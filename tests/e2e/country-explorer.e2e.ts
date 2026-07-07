@@ -42,6 +42,7 @@ test("country detail renders ten module skeleton and switches language", async (
   page,
 }) => {
   await page.goto("/en/countries/ID");
+  const main = page.locator("main");
 
   await expect(
     page.getByRole("heading", { exact: true, name: "Indonesia" }),
@@ -58,6 +59,14 @@ test("country detail renders ten module skeleton and switches language", async (
   await expect(
     page.getByRole("heading", { exact: true, name: "AI Advisor" }),
   ).toBeVisible();
+  await expect(page.getByText("Internal sample data").first()).toBeVisible();
+  await expect(page.getByText("Solar, Storage, EV, Grid")).toBeVisible();
+  const englishVisibleText = await main.innerText();
+  expect(englishVisibleText).not.toContain("P1-2 manually curated");
+  expect(englishVisibleText).not.toContain(
+    "Derived from published country module knowledge chunks",
+  );
+  expect(englishVisibleText).not.toContain("solar, storage, EV, grid");
 
   await page.getByRole("link", { name: "zh-CN" }).click();
 
@@ -66,4 +75,12 @@ test("country detail renders ten module skeleton and switches language", async (
     page.getByRole("heading", { exact: true, name: "印度尼西亚" }),
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "市场概览" })).toBeVisible();
+  await expect(page.getByText("内部样板数据").first()).toBeVisible();
+  await expect(page.getByText("光伏、储能、电动车、电网")).toBeVisible();
+  const chineseVisibleText = await main.innerText();
+  expect(chineseVisibleText).not.toContain("P1-2 manually curated");
+  expect(chineseVisibleText).not.toContain(
+    "Derived from published country module knowledge chunks",
+  );
+  expect(chineseVisibleText).not.toContain("solar, storage, EV, grid");
 });
