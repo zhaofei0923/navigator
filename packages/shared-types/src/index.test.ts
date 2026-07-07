@@ -1,6 +1,21 @@
 import { describe, expect, test } from "vitest";
 
-import { pickLocale, type LocalizedText } from "./index.js";
+import {
+  ACCESS_LEVELS,
+  COVERAGE_LEVELS,
+  CREDIBILITIES,
+  INDUSTRY_TAGS,
+  MODULE_COVERAGE_STATUSES,
+  MODULE_KEYS,
+  POLICY_TYPES,
+  PROJECT_STATUSES,
+  REGIONS,
+  REVIEW_STATUSES,
+  RISK_LEVELS,
+  TECH_TAGS,
+  pickLocale,
+  type LocalizedText,
+} from "./index.js";
 
 describe("@navigator/shared-types", () => {
   test("returns zh text for zh-CN without fallback", () => {
@@ -63,5 +78,77 @@ describe("@navigator/shared-types", () => {
       value: "",
       fallback: true,
     });
+  });
+
+  test("exports fixed enum values from data-schema.md", () => {
+    expect(COVERAGE_LEVELS).toEqual(["BASIC", "STANDARD", "COMPLETE"]);
+    expect(MODULE_KEYS).toEqual([
+      "market-overview",
+      "policy",
+      "risk",
+      "opportunities",
+      "projects",
+      "partners",
+      "chinese-companies",
+      "entry-strategy",
+      "ai-advisor",
+      "reports",
+    ]);
+    expect(REVIEW_STATUSES).toEqual(["draft", "pending", "published"]);
+    expect(CREDIBILITIES).toEqual([
+      "OFFICIAL",
+      "VERIFIED",
+      "ESTIMATED",
+      "UNVERIFIED",
+    ]);
+    expect(MODULE_COVERAGE_STATUSES).toEqual([
+      "BUILDING",
+      "PARTIAL",
+      "COMPLETE",
+    ]);
+    expect(RISK_LEVELS).toEqual(["LOW", "MEDIUM", "HIGH"]);
+    expect(PROJECT_STATUSES).toEqual([
+      "PLANNING",
+      "BIDDING",
+      "CONSTRUCTION",
+      "OPERATIONAL",
+    ]);
+    expect(ACCESS_LEVELS).toEqual(["FREE", "MEMBER", "PREMIUM"]);
+    expect(INDUSTRY_TAGS).toEqual([
+      "solar",
+      "wind",
+      "storage",
+      "ev",
+      "hydrogen",
+      "grid",
+      "bess-mfg",
+      "epc",
+    ]);
+    expect(TECH_TAGS).toEqual([
+      "pv-module",
+      "inverter",
+      "onshore-wind",
+      "offshore-wind",
+      "lfp",
+      "ncm",
+      "electrolyzer",
+    ]);
+    expect(REGIONS).toEqual([
+      "southeast-asia",
+      "south-asia",
+      "middle-east",
+      "africa",
+      "latin-america",
+      "europe",
+      "central-asia",
+    ]);
+    expect(POLICY_TYPES).toEqual([
+      "incentive",
+      "tariff",
+      "localization",
+      "permit",
+      "tax",
+      "import-export",
+    ]);
   });
 });
