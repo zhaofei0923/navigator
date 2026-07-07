@@ -1,0 +1,411 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum CoverageLevel {
+  BASIC
+  STANDARD
+  COMPLETE
+
+  @@map("coverage_level")
+}
+
+enum ModuleKey {
+  MARKET_OVERVIEW   @map("market-overview")
+  POLICY            @map("policy")
+  RISK              @map("risk")
+  OPPORTUNITIES     @map("opportunities")
+  PROJECTS          @map("projects")
+  PARTNERS          @map("partners")
+  CHINESE_COMPANIES @map("chinese-companies")
+  ENTRY_STRATEGY    @map("entry-strategy")
+  AI_ADVISOR        @map("ai-advisor")
+  REPORTS           @map("reports")
+
+  @@map("module_key")
+}
+
+enum ReviewStatus {
+  draft
+  pending
+  published
+
+  @@map("review_status")
+}
+
+enum Credibility {
+  OFFICIAL
+  VERIFIED
+  ESTIMATED
+  UNVERIFIED
+
+  @@map("credibility")
+}
+
+enum ModuleCoverageStatus {
+  BUILDING
+  PARTIAL
+  COMPLETE
+
+  @@map("module_coverage_status")
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+
+  @@map("risk_level")
+}
+
+enum ProjectStatus {
+  PLANNING
+  BIDDING
+  CONSTRUCTION
+  OPERATIONAL
+
+  @@map("project_status")
+}
+
+enum AccessLevel {
+  FREE
+  MEMBER
+  PREMIUM
+
+  @@map("access_level")
+}
+
+enum IndustryTag {
+  SOLAR    @map("solar")
+  WIND     @map("wind")
+  STORAGE  @map("storage")
+  EV       @map("ev")
+  HYDROGEN @map("hydrogen")
+  GRID     @map("grid")
+  BESS_MFG @map("bess-mfg")
+  EPC      @map("epc")
+
+  @@map("industry_tag")
+}
+
+enum TechTag {
+  PV_MODULE     @map("pv-module")
+  INVERTER      @map("inverter")
+  ONSHORE_WIND  @map("onshore-wind")
+  OFFSHORE_WIND @map("offshore-wind")
+  LFP           @map("lfp")
+  NCM           @map("ncm")
+  ELECTROLYZER  @map("electrolyzer")
+
+  @@map("tech_tag")
+}
+
+enum Region {
+  SOUTHEAST_ASIA @map("southeast-asia")
+  SOUTH_ASIA     @map("south-asia")
+  MIDDLE_EAST    @map("middle-east")
+  AFRICA         @map("africa")
+  LATIN_AMERICA  @map("latin-america")
+  EUROPE         @map("europe")
+  CENTRAL_ASIA   @map("central-asia")
+
+  @@map("region")
+}
+
+enum PolicyType {
+  INCENTIVE     @map("incentive")
+  TARIFF        @map("tariff")
+  LOCALIZATION  @map("localization")
+  PERMIT        @map("permit")
+  TAX           @map("tax")
+  IMPORT_EXPORT @map("import-export")
+
+  @@map("policy_type")
+}
+
+model Country {
+  code           String        @id @db.VarChar(2)
+  name           Json
+  region         Region
+  coverageLevel  CoverageLevel @map("coverage_level")
+  flagEmoji      String        @map("flag_emoji")
+  summary        Json
+  updatedAt      DateTime      @map("updated_at")
+
+  moduleCoverage   ModuleCoverage[]
+  marketOverview   MarketOverview?
+  policies         Policy[]
+  risks            Risk[]
+  opportunities    Opportunity[]
+  projects         Project[]
+  partners         Partner[]
+  chineseCompanies ChineseCompany[]
+  entryStrategy    EntryStrategy?
+  reports          Report[]
+  knowledgeChunks  KnowledgeChunk[]
+
+  @@map("countries")
+}
+
+model ModuleCoverage {
+  id          String               @id @default(cuid())
+  moduleKey   ModuleKey            @map("module_key")
+  status      ModuleCoverageStatus
+  dataCount   Int                  @map("data_count")
+  updatedAt   DateTime             @map("updated_at")
+  countryCode String               @map("country_code") @db.VarChar(2)
+
+  country Country @relation(fields: [countryCode], references: [code], onDelete: Cascade)
+
+  @@unique([countryCode, moduleKey])
+  @@map("module_coverages")
+}
+
+model MarketOverview {
+  id              String     @id @default(cuid())
+  overview        Json
+  population      Int?
+  gdp             Float?
+  gdpGrowth       Float?     @map("gdp_growth")
+  energyDemand    Json       @map("energy_demand")
+  renewableTarget Json       @map("renewable_target")
+  keyIndicators   Json       @map("key_indicators")
+  source          String
+  sourceUrl       String?    @map("source_url")
+  collectedAt     DateTime   @map("collected_at")
+  updatedAt       DateTime   @map("updated_at")
+  credibility     Credibility
+  reviewStatus    ReviewStatus @map("review_status")
+  aiUsable        Boolean    @map("ai_usable")
+  countryCode     String     @map("country_code") @db.VarChar(2)
+  industryTags    IndustryTag[] @map("industry_tags")
+  techTags        TechTag[]     @map("tech_tags")
+
+  country Country @relation(fields: [countryCode], references: [code], onDelete: Cascade)
+
+  @@unique([countryCode])
+  @@map("market_overviews")
+}
+
+model Policy {
+  id            String       @id @default(cuid())
+  title         Json
+  summary       Json
+  body          Json
+  policyType    PolicyType   @map("policy_type")
+  effectiveDate DateTime?    @map("effective_date")
+  authority     Json
+  source        String
+  sourceUrl     String?      @map("source_url")
+  collectedAt   DateTime     @map("collected_at")
+  updatedAt     DateTime     @map("updated_at")
+  credibility   Credibility
+  reviewStatus  ReviewStatus @map("review_status")
+  aiUsable      Boolean      @map("ai_usable")
+  countryCode   String       @map("country_code") @db.VarChar(2)
+  industryTags  IndustryTag[] @map("industry_tags")
+  techTags      TechTag[]     @map("tech_tags")
+
+  country Country @relation(fields: [countryCode], references: [code], onDelete: Cascade)
+
+  @@map("policies")
+}
+
+model Risk {
+  id            String       @id @default(cuid())
+  title         Json
+  category      String
+  level         RiskLevel
+  description   Json
+  mitigation    Json
+  source        String
+  sourceUrl     String?      @map("source_url")
+  collectedAt   DateTime     @map("collected_at")
+  updatedAt     DateTime     @map("updated_at")
+  credibility   Credibility
+  reviewStatus  ReviewStatus @map("review_status")
+  aiUsable      Boolean      @map("ai_usable")
+  countryCode   String       @map("country_code") @db.VarChar(2)
+  industryTags  IndustryTag[] @map("industry_tags")
+  techTags      TechTag[]     @map("tech_tags")
+
+  country Country @relation(fields: [countryCode], references: [code], onDelete: Cascade)
+
+  @@map("risks")
+}
+
+model Opportunity {
+  id            String       @id @default(cuid())
+  title         Json
+  description   Json
+  marketSize    Json?        @map("market_size")
+  timeWindow    Json?        @map("time_window")
+  source        String
+  sourceUrl     String?      @map("source_url")
+  collectedAt   DateTime     @map("collected_at")
+  updatedAt     DateTime     @map("updated_at")
+  credibility   Credibility
+  reviewStatus  ReviewStatus @map("review_status")
+  aiUsable      Boolean      @map("ai_usable")
+  countryCode   String       @map("country_code") @db.VarChar(2)
+  industryTags  IndustryTag[] @map("industry_tags")
+  techTags      TechTag[]     @map("tech_tags")
+
+  country Country @relation(fields: [countryCode], references: [code], onDelete: Cascade)
+
+  @@map("opportunities")
+}
+
+model Project {
+  id            String        @id @default(cuid())
+  name          Json
+  description   Json
+  status        ProjectStatus
+  capacity      String?
+  investment    Float?
+  location      Json?
+  source        String
+  sourceUrl     String?       @map("source_url")
+  collectedAt   DateTime      @map("collected_at")
+  updatedAt     DateTime      @map("updated_at")
+  credibility   Credibility
+  reviewStatus  ReviewStatus  @map("review_status")
+  aiUsable      Boolean       @map("ai_usable")
+  countryCode   String        @map("country_code") @db.VarChar(2)
+  industryTags  IndustryTag[] @map("industry_tags")
+  techTags      TechTag[]     @map("tech_tags")
+
+  country Country @relation(fields: [countryCode], references: [code], onDelete: Cascade)
+
+  @@map("projects")
+}
+
+model Partner {
+  id            String       @id @default(cuid())
+  name          Json
+  partnerType   String       @map("partner_type")
+  description   Json
+  contactHint   Json?        @map("contact_hint")
+  source        String
+  sourceUrl     String?      @map("source_url")
+  collectedAt   DateTime     @map("collected_at")
+  updatedAt     DateTime     @map("updated_at")
+  credibility   Credibility
+  reviewStatus  ReviewStatus @map("review_status")
+  aiUsable      Boolean      @map("ai_usable")
+  countryCode   String       @map("country_code") @db.VarChar(2)
+  industryTags  IndustryTag[] @map("industry_tags")
+  techTags      TechTag[]     @map("tech_tags")
+
+  country Country @relation(fields: [countryCode], references: [code], onDelete: Cascade)
+
+  @@map("partners")
+}
+
+model ChineseCompany {
+  id            String       @id @default(cuid())
+  name          Json
+  industry      String
+  businessScope Json         @map("business_scope")
+  entryYear     Int?         @map("entry_year")
+  caseStudy     Json?        @map("case_study")
+  source        String
+  sourceUrl     String?      @map("source_url")
+  collectedAt   DateTime     @map("collected_at")
+  updatedAt     DateTime     @map("updated_at")
+  credibility   Credibility
+  reviewStatus  ReviewStatus @map("review_status")
+  aiUsable      Boolean      @map("ai_usable")
+  countryCode   String       @map("country_code") @db.VarChar(2)
+  industryTags  IndustryTag[] @map("industry_tags")
+  techTags      TechTag[]     @map("tech_tags")
+
+  country Country @relation(fields: [countryCode], references: [code], onDelete: Cascade)
+
+  @@map("chinese_companies")
+}
+
+model EntryStrategy {
+  id              String       @id @default(cuid())
+  overview        Json
+  steps           Json
+  recommendedMode Json         @map("recommended_mode")
+  source          String
+  sourceUrl       String?      @map("source_url")
+  collectedAt     DateTime     @map("collected_at")
+  updatedAt       DateTime     @map("updated_at")
+  credibility     Credibility
+  reviewStatus    ReviewStatus @map("review_status")
+  aiUsable        Boolean      @map("ai_usable")
+  countryCode     String       @map("country_code") @db.VarChar(2)
+  industryTags    IndustryTag[] @map("industry_tags")
+  techTags        TechTag[]     @map("tech_tags")
+
+  country Country @relation(fields: [countryCode], references: [code], onDelete: Cascade)
+
+  @@unique([countryCode])
+  @@map("entry_strategies")
+}
+
+model Report {
+  id            String       @id @default(cuid())
+  title         Json
+  abstract      Json
+  fileUrl       String       @map("file_url")
+  publishedAt   DateTime     @map("published_at")
+  accessLevel   AccessLevel  @map("access_level")
+  source        String
+  sourceUrl     String?      @map("source_url")
+  collectedAt   DateTime     @map("collected_at")
+  updatedAt     DateTime     @map("updated_at")
+  credibility   Credibility
+  reviewStatus  ReviewStatus @map("review_status")
+  aiUsable      Boolean      @map("ai_usable")
+  countryCode   String       @map("country_code") @db.VarChar(2)
+  industryTags  IndustryTag[] @map("industry_tags")
+  techTags      TechTag[]     @map("tech_tags")
+
+  country Country @relation(fields: [countryCode], references: [code], onDelete: Cascade)
+
+  @@map("reports")
+}
+
+model KnowledgeChunk {
+  id            String                @id @default(cuid())
+  content       Json
+  embeddingZh   Unsupported("vector") @map("embedding_zh")
+  embeddingEn   Unsupported("vector") @map("embedding_en")
+  sourceModule  ModuleKey             @map("source_module")
+  sourceId      String                @map("source_id")
+  source        String
+  sourceUrl     String?               @map("source_url")
+  collectedAt   DateTime              @map("collected_at")
+  updatedAt     DateTime              @map("updated_at")
+  credibility   Credibility
+  reviewStatus  ReviewStatus          @map("review_status")
+  aiUsable      Boolean               @map("ai_usable")
+  countryCode   String                @map("country_code") @db.VarChar(2)
+  industryTags  IndustryTag[]         @map("industry_tags")
+  techTags      TechTag[]             @map("tech_tags")
+
+  country Country @relation(fields: [countryCode], references: [code], onDelete: Cascade)
+
+  @@map("knowledge_chunks")
+}
+
+model Lead {
+  id                String   @id @default(cuid())
+  name              String
+  company           String?
+  contact           String
+  interestedCountry String?  @map("interested_country") @db.VarChar(2)
+  source            String
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  @@map("leads")
+}
