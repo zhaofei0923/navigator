@@ -1,6 +1,7 @@
 import type { Locale } from "@navigator/shared-types/schema";
 import { hasLocale } from "next-intl";
 import { NextIntlClientProvider } from "next-intl";
+import { setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 
 import { AppShell } from "../../components/app-shell/app-shell";
@@ -25,6 +26,8 @@ export default async function LocaleLayout({
   if (!hasLocale(routing.locales, locale)) {
     notFound();
   }
+
+  setRequestLocale(locale);
 
   return (
     <html lang={locale}>

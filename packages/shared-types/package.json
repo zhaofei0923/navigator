@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     "./coverage": "./src/coverage.ts",
+    "./i18n": "./src/i18n.ts",
     "./schema": "./src/schema.ts"
   },
   "scripts": {

@@ -26,12 +26,11 @@ describe("P0-4 CI gates", () => {
     );
   });
 
-  it("keeps E2E as an explicit roadmap placeholder", () => {
+  it("runs the Playwright E2E gate after P2 adds browser flows", () => {
     const packageJson = JSON.parse(readRootFile("package.json")) as {
       scripts?: Record<string, string>;
     };
 
-    expect(packageJson.scripts?.["test:e2e"]).toContain("P0-4 placeholder");
-    expect(packageJson.scripts?.["test:e2e"]).toContain("P2/P3/P4");
+    expect(packageJson.scripts?.["test:e2e"]).toBe("playwright test");
   });
 });

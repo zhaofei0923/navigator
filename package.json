@@ -7,9 +7,10 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "vitest run tests && turbo run test",
-    "test:e2e": "node -e \"console.log('P0-4 placeholder: Playwright E2E suites will be added in P2/P3/P4 roadmap tasks.')\""
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@types/node": "^24.0.0",
     "turbo": "^2.5.6",
     "typescript": "^5.8.3",
