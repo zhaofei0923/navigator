@@ -80,6 +80,7 @@
 **返回**：`data` 为国家卡片数组，每项包含：
 - `code`、`name`、`region`、`flagEmoji`、`summary`、`coverageLevel`、`updatedAt`
 - `moduleCoverage`（各模块 `status` 摘要，供列表标记）
+- `signals`（可选派生字段，见 [scoring-framework.md](./scoring-framework.md)，用于机会、风险、政策友好度、推荐优先级等重点信号；不代表新增持久化模型字段）
 
 > 详细字段见 [data-schema.md §4](./data-schema.md)。
 
@@ -138,7 +139,10 @@
 
 ---
 
-## 4. 国家对比
+## 4. 国家对比（Deferred）
+
+> 国家对比不属于当前 MVP 四板块范围，暂不作为 P2 开发入口。
+> 保留下列契约草案仅供后续恢复能力时参考；恢复前必须先更新 `roadmap.md` 与 `testing.md`。
 
 ### `GET /api/v1/compare`
 **Query**：`codes`（逗号分隔的 ISO 码，2–4 国）、可选 `modules`（限定对比的模块）。
