@@ -1,0 +1,43 @@
+{
+  "id": "id_entry_001",
+  "overview": {
+    "zh": "进入印尼应采用“政策合规先行、伙伴验证、小规模示范、区域复制”的节奏。新能源设备企业宜先锁定工业园区、国有电力体系相关项目和本地经销服务网络，再逐步评估本地组装或合资安排。",
+    "en": "Market entry should follow a sequence of policy compliance, partner validation, small-scale demonstration, and regional replication. Equipment companies should first target industrial parks, projects linked to the state power ecosystem, and local distribution/service networks before assessing assembly or joint-venture options."
+  },
+  "steps": [
+    {
+      "order": 1,
+      "title": { "zh": "确认准入和认证路径", "en": "Confirm entry and certification path" },
+      "detail": { "zh": "梳理进口许可、本地含量、产品认证、并网和安全标准，形成产品线级别的合规清单。", "en": "Map import licenses, local-content rules, product certification, grid-connection requirements, and safety standards into a product-line compliance checklist." }
+    },
+    {
+      "order": 2,
+      "title": { "zh": "筛选可信本地伙伴", "en": "Screen trusted local partners" },
+      "detail": { "zh": "优先验证 EPC、经销商、律所和政府事务顾问的项目履历、付款能力与合规记录。", "en": "Prioritize verification of EPCs, distributors, law firms, and government-affairs advisors by project track record, payment capacity, and compliance history." }
+    },
+    {
+      "order": 3,
+      "title": { "zh": "落地样板项目", "en": "Deliver a reference project" },
+      "detail": { "zh": "选择工业园区、商业屋顶、储能微网或充电站等场景，建立可展示的成本、性能和运维数据。", "en": "Select scenarios such as industrial parks, C&I rooftops, storage microgrids, or charging sites to build demonstrable cost, performance, and O&M data." }
+    },
+    {
+      "order": 4,
+      "title": { "zh": "评估本地化和融资结构", "en": "Assess localization and financing structure" },
+      "detail": { "zh": "在订单稳定后评估组装、售后仓、本地融资和合资结构，避免过早重资产投入。", "en": "After order stability improves, assess assembly, service warehouses, local financing, and joint-venture structures while avoiding premature heavy-asset commitments." }
+    }
+  ],
+  "recommendedMode": {
+    "zh": "推荐以本地渠道伙伴 + 项目型 EPC 联合开发起步，成熟后再评估轻资产组装或合资。",
+    "en": "Start with local channel partners plus project-based EPC co-development, then assess asset-light assembly or a joint venture after traction matures."
+  },
+  "source": "P1-2 manually curated Indonesia seed baseline; sourceUrl null because this is an internal sample fixture for schema and coverage validation",
+  "sourceUrl": null,
+  "collectedAt": "2026-01-10T00:00:00Z",
+  "updatedAt": "2026-01-15T00:00:00Z",
+  "credibility": "ESTIMATED",
+  "reviewStatus": "published",
+  "aiUsable": true,
+  "countryCode": "ID",
+  "industryTags": ["solar", "storage", "ev", "epc"],
+  "techTags": ["pv-module", "inverter", "lfp"]
+}

@@ -1,0 +1,34 @@
+{
+  "id": "id_mkt_001",
+  "overview": {
+    "zh": "印尼是东南亚人口和经济规模最大的市场之一。新能源企业应重点关注爪哇和苏门答腊的负荷中心、群岛电网互联约束、工业园区用电增长，以及政府推动可再生能源和电动交通的长期方向。",
+    "en": "Indonesia is one of Southeast Asia's largest markets by population and economic scale. Clean-energy companies should focus on Java and Sumatra load centers, archipelago grid constraints, industrial-park power growth, and the government's long-term push for renewables and electric mobility."
+  },
+  "population": 278700000,
+  "gdp": 1371000000000,
+  "gdpGrowth": 5.0,
+  "energyDemand": {
+    "zh": "电力需求由城市化、矿冶和制造业园区扩张共同驱动，离网和岛屿供电仍需要储能、微网和混合能源方案。",
+    "en": "Power demand is driven by urbanization, mining and smelting, and manufacturing-park expansion, while off-grid and island supply still need storage, microgrid, and hybrid energy solutions."
+  },
+  "renewableTarget": {
+    "zh": "政策方向强调提高可再生能源占比、减少柴油依赖并支持电动车和电池产业链本地化。",
+    "en": "Policy direction emphasizes increasing the renewable share, reducing diesel reliance, and supporting localized EV and battery supply chains."
+  },
+  "keyIndicators": [
+    { "label": { "zh": "人口", "en": "Population" }, "value": "278.7", "unit": "million people", "year": 2024 },
+    { "label": { "zh": "GDP", "en": "GDP" }, "value": "1.371", "unit": "trillion USD", "year": 2024 },
+    { "label": { "zh": "实际 GDP 增速", "en": "Real GDP growth" }, "value": "5.0", "unit": "%", "year": 2024 },
+    { "label": { "zh": "优先机会", "en": "Priority opportunities" }, "value": "solar, storage, EV, grid", "unit": "tags", "year": 2026 }
+  ],
+  "source": "P1-2 manually curated Indonesia seed baseline; sourceUrl null because this is an internal sample fixture for schema and coverage validation",
+  "sourceUrl": null,
+  "collectedAt": "2026-01-10T00:00:00Z",
+  "updatedAt": "2026-01-15T00:00:00Z",
+  "credibility": "ESTIMATED",
+  "reviewStatus": "published",
+  "aiUsable": true,
+  "countryCode": "ID",
+  "industryTags": ["solar", "storage", "ev", "grid"],
+  "techTags": ["pv-module", "inverter", "lfp"]
+}
