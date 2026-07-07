@@ -3,6 +3,10 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "exports": {
+    "./coverage": "./src/coverage.ts",
+    "./schema": "./src/schema.ts"
+  },
   "scripts": {
     "lint": "tsc --project tsconfig.json --noEmit --pretty false",
     "typecheck": "tsc --project tsconfig.json --noEmit --pretty false",

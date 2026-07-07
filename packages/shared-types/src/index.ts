@@ -1,97 +1,32 @@
-export type Locale = "zh-CN" | "en";
+import type { Locale } from "./schema.js";
 
-export const COVERAGE_LEVELS = ["BASIC", "STANDARD", "COMPLETE"] as const;
-export type CoverageLevel = (typeof COVERAGE_LEVELS)[number];
-
-export const MODULE_KEYS = [
-  "market-overview",
-  "policy",
-  "risk",
-  "opportunities",
-  "projects",
-  "partners",
-  "chinese-companies",
-  "entry-strategy",
-  "ai-advisor",
-  "reports",
-] as const;
-export type ModuleKey = (typeof MODULE_KEYS)[number];
-
-export const REVIEW_STATUSES = ["draft", "pending", "published"] as const;
-export type ReviewStatus = (typeof REVIEW_STATUSES)[number];
-
-export const CREDIBILITIES = [
-  "OFFICIAL",
-  "VERIFIED",
-  "ESTIMATED",
-  "UNVERIFIED",
-] as const;
-export type Credibility = (typeof CREDIBILITIES)[number];
-
-export const MODULE_COVERAGE_STATUSES = [
-  "BUILDING",
-  "PARTIAL",
-  "COMPLETE",
-] as const;
-export type ModuleCoverageStatus = (typeof MODULE_COVERAGE_STATUSES)[number];
-
-export const RISK_LEVELS = ["LOW", "MEDIUM", "HIGH"] as const;
-export type RiskLevel = (typeof RISK_LEVELS)[number];
-
-export const PROJECT_STATUSES = [
-  "PLANNING",
-  "BIDDING",
-  "CONSTRUCTION",
-  "OPERATIONAL",
-] as const;
-export type ProjectStatus = (typeof PROJECT_STATUSES)[number];
-
-export const ACCESS_LEVELS = ["FREE", "MEMBER", "PREMIUM"] as const;
-export type AccessLevel = (typeof ACCESS_LEVELS)[number];
-
-export const INDUSTRY_TAGS = [
-  "solar",
-  "wind",
-  "storage",
-  "ev",
-  "hydrogen",
-  "grid",
-  "bess-mfg",
-  "epc",
-] as const;
-export type IndustryTag = (typeof INDUSTRY_TAGS)[number];
-
-export const TECH_TAGS = [
-  "pv-module",
-  "inverter",
-  "onshore-wind",
-  "offshore-wind",
-  "lfp",
-  "ncm",
-  "electrolyzer",
-] as const;
-export type TechTag = (typeof TECH_TAGS)[number];
-
-export const REGIONS = [
-  "southeast-asia",
-  "south-asia",
-  "middle-east",
-  "africa",
-  "latin-america",
-  "europe",
-  "central-asia",
-] as const;
-export type Region = (typeof REGIONS)[number];
-
-export const POLICY_TYPES = [
-  "incentive",
-  "tariff",
-  "localization",
-  "permit",
-  "tax",
-  "import-export",
-] as const;
-export type PolicyType = (typeof POLICY_TYPES)[number];
+export {
+  ACCESS_LEVELS,
+  COVERAGE_LEVELS,
+  CREDIBILITIES,
+  INDUSTRY_TAGS,
+  MODULE_COVERAGE_STATUSES,
+  MODULE_KEYS,
+  POLICY_TYPES,
+  PROJECT_STATUSES,
+  REGIONS,
+  REVIEW_STATUSES,
+  RISK_LEVELS,
+  TECH_TAGS,
+  type AccessLevel,
+  type CoverageLevel,
+  type Credibility,
+  type IndustryTag,
+  type Locale,
+  type ModuleCoverageStatus,
+  type ModuleKey,
+  type PolicyType,
+  type ProjectStatus,
+  type Region,
+  type ReviewStatus,
+  type RiskLevel,
+  type TechTag,
+} from "./schema.js";
 
 export {
   EnvValidationError,
@@ -100,6 +35,16 @@ export {
   type LogLevel,
   type NodeEnv,
 } from "./env.js";
+export {
+  getAiAdvisorCoverageStatus,
+  getCountryCoverageLevel,
+  getListModuleCoverageStatus,
+  getObjectModuleCoverageStatus,
+  getObjectModuleFillRate,
+  isAtLeastPartial,
+  type AiAdvisorCoverageInput,
+  type ModuleCoverageDecision,
+} from "./coverage.js";
 
 export interface LocalizedText {
   zh: string;
