@@ -1,0 +1,11 @@
+{
+  "name": "@navigator/shared-types",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "tsc --project tsconfig.json --noEmit --pretty false",
+    "typecheck": "tsc --project tsconfig.json --noEmit --pretty false",
+    "test": "vitest run"
+  }
+}
