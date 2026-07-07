@@ -79,6 +79,29 @@
         "STANDARD": "Standard",
         "COMPLETE": "Complete"
       }
+    },
+    "modules": {
+      "market-overview": "Market overview",
+      "policy": "Policy",
+      "risk": "Risk",
+      "opportunities": "Opportunities",
+      "projects": "Projects",
+      "partners": "Partners",
+      "chinese-companies": "Chinese companies",
+      "entry-strategy": "Entry strategy",
+      "ai-advisor": "AI Advisor",
+      "reports": "Reports"
+    },
+    "detail": {
+      "moduleCount": "{complete}/{total} modules",
+      "updated": "Updated {date}",
+      "moduleNav": "Country modules",
+      "moduleUpdated": "Updated {date}",
+      "buildingTitle": "Data Building",
+      "buildingDescription": "This module is visible in the unified country template and will show published data once coverage is ready.",
+      "emptyTitle": "No published data",
+      "emptyDescription": "The module is active, but no published records are available for this view.",
+      "fallbackNotice": "{count, plural, one {# field is not translated} other {# fields are not translated}}"
     }
   },
   "countryMeta": {
@@ -114,6 +137,11 @@
   "coverage": {
     "dataBuilding": "Data Building",
     "updating": "Continuously updating",
+    "status": {
+      "BUILDING": "Building",
+      "PARTIAL": "Partial",
+      "COMPLETE": "Complete"
+    },
     "level": {
       "BASIC": "Basic",
       "STANDARD": "Standard",

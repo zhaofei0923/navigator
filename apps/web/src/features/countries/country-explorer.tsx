@@ -101,20 +101,22 @@ function CountryResultCard({
 
   return (
     <article className="country-result" aria-label={country.name}>
-      <span className="flag-code" aria-hidden>
-        {country.flagEmoji}
-      </span>
-      <span className="country-copy">
-        <strong>{country.name}</strong>
-        <span>{country.summary}</span>
-        <small>
-          {t("updated")} {formatDate(country.updatedAt, locale)}
-        </small>
-      </span>
-      <span className="country-score">
-        <CoverageBadge level={country.coverageLevel} />
-        <span>{formatModuleCount(country)}</span>
-      </span>
+      <Link className="country-result-link" href={`/countries/${country.code}`}>
+        <span className="flag-code" aria-hidden>
+          {country.flagEmoji}
+        </span>
+        <span className="country-copy">
+          <strong>{country.name}</strong>
+          <span>{country.summary}</span>
+          <small>
+            {t("updated")} {formatDate(country.updatedAt, locale)}
+          </small>
+        </span>
+        <span className="country-score">
+          <CoverageBadge level={country.coverageLevel} />
+          <span>{formatModuleCount(country)}</span>
+        </span>
+      </Link>
     </article>
   );
 }

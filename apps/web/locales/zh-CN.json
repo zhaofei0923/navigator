@@ -79,6 +79,29 @@
         "STANDARD": "标准覆盖",
         "COMPLETE": "完整覆盖"
       }
+    },
+    "modules": {
+      "market-overview": "市场概览",
+      "policy": "政策法规",
+      "risk": "风险评估",
+      "opportunities": "市场机会",
+      "projects": "项目信息",
+      "partners": "本地伙伴",
+      "chinese-companies": "中资企业",
+      "entry-strategy": "进入策略",
+      "ai-advisor": "AI咨询",
+      "reports": "研究报告"
+    },
+    "detail": {
+      "moduleCount": "{complete}/{total} 个模块",
+      "updated": "更新于 {date}",
+      "moduleNav": "国家模块",
+      "moduleUpdated": "更新于 {date}",
+      "buildingTitle": "数据建设中",
+      "buildingDescription": "该模块已纳入统一国家模板，覆盖就绪后将展示已发布数据。",
+      "emptyTitle": "暂无已发布数据",
+      "emptyDescription": "该模块已启用，但当前视图暂无可展示的已发布记录。",
+      "fallbackNotice": "{count} 个字段未翻译"
     }
   },
   "countryMeta": {
@@ -114,6 +137,11 @@
   "coverage": {
     "dataBuilding": "数据建设中",
     "updating": "持续更新中",
+    "status": {
+      "BUILDING": "建设中",
+      "PARTIAL": "部分覆盖",
+      "COMPLETE": "完整"
+    },
     "level": {
       "BASIC": "基础覆盖",
       "STANDARD": "标准覆盖",
