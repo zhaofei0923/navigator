@@ -1,5 +1,13 @@
 export type Locale = "zh-CN" | "en";
 
+export {
+  EnvValidationError,
+  validateEnv,
+  type AppEnvConfig,
+  type LogLevel,
+  type NodeEnv,
+} from "./env.js";
+
 export interface LocalizedText {
   zh: string;
   en: string;
