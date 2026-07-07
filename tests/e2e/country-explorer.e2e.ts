@@ -1,5 +1,24 @@
 import { expect, test } from "@playwright/test";
 
+test("home page switches UI language from Chinese to English", async ({
+  page,
+}) => {
+  await page.goto("/zh-CN");
+
+  await expect(
+    page.getByRole("heading", { name: "全球情报，更好的能源决策。" }),
+  ).toBeVisible();
+
+  await page.getByRole("link", { name: "EN" }).click();
+
+  await expect(page).toHaveURL(/\/en$/);
+  await expect(
+    page.getByRole("heading", {
+      name: "Global intelligence. Better energy decisions.",
+    }),
+  ).toBeVisible();
+});
+
 test("country explorer filters coverage and keeps coverage badges visible", async ({
   page,
 }) => {

@@ -1,7 +1,14 @@
-import { useTranslations } from "next-intl";
+import type { Locale } from "@navigator/shared-types/schema";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
-export default function AiAdvisorPage() {
-  const t = useTranslations("ai");
+interface AiAdvisorPageProps {
+  params: Promise<{ locale: Locale }>;
+}
+
+export default async function AiAdvisorPage({ params }: AiAdvisorPageProps) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+  const t = await getTranslations({ locale, namespace: "ai" });
 
   return (
     <section className="page-section">
