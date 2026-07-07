@@ -3,7 +3,6 @@ import { describe, expect, test } from "vitest";
 import {
   DEFAULT_LOCALE,
   LOCALE_COOKIE_NAME,
-  getLocalizedPathname,
   isLocale,
   locales,
 } from "./routing.js";
@@ -19,16 +18,5 @@ describe("web locale routing", () => {
 
   test("exposes the persistent locale cookie name", () => {
     expect(LOCALE_COOKIE_NAME).toBe("NEXT_LOCALE");
-  });
-
-  test("language switching keeps the current path, query, and hash", () => {
-    expect(getLocalizedPathname("/zh-CN/countries/ID", "en")).toBe(
-      "/en/countries/ID",
-    );
-    expect(getLocalizedPathname("/en/reports?type=market#latest", "zh-CN")).toBe(
-      "/zh-CN/reports?type=market#latest",
-    );
-    expect(getLocalizedPathname("/reports", "en")).toBe("/en/reports");
-    expect(getLocalizedPathname("/", "zh-CN")).toBe("/zh-CN");
   });
 });

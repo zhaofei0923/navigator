@@ -2,14 +2,10 @@
 
 import type { Locale } from "@navigator/shared-types/schema";
 import { useTranslations } from "next-intl";
-import NextLink from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 
-import { getLocaleCookieAssignment } from "../../i18n/locale-cookie";
-import {
-  getLocalizedPathname,
-  locales,
-} from "../../i18n/routing";
+import { Link, usePathname } from "../../i18n/navigation";
+import { locales } from "../../i18n/routing";
 
 interface LanguageSwitcherProps {
   locale: Locale;
@@ -25,17 +21,15 @@ export function LanguageSwitcher({ locale }: LanguageSwitcherProps) {
   return (
     <div aria-label={t("label")} className="language-switcher">
       {locales.map((targetLocale) => (
-        <NextLink
+        <Link
           aria-current={targetLocale === locale ? "page" : undefined}
           className="language-link"
-          href={getLocalizedPathname(currentPath, targetLocale)}
+          href={currentPath}
           key={targetLocale}
-          onClick={() => {
-            document.cookie = getLocaleCookieAssignment(targetLocale);
-          }}
+          locale={targetLocale}
         >
           {targetLocale === "zh-CN" ? t("zhCN") : t("en")}
-        </NextLink>
+        </Link>
       ))}
     </div>
   );

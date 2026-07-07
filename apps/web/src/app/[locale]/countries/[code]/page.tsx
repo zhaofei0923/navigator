@@ -1,4 +1,5 @@
 import type { Locale } from "@navigator/shared-types/schema";
+import { setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 
 import { CountryDetail } from "../../../../features/countries/country-detail";
@@ -14,6 +15,7 @@ export default async function CountryDetailPage({
   params,
 }: CountryDetailPageProps) {
   const { code, locale } = await params;
+  setRequestLocale(locale);
   const response = buildCountryDetailResponse(code, { locale });
 
   if (response === null) {

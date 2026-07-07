@@ -1,7 +1,14 @@
-import { useTranslations } from "next-intl";
+import type { Locale } from "@navigator/shared-types/schema";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
-export default function HomePage() {
-  const t = useTranslations("home");
+interface HomePageProps {
+  params: Promise<{ locale: Locale }>;
+}
+
+export default async function HomePage({ params }: HomePageProps) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+  const t = await getTranslations({ locale, namespace: "home" });
 
   return (
     <section className="page-section">

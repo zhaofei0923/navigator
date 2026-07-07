@@ -1,4 +1,5 @@
 import type { Locale } from "@navigator/shared-types/schema";
+import { setRequestLocale } from "next-intl/server";
 
 import { CountryExplorer } from "../../../features/countries/country-explorer";
 
@@ -31,6 +32,7 @@ export default async function CountriesPage({
     params,
     searchParams,
   ]);
+  setRequestLocale(locale);
 
   return (
     <CountryExplorer
