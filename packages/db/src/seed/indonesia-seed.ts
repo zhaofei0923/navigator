@@ -1,6 +1,29 @@
 import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
+import {
+  ACCESS_LEVELS,
+  COVERAGE_LEVELS,
+  CREDIBILITIES,
+  INDUSTRY_TAGS,
+  MODULE_COVERAGE_STATUSES,
+  MODULE_KEYS,
+  POLICY_TYPES,
+  PROJECT_STATUSES,
+  REGIONS,
+  REVIEW_STATUSES,
+  RISK_LEVELS,
+  TECH_TAGS,
+  type ModuleCoverageStatus,
+  type ModuleKey,
+} from "@navigator/shared-types/schema";
+import {
+  getAiAdvisorCoverageStatus,
+  getListModuleCoverageStatus,
+  getObjectModuleFillRate,
+  getObjectModuleCoverageStatus,
+} from "@navigator/shared-types/coverage";
+
 type JsonRecord = Record<string, unknown>;
 
 export interface SeedValidationResult {
@@ -43,10 +66,6 @@ export interface SeedImportPlan {
 
 const COUNTRY_CODE = "ID";
 const DATA_ROOT = new URL("../../../../data/indonesia/", import.meta.url);
-const SHARED_TYPES_SOURCE = new URL(
-  "../../../shared-types/src/index.ts",
-  import.meta.url,
-);
 
 const LIST_MODULES = [
   "policy",
@@ -425,7 +444,7 @@ function validateCompleteThresholds(seed: IndonesiaSeed, errors: string[]): void
     errors.push("country.coverageLevel must be COMPLETE");
   }
 
-  if (objectFillRate(seed.marketOverview, [
+  if (getObjectModuleFillRate(seed.marketOverview, [
     "overview",
     "population",
     "gdp",
@@ -437,7 +456,13 @@ function validateCompleteThresholds(seed: IndonesiaSeed, errors: string[]): void
     errors.push("market-overview core field fill rate must be >= 80%");
   }
 
-  if (objectFillRate(seed.entryStrategy, ["overview", "steps", "recommendedMode"]) < 0.8) {
+  if (
+    getObjectModuleFillRate(seed.entryStrategy, [
+      "overview",
+      "steps",
+      "recommendedMode",
+    ]) < 0.8
+  ) {
     errors.push("entry-strategy core field fill rate must be >= 80%");
   }
 
@@ -783,14 +808,14 @@ function validateModuleCoverageMatchesSeed(
 
 function buildExpectedModuleCoverage(
   seed: IndonesiaSeed,
-): Array<{ moduleKey: string; status: string; dataCount: number }> {
+): Array<{ moduleKey: ModuleKey; status: ModuleCoverageStatus; dataCount: number }> {
   const listModuleCoverage = LIST_MODULES.map((moduleKey) => {
     const dataCount = getListModule(seed, moduleKey).filter(
       (item) => item.reviewStatus === "published",
     ).length;
     return {
       moduleKey,
-      status: statusFromListCount(dataCount),
+      status: getListModuleCoverageStatus(dataCount),
       dataCount,
     };
   });
@@ -804,57 +829,36 @@ function buildExpectedModuleCoverage(
   return [
     {
       moduleKey: "market-overview",
-      status: statusFromObjectFillRate(
-        objectFillRate(seed.marketOverview, [
-          "overview",
-          "population",
-          "gdp",
-          "gdpGrowth",
-          "energyDemand",
-          "renewableTarget",
-          "keyIndicators",
-        ]),
-      ),
+      status: getObjectModuleCoverageStatus(seed.marketOverview, [
+        "overview",
+        "population",
+        "gdp",
+        "gdpGrowth",
+        "energyDemand",
+        "renewableTarget",
+        "keyIndicators",
+      ]),
       dataCount: isFilled(seed.marketOverview) ? 1 : 0,
     },
     ...listModuleCoverage,
     {
       moduleKey: "entry-strategy",
-      status: statusFromObjectFillRate(
-        objectFillRate(seed.entryStrategy, ["overview", "steps", "recommendedMode"]),
-      ),
+      status: getObjectModuleCoverageStatus(seed.entryStrategy, [
+        "overview",
+        "steps",
+        "recommendedMode",
+      ]),
       dataCount: isFilled(seed.entryStrategy) ? 1 : 0,
     },
     {
       moduleKey: "ai-advisor",
-      status: statusFromKnowledgeCoverage(aiDataCount, aiSourceModuleCount),
+      status: getAiAdvisorCoverageStatus({
+        usableKnowledgeCount: aiDataCount,
+        sourceModuleCount: aiSourceModuleCount,
+      }),
       dataCount: aiDataCount,
     },
   ];
-}
-
-function statusFromListCount(count: number): string {
-  if (count === 0) {
-    return "BUILDING";
-  }
-  return count >= 5 ? "COMPLETE" : "PARTIAL";
-}
-
-function statusFromObjectFillRate(fillRate: number): string {
-  if (fillRate === 0) {
-    return "BUILDING";
-  }
-  return fillRate >= 0.8 ? "COMPLETE" : "PARTIAL";
-}
-
-function statusFromKnowledgeCoverage(
-  eligibleCount: number,
-  sourceModuleCount: number,
-): string {
-  if (eligibleCount === 0) {
-    return "BUILDING";
-  }
-  return eligibleCount >= 20 && sourceModuleCount >= 3 ? "COMPLETE" : "PARTIAL";
 }
 
 function copyFields(item: JsonRecord, fields: readonly string[]): JsonRecord {
@@ -893,52 +897,35 @@ function mapEnumArray<T extends Record<string, string>>(
 }
 
 interface SharedEnums {
-  ACCESS_LEVELS: string[];
-  COVERAGE_LEVELS: string[];
-  CREDIBILITIES: string[];
-  INDUSTRY_TAGS: string[];
-  MODULE_COVERAGE_STATUSES: string[];
-  MODULE_KEYS: string[];
-  POLICY_TYPES: string[];
-  PROJECT_STATUSES: string[];
-  REGIONS: string[];
-  REVIEW_STATUSES: string[];
-  RISK_LEVELS: string[];
-  TECH_TAGS: string[];
+  ACCESS_LEVELS: readonly string[];
+  COVERAGE_LEVELS: readonly string[];
+  CREDIBILITIES: readonly string[];
+  INDUSTRY_TAGS: readonly string[];
+  MODULE_COVERAGE_STATUSES: readonly string[];
+  MODULE_KEYS: readonly string[];
+  POLICY_TYPES: readonly string[];
+  PROJECT_STATUSES: readonly string[];
+  REGIONS: readonly string[];
+  REVIEW_STATUSES: readonly string[];
+  RISK_LEVELS: readonly string[];
+  TECH_TAGS: readonly string[];
 }
 
 function loadSharedEnums(): SharedEnums {
-  const source = readFileSync(SHARED_TYPES_SOURCE, "utf8");
   return {
-    ACCESS_LEVELS: readSharedConst(source, "ACCESS_LEVELS"),
-    COVERAGE_LEVELS: readSharedConst(source, "COVERAGE_LEVELS"),
-    CREDIBILITIES: readSharedConst(source, "CREDIBILITIES"),
-    INDUSTRY_TAGS: readSharedConst(source, "INDUSTRY_TAGS"),
-    MODULE_COVERAGE_STATUSES: readSharedConst(source, "MODULE_COVERAGE_STATUSES"),
-    MODULE_KEYS: readSharedConst(source, "MODULE_KEYS"),
-    POLICY_TYPES: readSharedConst(source, "POLICY_TYPES"),
-    PROJECT_STATUSES: readSharedConst(source, "PROJECT_STATUSES"),
-    REGIONS: readSharedConst(source, "REGIONS"),
-    REVIEW_STATUSES: readSharedConst(source, "REVIEW_STATUSES"),
-    RISK_LEVELS: readSharedConst(source, "RISK_LEVELS"),
-    TECH_TAGS: readSharedConst(source, "TECH_TAGS"),
+    ACCESS_LEVELS,
+    COVERAGE_LEVELS,
+    CREDIBILITIES,
+    INDUSTRY_TAGS,
+    MODULE_COVERAGE_STATUSES,
+    MODULE_KEYS,
+    POLICY_TYPES,
+    PROJECT_STATUSES,
+    REGIONS,
+    REVIEW_STATUSES,
+    RISK_LEVELS,
+    TECH_TAGS,
   };
-}
-
-function readSharedConst(source: string, name: keyof SharedEnums): string[] {
-  const match = source.match(
-    new RegExp(`export const ${name} = \\[([\\s\\S]*?)\\] as const;`),
-  );
-  if (match?.[1] === undefined) {
-    throw new Error(`Missing ${name} in @navigator/shared-types`);
-  }
-
-  return [...match[1].matchAll(/"([^"]+)"/g)].map((item) => item[1] ?? "");
-}
-
-function objectFillRate(item: JsonRecord, fields: readonly string[]): number {
-  const filled = fields.filter((field) => isFilled(item[field])).length;
-  return filled / fields.length;
 }
 
 function isFilled(value: unknown): boolean {

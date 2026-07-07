@@ -31,6 +31,9 @@ importers:
 
   packages/db:
     dependencies:
+      '@navigator/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
       '@prisma/client':
         specifier: ^6.19.3
         version: 6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)

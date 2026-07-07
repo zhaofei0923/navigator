@@ -12,6 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@navigator/shared-types": "workspace:*",
     "@prisma/client": "^6.19.3"
   },
   "devDependencies": {
