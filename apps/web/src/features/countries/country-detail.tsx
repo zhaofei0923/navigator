@@ -1,10 +1,15 @@
 import {
+  INDUSTRY_TAGS,
   MODULE_KEYS,
+  TECH_TAGS,
+  type IndustryTag,
   type Locale,
   type ModuleCoverageStatus,
   type ModuleKey,
+  type TechTag,
 } from "@navigator/shared-types/schema";
 import { useTranslations } from "next-intl";
+import React from "react";
 
 import {
   buildCountryModuleResponse,
@@ -17,6 +22,7 @@ import {
 interface CountryDetailProps {
   country: LocalizedCountryDetail;
   locale: Locale;
+  moduleResponses?: Partial<Record<ModuleKey, LocalizedCountryModuleResponse>>;
 }
 
 interface ModuleViewModel {
@@ -95,6 +101,32 @@ function readRecordArray(value: unknown): ModuleResponseRecord[] {
   );
 }
 
+function classifySource(
+  source: string,
+):
+  | "internalSample"
+  | "publishedKnowledge"
+  | null {
+  const normalized = source.toLowerCase();
+
+  if (
+    normalized.includes("internal sample fixture") ||
+    normalized.includes("manually curated")
+  ) {
+    return "internalSample";
+  }
+
+  if (normalized.includes("published country module knowledge chunks")) {
+    return "publishedKnowledge";
+  }
+
+  return null;
+}
+
+function joinList(values: string[], locale: Locale) {
+  return values.join(locale === "zh-CN" ? "、" : ", ");
+}
+
 function CoverageBadge({
   level,
 }: {
@@ -127,20 +159,27 @@ function ModulePreviewCard({
   locale: Locale;
 }) {
   const t = useTranslations("common");
+  const sourceLabels = useTranslations("countries.detail.source");
   const title = readStringField(item, PRIMARY_TEXT_FIELDS);
   const description = readStringField(item, SECONDARY_TEXT_FIELDS);
   const source = readStringField(item, ["source"]);
   const updatedAt = readStringField(item, ["updatedAt"]);
+  const sourceKind =
+    source === undefined ? null : classifySource(source);
+  const sourceDisplay =
+    source === undefined
+      ? undefined
+      : sourceLabels(sourceKind ?? "externalPublic");
 
   return (
     <article className="module-preview-card">
       {title !== undefined ? <h3>{title}</h3> : null}
       {description !== undefined ? <p>{description}</p> : null}
       <dl>
-        {source !== undefined ? (
+        {sourceDisplay !== undefined ? (
           <div>
             <dt>{t("source")}</dt>
-            <dd>{source}</dd>
+            <dd>{sourceDisplay}</dd>
           </div>
         ) : null}
         {updatedAt !== undefined ? (
@@ -161,6 +200,9 @@ function ObjectModuleBody({
   item: ModuleResponseRecord;
   locale: Locale;
 }) {
+  const industryLabels = useTranslations("countryMeta.industry");
+  const techLabels = useTranslations("countryMeta.tech");
+  const unitLabels = useTranslations("countryMeta.unit");
   const indicators = readRecordArray(item.keyIndicators);
   const steps = readRecordArray(item.steps);
 
@@ -173,11 +215,47 @@ function ObjectModuleBody({
             const label = readStringField(indicator, ["label"]);
             const value = readStringField(indicator, ["value"]);
             const unit = readStringField(indicator, ["unit"]);
+            const normalizedUnit = unit?.toLowerCase();
+            const displayValue =
+              normalizedUnit === "tags" && value !== undefined
+                ? joinList(
+                    value
+                      .split(",")
+                      .map((tag) => tag.trim())
+                      .filter((tag) => tag !== "")
+                      .map((tag) => {
+                        const normalizedTag = tag.toLowerCase();
+                        if (
+                          INDUSTRY_TAGS.includes(normalizedTag as IndustryTag)
+                        ) {
+                          return industryLabels(normalizedTag as IndustryTag);
+                        }
+                        if (TECH_TAGS.includes(normalizedTag as TechTag)) {
+                          return techLabels(normalizedTag as TechTag);
+                        }
+                        return tag;
+                      }),
+                    locale,
+                  )
+                : value;
+            const displayUnit =
+              normalizedUnit === "million people"
+                ? unitLabels("millionPeople")
+                : normalizedUnit === "trillion usd"
+                  ? unitLabels("trillionUsd")
+                  : normalizedUnit === "tags"
+                    ? unitLabels("tags")
+                    : unit === undefined
+                      ? undefined
+                      : unitLabels("value");
+
             return (
               <div className="indicator-item" key={`${label ?? "indicator"}-${index}`}>
                 {label !== undefined ? <span>{label}</span> : null}
-                {value !== undefined ? <strong>{value}</strong> : null}
-                {unit !== undefined ? <small>{unit}</small> : null}
+                {displayValue !== undefined && displayValue !== "" ? (
+                  <strong>{displayValue}</strong>
+                ) : null}
+                {displayUnit !== undefined ? <small>{displayUnit}</small> : null}
               </div>
             );
           })}
@@ -268,7 +346,11 @@ function ModuleSection({
   );
 }
 
-export function CountryDetail({ country, locale }: CountryDetailProps) {
+export function CountryDetail({
+  country,
+  locale,
+  moduleResponses,
+}: CountryDetailProps) {
   const t = useTranslations("countries.detail");
   const moduleLabels = useTranslations("countries.modules");
   const completeModules = getCompleteModuleCount(country);
@@ -281,7 +363,8 @@ export function CountryDetail({ country, locale }: CountryDetailProps) {
       response:
         coverage.status === "BUILDING"
           ? null
-          : buildCountryModuleResponse(country.code, moduleKey, { locale }),
+          : (moduleResponses?.[moduleKey] ??
+            buildCountryModuleResponse(country.code, moduleKey, { locale })),
     } satisfies ModuleViewModel;
   });
 

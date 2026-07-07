@@ -101,7 +101,12 @@
       "buildingDescription": "This module is visible in the unified country template and will show published data once coverage is ready.",
       "emptyTitle": "No published data",
       "emptyDescription": "The module is active, but no published records are available for this view.",
-      "fallbackNotice": "{count, plural, one {# field is not translated} other {# fields are not translated}}"
+      "fallbackNotice": "{count, plural, one {# field is not translated} other {# fields are not translated}}",
+      "source": {
+        "internalSample": "Internal sample data",
+        "publishedKnowledge": "Published module knowledge",
+        "externalPublic": "External public source"
+      }
     }
   },
   "countryMeta": {
@@ -132,6 +137,12 @@
       "lfp": "LFP battery",
       "ncm": "NCM battery",
       "electrolyzer": "Electrolyzer"
+    },
+    "unit": {
+      "millionPeople": "million people",
+      "trillionUsd": "trillion USD",
+      "tags": "Tags",
+      "value": "Value"
     }
   },
   "coverage": {
