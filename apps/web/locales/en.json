@@ -1,0 +1,90 @@
+{
+  "common": {
+    "loading": "Loading",
+    "notTranslated": "Not translated",
+    "source": "Source",
+    "updatedAt": "Updated"
+  },
+  "shell": {
+    "productName": "Navigator",
+    "tagline": "Global Renewable Energy Intelligence"
+  },
+  "nav": {
+    "label": "Main navigation",
+    "home": "Home",
+    "countries": "Countries",
+    "aiAdvisor": "AI Advisor",
+    "reports": "Reports"
+  },
+  "locale": {
+    "label": "Language",
+    "zhCN": "zh-CN",
+    "en": "EN"
+  },
+  "home": {
+    "title": "Global intelligence. Better energy decisions.",
+    "lede": "An international market, policy, risk, and opportunity intelligence platform for Chinese renewable energy companies expanding overseas.",
+    "explorerTitle": "Global energy market explorer",
+    "updated": "Global data updates continuously",
+    "countriesValue": "120+",
+    "countriesLabel": "Countries and regions",
+    "modulesValue": "10",
+    "modulesLabel": "Unified decision modules",
+    "sourcesValue": "500+",
+    "sourcesLabel": "Institutional and industry sources"
+  },
+  "countries": {
+    "title": "Country data explorer",
+    "lede": "Filter countries by region, industry, technology, and coverage level, then prioritize markets by potential, policy support, risk, and data readiness.",
+    "explorerTitle": "Market potential and coverage overview",
+    "selectedCountry": "Selected: Indonesia",
+    "marketPotentialValue": "0.78",
+    "marketPotentialLabel": "Market potential score",
+    "policySupportValue": "High",
+    "policySupportLabel": "Policy support index",
+    "coverageValue": "Complete",
+    "coverageLabel": "All ten modules available"
+  },
+  "coverage": {
+    "dataBuilding": "Data Building",
+    "updating": "Continuously updating",
+    "level": {
+      "BASIC": "Basic",
+      "STANDARD": "Standard",
+      "COMPLETE": "Complete"
+    }
+  },
+  "ai": {
+    "title": "AI Advisor",
+    "lede": "Traceable answers for country entry decisions, grounded only in published, AI-usable, credibility-screened knowledge.",
+    "readinessTitle": "Advisor readiness",
+    "noData": "No data available",
+    "buildingHint": "Data is being built for this country",
+    "answerLanguageValue": "Current locale",
+    "answerLanguageLabel": "Answer language",
+    "sourcePolicyValue": "Published sources",
+    "sourcePolicyLabel": "Retrieval boundary",
+    "emptyStateValue": "ai.noData"
+  },
+  "reports": {
+    "title": "Reports and data",
+    "lede": "Country research, policy trackers, and structured data packs for market assessment and executive briefings.",
+    "libraryTitle": "Institutional research library",
+    "accessNote": "Download access will connect to membership gates later",
+    "marketReportsValue": "Market reports",
+    "marketReportsLabel": "Country and regional research",
+    "policyTrackersValue": "Policy trackers",
+    "policyTrackersLabel": "Regulation and incentive changes",
+    "dataPacksValue": "Data packs",
+    "dataPacksLabel": "Structured decision materials"
+  },
+  "error": {
+    "invalidLocale": "Unsupported language",
+    "validation": "Validation failed",
+    "unauthorized": "Sign in required",
+    "forbidden": "Insufficient access",
+    "notFound": "Resource not found",
+    "rateLimited": "Too many requests",
+    "internal": "Service temporarily unavailable"
+  }
+}
