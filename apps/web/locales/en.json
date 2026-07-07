@@ -35,15 +35,81 @@
   },
   "countries": {
     "title": "Country data explorer",
-    "lede": "Filter countries by region, industry, technology, and coverage level, then prioritize markets by potential, policy support, risk, and data readiness.",
-    "explorerTitle": "Market potential and coverage overview",
-    "selectedCountry": "Selected: Indonesia",
-    "marketPotentialValue": "0.78",
-    "marketPotentialLabel": "Market potential score",
-    "policySupportValue": "High",
-    "policySupportLabel": "Policy support index",
-    "coverageValue": "Complete",
-    "coverageLabel": "All ten modules available"
+    "lede": "Filter countries by region, industry, technology, and coverage level, then review published data coverage, module readiness, and latest updates.",
+    "dataPolicy": "Published country cards",
+    "filters": {
+      "title": "Data explorer",
+      "description": "Narrow the market universe by decision criteria.",
+      "all": "All",
+      "region": "Region",
+      "industry": "Industry",
+      "technology": "Technology",
+      "coverage": "Coverage",
+      "apply": "Apply filters",
+      "reset": "Reset"
+    },
+    "map": {
+      "label": "Country map explorer",
+      "title": "Energy data coverage layer",
+      "description": "A clean regional view of available market intelligence, module coverage, and update status.",
+      "imageAlt": "Global renewable energy data map",
+      "modeLabel": "Map data mode",
+      "coverageReadiness": "Coverage readiness",
+      "publishedModules": "Published modules",
+      "latestUpdate": "Latest update"
+    },
+    "results": {
+      "label": "Country results",
+      "title": "Country results",
+      "count": "{count, plural, one {# country} other {# countries}}"
+    },
+    "card": {
+      "updated": "Updated"
+    },
+    "signals": {
+      "emptyTitle": "No matching country",
+      "emptyDescription": "Adjust filters to see available markets.",
+      "coverageLevel": "Coverage level",
+      "completeModules": "Complete modules",
+      "activeModules": "Available modules",
+      "updatedAt": "Updated",
+      "moduleCount": "{count}/{total} modules",
+      "coverageValue": {
+        "BASIC": "Basic",
+        "STANDARD": "Standard",
+        "COMPLETE": "Complete"
+      }
+    }
+  },
+  "countryMeta": {
+    "region": {
+      "southeast-asia": "Southeast Asia",
+      "south-asia": "South Asia",
+      "middle-east": "Middle East",
+      "africa": "Africa",
+      "latin-america": "Latin America",
+      "europe": "Europe",
+      "central-asia": "Central Asia"
+    },
+    "industry": {
+      "solar": "Solar",
+      "wind": "Wind",
+      "storage": "Storage",
+      "ev": "EV",
+      "hydrogen": "Hydrogen",
+      "grid": "Grid",
+      "bess-mfg": "BESS manufacturing",
+      "epc": "EPC"
+    },
+    "tech": {
+      "pv-module": "PV module",
+      "inverter": "Inverter",
+      "onshore-wind": "Onshore wind",
+      "offshore-wind": "Offshore wind",
+      "lfp": "LFP battery",
+      "ncm": "NCM battery",
+      "electrolyzer": "Electrolyzer"
+    }
   },
   "coverage": {
     "dataBuilding": "Data Building",

@@ -1,5 +1,6 @@
 import type { Locale } from "@navigator/shared-types/schema";
 import { useTranslations } from "next-intl";
+import { Suspense } from "react";
 
 import { Link } from "../../i18n/navigation";
 import { LanguageSwitcher } from "./language-switcher";
@@ -13,6 +14,7 @@ interface AppShellProps {
 export function AppShell({ children, locale }: AppShellProps) {
   const nav = useTranslations("nav");
   const shell = useTranslations("shell");
+  const localeText = useTranslations("locale");
 
   return (
     <div className="app-shell">
@@ -31,7 +33,16 @@ export function AppShell({ children, locale }: AppShellProps) {
             </Link>
           ))}
         </nav>
-        <LanguageSwitcher locale={locale} />
+        <Suspense
+          fallback={
+            <div
+              aria-label={localeText("label")}
+              className="language-switcher"
+            />
+          }
+        >
+          <LanguageSwitcher locale={locale} />
+        </Suspense>
       </header>
       <main>{children}</main>
     </div>

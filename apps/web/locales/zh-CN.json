@@ -35,15 +35,81 @@
   },
   "countries": {
     "title": "国家数据浏览器",
-    "lede": "按地区、行业、技术与覆盖等级筛选国家，优先查看市场潜力、政策支持、风险和数据完备度。",
-    "explorerTitle": "市场潜力与覆盖概览",
-    "selectedCountry": "已选择：印度尼西亚",
-    "marketPotentialValue": "0.78",
-    "marketPotentialLabel": "市场潜力评分",
-    "policySupportValue": "高",
-    "policySupportLabel": "政策支持指数",
-    "coverageValue": "完整覆盖",
-    "coverageLabel": "十模块可用"
+    "lede": "按地区、行业、技术与覆盖等级筛选国家，优先查看已发布数据覆盖、模块完备度与最新更新时间。",
+    "dataPolicy": "已发布国家卡片",
+    "filters": {
+      "title": "数据浏览器",
+      "description": "按决策条件缩小目标市场范围。",
+      "all": "全部",
+      "region": "地区",
+      "industry": "行业",
+      "technology": "技术",
+      "coverage": "覆盖等级",
+      "apply": "应用筛选",
+      "reset": "重置"
+    },
+    "map": {
+      "label": "国家地图浏览器",
+      "title": "能源数据覆盖图层",
+      "description": "以简洁区域视图呈现可用市场情报、模块覆盖和数据更新状态。",
+      "imageAlt": "全球新能源数据地图",
+      "modeLabel": "地图数据模式",
+      "coverageReadiness": "覆盖就绪度",
+      "publishedModules": "已发布模块",
+      "latestUpdate": "最新更新"
+    },
+    "results": {
+      "label": "国家结果",
+      "title": "国家结果",
+      "count": "{count} 个国家"
+    },
+    "card": {
+      "updated": "更新"
+    },
+    "signals": {
+      "emptyTitle": "没有匹配国家",
+      "emptyDescription": "调整筛选条件以查看可用市场。",
+      "coverageLevel": "覆盖等级",
+      "completeModules": "完整模块",
+      "activeModules": "可用模块",
+      "updatedAt": "更新时间",
+      "moduleCount": "{count}/{total} 个模块",
+      "coverageValue": {
+        "BASIC": "基础覆盖",
+        "STANDARD": "标准覆盖",
+        "COMPLETE": "完整覆盖"
+      }
+    }
+  },
+  "countryMeta": {
+    "region": {
+      "southeast-asia": "东南亚",
+      "south-asia": "南亚",
+      "middle-east": "中东",
+      "africa": "非洲",
+      "latin-america": "拉丁美洲",
+      "europe": "欧洲",
+      "central-asia": "中亚"
+    },
+    "industry": {
+      "solar": "光伏",
+      "wind": "风电",
+      "storage": "储能",
+      "ev": "电动车",
+      "hydrogen": "氢能",
+      "grid": "电网",
+      "bess-mfg": "储能制造",
+      "epc": "EPC"
+    },
+    "tech": {
+      "pv-module": "光伏组件",
+      "inverter": "逆变器",
+      "onshore-wind": "陆上风电",
+      "offshore-wind": "海上风电",
+      "lfp": "磷酸铁锂电池",
+      "ncm": "三元电池",
+      "electrolyzer": "电解槽"
+    }
   },
   "coverage": {
     "dataBuilding": "数据建设中",

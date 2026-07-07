@@ -1,32 +1,41 @@
-import { useTranslations } from "next-intl";
+import type { Locale } from "@navigator/shared-types/schema";
 
-export default function CountriesPage() {
-  const t = useTranslations("countries");
+import { CountryExplorer } from "../../../features/countries/country-explorer";
+
+interface CountriesPageProps {
+  params: Promise<{ locale: Locale }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+function toUrlSearchParams(
+  searchParams: Record<string, string | string[] | undefined>,
+) {
+  const params = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(searchParams)) {
+    if (Array.isArray(value)) {
+      params.set(key, value.join(","));
+    } else if (value !== undefined) {
+      params.set(key, value);
+    }
+  }
+
+  return params;
+}
+
+export default async function CountriesPage({
+  params,
+  searchParams,
+}: CountriesPageProps) {
+  const [{ locale }, resolvedSearchParams] = await Promise.all([
+    params,
+    searchParams,
+  ]);
 
   return (
-    <section className="page-section">
-      <h1 className="page-title">{t("title")}</h1>
-      <p className="page-lede">{t("lede")}</p>
-      <div className="surface">
-        <div className="surface-header">
-          <h2 className="surface-title">{t("explorerTitle")}</h2>
-          <span>{t("selectedCountry")}</span>
-        </div>
-        <div className="signal-grid">
-          <div className="signal">
-            <strong>{t("marketPotentialValue")}</strong>
-            <span>{t("marketPotentialLabel")}</span>
-          </div>
-          <div className="signal">
-            <strong>{t("policySupportValue")}</strong>
-            <span>{t("policySupportLabel")}</span>
-          </div>
-          <div className="signal">
-            <strong>{t("coverageValue")}</strong>
-            <span>{t("coverageLabel")}</span>
-          </div>
-        </div>
-      </div>
-    </section>
+    <CountryExplorer
+      locale={locale}
+      searchParams={toUrlSearchParams(resolvedSearchParams)}
+    />
   );
 }

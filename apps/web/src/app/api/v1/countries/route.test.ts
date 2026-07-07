@@ -1,0 +1,98 @@
+import { describe, expect, test } from "vitest";
+
+import { GET } from "./route.js";
+
+describe("GET /api/v1/countries", () => {
+  test("returns localized country cards", async () => {
+    const response = await GET(
+      new Request("https://navigator.test/api/v1/countries?locale=en"),
+    );
+    const body = (await response.json()) as {
+      success: boolean;
+      data: Array<{ code: string; name: string; coverageLevel: string }>;
+    };
+
+    expect(response.status).toBe(200);
+    expect(body.success).toBe(true);
+    expect(body.data[0]).toEqual(
+      expect.objectContaining({
+        code: "ID",
+        coverageLevel: "COMPLETE",
+        name: "Indonesia",
+      }),
+    );
+    expect(body.data[0]).not.toHaveProperty("industryTags");
+    expect(body.data[0]).not.toHaveProperty("techTags");
+  });
+
+  test.each([
+    ["coverageLevel", "DEEP"],
+    ["locale", "fr"],
+    ["region", "antarctica"],
+    ["industryTags", "solar,bad-tag"],
+    ["techTags", "pv-module,bad-tech"],
+    ["textMode", "compact"],
+    ["page", "0"],
+    ["page", "abc"],
+    ["pageSize", "0"],
+    ["pageSize", "abc"],
+  ])("validates %s query values", async (key, value) => {
+    const response = await GET(
+      new Request(`https://navigator.test/api/v1/countries?${key}=${value}`),
+    );
+    const body = (await response.json()) as {
+      success: boolean;
+      error: { code: string; details: Record<string, string> };
+    };
+
+    expect(response.status).toBe(400);
+    expect(body.success).toBe(false);
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+    expect(body.error.details[key]).toBe(value);
+  });
+
+  test("uses Accept-Language when locale query is absent", async () => {
+    const response = await GET(
+      new Request("https://navigator.test/api/v1/countries", {
+        headers: { "accept-language": "en-US,en;q=0.9" },
+      }),
+    );
+    const body = (await response.json()) as {
+      data: Array<{ name: string }>;
+      meta: { locale: string };
+    };
+
+    expect(body.meta.locale).toBe("en");
+    expect(body.data[0]?.name).toBe("Indonesia");
+  });
+
+  test("returns raw LocalizedText fields when requested", async () => {
+    const response = await GET(
+      new Request(
+        "https://navigator.test/api/v1/countries?locale=en&textMode=raw",
+      ),
+    );
+    const body = (await response.json()) as {
+      data: Array<{ name: { zh: string; en: string }; _i18nFallback?: string[] }>;
+      meta: { textMode: string };
+    };
+
+    expect(body.meta.textMode).toBe("raw");
+    expect(body.data[0]?.name).toEqual({
+      zh: "印度尼西亚",
+      en: "Indonesia",
+    });
+    expect(body.data[0]?._i18nFallback).toBeUndefined();
+  });
+
+  test("caps pageSize at the documented maximum", async () => {
+    const response = await GET(
+      new Request("https://navigator.test/api/v1/countries?pageSize=999"),
+    );
+    const body = (await response.json()) as {
+      meta: { pageSize: number };
+    };
+
+    expect(body.meta.pageSize).toBe(100);
+  });
+});
