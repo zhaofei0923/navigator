@@ -1,0 +1,90 @@
+{
+  "common": {
+    "loading": "加载中",
+    "notTranslated": "未翻译",
+    "source": "来源",
+    "updatedAt": "更新时间"
+  },
+  "shell": {
+    "productName": "Navigator",
+    "tagline": "全球新能源市场情报"
+  },
+  "nav": {
+    "label": "主导航",
+    "home": "首页",
+    "countries": "国家",
+    "aiAdvisor": "AI咨询",
+    "reports": "报告"
+  },
+  "locale": {
+    "label": "语言",
+    "zhCN": "中文",
+    "en": "EN"
+  },
+  "home": {
+    "title": "全球情报，更好的能源决策。",
+    "lede": "面向中国新能源企业的国际市场、政策、风险与机会情报平台，帮助团队更快识别重点国家和进入路径。",
+    "explorerTitle": "全球能源市场浏览器",
+    "updated": "全球数据持续更新",
+    "countriesValue": "120+",
+    "countriesLabel": "国家与地区",
+    "modulesValue": "10",
+    "modulesLabel": "统一决策模块",
+    "sourcesValue": "500+",
+    "sourcesLabel": "机构与行业数据源"
+  },
+  "countries": {
+    "title": "国家数据浏览器",
+    "lede": "按地区、行业、技术与覆盖等级筛选国家，优先查看市场潜力、政策支持、风险和数据完备度。",
+    "explorerTitle": "市场潜力与覆盖概览",
+    "selectedCountry": "已选择：印度尼西亚",
+    "marketPotentialValue": "0.78",
+    "marketPotentialLabel": "市场潜力评分",
+    "policySupportValue": "高",
+    "policySupportLabel": "政策支持指数",
+    "coverageValue": "完整覆盖",
+    "coverageLabel": "十模块可用"
+  },
+  "coverage": {
+    "dataBuilding": "数据建设中",
+    "updating": "持续更新中",
+    "level": {
+      "BASIC": "基础覆盖",
+      "STANDARD": "标准覆盖",
+      "COMPLETE": "完整覆盖"
+    }
+  },
+  "ai": {
+    "title": "AI出海咨询",
+    "lede": "基于已发布、可用于 AI、且通过可信度校验的知识片段，为国家进入决策提供可追溯回答。",
+    "readinessTitle": "顾问可用性",
+    "noData": "暂无数据",
+    "buildingHint": "该国数据建设中，暂无法提供深度问答",
+    "answerLanguageValue": "同界面语言",
+    "answerLanguageLabel": "回答语言",
+    "sourcePolicyValue": "已发布来源",
+    "sourcePolicyLabel": "检索边界",
+    "emptyStateValue": "ai.noData"
+  },
+  "reports": {
+    "title": "报告与数据",
+    "lede": "汇集国家研究报告、政策追踪和数据包，作为市场评估和管理层汇报的证据层。",
+    "libraryTitle": "机构级研究库",
+    "accessNote": "下载权限后续接入会员门控",
+    "marketReportsValue": "市场报告",
+    "marketReportsLabel": "国家与区域研究",
+    "policyTrackersValue": "政策追踪",
+    "policyTrackersLabel": "法规与激励变化",
+    "dataPacksValue": "数据包",
+    "dataPacksLabel": "结构化决策材料"
+  },
+  "error": {
+    "invalidLocale": "不支持的语言",
+    "validation": "参数校验失败",
+    "unauthorized": "请先登录",
+    "forbidden": "权限不足",
+    "notFound": "资源不存在",
+    "rateLimited": "请求过于频繁",
+    "internal": "服务暂时不可用"
+  }
+}
