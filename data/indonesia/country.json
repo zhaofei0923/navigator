@@ -1,0 +1,24 @@
+{
+  "code": "ID",
+  "name": { "zh": "印度尼西亚", "en": "Indonesia" },
+  "region": "southeast-asia",
+  "coverageLevel": "COMPLETE",
+  "flagEmoji": "🇮🇩",
+  "summary": {
+    "zh": "东南亚最大经济体，具备电力需求增长、可再生能源转型和新能源制造投资机会。",
+    "en": "Southeast Asia's largest economy, with rising power demand, renewable transition needs, and clean-energy manufacturing opportunities."
+  },
+  "moduleCoverage": [
+    { "moduleKey": "market-overview", "status": "COMPLETE", "dataCount": 1, "updatedAt": "2026-01-15T00:00:00Z" },
+    { "moduleKey": "policy", "status": "COMPLETE", "dataCount": 5, "updatedAt": "2026-01-15T00:00:00Z" },
+    { "moduleKey": "risk", "status": "COMPLETE", "dataCount": 5, "updatedAt": "2026-01-15T00:00:00Z" },
+    { "moduleKey": "opportunities", "status": "COMPLETE", "dataCount": 5, "updatedAt": "2026-01-15T00:00:00Z" },
+    { "moduleKey": "projects", "status": "COMPLETE", "dataCount": 5, "updatedAt": "2026-01-15T00:00:00Z" },
+    { "moduleKey": "partners", "status": "COMPLETE", "dataCount": 5, "updatedAt": "2026-01-15T00:00:00Z" },
+    { "moduleKey": "chinese-companies", "status": "COMPLETE", "dataCount": 5, "updatedAt": "2026-01-15T00:00:00Z" },
+    { "moduleKey": "entry-strategy", "status": "COMPLETE", "dataCount": 1, "updatedAt": "2026-01-15T00:00:00Z" },
+    { "moduleKey": "ai-advisor", "status": "COMPLETE", "dataCount": 20, "updatedAt": "2026-01-15T00:00:00Z" },
+    { "moduleKey": "reports", "status": "COMPLETE", "dataCount": 5, "updatedAt": "2026-01-15T00:00:00Z" }
+  ],
+  "updatedAt": "2026-01-15T00:00:00Z"
+}
