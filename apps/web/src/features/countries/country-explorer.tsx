@@ -7,6 +7,7 @@ import type {
 } from "@navigator/shared-types/schema";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
+import React from "react";
 
 import { Link } from "../../i18n/navigation";
 import {
@@ -98,6 +99,7 @@ function CountryResultCard({
   locale: Locale;
 }) {
   const t = useTranslations("countries.card");
+  const signalValue = useTranslations("countries.signals.signalValue");
 
   return (
     <article className="country-result" aria-label={country.name}>
@@ -111,6 +113,10 @@ function CountryResultCard({
           <small>
             {t("updated")} {formatDate(country.updatedAt, locale)}
           </small>
+          <span className="country-card-signals">
+            {t("opportunity")} {signalValue(country.signals.opportunityLevel)} ·{" "}
+            {t("risk")} {signalValue(country.signals.riskLevel)}
+          </span>
         </span>
         <span className="country-score">
           <CoverageBadge level={country.coverageLevel} />
@@ -161,6 +167,33 @@ function ExplorerMap({ countries }: { countries: LocalizedCountryCard[] }) {
   );
 }
 
+function SignalLevelValue({
+  value,
+}: {
+  value: LocalizedCountryCard["signals"]["opportunityLevel"];
+}) {
+  const t = useTranslations("countries.signals.signalValue");
+  return <span>{t(value)}</span>;
+}
+
+function PriorityValue({
+  value,
+}: {
+  value: LocalizedCountryCard["signals"]["recommendedPriority"];
+}) {
+  const t = useTranslations("countries.signals.priorityValue");
+  return <span>{t(value)}</span>;
+}
+
+function RecommendedEntryModeValue({
+  value,
+}: {
+  value: LocalizedCountryCard["signals"]["recommendedEntryMode"];
+}) {
+  const t = useTranslations("countries.signals.signalValue");
+  return <span>{value ?? t("DATA_BUILDING")}</span>;
+}
+
 function KeySignals({
   locale,
   selected,
@@ -179,9 +212,6 @@ function KeySignals({
     );
   }
 
-  const completeModules = getCompleteModuleCount(selected);
-  const activeModules = getActiveModuleCount(selected);
-
   return (
     <aside className="country-side-panel">
       <div className="side-panel-heading">
@@ -195,30 +225,30 @@ function KeySignals({
       </div>
       <ul className="signal-list">
         <li>
-          <strong>{t("coverageLevel")}</strong>
-          <span>{t(`coverageValue.${selected.coverageLevel}`)}</span>
+          <strong>{t("opportunityLevel")}</strong>
+          <SignalLevelValue value={selected.signals.opportunityLevel} />
         </li>
         <li>
-          <strong>{t("completeModules")}</strong>
-          <span>
-            {t("moduleCount", {
-              count: completeModules,
-              total: selected.moduleCoverage.length,
-            })}
-          </span>
+          <strong>{t("riskLevel")}</strong>
+          <SignalLevelValue value={selected.signals.riskLevel} />
         </li>
         <li>
-          <strong>{t("activeModules")}</strong>
-          <span>
-            {t("moduleCount", {
-              count: activeModules,
-              total: selected.moduleCoverage.length,
-            })}
-          </span>
+          <strong>{t("policyFriendliness")}</strong>
+          <SignalLevelValue value={selected.signals.policyFriendliness} />
+        </li>
+        <li>
+          <strong>{t("recommendedPriority")}</strong>
+          <PriorityValue value={selected.signals.recommendedPriority} />
         </li>
         <li>
           <strong>{t("updatedAt")}</strong>
-          <span>{formatDate(selected.updatedAt, locale)}</span>
+          <span>{formatDate(selected.signals.updatedAt, locale)}</span>
+        </li>
+        <li>
+          <strong>{t("recommendedEntryMode")}</strong>
+          <RecommendedEntryModeValue
+            value={selected.signals.recommendedEntryMode}
+          />
         </li>
       </ul>
     </aside>

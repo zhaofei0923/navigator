@@ -1,5 +1,6 @@
 import {
   COVERAGE_LEVELS,
+  type Credibility,
   INDUSTRY_TAGS,
   MODULE_KEYS,
   REGIONS,
@@ -23,6 +24,7 @@ import {
   type CountryModuleDataSeed,
   type CountryModuleRecord,
   type CountrySeedBundle,
+  type TagSourceRecord,
 } from "./country-seed-registry";
 
 export type TextMode = "localized" | "raw";
@@ -31,6 +33,11 @@ const OBJECT_MODULE_KEYS = [
   "market-overview",
   "entry-strategy",
 ] as const satisfies readonly ModuleKey[];
+const PUBLIC_CREDIBILITIES = [
+  "OFFICIAL",
+  "VERIFIED",
+  "ESTIMATED",
+] as const satisfies readonly Credibility[];
 const MAX_MODULE_PAGE_SIZE = 100;
 
 export interface CountryModuleCoverageSummary {
@@ -38,6 +45,31 @@ export interface CountryModuleCoverageSummary {
   status: ModuleCoverageStatus;
   dataCount: number;
   updatedAt: string;
+}
+
+export type SignalLevel = "HIGH" | "MEDIUM" | "LOW" | "DATA_BUILDING";
+export type RecommendedPriority =
+  | "PRIORITY"
+  | "WATCH"
+  | "EXPLORE"
+  | "DATA_BUILDING";
+
+export interface CountrySignalsBase {
+  opportunityLevel: SignalLevel;
+  policyFriendliness: SignalLevel;
+  recommendedPriority: RecommendedPriority;
+  riskLevel: SignalLevel;
+  sourceCount: number;
+  sources: string[];
+  updatedAt: string;
+}
+
+export interface RawCountrySignals extends CountrySignalsBase {
+  recommendedEntryMode: LocalizedText | null;
+}
+
+export interface LocalizedCountrySignals extends CountrySignalsBase {
+  recommendedEntryMode: string | null;
 }
 
 export interface CountryCatalogItem {
@@ -48,6 +80,7 @@ export interface CountryCatalogItem {
   moduleCoverage: CountryModuleCoverageSummary[];
   name: LocalizedText;
   region: Region;
+  signals: RawCountrySignals;
   summary: LocalizedText;
   techTags: TechTag[];
   updatedAt: string;
@@ -60,14 +93,19 @@ export interface LocalizedCountryCard {
   moduleCoverage: CountryModuleCoverageSummary[];
   name: string;
   region: Region;
+  signals: LocalizedCountrySignals;
   summary: string;
   updatedAt: string;
   _i18nFallback: string[];
 }
 
 export interface RawCountryCard
-  extends Omit<LocalizedCountryCard, "name" | "summary" | "_i18nFallback"> {
+  extends Omit<
+    LocalizedCountryCard,
+    "name" | "signals" | "summary" | "_i18nFallback"
+  > {
   name: LocalizedText;
+  signals: RawCountrySignals;
   summary: LocalizedText;
 }
 
@@ -186,6 +224,26 @@ export type CountryModuleResponse =
   | LocalizedCountryModuleResponse
   | RawCountryModuleResponse;
 
+function isPublicCredibility(
+  value: unknown,
+): value is (typeof PUBLIC_CREDIBILITIES)[number] {
+  return (
+    typeof value === "string" &&
+    (PUBLIC_CREDIBILITIES as readonly string[]).includes(value)
+  );
+}
+
+function isPublicCountryRecord(
+  record: TagSourceRecord,
+  countryCode: string,
+): boolean {
+  return (
+    record.countryCode === countryCode &&
+    record.reviewStatus === "published" &&
+    isPublicCredibility(record.credibility)
+  );
+}
+
 function collectSeedTags<TTag extends string>(
   bundle: CountrySeedBundle,
   field: "industryTags" | "techTags",
@@ -194,10 +252,7 @@ function collectSeedTags<TTag extends string>(
   const tags = new Set<TTag>();
 
   for (const item of bundle.tagSources) {
-    if (
-      item.countryCode !== bundle.country.code ||
-      item.reviewStatus !== "published"
-    ) {
+    if (!isPublicCountryRecord(item, bundle.country.code)) {
       continue;
     }
 
@@ -210,6 +265,196 @@ function collectSeedTags<TTag extends string>(
   }
 
   return [...allowed].filter((tag) => tags.has(tag));
+}
+
+function getPublicModuleRecords(
+  bundle: CountrySeedBundle,
+  moduleKey: ModuleKey,
+): CountryModuleRecord[] {
+  return normalizeModuleData(bundle.moduleData[moduleKey]).filter((item) => {
+    if (!isPublicCountryRecord(item, bundle.country.code)) {
+      return false;
+    }
+
+    if (moduleKey !== "ai-advisor") {
+      return true;
+    }
+
+    return item.aiUsable === true;
+  });
+}
+
+function getStringField(record: CountryModuleRecord, field: string) {
+  const value = record[field];
+  return typeof value === "string" ? value : undefined;
+}
+
+function getLocalizedTextField(
+  record: CountryModuleRecord | undefined,
+  field: string,
+): LocalizedText | null {
+  const value = record?.[field];
+  return toLocalizedText(value) ?? null;
+}
+
+function newestIsoDate(records: CountryModuleRecord[], fallback: string) {
+  let newest = fallback;
+  let newestTime = Date.parse(fallback);
+
+  for (const record of records) {
+    const updatedAt = getStringField(record, "updatedAt");
+    if (updatedAt === undefined) {
+      continue;
+    }
+
+    const time = Date.parse(updatedAt);
+    if (!Number.isNaN(time) && time > newestTime) {
+      newest = updatedAt;
+      newestTime = time;
+    }
+  }
+
+  return newest;
+}
+
+function uniqueSources(records: CountryModuleRecord[]) {
+  return [
+    ...new Set(
+      records
+        .map((record) => getStringField(record, "source"))
+        .filter((source): source is string => source !== undefined),
+    ),
+  ];
+}
+
+function deriveOpportunityLevel(
+  opportunities: CountryModuleRecord[],
+  projects: CountryModuleRecord[],
+): SignalLevel {
+  const evidenceCount = opportunities.length + projects.length;
+
+  if (evidenceCount === 0) {
+    return "DATA_BUILDING";
+  }
+
+  if (opportunities.length >= 5 || evidenceCount >= 8) {
+    return "HIGH";
+  }
+
+  return "MEDIUM";
+}
+
+function deriveRiskLevel(risks: CountryModuleRecord[]): SignalLevel {
+  if (risks.length === 0) {
+    return "DATA_BUILDING";
+  }
+
+  const levels = risks.map((risk) => getStringField(risk, "level"));
+  if (levels.includes("HIGH")) {
+    return "HIGH";
+  }
+
+  if (levels.includes("MEDIUM")) {
+    return "MEDIUM";
+  }
+
+  return "LOW";
+}
+
+function derivePolicyFriendliness(policies: CountryModuleRecord[]): SignalLevel {
+  if (policies.length === 0) {
+    return "DATA_BUILDING";
+  }
+
+  const supportiveCount = policies.filter((policy) => {
+    const policyType = getStringField(policy, "policyType");
+    return policyType === "incentive" || policyType === "tax";
+  }).length;
+  const restrictiveCount = policies.filter((policy) => {
+    const policyType = getStringField(policy, "policyType");
+    return (
+      policyType === "import-export" ||
+      policyType === "localization" ||
+      policyType === "permit" ||
+      policyType === "tariff"
+    );
+  }).length;
+
+  if (supportiveCount >= 2 && restrictiveCount <= 1) {
+    return "HIGH";
+  }
+
+  if (supportiveCount >= 1 || policies.length >= 3) {
+    return "MEDIUM";
+  }
+
+  return "LOW";
+}
+
+function deriveRecommendedPriority(
+  coverageLevel: CoverageLevel,
+  opportunityLevel: SignalLevel,
+  riskLevel: SignalLevel,
+): RecommendedPriority {
+  if (riskLevel === "HIGH") {
+    return "EXPLORE";
+  }
+
+  if (opportunityLevel === "DATA_BUILDING" || riskLevel === "DATA_BUILDING") {
+    return "DATA_BUILDING";
+  }
+
+  if (
+    opportunityLevel === "HIGH" &&
+    (coverageLevel === "STANDARD" || coverageLevel === "COMPLETE")
+  ) {
+    return "PRIORITY";
+  }
+
+  if (opportunityLevel === "HIGH" || opportunityLevel === "MEDIUM") {
+    return "WATCH";
+  }
+
+  return "EXPLORE";
+}
+
+export function buildCountrySignals(
+  bundle: CountrySeedBundle,
+): RawCountrySignals {
+  const opportunities = getPublicModuleRecords(bundle, "opportunities");
+  const projects = getPublicModuleRecords(bundle, "projects");
+  const risks = getPublicModuleRecords(bundle, "risk");
+  const policies = getPublicModuleRecords(bundle, "policy");
+  const entryStrategies = getPublicModuleRecords(bundle, "entry-strategy");
+  const signalRecords = [
+    ...opportunities,
+    ...projects,
+    ...risks,
+    ...policies,
+    ...entryStrategies,
+  ];
+  const sources = uniqueSources(signalRecords);
+  const opportunityLevel = deriveOpportunityLevel(opportunities, projects);
+  const riskLevel = deriveRiskLevel(risks);
+  const policyFriendliness = derivePolicyFriendliness(policies);
+
+  return {
+    opportunityLevel,
+    policyFriendliness,
+    recommendedEntryMode: getLocalizedTextField(
+      entryStrategies[0],
+      "recommendedMode",
+    ),
+    recommendedPriority: deriveRecommendedPriority(
+      bundle.country.coverageLevel,
+      opportunityLevel,
+      riskLevel,
+    ),
+    riskLevel,
+    sourceCount: sources.length,
+    sources,
+    updatedAt: newestIsoDate(signalRecords, bundle.country.updatedAt),
+  };
 }
 
 function normalizeModuleCoverage(
@@ -242,6 +487,7 @@ function buildCountryCatalogItem(bundle: CountrySeedBundle): CountryCatalogItem 
     moduleCoverage: normalizeModuleCoverage(bundle),
     name: bundle.country.name,
     region: bundle.country.region,
+    signals: buildCountrySignals(bundle),
     summary: bundle.country.summary,
     techTags: collectSeedTags(bundle, "techTags", TECH_TAGS),
     updatedAt: bundle.country.updatedAt,
@@ -288,9 +534,16 @@ export function localizeCountryCard(
 ): LocalizedCountryCard {
   const name = pickLocale(country.name, locale);
   const summary = pickLocale(country.summary, locale);
+  const recommendedEntryMode =
+    country.signals.recommendedEntryMode === null
+      ? null
+      : pickLocale(country.signals.recommendedEntryMode, locale);
   const fallbackFields = [
     name.fallback ? "name" : undefined,
     summary.fallback ? "summary" : undefined,
+    recommendedEntryMode?.fallback
+      ? "signals.recommendedEntryMode"
+      : undefined,
   ].filter((field): field is string => field !== undefined);
 
   return {
@@ -300,6 +553,11 @@ export function localizeCountryCard(
     moduleCoverage: [...country.moduleCoverage],
     name: name.value,
     region: country.region,
+    signals: {
+      ...country.signals,
+      recommendedEntryMode: recommendedEntryMode?.value ?? null,
+      sources: [...country.signals.sources],
+    },
     summary: summary.value,
     updatedAt: country.updatedAt,
     _i18nFallback: fallbackFields,
@@ -314,6 +572,14 @@ export function rawCountryCard(country: CountryCatalogItem): RawCountryCard {
     moduleCoverage: [...country.moduleCoverage],
     name: country.name,
     region: country.region,
+    signals: {
+      ...country.signals,
+      recommendedEntryMode:
+        country.signals.recommendedEntryMode === null
+          ? null
+          : { ...country.signals.recommendedEntryMode },
+      sources: [...country.signals.sources],
+    },
     summary: country.summary,
     updatedAt: country.updatedAt,
   };
@@ -377,28 +643,6 @@ function normalizeModuleData(
   }
 
   return [moduleData];
-}
-
-function getPublishedModuleRecords(
-  bundle: CountrySeedBundle,
-  moduleKey: ModuleKey,
-): CountryModuleRecord[] {
-  return normalizeModuleData(bundle.moduleData[moduleKey]).filter(
-    (item) => {
-      if (
-        item.countryCode !== bundle.country.code ||
-        item.reviewStatus !== "published"
-      ) {
-        return false;
-      }
-
-      if (moduleKey !== "ai-advisor") {
-        return true;
-      }
-
-      return item.aiUsable === true && item.credibility !== "UNVERIFIED";
-    },
-  );
 }
 
 function normalizePositiveInteger(value: number | undefined, fallback: number) {
@@ -477,11 +721,12 @@ function localizeValue(
 function localizeModuleRecord(
   record: CountryModuleRecord,
   locale: Locale,
+  moduleKey: ModuleKey,
   path: string,
   fallbackFields: string[],
 ): ModuleResponseRecord {
   return localizeValue(
-    sanitizeModuleRecord(record),
+    sanitizeModuleRecord(record, moduleKey),
     locale,
     path,
     fallbackFields,
@@ -502,7 +747,7 @@ function sanitizeModuleRecord(
   void embeddingZh;
   void fileUrl;
 
-  if (moduleKey === "ai-advisor") {
+  if (moduleKey === "ai-advisor" && record.id !== "ai-advisor-readiness") {
     const { content, ...aiPublicRecord } = publicRecord;
     void content;
     return { ...aiPublicRecord };
@@ -684,7 +929,7 @@ export function buildCountryModuleResponse(
     );
   }
 
-  const publishedRecords = getPublishedModuleRecords(bundle, moduleKey);
+  const publishedRecords = getPublicModuleRecords(bundle, moduleKey);
   const responseRecords =
     moduleKey === "ai-advisor"
       ? buildAiAdvisorSummaryRecords(publishedRecords)
@@ -697,7 +942,7 @@ export function buildCountryModuleResponse(
     const localizedItem =
       record === undefined
         ? undefined
-        : localizeModuleRecord(record, locale, "item", fallbackFields);
+        : localizeModuleRecord(record, locale, moduleKey, "item", fallbackFields);
 
     if (textMode === "raw") {
       return {
@@ -760,7 +1005,13 @@ export function buildCountryModuleResponse(
     data: {
       _i18nFallback: fallbackFields,
       items: pageItems.map((item, index) =>
-        localizeModuleRecord(item, locale, `items[${index}]`, fallbackFields),
+        localizeModuleRecord(
+          item,
+          locale,
+          moduleKey,
+          `items[${index}]`,
+          fallbackFields,
+        ),
       ),
       moduleKey,
       status: coverage.status,
