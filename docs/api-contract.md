@@ -106,7 +106,7 @@
 **行为**：
 - 模块 `status = BUILDING` 时，返回 `{ status: "BUILDING", items: [] }`，**HTTP 200**（前端渲染占位，不视为错误）。
 - 列表型模块返回分页 `items`；对象型模块（`market-overview` / `entry-strategy`）返回单对象 `item`。
-- 仅返回 `reviewStatus = published` 的数据（除非 admin 端带权限，见 §7）。
+- 仅返回 `reviewStatus = published` 且 `credibility != UNVERIFIED` 的数据（除非 admin 端带权限，见 §7）。
 
 **返回示例（列表型，localized 模式）**：
 ```json
@@ -210,7 +210,7 @@
 - 受控资源接口：
   - `GET /api/v1/countries/:code/reports/:id/download` — 校验会员等级，未授权返回 `FORBIDDEN`，未登录返回 `UNAUTHORIZED`。
   - `POST /api/v1/export` — 服务端校验导出权限。
-- Admin 端接口（`/api/v1/admin/*`）需管理员鉴权，可返回 `draft` / `pending` 数据并支持 `textMode=raw`；普通 C 端接口只返回 `published`。
+- Admin 端接口（`/api/v1/admin/*`）需管理员鉴权，可返回 `draft` / `pending` / `UNVERIFIED` 数据并支持 `textMode=raw`；普通 C 端接口只返回 `published` 且 `credibility != UNVERIFIED` 的数据。
 
 ---
 

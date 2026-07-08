@@ -30,8 +30,8 @@ graph LR
 
 | 阶段 | 目标 | 主要依据文档 | 关口 |
 |------|------|--------------|------|
-| P0 地基 | 可运行的空骨架 + 共享类型 + CI | env-config、i18n、testing | — |
-| P1 数据层 | 数据模型落地 + 印尼样板 | data-schema、indonesia-seed | ⚠️ |
+| P0 地基 | 可运行骨架 + 共享枚举/双语工具 + 环境/CI/文档守卫 | env-config、i18n、testing、data-schema、product-brief | — |
+| P1 数据层 | 数据模型落地 + 数据治理校验 + 印尼样板 + 覆盖判定 | data-schema、coverage-levels、data-governance、indonesia-seed、country-rollout | ⚠️ |
 | P2 Web 展示 | 首页 / 国家 / AI 咨询 / 报告四板块 + i18n | product-brief、api-contract、coverage-levels、i18n | — |
 | P3 AI 顾问 | RAG 管道 + 问答接口（占位边界） | ai-advisor | ⚠️ |
 | P4 权限/会员/留资 | 门控 + 报告下载 + 留资 | auth-membership | ⚠️ |
@@ -49,45 +49,47 @@ graph LR
 
 #### P0-1 Monorepo 骨架
 - 目标：pnpm workspace + Turborepo，建 `apps/{web,admin,mini}`、`packages/{db,shared-types,ai-advisor}`、`data/` 空目录。
-- 验收：`pnpm install` 通过；`pnpm lint`、`pnpm typecheck`、`pnpm test`（空）可运行；TS strict 开启。
+- 验收：`pnpm install` 通过；根脚本含 `lint` / `typecheck` / `test` / `test:e2e`；TS strict 开启；`packageManager` 固定为 pnpm；目录结构与 AGENTS.md §4 一致。
 - 人工确认：否（技术栈已在 AGENTS.md 固定，不得替换）。
 
-#### P0-2 共享类型与双语工具
-- 目标：`packages/shared-types` 定义 `Locale`、`LocalizedText` 与 `pickLocale()`（[i18n.md §5](./i18n.md)）。
-- 验收：`pickLocale` 三种缺失分支单测通过（缺 zh / 缺 en / 全缺）。
+#### P0-2 共享类型、固定枚举与双语工具
+- 目标：`packages/shared-types` 定义 `Locale`、`LocalizedText`、`pickLocale()`（[i18n.md §5](./i18n.md)）以及 `data-schema.md` 固定枚举（模块、覆盖等级、模块状态、审核状态、可信度、标签、地区、访问等级）。
+- 验收：`pickLocale` 三种缺失分支单测通过（缺 zh / 缺 en / 全缺）；枚举 key 与 [data-schema.md §1/§5.10/§7](./data-schema.md) 完全一致；各端禁止重复定义国家/数据模型枚举。
 - 人工确认：否。
 
 #### P0-3 环境配置与校验
-- 目标：`.env.example` 按 [env-config.md §2](./env-config.md) 全量字段；启动校验 schema；`.gitignore` 含 `.env*`。
-- 验收：缺必需变量 fail-fast 且不泄露值；前端无服务端密钥前缀。
+- 目标：`.env.example` 按 [env-config.md §2](./env-config.md) 全量字段；共享环境校验函数；`.gitignore` 含 `.env*`。
+- 验收：缺必需变量 fail-fast 且不泄露值；前端公开变量不含服务端密钥；新增变量必须同时更新 `env-config.md`、`.env.example` 与校验测试。
 - 人工确认：否（引入需新密钥的三方依赖时才 ⚠️）。
 
 #### P0-4 CI 门槛
-- 目标：CI 跑 `pnpm lint && typecheck && test`；E2E 关键流程占位。
-- 验收：CI 绿；无测试的改动被拦。
+- 目标：CI 跑 `pnpm install --frozen-lockfile`、`pnpm lint`、`pnpm typecheck`、`pnpm test`；保留 `pnpm test:e2e` 门槛；加入基础文档范围 smoke test。
+- 验收：CI 绿；无测试的改动被拦；`AGENTS.md`、`product-brief.md`、`roadmap.md`、`testing.md`、`api-contract.md` 对 MVP 四板块与国家对比 Deferred 的描述不互相冲突。
 - 人工确认：否。
 
 ### P1 — 数据层 ⚠️
 
+> P1-1 至 P1-3 是 P2 Web 展示的技术前置；P1-4 是国家扩展计划与人工确认清单，不落库，不阻塞 P2。
+
 #### P1-1 Prisma schema（数据模型落地）⚠️
-- 目标：按 [data-schema.md](./data-schema.md) 建 `packages/db` schema：`Country`、10 模块、`KnowledgeChunk`（pgvector）、`Lead`，枚举与元字段齐全。
-- 验收：schema 与 data-schema 完全一致；迁移可执行；`shared-types` 从 db 派生一致。
+- 目标：按 [data-schema.md](./data-schema.md) 建 `packages/db` schema：`Country`、`ModuleCoverage`、10 模块、`KnowledgeChunk`（pgvector）、`Lead`，枚举与元字段齐全。
+- 验收：schema 与 data-schema 完全一致；迁移可执行；`shared-types` 与 schema 枚举一致；报告 `accessLevel`、`Lead.contact` 按 data-schema §6 加密存储、知识片段双语向量字段齐全；不得新增评分/国家计划持久化字段，若需新增字段必须先改 `data-schema.md`。
 - 人工确认：**是（修改统一数据模型，AGENTS.md §11）** —— PR 标注。
 
-#### P1-2 印尼样板 seed
-- 目标：`data/indonesia/` 按 [indonesia-seed.md](./indonesia-seed.md) 填充至 COMPLETE + seed 导入脚本。
-- 验收：seed 校验通过（双语齐全、元字段齐全、枚举合法、`countryCode=ID`）；含反例数据验证 AI 过滤；印尼判定为 COMPLETE。
+#### P1-2 印尼样板 seed 与数据治理校验
+- 目标：`data/indonesia/` 按 [indonesia-seed.md](./indonesia-seed.md) 填充至 COMPLETE；实现 seed 导入与 [data-governance.md](./data-governance.md) 数据质量校验。
+- 验收：seed 校验通过（双语齐全、元字段齐全、来源/可信度合法、枚举合法、`countryCode=ID`）；缺元字段不得入库；`draft` / `pending` / `UNVERIFIED` 反例不进入 C 端展示、覆盖判定或 AI 检索；报告 `accessLevel` 合法；印尼判定为 COMPLETE。
 - 人工确认：否（不改结构；改结构须回 P1-1）。
 
 #### P1-3 覆盖等级判定逻辑
-- 目标：实现 [coverage-levels.md §3](./coverage-levels.md) 的模块级 + 国家级判定。
-- 验收：阈值边界单测覆盖；印尼样板判定为 COMPLETE。
+- 目标：实现 [coverage-levels.md §3](./coverage-levels.md) 的模块级 + 国家级判定，计数口径按 C 端可展示数据（`published` 且 `credibility != UNVERIFIED`）。
+- 验收：阈值边界单测覆盖；`draft` / `pending` / `UNVERIFIED` 不计入覆盖判定计数；对象型模块按核心字段填充率判定；`ai-advisor` 按可用知识片段判定；印尼样板判定为 COMPLETE。
 - 人工确认：否。
 
-#### P1-4 首批国家建设计划
-- 目标：按 [country-rollout.md](./country-rollout.md) 整理国家建设计划与覆盖升级节奏，不落库。
-- 验收：首批 Complete / Standard / Basic 候选清晰；人工确认项标注完整。
-- 人工确认：否（仅文档候选；最终 30–50 国家清单与升级结论须人工确认）。
+#### P1-4 首批国家建设计划与复制模板
+- 目标：按 [country-rollout.md](./country-rollout.md) 与 [indonesia-seed.md §5](./indonesia-seed.md) 整理国家建设计划、覆盖升级节奏与从印尼复制到新国家的 seed 模板规则，不落库。
+- 验收：Complete / Standard / Basic 候选与人工确认项清晰；不得把国家优先级、覆盖升级结论、评分结果写入持久化字段；后续新增国家 seed 必须独立任务卡、独立验收。
+- 人工确认：否（仅文档候选；最终 30–50 国家清单、优先级与升级结论须人工确认）。
 
 ### P2 — Web 展示
 
