@@ -64,6 +64,8 @@
       "count": "{count} 个国家"
     },
     "card": {
+      "opportunity": "机会",
+      "risk": "风险",
       "updated": "更新"
     },
     "signals": {
@@ -72,8 +74,25 @@
       "coverageLevel": "覆盖等级",
       "completeModules": "完整模块",
       "activeModules": "可用模块",
+      "opportunityLevel": "机会强度",
+      "riskLevel": "风险强度",
+      "policyFriendliness": "政策友好度",
+      "recommendedPriority": "推荐优先级",
+      "recommendedEntryMode": "推荐进入模式",
       "updatedAt": "更新时间",
       "moduleCount": "{count}/{total} 个模块",
+      "signalValue": {
+        "HIGH": "高",
+        "MEDIUM": "中",
+        "LOW": "低",
+        "DATA_BUILDING": "数据建设中"
+      },
+      "priorityValue": {
+        "PRIORITY": "优先",
+        "WATCH": "观察",
+        "EXPLORE": "探索",
+        "DATA_BUILDING": "数据建设中"
+      },
       "coverageValue": {
         "BASIC": "基础覆盖",
         "STANDARD": "标准覆盖",

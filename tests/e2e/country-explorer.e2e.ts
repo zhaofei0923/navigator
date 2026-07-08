@@ -28,6 +28,15 @@ test("country explorer filters coverage and keeps coverage badges visible", asyn
   await expect(page.getByRole("article", { name: /Indonesia/ })).toContainText(
     "Complete",
   );
+  await expect(page.getByRole("article", { name: /Indonesia/ })).toContainText(
+    "Opportunity High",
+  );
+  await expect(page.getByRole("article", { name: /Indonesia/ })).toContainText(
+    "Risk High",
+  );
+  const signalsPanel = page.locator(".country-side-panel");
+  await expect(signalsPanel.getByText("Recommended priority")).toBeVisible();
+  await expect(signalsPanel.getByText("Explore", { exact: true })).toBeVisible();
   await expect(
     page.getByRole("img", { name: "Global renewable energy data map" }),
   ).toBeVisible();

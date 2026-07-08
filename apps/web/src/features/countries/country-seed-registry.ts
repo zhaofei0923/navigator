@@ -38,6 +38,8 @@ export interface CountrySeedRecord {
 
 export interface TagSourceRecord {
   countryCode?: string;
+  credibility?: string;
+  aiUsable?: boolean;
   industryTags?: readonly string[];
   reviewStatus?: string;
   techTags?: readonly string[];

@@ -9,7 +9,17 @@ describe("GET /api/v1/countries", () => {
     );
     const body = (await response.json()) as {
       success: boolean;
-      data: Array<{ code: string; name: string; coverageLevel: string }>;
+      data: Array<{
+        code: string;
+        coverageLevel: string;
+        name: string;
+        signals?: {
+          opportunityLevel: string;
+          policyFriendliness: string;
+          recommendedPriority: string;
+          riskLevel: string;
+        };
+      }>;
     };
 
     expect(response.status).toBe(200);
@@ -19,6 +29,12 @@ describe("GET /api/v1/countries", () => {
         code: "ID",
         coverageLevel: "COMPLETE",
         name: "Indonesia",
+        signals: expect.objectContaining({
+          opportunityLevel: "HIGH",
+          policyFriendliness: "MEDIUM",
+          recommendedPriority: "EXPLORE",
+          riskLevel: "HIGH",
+        }),
       }),
     );
     expect(body.data[0]).not.toHaveProperty("industryTags");

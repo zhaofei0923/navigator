@@ -64,6 +64,8 @@
       "count": "{count, plural, one {# country} other {# countries}}"
     },
     "card": {
+      "opportunity": "Opportunity",
+      "risk": "Risk",
       "updated": "Updated"
     },
     "signals": {
@@ -72,8 +74,25 @@
       "coverageLevel": "Coverage level",
       "completeModules": "Complete modules",
       "activeModules": "Available modules",
+      "opportunityLevel": "Opportunity",
+      "riskLevel": "Risk",
+      "policyFriendliness": "Policy friendliness",
+      "recommendedPriority": "Recommended priority",
+      "recommendedEntryMode": "Recommended entry mode",
       "updatedAt": "Updated",
       "moduleCount": "{count}/{total} modules",
+      "signalValue": {
+        "HIGH": "High",
+        "MEDIUM": "Medium",
+        "LOW": "Low",
+        "DATA_BUILDING": "Data Building"
+      },
+      "priorityValue": {
+        "PRIORITY": "Priority",
+        "WATCH": "Watch",
+        "EXPLORE": "Explore",
+        "DATA_BUILDING": "Data Building"
+      },
       "coverageValue": {
         "BASIC": "Basic",
         "STANDARD": "Standard",

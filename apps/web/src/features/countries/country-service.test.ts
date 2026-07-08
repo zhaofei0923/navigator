@@ -7,10 +7,73 @@ import {
   buildCountryDetailResponse,
   buildCountryModuleResponse,
   buildCountriesResponse,
+  buildCountrySignals,
   filterCountryCatalog,
   getFilterOptions,
   localizeCountryCard,
 } from "./country-service.js";
+import type {
+  CountryModuleDataRegistry,
+  CountryModuleDataSeed,
+  CountryModuleRecord,
+  CountrySeedBundle,
+} from "./country-seed-registry.js";
+
+function emptyModuleData(): CountryModuleDataRegistry {
+  return Object.fromEntries(
+    MODULE_KEYS.map((moduleKey) => [moduleKey, null]),
+  ) as CountryModuleDataRegistry;
+}
+
+function syntheticBundle(
+  moduleData: Partial<Record<(typeof MODULE_KEYS)[number], CountryModuleDataSeed>>,
+): CountrySeedBundle {
+  return {
+    country: {
+      code: "ZZ",
+      coverageLevel: "COMPLETE",
+      flagEmoji: "",
+      moduleCoverage: [],
+      name: { en: "Testland", zh: "测试国家" },
+      region: "southeast-asia",
+      summary: { en: "Synthetic country", zh: "合成国家" },
+      updatedAt: "2026-01-15T00:00:00Z",
+    },
+    moduleData: {
+      ...emptyModuleData(),
+      ...moduleData,
+    },
+    tagSources: [],
+  };
+}
+
+function publicRecord(
+  id: string,
+  extra: CountryModuleRecord = {},
+): CountryModuleRecord {
+  return {
+    aiUsable: true,
+    collectedAt: "2026-01-10T00:00:00Z",
+    countryCode: "ZZ",
+    credibility: "ESTIMATED",
+    id,
+    reviewStatus: "published",
+    source: "Synthetic public source",
+    updatedAt: "2026-01-15T00:00:00Z",
+    ...extra,
+  };
+}
+
+function publicRecordWithoutCredibility(
+  id: string,
+  extra: CountryModuleRecord = {},
+): CountryModuleRecord {
+  const { credibility, ...record } = publicRecord(id, extra);
+
+  void credibility;
+
+  return record;
+}
 
 describe("country explorer service", () => {
   test("uses the approved Indonesia seed as the current country catalog", () => {
@@ -73,6 +136,21 @@ describe("country explorer service", () => {
     expect(response.data.map((country) => country.name)).toEqual(["Indonesia"]);
     expect(response.data[0]).not.toHaveProperty("industryTags");
     expect(response.data[0]).not.toHaveProperty("techTags");
+    expect(response.data[0]?.signals).toMatchObject({
+      opportunityLevel: "HIGH",
+      policyFriendliness: "MEDIUM",
+      recommendedEntryMode:
+        "Start with local channel partners plus project-based EPC co-development, then assess asset-light assembly or a joint venture after traction matures.",
+      recommendedPriority: "EXPLORE",
+      riskLevel: "HIGH",
+      sourceCount: expect.any(Number),
+      updatedAt: "2026-01-15T00:00:00Z",
+    });
+    expect(response.data[0]?.signals.sources).toEqual(
+      expect.arrayContaining([
+        "P1-2 manually curated Indonesia seed baseline; sourceUrl null because this is an internal sample fixture for schema and coverage validation",
+      ]),
+    );
   });
 
   test("records fallback fields when country business text is untranslated", () => {
@@ -85,6 +163,16 @@ describe("country explorer service", () => {
         moduleCoverage: [],
         name: { en: "", zh: "测试国家" },
         region: "southeast-asia",
+        signals: {
+          opportunityLevel: "DATA_BUILDING",
+          policyFriendliness: "DATA_BUILDING",
+          recommendedEntryMode: { en: "", zh: "测试进入模式" },
+          recommendedPriority: "DATA_BUILDING",
+          riskLevel: "DATA_BUILDING",
+          sourceCount: 0,
+          sources: [],
+          updatedAt: "2026-01-15T00:00:00Z",
+        },
         summary: { en: "", zh: "测试摘要" },
         techTags: [],
         updatedAt: "2026-01-15T00:00:00Z",
@@ -94,9 +182,82 @@ describe("country explorer service", () => {
 
     expect(country).toMatchObject({
       name: "测试国家",
+      signals: {
+        recommendedEntryMode: "测试进入模式",
+      },
       summary: "测试摘要",
-      _i18nFallback: ["name", "summary"],
+      _i18nFallback: ["name", "summary", "signals.recommendedEntryMode"],
     });
+  });
+
+  test("keeps high-risk countries as explore priority even with strong opportunity evidence", () => {
+    const signals = buildCountrySignals(
+      syntheticBundle({
+        opportunities: Array.from({ length: 5 }, (_, index) =>
+          publicRecord(`opp-${index + 1}`),
+        ),
+        risk: [publicRecord("risk-high", { level: "HIGH" })],
+      }),
+    );
+
+    expect(signals).toMatchObject({
+      opportunityLevel: "HIGH",
+      recommendedPriority: "EXPLORE",
+      riskLevel: "HIGH",
+    });
+  });
+
+  test("returns data-building signals and null entry mode when evidence is absent", () => {
+    const signals = buildCountrySignals(syntheticBundle({}));
+
+    expect(signals).toEqual({
+      opportunityLevel: "DATA_BUILDING",
+      policyFriendliness: "DATA_BUILDING",
+      recommendedEntryMode: null,
+      recommendedPriority: "DATA_BUILDING",
+      riskLevel: "DATA_BUILDING",
+      sourceCount: 0,
+      sources: [],
+      updatedAt: "2026-01-15T00:00:00Z",
+    });
+  });
+
+  test("excludes published UNVERIFIED and missing-credibility ordinary records from signals", () => {
+    const signals = buildCountrySignals(
+      syntheticBundle({
+        opportunities: [
+          publicRecord("opp-public", { source: "public opportunity" }),
+          publicRecord("opp-unverified", {
+            credibility: "UNVERIFIED",
+            source: "unverified opportunity",
+          }),
+          publicRecordWithoutCredibility("opp-missing-credibility", {
+            source: "missing credibility opportunity",
+          }),
+        ],
+        policy: [
+          publicRecord("policy-public", {
+            policyType: "incentive",
+            source: "public policy",
+          }),
+          publicRecord("policy-unverified", {
+            credibility: "UNVERIFIED",
+            policyType: "tax",
+            source: "unverified policy",
+          }),
+          publicRecordWithoutCredibility("policy-missing-credibility", {
+            policyType: "permit",
+            source: "missing credibility policy",
+          }),
+        ],
+      }),
+    );
+
+    expect(signals.sources).toEqual(["public opportunity", "public policy"]);
+    expect(signals.sources).not.toContain("unverified opportunity");
+    expect(signals.sources).not.toContain("missing credibility opportunity");
+    expect(signals.sources).not.toContain("unverified policy");
+    expect(signals.sources).not.toContain("missing credibility policy");
   });
 
   test("builds raw API response with LocalizedText business fields", () => {
@@ -110,6 +271,12 @@ describe("country explorer service", () => {
     expect(response.meta.textMode).toBe("raw");
     expect(response.data[0]).toMatchObject({
       name: { zh: "印度尼西亚", en: "Indonesia" },
+      signals: {
+        recommendedEntryMode: {
+          en: "Start with local channel partners plus project-based EPC co-development, then assess asset-light assembly or a joint venture after traction matures.",
+          zh: "推荐以本地渠道伙伴 + 项目型 EPC 联合开发起步，成熟后再评估轻资产组装或合资。",
+        },
+      },
       summary: {
         zh: expect.any(String),
         en: expect.any(String),
@@ -152,7 +319,7 @@ describe("country explorer service", () => {
     expect(buildCountryDetailResponse("ZZ", { locale: "en" })).toBeNull();
   });
 
-  test("builds localized list module payload from published items only", () => {
+  test("builds localized list module payload from public verified items only", () => {
     const response = buildCountryModuleResponse("ID", "policy", {
       locale: "en",
     });
