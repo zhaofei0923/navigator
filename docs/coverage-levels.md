@@ -35,17 +35,17 @@
 | 状态 | 含义 | 前端展示 |
 |------|------|----------|
 | `BUILDING` | 建设中，暂无有效数据 | 显示占位卡片 "Data Building / 数据建设中" |
-| `PARTIAL` | 部分覆盖，有少量已发布数据 | 正常渲染 + 「持续更新中」标记 |
+| `PARTIAL` | 部分覆盖，有少量 C 端可展示数据 | 正常渲染 + 「持续更新中」标记 |
 | `COMPLETE` | 完整覆盖 | 正常渲染 |
 
-**判定基准**：某模块状态由「已发布（`reviewStatus = published`）且非草稿的数据条数 `dataCount`」决定，具体阈值见 §3。
+**判定基准**：某模块状态由「C 端可展示数据条数」决定。C 端可展示数据必须满足 `reviewStatus = published` 且 `credibility != UNVERIFIED`；`draft` / `pending` / `UNVERIFIED` 不计入覆盖判定，具体阈值见 §3。
 
 ---
 
 ## 3. 等级判定规则
 
 ### 3.1 模块级判定（每个模块的 `status`）
-以模块内**已发布数据条数**为准（`market-overview`、`entry-strategy` 为单条对象型，以字段填充率计）：
+以模块内**C 端可展示数据条数**为准（`market-overview`、`entry-strategy` 为单条对象型，以字段填充率计）：
 
 | 模块类型 | BUILDING | PARTIAL | COMPLETE |
 |----------|----------|---------|----------|
@@ -104,6 +104,7 @@
 
 - [ ] 覆盖等级仅使用 `BASIC` / `STANDARD` / `COMPLETE`
 - [ ] 模块状态仅使用 `BUILDING` / `PARTIAL` / `COMPLETE`
+- [ ] `draft` / `pending` / `UNVERIFIED` 不计入覆盖判定
 - [ ] 等级判定逻辑与本文件阈值一致且有单元测试
 - [ ] 前端对 `BUILDING` 模块显示占位，不报错/白屏
 - [ ] 占位/徽章/更新标记文案走 i18n，中英对齐

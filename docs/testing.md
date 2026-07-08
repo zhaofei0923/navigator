@@ -17,6 +17,7 @@
 ## 1. 必须有单元测试的对象（AGENTS.md §8）
 
 - **数据模型 / 校验逻辑**：字段校验、枚举约束、`LocalizedText` 结构校验。
+- **数据治理校验**：元字段齐全、来源/可信度合法、`draft` / `pending` / `UNVERIFIED` 不进入 C 端展示或覆盖判定。
 - **覆盖等级判定**：模块级与国家级判定阈值（[coverage-levels.md §3](./coverage-levels.md)）。
 - **i18n 降级**：`pickLocale` 三种缺失分支（[i18n.md §5](./i18n.md)）。
 - **RAG 检索边界**：`aiUsable` 过滤硬约束（[data-schema.md §3.1](./data-schema.md)、AGENTS.md §9）。
