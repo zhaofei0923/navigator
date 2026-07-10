@@ -232,12 +232,12 @@ function captureResult(
   contentSha256: string,
   reused: boolean,
 ): BasicRawCaptureResult {
-  return Object.freeze({
+  return {
     sourceId, contentSha256, byteLength: body.byteLength, reused, body,
     finalUrl: response.finalUrl, contentType: response.contentType,
     retrievedAt: response.retrievedAt,
     redirectChain: Object.freeze(Array.from(response.redirectChain)),
-  });
+  };
 }
 
 function resultFromCache({ manifest, body }: VerifiedCapture): BasicRawCaptureResult {

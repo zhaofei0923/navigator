@@ -255,6 +255,40 @@ describe("Hermes JSON evidence promotion", () => {
     expect(Object.isFrozen(result.data.extractedFacts.facts[1]!.evidence)).toBe(true);
   });
 
+  test("serializes equivalent nested evidence deterministically across caller key and observation order", () => {
+    const canonical = { alpha: { a: 1, z: 2 }, items: [{ a: 3, z: 4 }], omega: 5 };
+    const permuted = { omega: 5, items: [{ z: 4, a: 3 }], alpha: { z: 2, a: 1 } };
+    const captured = body(canonical);
+    const promote = (observations: readonly Record<string, unknown>[]) =>
+      promoteBasicHermesJsonEvidence(input({ openedSources: [opened({
+        capture: capture({ body: captured, byteLength: captured.byteLength, contentSha256: sha256(captured) }),
+        observations,
+      })] }));
+    const first = promote([
+      observation({ rawValue: canonical, normalizedValue: permuted }),
+      observation({ rawValue: permuted, normalizedValue: canonical }),
+    ]);
+    const second = promote([
+      observation({ rawValue: permuted, normalizedValue: canonical }),
+      observation({ rawValue: canonical, normalizedValue: permuted }),
+    ]);
+
+    expect(first).toMatchObject({ ok: true });
+    expect(second).toMatchObject({ ok: true });
+    expect(JSON.stringify(first)).toBe(JSON.stringify(second));
+    if (!first.ok) return;
+    const evidence = first.data.extractedFacts.facts.find(
+      (fact) => fact.fieldPath === "marketOverview.population",
+    )?.evidence[0];
+    const raw = evidence?.rawValue as { alpha: object; items: object[] };
+    const normalized = evidence?.normalizedValue as { alpha: object; items: object[] };
+    expect(Object.keys(raw)).toEqual(["alpha", "items", "omega"]);
+    expect(Object.keys(raw.alpha)).toEqual(["a", "z"]);
+    expect(Object.keys(raw.items[0]!)).toEqual(["a", "z"]);
+    expect(Object.keys(normalized)).toEqual(["alpha", "items", "omega"]);
+    expect(Object.keys(normalized.alpha)).toEqual(["a", "z"]);
+  });
+
   test("preserves a verified A-to-B-to-A raw redirect chain but refuses its promotion", async () => {
     const repoRoot = mkdtempSync(join(tmpdir(), "basic-hermes-redirect-"));
     const redirectUrl = "https://redirect.example/data?format=json";
@@ -357,6 +391,7 @@ describe("Hermes JSON evidence promotion", () => {
     ["untrusted base fact status", (_source: Record<string, unknown>, fact: Record<string, unknown>) => { fact.status = "untrusted"; }],
     ["wrong P1-6B fact ID", (_source: Record<string, unknown>, fact: Record<string, unknown>) => { fact.factId = "fact-not-a-field-hash"; }],
     ["whitespace base fact path", (_source: Record<string, unknown>, fact: Record<string, unknown>) => { fact.fieldPath = " country.code "; }],
+    ["outer-whitespace uncertainty", (_source: Record<string, unknown>, fact: Record<string, unknown>) => { fact.uncertainty = " reported "; }],
   ] as const)("rejects a base result with %s", (_label, mutate) => {
     expect(expectFailure(baseOnly(mutate)).code).toBe("EVIDENCE_INVALID");
   });
@@ -398,7 +433,7 @@ describe("Hermes JSON evidence promotion", () => {
     expect(expectFailure(create()).code).toMatch(/SOURCE_CAPTURE_INVALID|EVIDENCE_INVALID/);
   });
 
-  test("preserves nonblank human-readable policy strings and uncertainty exactly", () => {
+  test("preserves human-readable policy strings and trims Hermes uncertainty", () => {
     const result = promoteBasicHermesJsonEvidence(input({
       openedSources: [opened({
         policy: policy({ sourceName: " Reviewed portal ", accessNotes: " Reviewed access note " }),
@@ -412,7 +447,7 @@ describe("Hermes JSON evidence promotion", () => {
       sourceName: " Reviewed portal ",
       accessNotes: " Reviewed access note ",
     });
-    expect(result.data.extractedFacts.facts[1]?.uncertainty).toBe(" reported ");
+    expect(result.data.extractedFacts.facts[1]?.uncertainty).toBe("reported");
   });
 
   test("drops discovery text, raw bodies, cache paths, policies, and AI or canonical fields", () => {

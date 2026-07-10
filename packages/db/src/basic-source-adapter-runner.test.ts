@@ -164,7 +164,7 @@ describe("Basic deterministic source adapter runner", () => {
             },
           ],
           extractionMethod: "deterministic",
-          uncertainty: " estimated  | estimated | range",
+          uncertainty: "estimated | range",
         },
       ],
     });
@@ -197,7 +197,7 @@ describe("Basic deterministic source adapter runner", () => {
     expect(materializedRaw).toEqual({ nested: [{ value: "original" }], rank: 2 });
   });
 
-  test("preserves nonblank human-readable source metadata and uncertainty exactly", async () => {
+  test("preserves source metadata exactly and trims uncertainty", async () => {
     const source = {
       ...adapter("source-preserved", [observation({ uncertainty: " reported " })]),
       sourceName: " Reviewed source ",
@@ -221,7 +221,7 @@ describe("Basic deterministic source adapter runner", () => {
       sourceName: " Reviewed source ",
       accessNotes: " Reviewed access note ",
     });
-    expect(result.extractedFacts.facts[0]?.uncertainty).toBe(" reported ");
+    expect(result.extractedFacts.facts[0]?.uncertainty).toBe("reported");
   });
 
   test("treats canonical objects with sorted keys and ordered arrays as one tuple", async () => {

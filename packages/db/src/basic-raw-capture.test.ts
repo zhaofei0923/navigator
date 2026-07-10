@@ -102,6 +102,9 @@ describe("Basic immutable raw capture", () => {
       "https://api.worldbank.org/v2/country/VN/redirect?format=json",
       originalUrl,
     ]);
+    const mutatedUrl = "https://api.worldbank.org/mutated?format=json";
+    expect(() => { first.finalUrl = mutatedUrl; }).not.toThrow();
+    expect(first.finalUrl).toBe(mutatedUrl);
 
     const cached = await captureBasicRawSource(input(repoRoot), {
       async execute() {
@@ -109,7 +112,7 @@ describe("Basic immutable raw capture", () => {
       },
     });
 
-    expect(cached).toMatchObject({ reused: true, redirectChain: first.redirectChain });
+    expect(cached).toMatchObject({ reused: true, finalUrl: originalUrl, redirectChain: first.redirectChain });
     expect(cached.redirectChain).not.toBe(first.redirectChain);
     expect(Object.isFrozen(cached.redirectChain)).toBe(true);
   });
