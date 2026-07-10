@@ -11,6 +11,10 @@ import {
 } from "./basic-collection-contracts.js";
 import { materializeBasicHermesFacts, type BasicHermesSourcedObservation } from "./basic-hermes-evidence-materializer.js";
 import {
+  canonicalBasicHermesDiscoveryUrl,
+  snapshotBasicHermesDiscoveryCandidate,
+} from "./basic-hermes-discovery.js";
+import {
   BASIC_HERMES_DISCOVERY_SCHEMA_VERSION,
   type BasicBridgeResult,
   type BasicHermesSourcePolicy,
@@ -26,7 +30,6 @@ const FACT = ["factId", "fieldPath", "status", "evidence", "extractionMethod", "
 const EVIDENCE = ["sourceId", "locator", "rawValue", "normalizedValue", "unit", "year"] as const;
 const RECEIPT = ["sourceId", "contentSha256", "byteLength", "reused"] as const;
 const DISCOVERY = ["schemaVersion", "runId", "countryCode", "candidates"] as const;
-const CANDIDATE = ["discoveryId", "provider", "query", "title", "snippet", "url", "discoveredAt", "discoveryOnly"] as const;
 const OPENED = ["discoveryId", "policy", "capture", "observations"] as const;
 const POLICY = ["sourceId", "sourceName", "sourceUrl", "sourceFamily", "credibility", "accessStatus", "accessNotes", "publishedAt", "promptInjectionRisk", "approvedOrigins", "allowedQueryParameters"] as const;
 const CAPTURE = ["sourceId", "contentSha256", "byteLength", "reused", "body", "finalUrl", "contentType", "retrievedAt"] as const;
@@ -64,18 +67,19 @@ function promote(input: { base: BasicSourceAdapterRunResult; candidates: Map<str
   const facts = [...input.base.extractedFacts.facts];
   const receipts = [...input.base.receipts];
   const sourceIds = new Set(sources.map((source) => source.sourceId));
+  const discoveryIds = new Set<string>();
   const paths = new Set(facts.map((fact) => fact.fieldPath));
   const observations: BasicHermesSourcedObservation[] = [];
   for (const value of input.opened) {
     const opened = record(value, OPENED); if (opened === null) invalid();
-    const discoveryId = text(opened.get("discoveryId")); const candidate = input.candidates.get(discoveryId); if (candidate === undefined) invalid();
+    const discoveryId = text(opened.get("discoveryId")); const candidate = input.candidates.get(discoveryId); if (candidate === undefined || discoveryIds.has(discoveryId)) invalid();
     const policy = snapshotPolicy(opened.get("policy"));
     if (sourceIds.has(policy.sourceId) || !allowedUrl(candidate.url, policy) || candidate.url !== policy.sourceUrl) invalid();
     const verified = snapshotCapture(opened.get("capture"), policy);
     const raw = parseCapturedJson(verified.body);
     const values = snapshotObservations(opened.get("observations"), raw, policy.sourceId, policy);
     for (const item of values) { if (paths.has(item.fieldPath)) invalid(); observations.push(item); }
-    sources.push(source(policy, verified, values.map((item) => item.locator))); receipts.push(verified.receipt); sourceIds.add(policy.sourceId);
+    sources.push(source(policy, verified, values.map((item) => item.locator))); receipts.push(verified.receipt); sourceIds.add(policy.sourceId); discoveryIds.add(discoveryId);
   }
   let hermes: BasicExtractedFact[];
   try { hermes = materializeBasicHermesFacts(observations); } catch { invalid(); }
@@ -98,14 +102,14 @@ function snapshotBase(value: unknown): BasicSourceAdapterRunResult {
   const sources = values(register.get("sources"), Number.MAX_SAFE_INTEGER)?.map(snapshotSource); const parsedFacts = values(facts.get("facts"), Number.MAX_SAFE_INTEGER)?.map(snapshotFact); const parsedReceipts = receipts.map(snapshotReceipt);
   if (sources === undefined || parsedFacts === undefined || !unique(sources.map((item) => item.sourceId)) || !unique(parsedFacts.map((item) => item.factId)) || !unique(parsedFacts.map((item) => item.fieldPath)) || !unique(parsedReceipts.map((item) => item.sourceId)) || sources.length !== parsedReceipts.length) invalid();
   const sourceMap = new Map(sources.map((item) => [item.sourceId, item]));
-  if (parsedReceipts.some((item) => sourceMap.get(item.sourceId)?.contentSha256 !== item.contentSha256) || parsedFacts.some((fact) => fact.evidence.some((item) => !sourceMap.has(item.sourceId)))) invalid();
+  if (parsedReceipts.some((item) => sourceMap.get(item.sourceId)?.contentSha256 !== item.contentSha256) || parsedFacts.some((fact) => fact.evidence.some((item) => { const source = sourceMap.get(item.sourceId); return source === undefined || !source.evidenceLocators.includes(item.locator); }))) invalid();
   return { sourceRegister: { schemaVersion: BASIC_COLLECTION_AUDIT_SCHEMA_VERSION, runId, countryCode, sources }, extractedFacts: { schemaVersion: BASIC_COLLECTION_AUDIT_SCHEMA_VERSION, runId, countryCode, facts: parsedFacts }, receipts: parsedReceipts };
 }
 
 function snapshotDiscovery(value: unknown, base: BasicSourceAdapterRunResult): Map<string, Candidate> {
   const discovery = record(value, DISCOVERY); if (discovery === null || discovery.get("schemaVersion") !== BASIC_HERMES_DISCOVERY_SCHEMA_VERSION || discovery.get("runId") !== base.sourceRegister.runId || discovery.get("countryCode") !== base.sourceRegister.countryCode) invalid();
   const candidates = values(discovery.get("candidates"), 50); if (candidates === null) invalid(); const output = new Map<string, Candidate>();
-  for (const value of candidates) { const candidate = record(value, CANDIDATE); if (candidate === null || candidate.get("provider") !== "searxng" || candidate.get("discoveryOnly") !== true || !timestamp(candidate.get("discoveredAt")) || !nonblank(candidate.get("query")) || !nonblank(candidate.get("title")) || typeof candidate.get("snippet") !== "string") invalid(); const id = text(candidate.get("discoveryId")); const url = safeUrl(candidate.get("url")); if (!SOURCE_ID.test(id) || output.has(id) || Array.from(output.values()).some((item) => item.url === url)) invalid(); output.set(id, { id, url }); }
+  for (const value of candidates) { const candidate = snapshotBasicHermesDiscoveryCandidate(value); if ("code" in candidate || output.has(candidate.discoveryId) || Array.from(output.values()).some((item) => item.url === candidate.url)) invalid(); output.set(candidate.discoveryId, { id: candidate.discoveryId, url: candidate.url }); }
   return output;
 }
 
@@ -150,17 +154,16 @@ function snapshotReceipt(value: unknown): BasicRawCaptureReceipt { const receipt
 
 function parseCapturedJson(body: Uint8Array): BasicCollectionJsonValue { try { return json(JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(body)) as unknown); } catch { invalid(); } }
 function pointer(value: BasicCollectionJsonValue, locator: string): BasicCollectionJsonValue { if (!locator.startsWith("json:")) invalid(); const pointer = locator.slice(5); if (pointer !== "" && !pointer.startsWith("/")) invalid(); let current = value; for (const encoded of pointer === "" ? [] : pointer.slice(1).split("/")) { const segment = encoded.replace(/~1/g, "/").replace(/~0/g, "~"); if (/~(?:[^01]|$)/.test(encoded)) invalid(); if (Array.isArray(current)) { if (!/^(?:0|[1-9]\d*)$/.test(segment) || Number(segment) >= current.length) invalid(); current = current[Number(segment)]!; } else if (current !== null && typeof current === "object") { const descriptor = Object.getOwnPropertyDescriptor(current, segment); if (descriptor === undefined || !Object.hasOwn(descriptor, "value")) invalid(); current = descriptor.value as BasicCollectionJsonValue; } else invalid(); } return current; }
-function json(value: unknown, ancestors = new WeakSet<object>(), depth = 0): BasicCollectionJsonValue { if (depth > 64) invalid(); if (value === null || typeof value === "string" || typeof value === "boolean") return value; if (finite(value)) return value; if (typeof value !== "object" || value === null || ancestors.has(value)) invalid(); ancestors.add(value); let result: BasicCollectionJsonValue; if (Array.isArray(value)) { const items = values(value, Number.MAX_SAFE_INTEGER); if (items === null) invalid(); result = items.map((item) => json(item, ancestors, depth + 1)); } else { if (Object.getPrototypeOf(value) !== Object.prototype || Reflect.ownKeys(value).some((key) => typeof key !== "string")) invalid(); const output: { [key: string]: BasicCollectionJsonValue } = {}; for (const key of Object.keys(value)) { const descriptor = Object.getOwnPropertyDescriptor(value, key); if (descriptor === undefined || !descriptor.enumerable || !Object.hasOwn(descriptor, "value")) invalid(); Object.defineProperty(output, key, { value: json(descriptor.value, ancestors, depth + 1), enumerable: true }); } result = output; } ancestors.delete(value); return result; }
+function json(value: unknown, ancestors = new WeakSet<object>(), depth = 0): BasicCollectionJsonValue { if (depth > 64) invalid(); if (value === null || typeof value === "string" || typeof value === "boolean") return value; if (finite(value)) return value; if (typeof value !== "object" || value === null || ancestors.has(value)) invalid(); ancestors.add(value); let result: BasicCollectionJsonValue; if (Array.isArray(value)) { const items = values(value, Number.MAX_SAFE_INTEGER); if (items === null) invalid(); result = items.map((item) => json(item, ancestors, depth + 1)); } else { const keys = Reflect.ownKeys(value); if (Object.getPrototypeOf(value) !== Object.prototype || keys.some((key) => typeof key !== "string")) invalid(); const output: { [key: string]: BasicCollectionJsonValue } = {}; for (const key of keys as string[]) { const descriptor = Object.getOwnPropertyDescriptor(value, key); if (descriptor === undefined || !descriptor.enumerable || !Object.hasOwn(descriptor, "value")) invalid(); Object.defineProperty(output, key, { value: json(descriptor.value, ancestors, depth + 1), enumerable: true }); } result = output; } ancestors.delete(value); return result; }
 function sameJson(left: BasicCollectionJsonValue, right: BasicCollectionJsonValue): boolean { if (typeof left !== typeof right || left === null || right === null) return left === right; if (typeof left === "number") return Object.is(left, right); if (typeof left !== "object") return left === right; if (Array.isArray(left) || Array.isArray(right)) return Array.isArray(left) && Array.isArray(right) && left.length === right.length && left.every((item, index) => sameJson(item, right[index]!)); const leftRecord = left as { [key: string]: BasicCollectionJsonValue }; const rightRecord = right as { [key: string]: BasicCollectionJsonValue }; const keys = Object.keys(leftRecord); return keys.length === Object.keys(rightRecord).length && keys.every((key) => Object.hasOwn(rightRecord, key) && sameJson(leftRecord[key]!, rightRecord[key]!)); }
 function record(value: unknown, keys: readonly string[]): ReadonlyMap<string, unknown> | null { try { if (typeof value !== "object" || value === null || Array.isArray(value) || Object.getPrototypeOf(value) !== Object.prototype || Reflect.ownKeys(value).length !== keys.length || Reflect.ownKeys(value).some((key) => typeof key !== "string" || !keys.includes(key))) return null; const output = new Map<string, unknown>(); for (const key of keys) { const descriptor = Object.getOwnPropertyDescriptor(value, key); if (descriptor === undefined || !descriptor.enumerable || !Object.hasOwn(descriptor, "value")) return null; output.set(key, descriptor.value); } return output; } catch { return null; } }
 function values(value: unknown, max: number): unknown[] | null { try { if (!Array.isArray(value) || Object.getPrototypeOf(value) !== Array.prototype || value.length > max || Reflect.ownKeys(value).length !== value.length + 1) return null; const output: unknown[] = []; for (let index = 0; index < value.length; index += 1) { const descriptor = Object.getOwnPropertyDescriptor(value, String(index)); if (descriptor === undefined || !descriptor.enumerable || !Object.hasOwn(descriptor, "value")) return null; output.push(descriptor.value); } return output; } catch { return null; } }
 function strings(value: unknown, min: number): string[] { const result = values(value, Number.MAX_SAFE_INTEGER); if (result === null || result.length < min || result.some((item) => !nonblank(item)) || !unique(result as string[])) invalid(); return (result as string[]).map((item) => item.trim()); }
-function originList(value: unknown): string[] { const origins = strings(value, 1); if (origins.some((origin) => { try { const url = new URL(origin); return url.protocol !== "https:" || url.origin !== origin || url.username !== "" || url.password !== "" || forbidden(url.hostname); } catch { return true; } })) invalid(); return origins; }
+function originList(value: unknown): string[] { const origins = strings(value, 1); if (origins.some((origin) => { try { const url = new URL(origin); const canonical = canonicalBasicHermesDiscoveryUrl(origin); return url.protocol !== "https:" || url.origin !== origin || url.username !== "" || url.password !== "" || canonical === null || canonical === "forbidden"; } catch { return true; } })) invalid(); return origins; }
 function queryList(value: unknown): string[] { const names = strings(value, 0); if (names.some((name) => !/^[A-Za-z][A-Za-z0-9_-]*$/.test(name))) invalid(); return names; }
-function safeUrl(value: unknown): string { try { const url = new URL(text(value)); if (url.protocol !== "https:" || url.username !== "" || url.password !== "" || forbidden(url.hostname)) invalid(); return url.href; } catch { invalid(); } }
+function safeUrl(value: unknown): string { const url = canonicalBasicHermesDiscoveryUrl(value); if (url === null || url === "forbidden") invalid(); return url; }
 function httpUrl(value: unknown): string { try { const url = new URL(text(value)); if (!/^https?:$/.test(url.protocol)) invalid(); return url.href; } catch { invalid(); } }
 function allowedUrl(value: string, policy: Pick<BasicHermesSourcePolicy, "approvedOrigins" | "allowedQueryParameters">): boolean { try { const url = new URL(value); if (!policy.approvedOrigins.includes(url.origin)) return false; const names = new Set<string>(); for (const [name] of url.searchParams) { if (!policy.allowedQueryParameters.includes(name) || names.has(name)) return false; names.add(name); } return true; } catch { return false; } }
-function forbidden(hostname: string): boolean { const parts = hostname.split("."); if (parts.length !== 4 || parts.some((part) => !/^\d+$/.test(part))) return hostname === "[::1]" || hostname === "::1"; const values = parts.map(Number); if (values.some((part) => part > 255)) return true; const first = values[0] ?? -1; const second = values[1] ?? -1; return first === 0 || first === 10 || first === 127 || first >= 224 || first === 169 && second === 254 || first === 172 && second >= 16 && second <= 31 || first === 192 && second === 168; }
 function jsonMime(value: unknown): boolean { return typeof value === "string" && (value.split(";", 1)[0]?.trim().toLowerCase() === "application/json" || value.split(";", 1)[0]?.trim().toLowerCase().endsWith("+json") === true); }
 function isPath(value: string): boolean { return PATHS.has(value) || INDICATOR.test(value); }
 function timestamp(value: unknown): value is string { const errors: string[] = []; expectUtcRfc3339Timestamp(value, "timestamp", errors); return errors.length === 0; }

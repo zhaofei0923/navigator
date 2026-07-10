@@ -19,8 +19,27 @@ function sha256(value: Uint8Array): string {
   return createHash("sha256").update(value).digest("hex");
 }
 
-function body(value = BODY_VALUE): Uint8Array {
+function body(value: unknown = BODY_VALUE): Uint8Array {
   return new TextEncoder().encode(JSON.stringify({ facts: [{ value }] }));
+}
+
+function inputForDiscoveryUrl(url: string): Record<string, unknown> {
+  return input({
+    discovery: discovery([candidate({ url })]),
+    openedSources: [opened({
+      policy: policy({ sourceUrl: url, approvedOrigins: [new URL(url).origin] }),
+      capture: capture({ finalUrl: url }),
+    })],
+  });
+}
+
+function hostileJsonObject(kind: "symbol" | "non-enumerable" | "accessor"): object {
+  const value = {};
+  const key: PropertyKey = kind === "symbol" ? Symbol("hidden") : "hidden";
+  Object.defineProperty(value, key, kind === "accessor"
+    ? { get: () => "hidden", configurable: true }
+    : { value: "hidden", configurable: true, enumerable: kind === "symbol" });
+  return value;
 }
 
 function candidate(overrides: Record<string, unknown> = {}): Record<string, unknown> {
@@ -213,6 +232,52 @@ describe("Hermes JSON evidence promotion", () => {
     });
   });
 
+  test("accepts the Task 2 discovery ID boundary", () => {
+    const result = promoteBasicHermesJsonEvidence(input({
+      discovery: discovery([candidate({ discoveryId: "a".repeat(128) })]),
+      openedSources: [opened({ discoveryId: "a".repeat(128) })],
+    }));
+
+    expect(result.ok).toBe(true);
+  });
+
+  test("accepts an empty discovery title like Task 2", () => {
+    const result = promoteBasicHermesJsonEvidence(input({
+      discovery: discovery([candidate({ title: "" })]),
+    }));
+
+    expect(result.ok).toBe(true);
+  });
+
+  test("rejects a discovery ID beyond the Task 2 boundary", () => {
+    expect(expectFailure(input({
+      discovery: discovery([candidate({ discoveryId: "a".repeat(129) })]),
+      openedSources: [opened({ discoveryId: "a".repeat(129) })],
+    })).code).toBe("EVIDENCE_INVALID");
+  });
+
+  test.each([
+    "2026-02-29T00:00:00Z",
+    "2026-02-28T24:00:00Z",
+    "2026-02-28T00:00:00+08:00",
+    "2026-02-28T00:00:00.1234Z",
+  ])("revalidates discovery timestamp %s with the strict Task 2 rules", (discoveredAt) => {
+    expect(expectFailure(input({
+      discovery: discovery([candidate({ discoveredAt })]),
+    })).code).toBe("EVIDENCE_INVALID");
+  });
+
+  test.each([
+    "https://[::]/data?format=json",
+    "https://[fc00::1]/data?format=json",
+    "https://[fe80::1]/data?format=json",
+    "https://[ff02::1]/data?format=json",
+    "https://[::ffff:127.0.0.1]/data?format=json",
+    "https://[::127.0.0.1]/data?format=json",
+  ])("rejects Task 2 unsafe IPv6 discovery URL %s", (url) => {
+    expect(expectFailure(inputForDiscoveryUrl(url)).code).toBe("EVIDENCE_INVALID");
+  });
+
   test.each([
     ["candidate-policy URL mismatch", () => input({ openedSources: [opened({ policy: policy({ sourceUrl: "https://example.com/other?format=json" }) })] })],
     ["unapproved origin", () => input({ openedSources: [opened({ policy: policy({ approvedOrigins: ["https://other.example"] }) })] })],
@@ -277,6 +342,46 @@ describe("Hermes JSON evidence promotion", () => {
     expect(expectFailure(input({ openedSources: [opened(), opened({ discoveryId: "candidate-1" })] })).code).toBe("EVIDENCE_INVALID");
     expect(expectFailure(input({ base: { ...base(), extractedFacts: { ...(base().extractedFacts as Record<string, unknown>), countryCode: "MY" } } })).code).toBe("EVIDENCE_INVALID");
     expect(expectFailure(input({ openedSources: [opened({ observations: [observation({ fieldPath: "country.code", rawValue: BODY_VALUE })] })] })).code).toBe("EVIDENCE_INVALID");
+  });
+
+  test("rejects reuse of a discovery ID with a different reviewed source ID", () => {
+    const second = opened({
+      policy: policy({ sourceId: "hermes-source-2" }),
+      capture: capture({ sourceId: "hermes-source-2" }),
+    });
+
+    expect(expectFailure(input({ openedSources: [opened(), second] })).code).toBe("EVIDENCE_INVALID");
+  });
+
+  test("rejects base evidence whose locator is absent from its registered source", () => {
+    const malformedBase = base();
+    const extractedFacts = malformedBase.extractedFacts as Record<string, unknown>;
+    const facts = extractedFacts.facts as Array<Record<string, unknown>>;
+    const evidence = facts[0]!.evidence as Array<Record<string, unknown>>;
+    evidence[0]!.locator = "json:/unregistered";
+
+    expect(expectFailure(input({ base: malformedBase })).code).toBe("EVIDENCE_INVALID");
+  });
+
+  test.each([
+    ["rawValue", "symbol"],
+    ["rawValue", "non-enumerable"],
+    ["rawValue", "accessor"],
+    ["normalizedValue", "symbol"],
+    ["normalizedValue", "non-enumerable"],
+    ["normalizedValue", "accessor"],
+  ] as const)("rejects a hostile %s %s property", (field, kind) => {
+    const hostile = hostileJsonObject(kind);
+    const captured = field === "rawValue" ? body({}) : body();
+    const changedObservation = field === "rawValue"
+      ? observation({ rawValue: hostile })
+      : observation({ normalizedValue: hostile });
+    const value = input({ openedSources: [opened({
+      capture: capture({ body: captured, byteLength: captured.byteLength, contentSha256: sha256(captured) }),
+      observations: [changedObservation],
+    })] });
+
+    expect(expectFailure(value).code).toBe("EVIDENCE_INVALID");
   });
 
   test("rejects multiple tuples from the same source and materializes equal tuples as a candidate", () => {

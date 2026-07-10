@@ -136,7 +136,7 @@ function parseBatch(value: unknown, request: BasicHermesDiscoveryRequest): Basic
   const urls = new Set<string>();
   const snapshot: BasicHermesDiscoveryCandidate[] = [];
   for (const value of candidates) {
-    const candidate = parseCandidate(value, request);
+    const candidate = snapshotBasicHermesDiscoveryCandidate(value, request.queries);
     if ("code" in candidate) return { ok: false, error: candidate };
     if (ids.has(candidate.discoveryId) || urls.has(candidate.url)) {
       return failed("HERMES_RESPONSE_INVALID", "hermes");
@@ -155,7 +155,10 @@ function parseBatch(value: unknown, request: BasicHermesDiscoveryRequest): Basic
   }) };
 }
 
-function parseCandidate(value: unknown, request: BasicHermesDiscoveryRequest): BasicHermesDiscoveryCandidate | BasicBridgeFailure {
+export function snapshotBasicHermesDiscoveryCandidate(
+  value: unknown,
+  allowedQueries?: readonly string[],
+): BasicHermesDiscoveryCandidate | BasicBridgeFailure {
   const properties = exactProperties(value, CANDIDATE_KEYS);
   if (properties === null) return bridgeFailure("SEARXNG_RECORD_INVALID", "hermes");
   const discoveryId = properties.get("discoveryId");
@@ -163,13 +166,15 @@ function parseCandidate(value: unknown, request: BasicHermesDiscoveryRequest): B
   const query = properties.get("query");
   const title = properties.get("title");
   const snippet = properties.get("snippet");
-  const url = canonicalUrl(properties.get("url"));
+  const url = canonicalBasicHermesDiscoveryUrl(properties.get("url"));
   const discoveredAt = properties.get("discoveredAt");
   if (url === "forbidden") return bridgeFailure("DISCOVERY_URL_FORBIDDEN", "hermes");
   if (
     typeof discoveryId !== "string" || discoveryId.length > MAX_DISCOVERY_ID_LENGTH ||
     !SAFE_DISCOVERY_ID.test(discoveryId) || provider !== "searxng" ||
-    typeof query !== "string" || !request.queries.includes(query) ||
+    typeof query !== "string" || (allowedQueries === undefined
+      ? query.length > 256 || query.trim() === "" || query !== query.trim()
+      : !allowedQueries.includes(query)) ||
     typeof title !== "string" || typeof snippet !== "string" ||
     typeof discoveredAt !== "string" || !isUtcTimestamp(discoveredAt) ||
     properties.get("discoveryOnly") !== true || url === null
@@ -208,7 +213,7 @@ function denseValues(value: unknown): readonly unknown[] | null {
   } catch { return null; }
 }
 
-function canonicalUrl(value: unknown): string | null | "forbidden" {
+export function canonicalBasicHermesDiscoveryUrl(value: unknown): string | null | "forbidden" {
   if (typeof value !== "string") return null;
   try {
     const url = new URL(value);
