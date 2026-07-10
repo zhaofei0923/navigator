@@ -31,8 +31,16 @@
 - Create: `packages/db/src/seed/basic-country-types.ts`
 - Create: `packages/db/src/seed/basic-country-template.ts`
 - Create: `packages/db/src/seed/basic-country-validator.ts`
+- Create: `packages/db/src/seed/basic-country-loader.ts`
+- Create: `packages/db/src/seed/basic-country-validation-utils.ts`
+- Create: `packages/db/src/seed/basic-country-coverage-validation.ts`
 - Create: `packages/db/src/seed/basic-country-import.ts`
-- Create: `packages/db/src/basic-country-seed.test.ts`
+- Create: `packages/db/src/seed/basic-country-import-types.ts`
+- Create: `packages/db/src/basic-country-test-fixture.ts`
+- Create: `packages/db/src/basic-country-template.test.ts`
+- Create: `packages/db/src/basic-country-validator.test.ts`
+- Create: `packages/db/src/basic-country-import.test.ts`
+- Remove: `packages/db/src/basic-country-seed.test.ts`
 - Modify: `packages/db/src/index.ts`
 - Modify: `packages/db/src/index.test.ts`
 - Modify: `docs/basic-country-collection.md`
@@ -128,7 +136,7 @@ expect(bundle.canonical.knowledge).toEqual([]);
 Run:
 
 ```bash
-pnpm --filter @navigator/db exec vitest run src/basic-country-seed.test.ts
+pnpm --filter @navigator/db exec vitest run src/basic-country-template.test.ts src/basic-country-validator.test.ts src/basic-country-import.test.ts
 ```
 
 Expected: FAIL because `basic-country-template.js` does not exist.
@@ -257,7 +265,7 @@ Update `docs/basic-country-collection.md` so `collection-manifest.json` explicit
 Run:
 
 ```bash
-pnpm --filter @navigator/db exec vitest run src/basic-country-seed.test.ts
+pnpm --filter @navigator/db exec vitest run src/basic-country-template.test.ts src/basic-country-validator.test.ts src/basic-country-import.test.ts
 pnpm --filter @navigator/db test
 pnpm lint
 pnpm typecheck
@@ -270,6 +278,6 @@ Expected: every command exits 0; the existing Indonesia tests remain unchanged a
 - [ ] **Step 9: Commit the task card**
 
 ```bash
-git add packages/db/src/seed/basic-country-types.ts packages/db/src/seed/basic-country-template.ts packages/db/src/seed/basic-country-validator.ts packages/db/src/seed/basic-country-import.ts packages/db/src/basic-country-seed.test.ts packages/db/src/index.ts packages/db/src/index.test.ts docs/basic-country-collection.md docs/superpowers/plans/2026-07-10-basic-country-template-validator-plan.md
-git commit -m "feat: add Basic country seed validation"
+git add packages/db/src/seed/basic-country-types.ts packages/db/src/seed/basic-country-template.ts packages/db/src/seed/basic-country-validator.ts packages/db/src/seed/basic-country-loader.ts packages/db/src/seed/basic-country-validation-utils.ts packages/db/src/seed/basic-country-coverage-validation.ts packages/db/src/seed/basic-country-import.ts packages/db/src/seed/basic-country-import-types.ts packages/db/src/basic-country-test-fixture.ts packages/db/src/basic-country-template.test.ts packages/db/src/basic-country-validator.test.ts packages/db/src/basic-country-import.test.ts packages/db/src/index.ts packages/db/src/index.test.ts docs/basic-country-collection.md docs/superpowers/plans/2026-07-10-basic-country-template-validator-plan.md
+git commit -m "fix: seal Basic canonical imports"
 ```

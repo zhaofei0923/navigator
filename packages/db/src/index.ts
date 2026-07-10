@@ -1,10 +1,8 @@
 export const workspaceName = "@navigator/db" as const;
 
 export { createBasicCountryBundle } from "./seed/basic-country-template.js";
-export {
-  loadBasicCountryBundle,
-  validateBasicCountryBundle,
-} from "./seed/basic-country-validator.js";
+export { loadBasicCountryBundle } from "./seed/basic-country-loader.js";
+export { validateBasicCountryBundle } from "./seed/basic-country-validator.js";
 export { buildBasicCountryImportPlan } from "./seed/basic-country-import.js";
 export type {
   BasicAuditRun,
