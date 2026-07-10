@@ -118,10 +118,42 @@ describe("World Bank country adapter", () => {
     ["pagination", () => mutateCountry(({ metadata }) => ({ ...metadata, pages: 2 }))],
     ["an extra country record", () => mutateCountry(({ metadata, records }) => [metadata, [...records, records[0]]])],
     ["an ISO mismatch", () => mutateCountry(({ metadata, records }) => [metadata, [{ ...records[0], iso2Code: "ID" }]])],
+    ["an empty country name", () => mutateCountry(({ metadata, records }) => [metadata, [{ ...records[0], name: "" }]])],
+    ["a whitespace-only country name", () => mutateCountry(({ metadata, records }) => [metadata, [{ ...records[0], name: " \t " }]])],
   ])("rejects %s", (_label, createBody) => {
     const body = createBody();
     expect(() => worldBankCountryAdapter.extract(adapterInput(body))).toThrow(
       "world bank country response is invalid",
+    );
+  });
+});
+
+describe("World Bank adapter documentation", () => {
+  test("keeps mrv and null-observation semantics consistent", () => {
+    const design = readRepoDocument(
+      "docs/superpowers/specs/2026-07-10-basic-source-adapters-design.md",
+    );
+    const runtime = readRepoDocument("docs/basic-country-source-adapters.md");
+    const plan = readRepoDocument(
+      "docs/superpowers/plans/2026-07-10-basic-source-adapters-plan.md",
+    );
+
+    expect(design).not.toContain(
+      "supports JSON, ISO country queries, most-recent non-empty values",
+    );
+    expect(design).toContain(
+      "The `mrv` parameter means most recent values; it does not promise most-recent non-empty values.",
+    );
+    expect(design).not.toContain("A null WDI record is omitted");
+    expect(design).toContain(
+      "A null WDI record produces one candidate observation",
+    );
+    expect(runtime).not.toContain("`null` WDI record 被省略");
+    expect(runtime).toContain(
+      "`null` WDI record 必须产生一个 `candidate` observation",
+    );
+    expect(plan).toContain(
+      "A synthetic null `value` must emit raw and normalized `null` without guessing.",
     );
   });
 });
@@ -248,6 +280,13 @@ function readVerifiedFixture(
     contentSha256: parsed.contentSha256,
     body,
   };
+}
+
+function readRepoDocument(pathname: string): string {
+  return readFileSync(
+    fileURLToPath(new URL(`../../../${pathname}`, import.meta.url)),
+    "utf8",
+  );
 }
 
 function isFixtureEnvelope(value: unknown): value is ParsedFixtureEnvelope {

@@ -247,6 +247,28 @@ describe("Basic deterministic source adapter runner", () => {
     expect(error.message).toBe("source adapter materialization is invalid");
   });
 
+  test("rejects mixed same-source tuples even when another source agrees", async () => {
+    const error = await captureFailure(
+      runBasicDeterministicSourceAdapters({
+        repoRoot: createRepoRoot(),
+        countryCode: "XZ",
+        runId: "run-mixed-source-conflict",
+        adapters: [
+          adapter("source-a", [
+            observation({ locator: "table:a-101", normalizedValue: 101 }),
+            observation({ locator: "table:a-102", normalizedValue: 102 }),
+          ]),
+          adapter("source-b", [
+            observation({ locator: "table:b-101", normalizedValue: 101 }),
+          ]),
+        ],
+        transport: transport([]),
+      }),
+    );
+
+    expect(error.message).toBe("source adapter materialization is invalid");
+  });
+
   test("rejects duplicate source IDs before request or transport work", async () => {
     const repoRoot = createRepoRoot();
     let requestCalls = 0;
@@ -358,7 +380,7 @@ describe("Basic deterministic source adapter runner", () => {
         transport: transport([], "not-a-date"),
       }),
     );
-    expect(invalidDateError.message).toBe("source adapter materialization is invalid");
+    expect(invalidDateError.message).toBe("raw capture response is invalid");
 
     const invalidMetadata = {
       ...adapter("source-invalid-metadata", [observation()]),

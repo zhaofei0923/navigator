@@ -13,6 +13,7 @@ const REQUEST = {
   allowedOrigins: ["https://api.worldbank.org"],
   allowedQueryParameters: ["format"],
 };
+const METADATA_SENTINEL = "METADATA_DO_NOT_LEAK_7bb1";
 
 describe("Basic source transport", () => {
   test("returns a validated response without consuming its body", async () => {
@@ -36,6 +37,96 @@ describe("Basic source transport", () => {
       redirectChain: [],
     });
     expect(bodyReads).toBe(0);
+  });
+
+  test.each(["extra string key", "symbol key", "accessor key"] as const)(
+    "rejects a request with an %s without executing metadata accessors",
+    async (kind) => {
+      const probe = { executions: 0 };
+      const unsafeRequest = requestWithUnsafeKey(kind, probe);
+      const transport = createBasicSourceTransport(createFetch([]));
+
+      const error = await rejectWith(transport.execute(unsafeRequest));
+
+      expect(error.message).toBe("source request URL is not allowed");
+      expect(error.message).not.toContain(METADATA_SENTINEL);
+      expect(probe.executions).toBe(0);
+    },
+  );
+
+  test.each(["sparse", "extra property", "custom prototype"] as const)(
+    "rejects %s origin allowlists",
+    async (kind) => {
+      const unsafeRequest = {
+        ...REQUEST,
+        allowedOrigins: unsafeStringArray(
+          ["https://api.worldbank.org"],
+          kind,
+        ),
+      };
+      const transport = createBasicSourceTransport(
+        createFetch([
+          response(200, { "content-type": "application/json" }),
+        ]),
+      );
+
+      const error = await rejectWith(transport.execute(unsafeRequest));
+
+      expect(error.message).toBe("source request URL is not allowed");
+      expect(error.message).not.toContain(METADATA_SENTINEL);
+    },
+  );
+
+  test.each(["sparse", "extra property", "custom prototype"] as const)(
+    "rejects %s query-parameter allowlists",
+    async (kind) => {
+      const unsafeRequest = {
+        ...REQUEST,
+        allowedQueryParameters: unsafeStringArray(["format"], kind),
+      };
+      const transport = createBasicSourceTransport(
+        createFetch([
+          response(200, { "content-type": "application/json" }),
+        ]),
+      );
+
+      const error = await rejectWith(transport.execute(unsafeRequest));
+
+      expect(error.message).toBe("source request URL is not allowed");
+      expect(error.message).not.toContain(METADATA_SENTINEL);
+    },
+  );
+
+  test("uses an immutable request snapshot across fetch awaits", async () => {
+    const mutableRequest = {
+      ...REQUEST,
+      allowedOrigins: [...REQUEST.allowedOrigins],
+      allowedQueryParameters: [...REQUEST.allowedQueryParameters],
+    };
+    let calls = 0;
+    const fetchImpl: BasicSourceFetch = async (_url, init) => {
+      calls += 1;
+      expect(init.headers.Accept).toBe("application/json");
+      if (calls === 1) {
+        mutableRequest.url = `https://mutated.example/${METADATA_SENTINEL}`;
+        mutableRequest.accept = METADATA_SENTINEL;
+        mutableRequest.allowedOrigins[0] = "https://mutated.example";
+        mutableRequest.allowedQueryParameters[0] = "mutated";
+        return response(302, { location: "/redirected?format=json" });
+      }
+      return response(200, { "content-type": "application/json" });
+    };
+    const transport = createBasicSourceTransport(fetchImpl);
+
+    const result = await transport.execute(mutableRequest);
+
+    expect(result.finalUrl).toBe(
+      "https://api.worldbank.org/redirected?format=json",
+    );
+    expect(result.redirectChain).toEqual([
+      "https://api.worldbank.org/redirected?format=json",
+    ]);
+    expect(Object.isFrozen(result.redirectChain)).toBe(true);
   });
 
   test.each([
@@ -116,6 +207,20 @@ describe("Basic source transport", () => {
     expect(error.message).not.toMatch(/FETCH_DO_NOT_LEAK|worldbank|secret/);
   });
 
+  test.each(["status", "headers", "body"] as const)(
+    "redacts native fetch response %s access failures",
+    async (property) => {
+      const transport = createBasicSourceTransport(
+        async () => fetchResponseWithThrowingProperty(property),
+      );
+
+      const error = await rejectWith(transport.execute(REQUEST));
+
+      expect(error.message).not.toContain(METADATA_SENTINEL);
+      expect(error.message).not.toContain(REQUEST.url);
+    },
+  );
+
   test("redacts response body reader failures", async () => {
     const leakingBody = new ReadableStream<Uint8Array>({
       start(controller) {
@@ -160,6 +265,75 @@ function createFetch(
     }
     return response;
   };
+}
+
+function requestWithUnsafeKey(
+  kind: "extra string key" | "symbol key" | "accessor key",
+  probe: { executions: number },
+): typeof REQUEST {
+  const request: Record<PropertyKey, unknown> = {
+    ...REQUEST,
+    allowedOrigins: [...REQUEST.allowedOrigins],
+    allowedQueryParameters: [...REQUEST.allowedQueryParameters],
+  };
+  const property =
+    kind === "extra string key"
+      ? "unexpected"
+      : kind === "symbol key"
+        ? Symbol("unexpected")
+        : "url";
+  Object.defineProperty(request, property, {
+    configurable: true,
+    enumerable: true,
+    ...(kind === "extra string key"
+      ? { value: METADATA_SENTINEL, writable: true }
+      : {
+          get() {
+            probe.executions += 1;
+            throw new Error(METADATA_SENTINEL);
+          },
+        }),
+  });
+  return request as unknown as typeof REQUEST;
+}
+
+function unsafeStringArray(
+  values: readonly string[],
+  kind: "sparse" | "extra property" | "custom prototype",
+): string[] {
+  if (kind === "sparse") {
+    const sparse = new Array<string>(2);
+    sparse[0] = values[0]!;
+    return sparse;
+  }
+  const result = [...values];
+  if (kind === "extra property") {
+    Object.defineProperty(result, "unexpected", {
+      enumerable: true,
+      value: METADATA_SENTINEL,
+    });
+    return result;
+  }
+  Object.setPrototypeOf(result, Object.create(Array.prototype));
+  return result;
+}
+
+function fetchResponseWithThrowingProperty(
+  property: "status" | "headers" | "body",
+): BasicSourceFetchResponse {
+  const result: Record<string, unknown> = {
+    status: 200,
+    headers: new Headers({ "content-type": "application/json" }),
+    body: null,
+  };
+  Object.defineProperty(result, property, {
+    configurable: true,
+    enumerable: true,
+    get() {
+      throw new Error(METADATA_SENTINEL);
+    },
+  });
+  return result as unknown as BasicSourceFetchResponse;
 }
 
 function responseWithStatus(status: number): BasicSourceFetchResponse {

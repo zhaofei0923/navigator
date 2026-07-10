@@ -6,7 +6,6 @@ import type {
   BasicDeterministicObservation,
   BasicDeterministicSourceAdapter,
   BasicRawCaptureInput,
-  BasicRawCaptureManifest,
   BasicRawCaptureReceipt,
   BasicRawCaptureResult,
   BasicSourceAdapterRunInput,
@@ -110,6 +109,10 @@ describe("@navigator/db", () => {
       "readVerifiedCapture",
       "isBasicSourceRequestAllowed",
       "isBasicSourceResponseAllowed",
+      "snapshotBasicSourceRequest",
+      "snapshotBasicRawCaptureInput",
+      "snapshotBasicSourceTransportResponse",
+      "materializeBasicSourceFacts",
     ]) {
       expect(database).not.toHaveProperty(internalName);
     }
@@ -184,7 +187,6 @@ describe("@navigator/db", () => {
       BasicDeterministicAdapterInput,
       BasicDeterministicSourceAdapter,
       BasicRawCaptureReceipt,
-      BasicRawCaptureManifest,
       BasicRawCaptureInput,
       BasicRawCaptureResult,
       BasicSourceAdapterRunInput,

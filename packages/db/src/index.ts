@@ -50,7 +50,6 @@ export type {
   BasicDeterministicObservation,
   BasicDeterministicSourceAdapter,
   BasicRawCaptureInput,
-  BasicRawCaptureManifest,
   BasicRawCaptureReceipt,
   BasicSourceAdapterRunInput,
   BasicSourceAdapterRunResult,

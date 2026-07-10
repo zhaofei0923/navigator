@@ -48,7 +48,11 @@ export const worldBankCountryAdapter: BasicDeterministicSourceAdapter = {
     }
     const sourceCode = ownString(record, "iso2Code");
     const sourceName = ownString(record, "name");
-    if (sourceCode !== countryCode || sourceName === null) {
+    if (
+      sourceCode !== countryCode ||
+      sourceName === null ||
+      sourceName.trim() === ""
+    ) {
       throw new Error("world bank country response is invalid");
     }
     return {

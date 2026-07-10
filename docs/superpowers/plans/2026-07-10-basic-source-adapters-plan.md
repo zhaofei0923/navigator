@@ -140,7 +140,7 @@ Then test a streamed body of `10485761` bytes, cache hit without transport, one-
 
 - [ ] **Step 4: Implement immutable content-addressed capture**
 
-Validate `/^[A-Z]{2}$/` country codes, existing safe run IDs, and safe lowercase source IDs. `captureBasicRawSource()` alone consumes the stream, enforces `10485760` bytes, hashes the collected bytes, and writes the exact manifest shape from the design. Use exclusive temporary files and no-clobber atomic publication with mode `0o600`. Reconstruct and re-hash every cache hit.
+Validate `/^[A-Z]{2}$/` country codes, existing safe run IDs, and safe lowercase source IDs. `captureBasicRawSource()` alone consumes the stream, enforces `10485760` bytes, hashes the collected bytes, and writes the exact manifest shape from the design. Build a complete mode-`0o700` sibling temporary directory, write and fsync both mode-`0o600` files, fsync the directory where supported, and atomically rename the directory without pre-creating the final source directory. Reconstruct and re-hash every cache hit.
 
 - [ ] **Step 5: Run focused tests and commit**
 

@@ -23,7 +23,7 @@ Two reusable World Bank adapters prove the boundary without adding real country 
 - country profile: ISO code and English country name;
 - WDI core indicators: population, current-US-dollar GDP, and GDP growth.
 
-The World Bank V2 API is unauthenticated, supports JSON, ISO country queries, most-recent non-empty values, and multiple indicator codes. The implementation follows the official documentation:
+The World Bank V2 API is unauthenticated, supports JSON, ISO country queries, most-recent values, and multiple indicator codes. The `mrv` parameter means most recent values; it does not promise most-recent non-empty values. The implementation follows the official documentation:
 
 - https://datahelpdesk.worldbank.org/knowledgebase/articles/889392
 - https://datahelpdesk.worldbank.org/knowledgebase/articles/898581-api-basic-call-structures
@@ -177,7 +177,7 @@ The SHA-256 covers the exact bytes delivered by the transport after HTTP transfe
 
 The cache is immutable per `(countryCode, runId, sourceId)`. If a valid manifest exists, the runner re-reads and re-hashes the content-addressed payload and does not call the transport. Cache reuse requires exact equality of country/run/source IDs, adapter ID/version, GET URL, Accept value, sorted origin allowlist, sorted query-parameter allowlist, status, final URL, redirect chain, content type, payload filename, byte count, and hash. A malformed manifest, a final payload without a manifest, or any mismatch fails closed. Refreshing a source requires a new `runId`.
 
-Writes use an exclusive temporary file followed by no-clobber atomic publication. Concurrent writers with identical bytes converge on one verified capture; a different payload for the same identity fails. Orphan `.tmp-*` files are ignored and never treated as captures, while a published payload without `capture.json` is an invalid partial capture. Existing symlinks anywhere below the raw-cache root are rejected. Absolute paths, traversal segments, unsafe IDs, and NUL or backslash separators are rejected before transport execution.
+Writes build a complete sibling `.tmp-<sourceId>-<uuid>` directory with mode `0700`, sync both mode-`0600` files and the temporary directory where supported, then atomically rename that directory to the final `<sourceId>` directory. The final source directory is never pre-created. Concurrent writers with identical bytes converge on one verified capture; a different payload for the same identity fails. Orphan `.tmp-*` directories are ignored and never treated as captures, while a published payload without `capture.json` is an invalid partial capture. Existing symlinks anywhere below the raw-cache root are rejected. Absolute paths, traversal segments, unsafe IDs, and NUL or backslash separators are rejected before transport execution.
 
 ## Network Boundary
 
@@ -193,9 +193,9 @@ The source register preserves the original requested URL in `sourceUrl`; final U
 
 Every observation must use a P1-6A allowlisted canonical field path and a non-empty locator. The runner reconstructs raw and normalized values as strict finite JSON values, rejects unknown paths and unsafe values, and requires every fact locator to be present in its source record's `evidenceLocators`.
 
-An adapter output with zero observations is rejected and produces no source-register result. A null WDI record is omitted, but a source run in which every supported record is null fails as observation-free; the already captured raw bytes remain local for diagnosis.
+An adapter output with zero observations is rejected and produces no source-register result. A null WDI record produces one candidate observation whose raw and normalized values are both `null`; it is not omitted and does not make the adapter output observation-free.
 
-Observations are grouped by field path in stable lexical order. Equality and conflict use the tuple `(normalizedValue, unit, year)`, where JSON objects compare by recursively sorted own keys, arrays preserve order, numbers use `Object.is`, and all other scalars compare by type and value:
+Observations are grouped by field path in stable lexical order, then by `sourceId`. Each per-source tuple set must contain exactly one `(normalizedValue, unit, year)` tuple before any cross-source comparison. JSON objects compare by recursively sorted own keys, arrays preserve order, numbers use `Object.is`, and all other scalars compare by type and value:
 
 - Equal tuples from one or more `sourceId` values produce one `candidate` fact with all evidence.
 - Differing tuples from at least two distinct `sourceId` values produce one `conflict` fact with all evidence, even when only unit or year differs.

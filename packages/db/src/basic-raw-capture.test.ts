@@ -27,6 +27,7 @@ const temporaryRoots = new Set<string>();
 const BODY = new TextEncoder().encode('{"value":1234}');
 const CONTENT_SHA256 =
   "07a9415d68c1cc231402a4b0c4a01aa291945f4a25dc1ffb228a697346c88d4b";
+const METADATA_SENTINEL = "RAW_METADATA_DO_NOT_LEAK_1f2a";
 
 afterEach(() => {
   for (const root of temporaryRoots) {
@@ -75,6 +76,157 @@ describe("Basic immutable raw capture", () => {
         contentSha256: CONTENT_SHA256,
       },
     });
+  });
+
+  test("does not expose the final source directory before complete publication", async () => {
+    const repoRoot = createRepoRoot();
+    const checkingTransport: BasicSourceTransport = {
+      async execute() {
+        expect(existsSync(sourceDirectory(repoRoot))).toBe(false);
+        return response(BODY);
+      },
+    };
+
+    await expect(
+      captureBasicRawSource(input(repoRoot), checkingTransport),
+    ).resolves.toMatchObject({ contentSha256: CONTENT_SHA256 });
+    expect(existsSync(sourceDirectory(repoRoot))).toBe(true);
+  });
+
+  test("snapshots and freezes capture input before transport awaits", async () => {
+    const repoRoot = createRepoRoot();
+    const captureInput = input(repoRoot);
+    const mutatingTransport: BasicSourceTransport = {
+      async execute(request) {
+        expect(Object.isFrozen(request)).toBe(true);
+        expect(Object.isFrozen(request.allowedOrigins)).toBe(true);
+        expect(Object.isFrozen(request.allowedQueryParameters)).toBe(true);
+        captureInput.countryCode = "ID";
+        captureInput.adapterId = METADATA_SENTINEL;
+        captureInput.request.url =
+          `https://mutated.example/${METADATA_SENTINEL}`;
+        (captureInput.request.allowedOrigins as string[])[0] =
+          "https://mutated.example";
+        return response(BODY);
+      },
+    };
+
+    const result = await captureBasicRawSource(captureInput, mutatingTransport);
+
+    expect(result.finalUrl).toBe(
+      "https://api.worldbank.org/v2/country/VN?format=json",
+    );
+    expect(JSON.stringify(readManifest(repoRoot))).not.toContain(
+      METADATA_SENTINEL,
+    );
+    expect(readManifest(repoRoot)).toMatchObject({
+      countryCode: "VN",
+      adapterId: "world-bank-country",
+      request: {
+        url: "https://api.worldbank.org/v2/country/VN?format=json",
+        allowedOrigins: ["https://api.worldbank.org"],
+      },
+    });
+  });
+
+  test("snapshots transport response metadata before body collection awaits", async () => {
+    const repoRoot = createRepoRoot();
+    const mutableResponse = response(BODY) as BasicSourceTransportResponse & {
+      redirectChain: string[];
+    };
+    mutableResponse.redirectChain = [];
+    mutableResponse.body = (async function* mutateAfterYield() {
+      yield BODY;
+      mutableResponse.finalUrl =
+        `https://api.worldbank.org/${METADATA_SENTINEL}?format=json`;
+      mutableResponse.contentType = METADATA_SENTINEL;
+      mutableResponse.retrievedAt = "not-a-timestamp";
+      mutableResponse.redirectChain.push(
+        `https://api.worldbank.org/${METADATA_SENTINEL}?format=json`,
+      );
+    })();
+    const mutatingTransport: BasicSourceTransport = {
+      async execute() {
+        return mutableResponse;
+      },
+    };
+
+    const result = await captureBasicRawSource(
+      input(repoRoot),
+      mutatingTransport,
+    );
+
+    expect(result).toMatchObject({
+      finalUrl: "https://api.worldbank.org/v2/country/VN?format=json",
+      contentType: "application/json",
+      retrievedAt: "2026-07-10T09:40:00.000Z",
+    });
+    expect(JSON.stringify(readManifest(repoRoot))).not.toContain(
+      METADATA_SENTINEL,
+    );
+    expect(readManifest(repoRoot).response).toMatchObject({
+      finalUrl: "https://api.worldbank.org/v2/country/VN?format=json",
+      redirectChain: [],
+      contentType: "application/json",
+      retrievedAt: "2026-07-10T09:40:00.000Z",
+    });
+  });
+
+  test.each(["extra key", "symbol key", "accessor key"] as const)(
+    "rejects a transport response with an %s without executing accessors",
+    async (kind) => {
+      const repoRoot = createRepoRoot();
+      const probe = { executions: 0 };
+      const invalidTransport: BasicSourceTransport = {
+        async execute() {
+          return unsafeResponse(kind, probe);
+        },
+      };
+
+      const error = await rejectWith(
+        captureBasicRawSource(input(repoRoot), invalidTransport),
+      );
+
+      expect(error.message).toBe("raw capture response is invalid");
+      expect(error.message).not.toContain(METADATA_SENTINEL);
+      expect(probe.executions).toBe(0);
+    },
+  );
+
+  test.each(["sparse", "extra property", "custom prototype"] as const)(
+    "rejects a transport response with a %s redirect chain",
+    async (kind) => {
+      const repoRoot = createRepoRoot();
+      const invalidResponse = response(BODY) as BasicSourceTransportResponse & {
+        redirectChain: string[];
+      };
+      invalidResponse.redirectChain = unsafeRedirectChain(kind);
+      const invalidTransport: BasicSourceTransport = {
+        async execute() {
+          return invalidResponse;
+        },
+      };
+
+      await expect(
+        captureBasicRawSource(input(repoRoot), invalidTransport),
+      ).rejects.toThrow("raw capture response is invalid");
+    },
+  );
+
+  test("rejects a non-strict transport retrievedAt timestamp", async () => {
+    const repoRoot = createRepoRoot();
+    const invalidTransport: BasicSourceTransport = {
+      async execute() {
+        return {
+          ...response(BODY),
+          retrievedAt: "2026-07-10T09:40:00+00:00",
+        };
+      },
+    };
+
+    await expect(
+      captureBasicRawSource(input(repoRoot), invalidTransport),
+    ).rejects.toThrow("raw capture response is invalid");
   });
 
   test("rejects a body one byte over the stream limit", async () => {
@@ -191,6 +343,31 @@ describe("Basic immutable raw capture", () => {
     ).rejects.toThrow("raw capture manifest is invalid");
   });
 
+  test("rejects an invalid cached retrievedAt before transport", async () => {
+    const repoRoot = createRepoRoot();
+    await captureBasicRawSource(input(repoRoot), transport(BODY));
+    const manifest = readManifest(repoRoot);
+    writeManifest(repoRoot, {
+      ...manifest,
+      response: {
+        ...(manifest.response as object),
+        retrievedAt: "2026-07-10T09:40:00+00:00",
+      },
+    });
+    let calls = 0;
+    const noTransport: BasicSourceTransport = {
+      async execute() {
+        calls += 1;
+        return response(BODY);
+      },
+    };
+
+    await expect(
+      captureBasicRawSource(input(repoRoot), noTransport),
+    ).rejects.toThrow("raw capture manifest is invalid");
+    expect(calls).toBe(0);
+  });
+
   test.each([
     ["adapter ID", (value: Record<string, unknown>) => ({ ...value, adapterId: "other" })],
     ["adapter version", (value: Record<string, unknown>) => ({ ...value, adapterVersion: "2.0.0" })],
@@ -232,52 +409,20 @@ describe("Basic immutable raw capture", () => {
     ).rejects.toThrow("raw capture is incomplete");
   });
 
-  test("waits for a lock-protected partial publication before reading", async () => {
-    const completedRoot = createRepoRoot();
-    await captureBasicRawSource(input(completedRoot), transport(BODY));
-    const manifest = readManifest(completedRoot);
+  test("ignores an orphan sibling temp directory after a simulated crash", async () => {
     const repoRoot = createRepoRoot();
-    mkdirSync(sourceDirectory(repoRoot), { recursive: true });
-    writeFileSync(payloadPath(repoRoot), BODY);
-    const lockPath = join(sourceDirectory(repoRoot), ".tmp-capture.lock");
-    writeFileSync(lockPath, "publishing");
-    let calls = 0;
-    const noNetwork: BasicSourceTransport = {
-      async execute() {
-        calls += 1;
-        throw new Error("transport must not be called");
-      },
-    };
-    const readResult = captureBasicRawSource(input(repoRoot), noNetwork);
-    const publication = new Promise<void>((resolvePublication) => {
-      setTimeout(() => {
-        writeManifest(repoRoot, manifest);
-        unlinkSync(lockPath);
-        resolvePublication();
-      }, 500);
-    });
-
-    const [captureResult] = await Promise.allSettled([readResult, publication]);
-
-    expect(captureResult.status).toBe("fulfilled");
-    if (captureResult.status === "fulfilled") {
-      expect(captureResult.value).toMatchObject({
-        reused: true,
-        contentSha256: CONTENT_SHA256,
-      });
-    }
-    expect(calls).toBe(0);
-  });
-
-  test("ignores orphan temporary files", async () => {
-    const repoRoot = createRepoRoot();
-    mkdirSync(sourceDirectory(repoRoot), { recursive: true });
-    writeFileSync(join(sourceDirectory(repoRoot), ".tmp-orphan"), "partial");
+    const orphanDirectory = join(
+      rawDirectory(repoRoot),
+      ".tmp-world-bank-country-orphan",
+    );
+    mkdirSync(orphanDirectory, { recursive: true });
+    writeFileSync(join(orphanDirectory, "partial.bin"), "partial");
 
     await expect(captureBasicRawSource(input(repoRoot), transport(BODY))).resolves.toMatchObject({
       reused: false,
       contentSha256: CONTENT_SHA256,
     });
+    expect(existsSync(orphanDirectory)).toBe(true);
   });
 
   test("concurrent identical captures converge on one immutable capture", async () => {
@@ -400,6 +545,53 @@ function response(body: Uint8Array): BasicSourceTransportResponse {
   };
 }
 
+function unsafeResponse(
+  kind: "extra key" | "symbol key" | "accessor key",
+  probe: { executions: number },
+): BasicSourceTransportResponse {
+  const result: Record<PropertyKey, unknown> = response(BODY) as unknown as Record<
+    PropertyKey,
+    unknown
+  >;
+  const property =
+    kind === "extra key"
+      ? "unexpected"
+      : kind === "symbol key"
+        ? Symbol("unexpected")
+        : "finalUrl";
+  Object.defineProperty(result, property, {
+    configurable: true,
+    enumerable: true,
+    ...(kind === "extra key"
+      ? { value: METADATA_SENTINEL, writable: true }
+      : {
+          get() {
+            probe.executions += 1;
+            throw new Error(METADATA_SENTINEL);
+          },
+        }),
+  });
+  return result as unknown as BasicSourceTransportResponse;
+}
+
+function unsafeRedirectChain(
+  kind: "sparse" | "extra property" | "custom prototype",
+): string[] {
+  if (kind === "sparse") {
+    return new Array<string>(1);
+  }
+  const result: string[] = [];
+  if (kind === "extra property") {
+    Object.defineProperty(result, "unexpected", {
+      enumerable: true,
+      value: METADATA_SENTINEL,
+    });
+    return result;
+  }
+  Object.setPrototypeOf(result, Object.create(Array.prototype));
+  return result;
+}
+
 async function* chunks(body: Uint8Array): AsyncIterable<Uint8Array> {
   yield body;
 }
@@ -418,6 +610,10 @@ function createRepoRoot(): string {
 
 function sourceDirectory(repoRoot: string): string {
   return join(repoRoot, ".cache", "basic-country", "VN", "run-20260710", "raw", "world-bank-country");
+}
+
+function rawDirectory(repoRoot: string): string {
+  return join(repoRoot, ".cache", "basic-country", "VN", "run-20260710", "raw");
 }
 
 function payloadPath(repoRoot: string): string {

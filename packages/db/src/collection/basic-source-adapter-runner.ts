@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { CREDIBILITIES } from "@navigator/shared-types/schema";
 import {
   expectUtcRfc3339Timestamp,
@@ -9,8 +8,6 @@ import {
   BASIC_COLLECTION_AUDIT_SCHEMA_VERSION,
   BASIC_COLLECTION_REQUIRED_STATIC_FACT_PATHS,
   type BasicCollectionJsonValue,
-  type BasicExtractedFact,
-  type BasicFactEvidence,
   type BasicSourceRecord,
 } from "./basic-collection-contracts.js";
 import { captureBasicRawSource } from "./basic-raw-capture.js";
@@ -23,6 +20,11 @@ import type {
   BasicSourceAdapterRunResult,
   BasicSourceRequest,
 } from "./basic-source-adapter-contracts.js";
+import {
+  materializeBasicSourceFacts,
+  type BasicSourcedObservation,
+} from "./basic-source-fact-materializer.js";
+import { snapshotBasicSourceRequest } from "./basic-source-metadata.js";
 const OUTPUT_KEYS = ["publishedAt", "promptInjectionRisk", "accessNotes", "observations"] as const;
 const OBSERVATION_KEYS = ["fieldPath", "locator", "rawValue", "normalizedValue", "unit", "year", "uncertainty"] as const;
 const SOURCE_FAMILIES = ["international-organization", "official-statistics", "government", "energy-authority", "regulator", "grid-operator", "industry-association", "verified-research"] as const;
@@ -30,9 +32,6 @@ const PROMPT_INJECTION_RISKS = ["none", "suspected", "confirmed"] as const;
 const FIELD_PATHS = new Set<string>(BASIC_COLLECTION_REQUIRED_STATIC_FACT_PATHS);
 const INDICATOR_PATH = /^marketOverview\.keyIndicators\[(?:0|[1-9]\d*)\]\.(?:label|value|unit|year)$/;
 const SAFE_SOURCE_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-interface SourcedObservation extends BasicDeterministicObservation {
-  sourceId: string;
-}
 export async function runBasicDeterministicSourceAdapters(
   input: BasicSourceAdapterRunInput,
 ): Promise<BasicSourceAdapterRunResult> {
@@ -41,7 +40,7 @@ export async function runBasicDeterministicSourceAdapters(
     throw new Error("source adapter run must contain observations");
   }
   const sources: BasicSourceRecord[] = [];
-  const observations: SourcedObservation[] = [];
+  const observations: BasicSourcedObservation[] = [];
   const receipts: BasicRawCaptureReceipt[] = [];
   for (const adapter of adapters) {
     const request = requestFrom(adapter, input.countryCode);
@@ -104,7 +103,7 @@ export async function runBasicDeterministicSourceAdapters(
       schemaVersion: BASIC_COLLECTION_AUDIT_SCHEMA_VERSION,
       runId: input.runId,
       countryCode: input.countryCode,
-      facts: materializeFacts(observations),
+      facts: materializeBasicSourceFacts(observations),
     },
     receipts,
   };
@@ -137,7 +136,7 @@ function prepareAdapters(
 }
 function requestFrom(adapter: BasicDeterministicSourceAdapter, countryCode: string): BasicSourceRequest {
   try {
-    return adapter.request(countryCode);
+    return snapshotBasicSourceRequest(adapter.request(countryCode));
   } catch {
     throw new Error("source adapter request failed");
   }
@@ -230,46 +229,6 @@ function reconstructJson(
   ancestors.delete(value);
   return result;
 }
-function materializeFacts(observations: readonly SourcedObservation[]): BasicExtractedFact[] {
-  const grouped = new Map<string, SourcedObservation[]>();
-  for (const item of observations) {
-    const group = grouped.get(item.fieldPath) ?? [];
-    group.push(item);
-    grouped.set(item.fieldPath, group);
-  }
-  return [...grouped.keys()].sort(compareText).map((fieldPath) => {
-    const group = grouped.get(fieldPath) ?? [];
-    const tuples = new Set(group.map(tupleKey));
-    const evidence = group.map(toEvidence).sort(compareEvidence);
-    if (tuples.size > 1 && new Set(evidence.map(({ sourceId }) => sourceId)).size < 2) {
-      throw new Error("source adapter materialization is invalid");
-    }
-    const uncertainties = [...new Set(group.map(({ uncertainty }) => uncertainty).filter(isText))].sort(compareText);
-    return {
-      factId: `fact-${createHash("sha256").update(fieldPath, "utf8").digest("hex").slice(0, 16)}`,
-      fieldPath,
-      status: tuples.size === 1 ? "candidate" : "conflict",
-      evidence,
-      extractionMethod: "deterministic",
-      uncertainty: uncertainties.length === 0 ? null : uncertainties.join(" | "),
-    };
-  });
-}
-function toEvidence(item: SourcedObservation): BasicFactEvidence { return { sourceId: item.sourceId, locator: item.locator, rawValue: item.rawValue, normalizedValue: item.normalizedValue, unit: item.unit, year: item.year }; }
-function tupleKey(item: SourcedObservation): string { return `${canonicalJson(item.normalizedValue)}\0${canonicalJson(item.unit)}\0${canonicalJson(item.year)}`; }
-function canonicalJson(value: BasicCollectionJsonValue): string {
-  if (value === null) return "null";
-  if (typeof value === "number") return Object.is(value, -0) ? "-0" : JSON.stringify(value);
-  if (typeof value === "string" || typeof value === "boolean") return JSON.stringify(value);
-  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
-  return `{${Object.keys(value).sort(compareText).map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key]!)}`).join(",")}}`;
-}
-function compareEvidence(left: BasicFactEvidence, right: BasicFactEvidence): number {
-  return compareText(left.sourceId, right.sourceId) || compareText(left.locator, right.locator) ||
-    compareText(canonicalJson(left.rawValue), canonicalJson(right.rawValue)) ||
-    compareText(canonicalJson(left.normalizedValue), canonicalJson(right.normalizedValue)) ||
-    compareNullableText(left.unit, right.unit) || compareNullableNumber(left.year, right.year);
-}
 function exactDataRecord(value: unknown, keys: readonly string[]): value is Record<string, unknown> { return hasExactOwnKeys(value, keys) && dataKeys(value, keys); }
 function dataKeys(value: object, keys: readonly PropertyKey[]): boolean {
   return keys.every((key) => {
@@ -296,5 +255,3 @@ function isFiniteNumber(value: unknown): value is number { return typeof value =
 function isText(value: unknown): value is string { return typeof value === "string" && value.trim() !== ""; }
 function includes<T>(values: readonly T[], value: unknown): value is T { return values.includes(value as T); }
 function compareText(left: string, right: string): number { return left < right ? -1 : left > right ? 1 : 0; }
-function compareNullableText(left: string | null, right: string | null): number { return left === null ? (right === null ? 0 : -1) : right === null ? 1 : compareText(left, right); }
-function compareNullableNumber(left: number | null, right: number | null): number { if (left === null) return right === null ? 0 : -1; if (right === null) return 1; if (Object.is(left, right)) return 0; if (Object.is(left, -0)) return -1; if (Object.is(right, -0)) return 1; return left - right; }

@@ -84,7 +84,7 @@ manifest 不得包含任意请求头、凭证、cookie、authorization 值、can
 
 当一个有效的既有 capture 存在时，runner 必须重新读取 content-addressed payload、重新计算并验证哈希，然后复用该 capture，**不发起网络调用**。复用要求以下字段完全相等：国家、批次、来源 ID、adapter ID/version、GET URL、Accept 值、排序后的 origin 白名单、排序后的 query 参数白名单、状态码、最终 URL、重定向链、媒体类型、payload 文件名、字节数和哈希。manifest 损坏、只有 payload 没有 manifest、或任一字段不一致都必须 fail closed；刷新来源必须使用新的 `runId`。
 
-缓存按 `(countryCode, runId, sourceId)` 不可变。写入使用独占临时文件和 no-clobber 原子发布；相同字节的并发写入可以收敛到同一份已验证采集，不同字节不得覆盖同一身份。孤儿 `.tmp-*` 文件不是采集；只有 payload 没有 `capture.json` 是无效的 partial capture。raw-cache root 下任意已有 symlink 都必须拒绝；绝对路径、traversal segment、不安全 ID、NUL 和反斜杠分隔符必须在 transport 执行前拒绝。缓存文件使用本地 restrictive permissions。
+缓存按 `(countryCode, runId, sourceId)` 不可变。写入必须先在 `raw/` 下构建完整的 sibling `.tmp-<sourceId>-<uuid>` 目录（mode `0700`），以 mode `0600` 写入并 fsync payload 与 `capture.json`，在平台支持时 fsync 临时目录，再把完整目录原子 rename 为最终 `<sourceId>`；最终来源目录不得预创建。相同字节的并发写入可以收敛到同一份已验证采集，不同字节不得覆盖同一身份。孤儿 `.tmp-*` 目录不是采集，也不能阻塞后续 capture；只有 payload 没有 `capture.json` 是无效的 partial capture。raw-cache root 下任意已有 symlink 都必须拒绝；绝对路径、traversal segment、不安全 ID、NUL 和反斜杠分隔符必须在 transport 执行前拒绝。缓存文件使用本地 restrictive permissions。
 
 ## 5. 网络与请求参数边界
 
@@ -100,7 +100,7 @@ source register 的 `sourceUrl` 保留原始请求 URL；最终 URL 和重定向
 
 每个 observation 必须使用 P1-6A allowlisted canonical field path 和非空 locator。runner 必须验证每个 locator **恰好匹配** 被引用 source record 的 `evidenceLocators` 数组中的一个定位符。每个 `extracted-facts` `fieldPath` 最多出现一次；同一字段的多来源证据必须合并到该唯一事实的 `evidence` 中。
 
-runner 按 field path 的稳定字典序分组 observation。比较和冲突使用 `(normalizedValue, unit, year)` tuple：对象递归按排序后的 own keys 比较，数组保留顺序，数值使用 `Object.is`，其他标量比较类型和值。物化规则固定为：
+runner 按 field path 的稳定字典序分组 observation，再按 `sourceId` 分组。每个来源在该 field path 下的 `(normalizedValue, unit, year)` tuple set 必须恰好只有一个值；任何来源内部出现两个 tuple 都先 fail closed，之后才进行跨来源比较。对象递归按排序后的 own keys 比较，数组保留顺序，数值使用 `Object.is`，其他标量比较类型和值。物化规则固定为：
 
 - Equal tuples from one or more `sourceId` values produce one `candidate` fact with all evidence.
 - Differing tuples from at least two distinct `sourceId` values produce one `conflict` fact with all evidence.
@@ -111,7 +111,7 @@ runner 按 field path 的稳定字典序分组 observation。比较和冲突使�
 
 evidence 按 `sourceId`、`locator`、canonical raw JSON、canonical normalized JSON、unit（`null` 在文本前）和 year（`null` 在数字前）稳定排序。fact 的 `uncertainty` 是去重、trim 后非空 uncertainty 的字典序拼接，以 `" | "` 分隔；没有时为 `null`。`factId` 固定为 `fact-` 加上 field path UTF-8 字节 SHA-256 的前 16 个小写十六进制字符。
 
-observation 数量为零时拒绝 adapter output，不产生 source-register result。World Bank 的 `null` WDI record 被省略；若一次 source run 的所有受支持 record 都是 `null`，则该 run 仍按 observation-free 失败，已采集的 raw bytes 只保留在本地供诊断。
+observation 数量为零时拒绝 adapter output，不产生 source-register result。World Bank 的 `null` WDI record 必须产生一个 `candidate` observation，其 `rawValue` 和 `normalizedValue` 都是 `null`；它不得被省略，也不会使 source run 变成 observation-free。
 
 ## 7. World Bank 适配器
 
@@ -135,7 +135,7 @@ https://api.worldbank.org/v2/country/<ISO2>/indicator/NY.GDP.MKTP.CD?source=2&fo
 https://api.worldbank.org/v2/country/<ISO2>/indicator/NY.GDP.MKTP.KD.ZG?source=2&format=json&mrv=1&per_page=1
 ```
 
-大写 ISO2、query 参数顺序、`source=2` 和 `per_page=1` 都固定。每个响应 metadata 必须包含 `page = 1`、`pages = 1`、`per_page = 1`、`total = 1`、`sourceid = "2"` 和 `lastupdated` 日期；不得静默忽略 pagination。唯一 data record 必须标识该 adapter 请求的 indicator 和 ISO2 country。
+大写 ISO2、query 参数顺序、`source=2` 和 `per_page=1` 都固定。`mrv=1` 表示请求最近一期值，而不是最近一期非空值。每个响应 metadata 必须包含 `page = 1`、`pages = 1`、`per_page = 1`、`total = 1`、`sourceid = "2"` 和 `lastupdated` 日期；不得静默忽略 pagination。唯一 data record 必须标识该 adapter 请求的 indicator 和 ISO2 country。
 
 | Indicator | canonical fieldPath | unit |
 |---|---|---|

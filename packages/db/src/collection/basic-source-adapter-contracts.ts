@@ -78,28 +78,35 @@ export interface BasicRawCaptureReceipt {
   reused: boolean;
 }
 
+export interface BasicRawCaptureResult extends BasicRawCaptureReceipt {
+  body: Uint8Array;
+  finalUrl: string;
+  contentType: string;
+  retrievedAt: string;
+}
+
 export interface BasicRawCaptureManifest {
-  schemaVersion: typeof BASIC_RAW_CAPTURE_SCHEMA_VERSION;
-  countryCode: string;
-  runId: string;
-  adapterId: string;
-  adapterVersion: string;
-  sourceId: string;
-  request: {
-    method: "GET";
-    url: string;
-    accept: string;
-    allowedOrigins: string[];
-    allowedQueryParameters: string[];
+  readonly schemaVersion: typeof BASIC_RAW_CAPTURE_SCHEMA_VERSION;
+  readonly countryCode: string;
+  readonly runId: string;
+  readonly adapterId: string;
+  readonly adapterVersion: string;
+  readonly sourceId: string;
+  readonly request: {
+    readonly method: "GET";
+    readonly url: string;
+    readonly accept: string;
+    readonly allowedOrigins: readonly string[];
+    readonly allowedQueryParameters: readonly string[];
   };
-  response: {
-    status: number;
-    finalUrl: string;
-    redirectChain: string[];
-    contentType: string;
-    retrievedAt: string;
-    byteLength: number;
-    contentSha256: string;
+  readonly response: {
+    readonly status: number;
+    readonly finalUrl: string;
+    readonly redirectChain: readonly string[];
+    readonly contentType: string;
+    readonly retrievedAt: string;
+    readonly byteLength: number;
+    readonly contentSha256: string;
   };
 }
 
@@ -126,4 +133,3 @@ export interface BasicSourceAdapterRunResult {
   extractedFacts: BasicExtractedFacts;
   receipts: BasicRawCaptureReceipt[];
 }
-
