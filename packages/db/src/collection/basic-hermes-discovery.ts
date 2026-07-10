@@ -1,4 +1,7 @@
-import { SAFE_RUN_ID } from "../seed/basic-country-validation-utils.js";
+import {
+  expectUtcRfc3339Timestamp,
+  SAFE_RUN_ID,
+} from "../seed/basic-country-validation-utils.js";
 import {
   BASIC_HERMES_DISCOVERY_MAX_QUERIES,
   BASIC_HERMES_DISCOVERY_MAX_RESULTS,
@@ -17,6 +20,8 @@ const REQUEST_KEYS = ["countryCode", "runId", "queries", "maxResults"] as const;
 const BATCH_KEYS = ["schemaVersion", "runId", "countryCode", "candidates"] as const;
 const CANDIDATE_KEYS = ["discoveryId", "provider", "query", "title", "snippet", "url", "discoveredAt", "discoveryOnly"] as const;
 const MAX_PORT_PROTOTYPE_DEPTH = 16;
+const MAX_DISCOVERY_ID_LENGTH = 128;
+const SAFE_DISCOVERY_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 type DiscoveryMethod = BasicHermesDiscoveryPort["discover"];
 type CapturedPort = (request: BasicHermesDiscoveryRequest, signal: AbortSignal) => Promise<unknown>;
@@ -52,6 +57,7 @@ function settleDiscovery(
     try {
       Promise.resolve(discover(request, controller.signal)).then(
         (response) => {
+          if (settled) return;
           try { settle(parseBatch(response, request)); }
           catch { settle(failed("HERMES_RESPONSE_INVALID", "hermes")); }
         },
@@ -139,7 +145,8 @@ function parseBatch(value: unknown, request: BasicHermesDiscoveryRequest): Basic
     urls.add(candidate.url);
     snapshot.push(candidate);
   }
-  snapshot.sort((left, right) => left.url.localeCompare(right.url) || left.discoveryId.localeCompare(right.discoveryId));
+  snapshot.sort((left, right) => compareCodeUnits(left.url, right.url) ||
+    compareCodeUnits(left.discoveryId, right.discoveryId));
   return { ok: true, data: Object.freeze({
     schemaVersion: BASIC_HERMES_DISCOVERY_SCHEMA_VERSION,
     runId: request.runId,
@@ -160,7 +167,8 @@ function parseCandidate(value: unknown, request: BasicHermesDiscoveryRequest): B
   const discoveredAt = properties.get("discoveredAt");
   if (url === "forbidden") return bridgeFailure("DISCOVERY_URL_FORBIDDEN", "hermes");
   if (
-    typeof discoveryId !== "string" || discoveryId.trim() === "" || provider !== "searxng" ||
+    typeof discoveryId !== "string" || discoveryId.length > MAX_DISCOVERY_ID_LENGTH ||
+    !SAFE_DISCOVERY_ID.test(discoveryId) || provider !== "searxng" ||
     typeof query !== "string" || !request.queries.includes(query) ||
     typeof title !== "string" || typeof snippet !== "string" ||
     typeof discoveredAt !== "string" || !isUtcTimestamp(discoveredAt) ||
@@ -252,7 +260,13 @@ function isForbiddenIpv4([first, second]: readonly [number, number, number, numb
 }
 
 function isUtcTimestamp(value: string): boolean {
-  try { return new Date(value).toISOString() === value; } catch { return false; }
+  const errors: string[] = [];
+  expectUtcRfc3339Timestamp(value, "discoveredAt", errors);
+  return errors.length === 0;
+}
+
+function compareCodeUnits(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
 }
 
 function bridgeFailure(code: BasicBridgeErrorCode, phase: "input" | "hermes"): BasicBridgeFailure {

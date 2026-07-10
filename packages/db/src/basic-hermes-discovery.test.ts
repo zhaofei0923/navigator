@@ -96,32 +96,72 @@ describe("Basic Hermes discovery bridge", () => {
     }).toThrow();
   });
 
-  test("snapshots the request and calls an inherited method with Reflect.apply without reading bind", async () => {
-    const seen: { request?: BasicHermesDiscoveryRequest; signal?: AbortSignal } = {};
-    class HermesPort {
-      discover(request: BasicHermesDiscoveryRequest, signal: AbortSignal) {
+  test("sorts URL and discovery ID fields by explicit code units", async () => {
+    const result = await runBasicHermesDiscovery(REQUEST, portReturning(response([
+      candidate({ discoveryId: "candidate-a", url: "https://example.com/a" }),
+      candidate({ discoveryId: "candidate-z", url: "https://example.com/Z" }),
+    ])));
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.candidates.map(({ discoveryId }) => discoveryId)).toEqual([
+      "candidate-z",
+      "candidate-a",
+    ]);
+  });
+
+  test.each(["throwing getter", "hostile data override"] as const)(
+    "snapshots the request and preserves the original receiver with a %s on discover.bind",
+    async (kind) => {
+      const seen: {
+        receiver?: object;
+        request?: BasicHermesDiscoveryRequest;
+        signal?: AbortSignal;
+      } = {};
+      let bindInteractions = 0;
+      const discover = function (
+        this: object,
+        request: BasicHermesDiscoveryRequest,
+        signal: AbortSignal,
+      ) {
+        seen.receiver = this;
         seen.request = request;
         seen.signal = signal;
         return Promise.resolve(response([candidate()]));
+      };
+      if (kind === "throwing getter") {
+        Object.defineProperty(discover, "bind", {
+          configurable: true,
+          get() {
+            bindInteractions += 1;
+            throw new Error("discover.bind must not be read");
+          },
+        });
+      } else {
+        Object.defineProperty(discover, "bind", {
+          configurable: true,
+          value: () => {
+            bindInteractions += 1;
+            throw new Error("discover.bind must not be called");
+          },
+        });
       }
-    }
-    const port = new HermesPort() as HermesPort & { bind?: unknown };
-    Object.defineProperty(port, "bind", {
-      get() {
-        throw new Error("bind must not be read");
-      },
-      enumerable: true,
-    });
-    const mutableRequest = { ...REQUEST, queries: [...REQUEST.queries] };
-    const resultPromise = runBasicHermesDiscovery(mutableRequest, port);
-    mutableRequest.queries[0] = "MUTATED";
-    const result = await resultPromise;
+      const prototype = Object.create(null);
+      Object.defineProperty(prototype, "discover", { value: discover });
+      const port = Object.create(prototype) as object;
+      const mutableRequest = { ...REQUEST, queries: [...REQUEST.queries] };
+      const resultPromise = runBasicHermesDiscovery(mutableRequest, port);
+      mutableRequest.queries[0] = "MUTATED";
+      const result = await resultPromise;
 
-    expect(result.ok).toBe(true);
-    expect(seen.request).toEqual(REQUEST);
-    expect(Object.isFrozen(seen.request)).toBe(true);
-    expect(seen.signal).toBeInstanceOf(AbortSignal);
-  });
+      expect(result.ok).toBe(true);
+      expect(bindInteractions).toBe(0);
+      expect(seen.receiver).toBe(port);
+      expect(seen.request).toEqual(REQUEST);
+      expect(Object.isFrozen(seen.request)).toBe(true);
+      expect(seen.signal).toBeInstanceOf(AbortSignal);
+    },
+  );
 
   test.each(["extra key", "symbol key", "accessor key", "sparse queries"] as const)(
     "rejects a caller request with an %s before calling the port",
@@ -227,6 +267,65 @@ describe("Basic Hermes discovery bridge", () => {
     expect(expectFailure(await runBasicHermesDiscovery(REQUEST, portReturning(response([invalidTimestamp])))).code).toBe("SEARXNG_RECORD_INVALID");
   });
 
+  test.each([
+    "2026-02-28T00:00:00Z",
+    "2026-02-28T00:00:00.1Z",
+    "2026-02-28T00:00:00.12Z",
+    "2026-02-28T00:00:00.123Z",
+  ])("accepts strict P1-6A UTC RFC3339 timestamp %s", async (discoveredAt) => {
+    const result = await runBasicHermesDiscovery(
+      REQUEST,
+      portReturning(response([candidate({ discoveredAt })])),
+    );
+
+    expect(result.ok).toBe(true);
+  });
+
+  test.each([
+    ["2026-02-29T00:00:00Z", "invalid calendar date"],
+    ["2026-02-28T24:00:00Z", "invalid hour"],
+    ["2026-02-28T00:60:00Z", "invalid minute"],
+    ["2026-02-28T00:00:00+08:00", "timezone offset"],
+    ["2026-02-28T00:00:00z", "lowercase timezone marker"],
+    ["2026-02-28T00:00Z", "missing seconds"],
+    ["2026-02-28T00:00:00.1234Z", "too many fractional digits"],
+    ["2026-02-28T00:00:60Z", "leap second"],
+  ] as const)("rejects %s as %s", async (discoveredAt, _reason) => {
+    const result = await runBasicHermesDiscovery(
+      REQUEST,
+      portReturning(response([candidate({ discoveredAt })])),
+    );
+
+    expect(expectFailure(result).code).toBe("SEARXNG_RECORD_INVALID");
+  });
+
+  test("accepts discovery IDs at the safe 128-character boundary", async () => {
+    const discoveryId = "a".repeat(128);
+    const result = await runBasicHermesDiscovery(
+      REQUEST,
+      portReturning(response([candidate({ discoveryId })])),
+    );
+
+    expect(result.ok).toBe(true);
+  });
+
+  test.each([
+    "Candidate-1",
+    "candidate_1",
+    "candidate--1",
+    "-candidate-1",
+    "candidate-1-",
+    "candidate.1",
+    "a".repeat(129),
+  ])("rejects unsafe discovery ID %s", async (discoveryId) => {
+    const result = await runBasicHermesDiscovery(
+      REQUEST,
+      portReturning(response([candidate({ discoveryId })])),
+    );
+
+    expect(expectFailure(result).code).toBe("SEARXNG_RECORD_INVALID");
+  });
+
   test("rejects unsafe ports and bounded prototype cycles", async () => {
     const target = Object.create(null);
     let cyclicPrototype: object;
@@ -284,9 +383,24 @@ describe("Basic Hermes discovery bridge", () => {
 
       expect(expectFailure(result)).toEqual({ code: "HERMES_TIMEOUT", phase: "hermes", retryable: true });
       expect(signal?.aborted).toBe(true);
-      resolveDiscovery?.(response([candidate({ title: "late secret" })]));
+      let parseFacingAccesses = 0;
+      const lateResponse = new Proxy({}, {
+        getPrototypeOf() {
+          parseFacingAccesses += 1;
+          throw new Error("late response must not be parsed");
+        },
+        getOwnPropertyDescriptor() {
+          parseFacingAccesses += 1;
+          throw new Error("late response descriptors must not be read");
+        },
+        ownKeys() {
+          parseFacingAccesses += 1;
+          throw new Error("late response keys must not be read");
+        },
+      });
+      resolveDiscovery?.(lateResponse);
       await vi.runAllTicks();
-      expect(JSON.stringify(result)).not.toContain("late secret");
+      expect(parseFacingAccesses).toBe(0);
     } finally {
       vi.useRealTimers();
     }
