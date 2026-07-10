@@ -23,7 +23,7 @@ review-report.json:
   publicationRecommendation, humanDecision
 ```
 
-生产暂存区在 `data/staging/<country>/<runId>/` 将以下四个产物分别存储为独立文件：`source-register.json`、`extracted-facts.json`、`market-overview.draft.json` 与 `review-report.json`。为便于确定性离线校验，已提交测试可以将相同四个产物包裹在一个 `BasicCollectionAuditBundle` 形状的 fixture JSON 文件中。fixture 不等于 canonical seed，暂存产物不得进入 Prisma 导入、C 端响应、覆盖计数或 AI 检索。
+生产暂存区在 `data/staging/<country>/<runId>/` 将以下四个产物分别存储为独立文件：`source-register.json`、`extracted-facts.json`、`market-overview.draft.json` 与 `review-report.json`。为便于确定性离线校验，已提交测试可以将相同四个产物包裹在一个 `BasicCollectionAuditBundle` 形状的 fixture JSON 文件中。四个 committed fixture 固定在 `packages/db/fixtures/basic-collection/{normal,missing,conflict,untrusted}.json`，并由静态测试以完整 bundle envelope 重复读取、验证，不表示生产暂存目录。fixture 不等于 canonical seed，暂存产物不得进入 Prisma 导入、C 端响应、覆盖计数或 AI 检索。
 
 `countryDirectory` 是与 `data/<country>/` 一致的国家目录名；`runId` 是稳定的批次标识。`source-register.json`、`extracted-facts.json` 与 `review-report.json` 是三个 envelope：它们的 `schemaVersion` 必须均为本契约版本，`runId` 必须等于 bundle 的 `runId`，且三者的 `countryCode` 必须相同。`market-overview.draft.json` 不是 envelope，不得包含 `schemaVersion` 或 `runId`；它只以 `countryCode` 与上述三个工件对齐，其批次归属由它在 bundle 中的位置及 `data/staging/<countryDirectory>/<runId>/` 路径关联。`countryCode` 是两个大写字母的 ISO 3166-1 alpha-2 代码。
 

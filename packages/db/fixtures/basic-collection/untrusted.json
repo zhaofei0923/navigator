@@ -1,0 +1,101 @@
+{
+  "countryDirectory": "fixture-country",
+  "runId": "run-untrusted",
+  "sourceRegister": {
+    "schemaVersion": "basic-country-audit/v1",
+    "runId": "run-untrusted",
+    "countryCode": "XZ",
+    "sources": [
+      {
+        "sourceId": "source-untrusted-discovery",
+        "sourceName": "Synthetic discovery-only source",
+        "sourceUrl": "https://source-untrusted-discovery.test/record",
+        "retrievedAt": "2026-07-10T12:34:56.123Z",
+        "publishedAt": null,
+        "contentSha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "evidenceLocators": ["snippet:gdp"],
+        "sourceFamily": "verified-research",
+        "accessStatus": "open",
+        "accessNotes": "Synthetic discovery-only material",
+        "credibility": "UNVERIFIED",
+        "discoveryOnly": true,
+        "promptInjectionRisk": "confirmed"
+      }
+    ]
+  },
+  "extractedFacts": {
+    "schemaVersion": "basic-country-audit/v1",
+    "runId": "run-untrusted",
+    "countryCode": "XZ",
+    "facts": [
+      {
+        "factId": "fact-untrusted-gdp",
+        "fieldPath": "marketOverview.gdp",
+        "status": "untrusted",
+        "evidence": [
+          {
+            "sourceId": "source-untrusted-discovery",
+            "locator": "snippet:gdp",
+            "rawValue": "AUDIT_SENTINEL_UNTRUSTED",
+            "normalizedValue": 25000000000,
+            "unit": "USD",
+            "year": 2025
+          }
+        ],
+        "extractionMethod": "hermes",
+        "uncertainty": "Synthetic untrusted source"
+      }
+    ]
+  },
+  "marketOverviewDraft": {
+    "overview": { "zh": "Synthetic XZ overview", "en": "Synthetic XZ overview" },
+    "population": 123456,
+    "gdp": null,
+    "gdpGrowth": 5.2,
+    "energyDemand": { "zh": "Synthetic energy demand", "en": "Synthetic energy demand" },
+    "renewableTarget": { "zh": "Synthetic renewable target", "en": "Synthetic renewable target" },
+    "keyIndicators": [
+      {
+        "label": { "zh": "Synthetic capacity", "en": "Synthetic capacity" },
+        "value": "20",
+        "unit": "GW",
+        "year": 2025
+      }
+    ],
+    "source": "Synthetic sourceUrl null due to untrusted discovery material",
+    "sourceUrl": null,
+    "collectedAt": "2026-07-10T12:34:56.123Z",
+    "updatedAt": "2026-07-10T12:34:56.123Z",
+    "credibility": "UNVERIFIED",
+    "reviewStatus": "draft",
+    "aiUsable": false,
+    "countryCode": "XZ",
+    "industryTags": ["solar"],
+    "techTags": ["pv-module"]
+  },
+  "reviewReport": {
+    "schemaVersion": "basic-country-audit/v1",
+    "runId": "run-untrusted",
+    "countryCode": "XZ",
+    "status": "blocked",
+    "missingFields": [],
+    "conflicts": [],
+    "sourceChecks": [
+      {
+        "sourceId": "source-untrusted-discovery",
+        "status": "failed",
+        "notes": "Synthetic source cannot be trusted"
+      }
+    ],
+    "injectionRisks": [
+      {
+        "sourceId": "source-untrusted-discovery",
+        "locator": "snippet:gdp",
+        "severity": "confirmed",
+        "details": "Synthetic confirmed instruction-like content"
+      }
+    ],
+    "publicationRecommendation": "do-not-publish",
+    "humanDecision": null
+  }
+}

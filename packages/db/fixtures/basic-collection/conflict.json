@@ -1,0 +1,129 @@
+{
+  "countryDirectory": "fixture-country",
+  "runId": "run-conflict",
+  "sourceRegister": {
+    "schemaVersion": "basic-country-audit/v1",
+    "runId": "run-conflict",
+    "countryCode": "XZ",
+    "sources": [
+      {
+        "sourceId": "source-conflict-primary",
+        "sourceName": "Synthetic original primary source",
+        "sourceUrl": "https://source-conflict-primary.test/record",
+        "retrievedAt": "2026-07-10T12:34:56.123Z",
+        "publishedAt": "2026-07-09T00:00:00Z",
+        "contentSha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "evidenceLocators": ["table:population-primary"],
+        "sourceFamily": "official-statistics",
+        "accessStatus": "open",
+        "accessNotes": null,
+        "credibility": "OFFICIAL",
+        "discoveryOnly": false,
+        "promptInjectionRisk": "none"
+      },
+      {
+        "sourceId": "source-conflict-secondary",
+        "sourceName": "Synthetic original secondary source",
+        "sourceUrl": "https://source-conflict-secondary.test/record",
+        "retrievedAt": "2026-07-10T12:34:56.123Z",
+        "publishedAt": "2026-07-08T00:00:00Z",
+        "contentSha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "evidenceLocators": ["table:population-secondary"],
+        "sourceFamily": "official-statistics",
+        "accessStatus": "open",
+        "accessNotes": null,
+        "credibility": "OFFICIAL",
+        "discoveryOnly": false,
+        "promptInjectionRisk": "none"
+      }
+    ]
+  },
+  "extractedFacts": {
+    "schemaVersion": "basic-country-audit/v1",
+    "runId": "run-conflict",
+    "countryCode": "XZ",
+    "facts": [
+      {
+        "factId": "fact-conflict-population",
+        "fieldPath": "marketOverview.population",
+        "status": "conflict",
+        "evidence": [
+          {
+            "sourceId": "source-conflict-primary",
+            "locator": "table:population-primary",
+            "rawValue": "AUDIT_SENTINEL_CONFLICT",
+            "normalizedValue": 123456,
+            "unit": "people",
+            "year": 2025
+          },
+          {
+            "sourceId": "source-conflict-secondary",
+            "locator": "table:population-secondary",
+            "rawValue": "Synthetic alternate population",
+            "normalizedValue": 123457,
+            "unit": "people",
+            "year": 2025
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": "Synthetic sources disagree"
+      }
+    ]
+  },
+  "marketOverviewDraft": {
+    "overview": { "zh": "Synthetic XZ overview", "en": "Synthetic XZ overview" },
+    "population": null,
+    "gdp": 25000000000,
+    "gdpGrowth": 5.2,
+    "energyDemand": { "zh": "Synthetic energy demand", "en": "Synthetic energy demand" },
+    "renewableTarget": { "zh": "Synthetic renewable target", "en": "Synthetic renewable target" },
+    "keyIndicators": [
+      {
+        "label": { "zh": "Synthetic capacity", "en": "Synthetic capacity" },
+        "value": "20",
+        "unit": "GW",
+        "year": 2025
+      }
+    ],
+    "source": "Synthetic original source",
+    "sourceUrl": "https://source-conflict-primary.test/market-overview",
+    "collectedAt": "2026-07-10T12:34:56.123Z",
+    "updatedAt": "2026-07-10T12:34:56.123Z",
+    "credibility": "OFFICIAL",
+    "reviewStatus": "draft",
+    "aiUsable": false,
+    "countryCode": "XZ",
+    "industryTags": ["solar"],
+    "techTags": ["pv-module"]
+  },
+  "reviewReport": {
+    "schemaVersion": "basic-country-audit/v1",
+    "runId": "run-conflict",
+    "countryCode": "XZ",
+    "status": "blocked",
+    "missingFields": [],
+    "conflicts": [
+      {
+        "fieldPath": "marketOverview.population",
+        "factIds": ["fact-conflict-population"],
+        "resolution": "unresolved",
+        "notes": "Synthetic source values remain unresolved"
+      }
+    ],
+    "sourceChecks": [
+      {
+        "sourceId": "source-conflict-primary",
+        "status": "passed",
+        "notes": "Synthetic integrity check passed"
+      },
+      {
+        "sourceId": "source-conflict-secondary",
+        "status": "passed",
+        "notes": "Synthetic integrity check passed"
+      }
+    ],
+    "injectionRisks": [],
+    "publicationRecommendation": "do-not-publish",
+    "humanDecision": null
+  }
+}

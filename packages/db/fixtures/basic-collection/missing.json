@@ -1,0 +1,102 @@
+{
+  "countryDirectory": "fixture-country",
+  "runId": "run-missing",
+  "sourceRegister": {
+    "schemaVersion": "basic-country-audit/v1",
+    "runId": "run-missing",
+    "countryCode": "XZ",
+    "sources": [
+      {
+        "sourceId": "source-missing-primary",
+        "sourceName": "Synthetic original primary source",
+        "sourceUrl": "https://source-missing-primary.test/record",
+        "retrievedAt": "2026-07-10T12:34:56.123Z",
+        "publishedAt": "2026-07-09T00:00:00Z",
+        "contentSha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "evidenceLocators": ["table:population"],
+        "sourceFamily": "official-statistics",
+        "accessStatus": "open",
+        "accessNotes": null,
+        "credibility": "OFFICIAL",
+        "discoveryOnly": false,
+        "promptInjectionRisk": "none"
+      }
+    ]
+  },
+  "extractedFacts": {
+    "schemaVersion": "basic-country-audit/v1",
+    "runId": "run-missing",
+    "countryCode": "XZ",
+    "facts": [
+      {
+        "factId": "fact-missing-gdp",
+        "fieldPath": "marketOverview.gdp",
+        "status": "missing",
+        "evidence": [],
+        "extractionMethod": "deterministic",
+        "uncertainty": "Synthetic GDP source did not report a value"
+      },
+      {
+        "factId": "fact-missing-population",
+        "fieldPath": "marketOverview.population",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-missing-primary",
+            "locator": "table:population",
+            "rawValue": "AUDIT_SENTINEL_MISSING",
+            "normalizedValue": 123456,
+            "unit": "people",
+            "year": 2025
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
+      }
+    ]
+  },
+  "marketOverviewDraft": {
+    "overview": { "zh": "Synthetic XZ overview", "en": "Synthetic XZ overview" },
+    "population": 123456,
+    "gdp": null,
+    "gdpGrowth": 5.2,
+    "energyDemand": { "zh": "Synthetic energy demand", "en": "Synthetic energy demand" },
+    "renewableTarget": { "zh": "Synthetic renewable target", "en": "Synthetic renewable target" },
+    "keyIndicators": [
+      {
+        "label": { "zh": "Synthetic capacity", "en": "Synthetic capacity" },
+        "value": "20",
+        "unit": "GW",
+        "year": 2025
+      }
+    ],
+    "source": "Synthetic original source",
+    "sourceUrl": "https://source-missing-primary.test/market-overview",
+    "collectedAt": "2026-07-10T12:34:56.123Z",
+    "updatedAt": "2026-07-10T12:34:56.123Z",
+    "credibility": "OFFICIAL",
+    "reviewStatus": "draft",
+    "aiUsable": false,
+    "countryCode": "XZ",
+    "industryTags": ["solar"],
+    "techTags": ["pv-module"]
+  },
+  "reviewReport": {
+    "schemaVersion": "basic-country-audit/v1",
+    "runId": "run-missing",
+    "countryCode": "XZ",
+    "status": "blocked",
+    "missingFields": ["marketOverview.gdp"],
+    "conflicts": [],
+    "sourceChecks": [
+      {
+        "sourceId": "source-missing-primary",
+        "status": "passed",
+        "notes": "Synthetic integrity check passed"
+      }
+    ],
+    "injectionRisks": [],
+    "publicationRecommendation": "do-not-publish",
+    "humanDecision": null
+  }
+}
