@@ -2,7 +2,9 @@ import type { Credibility } from "@navigator/shared-types/schema";
 
 import type {
   BasicCollectionJsonValue,
+  BasicExtractedFacts,
   BasicPromptInjectionRisk,
+  BasicSourceRegister,
   BasicSourceAccessStatus,
   BasicSourceFamily,
 } from "./basic-collection-contracts.js";
@@ -19,6 +21,9 @@ export const BASIC_HERMES_DISCOVERY_MAX_RESULTS = 50;
 export const BASIC_LLAMA_DRAFT_TIMEOUT_MS = 120_000;
 export const BASIC_LLAMA_DRAFT_MAX_REQUEST_BYTES = 1_048_576;
 export const BASIC_LLAMA_DRAFT_MAX_RESPONSE_BYTES = 262_144;
+export const BASIC_LLAMA_DRAFT_PROTOCOL_VERSION =
+  "basic-country-draft/v1" as const;
+export const BASIC_LLAMA_DRAFT_OPERATION = "return-exact-draft" as const;
 
 export interface BasicHermesDiscoveryRequest {
   countryCode: string;
@@ -102,6 +107,12 @@ export interface BasicLlamaCppDraftRequest {
 
 export interface BasicDraftModelPort {
   complete(request: BasicLlamaCppDraftRequest): Promise<unknown>;
+}
+
+export interface BasicDraftBridgeInput {
+  sourceRegister: BasicSourceRegister;
+  extractedFacts: BasicExtractedFacts;
+  model: BasicDraftModelPort;
 }
 
 export interface BasicLlamaCppFetchResponse {
