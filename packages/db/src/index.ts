@@ -13,6 +13,10 @@ export { validateBasicCollectionAuditBundle } from "./collection/basic-collectio
 export { createBasicSourceTransport } from "./collection/basic-source-transport.js";
 export { captureBasicRawSource } from "./collection/basic-raw-capture.js";
 export { runBasicDeterministicSourceAdapters } from "./collection/basic-source-adapter-runner.js";
+export { runBasicHermesDiscovery } from "./collection/basic-hermes-discovery.js";
+export { promoteBasicHermesJsonEvidence } from "./collection/basic-hermes-json-evidence.js";
+export { createBasicLlamaCppDraftTransport } from "./collection/basic-llama-cpp-transport.js";
+export { bridgeBasicMarketOverviewDraft } from "./collection/basic-llama-draft-bridge.js";
 export {
   worldBankCountryAdapter,
 } from "./collection/adapters/world-bank-country.js";
@@ -24,6 +28,17 @@ export {
   BASIC_RAW_CAPTURE_SCHEMA_VERSION,
   BASIC_SOURCE_MAX_REDIRECTS,
 } from "./collection/basic-source-adapter-contracts.js";
+export {
+  BASIC_HERMES_DISCOVERY_SCHEMA_VERSION,
+  BASIC_HERMES_DISCOVERY_TIMEOUT_MS,
+  BASIC_HERMES_DISCOVERY_MAX_QUERIES,
+  BASIC_HERMES_DISCOVERY_MAX_RESULTS,
+  BASIC_LLAMA_DRAFT_TIMEOUT_MS,
+  BASIC_LLAMA_DRAFT_MAX_REQUEST_BYTES,
+  BASIC_LLAMA_DRAFT_MAX_RESPONSE_BYTES,
+  BASIC_LLAMA_DRAFT_PROTOCOL_VERSION,
+  BASIC_LLAMA_DRAFT_OPERATION,
+} from "./collection/basic-hermes-llama-contracts.js";
 export type {
   BasicAuditRun,
   BasicCanonicalData,
@@ -57,6 +72,26 @@ export type {
   BasicSourceTransport,
   BasicSourceTransportResponse,
 } from "./collection/basic-source-adapter-contracts.js";
+export type {
+  BasicHermesDiscoveryRequest,
+  BasicHermesDiscoveryPort,
+  BasicHermesDiscoveryCandidate,
+  BasicHermesDiscoveryBatch,
+  BasicHermesSourcePolicy,
+  BasicHermesObservation,
+  BasicHermesOpenedJsonSource,
+  BasicHermesEvidencePromotionInput,
+  BasicLlamaCppDraftRequest,
+  BasicDraftModelPort,
+  BasicDraftBridgeInput,
+  BasicLlamaCppFetchResponse,
+  BasicLlamaCppFetch,
+  BasicLlamaCppTransportOptions,
+  BasicBridgeErrorCode,
+  BasicBridgePhase,
+  BasicBridgeFailure,
+  BasicBridgeResult,
+} from "./collection/basic-hermes-llama-contracts.js";
 export type {
   BasicCollectionAuditBundle,
   BasicCollectionAuditSummary,

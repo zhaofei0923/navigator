@@ -1,6 +1,12 @@
 import { describe, expect, test } from "vitest";
 
 import type {
+  BasicBridgeErrorCode,
+  BasicBridgeFailure,
+  BasicBridgePhase,
+  BasicBridgeResult,
+  BasicDraftBridgeInput,
+  BasicDraftModelPort,
   BasicDeterministicAdapterInput,
   BasicDeterministicAdapterOutput,
   BasicDeterministicObservation,
@@ -30,6 +36,18 @@ import type {
   BasicHumanDecision,
   BasicInjectionRisk,
   BasicMarketOverviewDraft,
+  BasicHermesDiscoveryBatch,
+  BasicHermesDiscoveryCandidate,
+  BasicHermesDiscoveryPort,
+  BasicHermesDiscoveryRequest,
+  BasicHermesEvidencePromotionInput,
+  BasicHermesObservation,
+  BasicHermesOpenedJsonSource,
+  BasicHermesSourcePolicy,
+  BasicLlamaCppDraftRequest,
+  BasicLlamaCppFetch,
+  BasicLlamaCppFetchResponse,
+  BasicLlamaCppTransportOptions,
   BasicPromptInjectionRisk,
   BasicReviewConflict,
   BasicSourceAccessStatus,
@@ -41,6 +59,15 @@ import type {
 import * as database from "./index.js";
 import { createBasicCollectionAuditFixture } from "./basic-collection-test-fixture.js";
 import {
+  BASIC_HERMES_DISCOVERY_MAX_QUERIES,
+  BASIC_HERMES_DISCOVERY_MAX_RESULTS,
+  BASIC_HERMES_DISCOVERY_SCHEMA_VERSION,
+  BASIC_HERMES_DISCOVERY_TIMEOUT_MS,
+  BASIC_LLAMA_DRAFT_MAX_REQUEST_BYTES,
+  BASIC_LLAMA_DRAFT_MAX_RESPONSE_BYTES,
+  BASIC_LLAMA_DRAFT_OPERATION,
+  BASIC_LLAMA_DRAFT_PROTOCOL_VERSION,
+  BASIC_LLAMA_DRAFT_TIMEOUT_MS,
   BASIC_RAW_CAPTURE_MAX_BYTES,
   BASIC_RAW_CAPTURE_SCHEMA_VERSION,
   BASIC_SOURCE_MAX_REDIRECTS,
@@ -48,12 +75,16 @@ import {
   BASIC_COLLECTION_BLOCKER_CODES,
   WORLD_BANK_CORE_INDICATOR_ADAPTERS,
   buildBasicCountryImportPlan,
+  bridgeBasicMarketOverviewDraft,
   captureBasicRawSource,
   createBasicSourceTransport,
+  createBasicLlamaCppDraftTransport,
   createBasicCountryBundle,
   loadBasicCollectionAuditBundle,
   loadBasicCountryBundle,
   runBasicDeterministicSourceAdapters,
+  runBasicHermesDiscovery,
+  promoteBasicHermesJsonEvidence,
   validateBasicCountryBundle,
   validateBasicCollectionAuditBundle,
   worldBankCountryAdapter,
@@ -194,5 +225,123 @@ describe("@navigator/db", () => {
     ] | null = null;
 
     expect(publicSourceAdapterTypeWitness).toBeNull();
+  });
+
+  test("exports exactly the documented P1-6C runtime bridge surface", () => {
+    const bridgeRuntimeExports = Object.keys(database)
+      .filter((name) =>
+        name.startsWith("BASIC_HERMES_") ||
+        name.startsWith("BASIC_LLAMA_") ||
+        name.includes("Hermes") ||
+        name.includes("Llama") ||
+        name === "bridgeBasicMarketOverviewDraft",
+      )
+      .sort();
+
+    expect(bridgeRuntimeExports).toEqual([
+      "BASIC_HERMES_DISCOVERY_MAX_QUERIES",
+      "BASIC_HERMES_DISCOVERY_MAX_RESULTS",
+      "BASIC_HERMES_DISCOVERY_SCHEMA_VERSION",
+      "BASIC_HERMES_DISCOVERY_TIMEOUT_MS",
+      "BASIC_LLAMA_DRAFT_MAX_REQUEST_BYTES",
+      "BASIC_LLAMA_DRAFT_MAX_RESPONSE_BYTES",
+      "BASIC_LLAMA_DRAFT_OPERATION",
+      "BASIC_LLAMA_DRAFT_PROTOCOL_VERSION",
+      "BASIC_LLAMA_DRAFT_TIMEOUT_MS",
+      "bridgeBasicMarketOverviewDraft",
+      "createBasicLlamaCppDraftTransport",
+      "promoteBasicHermesJsonEvidence",
+      "runBasicHermesDiscovery",
+    ]);
+    expect(runBasicHermesDiscovery).toBeTypeOf("function");
+    expect(promoteBasicHermesJsonEvidence).toBeTypeOf("function");
+    expect(createBasicLlamaCppDraftTransport).toBeTypeOf("function");
+    expect(bridgeBasicMarketOverviewDraft).toBeTypeOf("function");
+  });
+
+  test("exports immutable documented P1-6C protocol limits", () => {
+    expect(BASIC_HERMES_DISCOVERY_SCHEMA_VERSION).toBe("basic-hermes-discovery/v1");
+    expect(BASIC_HERMES_DISCOVERY_TIMEOUT_MS).toBe(300_000);
+    expect(BASIC_HERMES_DISCOVERY_MAX_QUERIES).toBe(20);
+    expect(BASIC_HERMES_DISCOVERY_MAX_RESULTS).toBe(50);
+    expect(BASIC_LLAMA_DRAFT_TIMEOUT_MS).toBe(120_000);
+    expect(BASIC_LLAMA_DRAFT_MAX_REQUEST_BYTES).toBe(1_048_576);
+    expect(BASIC_LLAMA_DRAFT_MAX_RESPONSE_BYTES).toBe(262_144);
+    expect(BASIC_LLAMA_DRAFT_PROTOCOL_VERSION).toBe("basic-country-draft/v1");
+    expect(BASIC_LLAMA_DRAFT_OPERATION).toBe("return-exact-draft");
+    for (const constant of [
+      BASIC_HERMES_DISCOVERY_SCHEMA_VERSION,
+      BASIC_HERMES_DISCOVERY_TIMEOUT_MS,
+      BASIC_HERMES_DISCOVERY_MAX_QUERIES,
+      BASIC_HERMES_DISCOVERY_MAX_RESULTS,
+      BASIC_LLAMA_DRAFT_TIMEOUT_MS,
+      BASIC_LLAMA_DRAFT_MAX_REQUEST_BYTES,
+      BASIC_LLAMA_DRAFT_MAX_RESPONSE_BYTES,
+      BASIC_LLAMA_DRAFT_PROTOCOL_VERSION,
+      BASIC_LLAMA_DRAFT_OPERATION,
+    ]) {
+      expect(Object.isFrozen(constant)).toBe(true);
+    }
+  });
+
+  test("keeps P1-6C parser and bridge implementation helpers private", () => {
+    for (const internalName of [
+      "snapshotBasicHermesDiscoveryCandidate",
+      "canonicalBasicHermesDiscoveryUrl",
+      "BasicHermesSourcedObservation",
+      "materializeBasicHermesFacts",
+      "factId",
+      "parseCapturedJson",
+      "pointer",
+      "source",
+      "BasicMarketOverviewDraftParseResult",
+      "parseBasicMarketOverviewDraft",
+      "parseBasicMarketOverviewDraftForAudit",
+      "BASIC_LLAMA_DRAFT_JSON_SCHEMA",
+      "BasicLlamaSourceSnapshot",
+      "BasicLlamaEvidenceSnapshot",
+      "BasicLlamaFactSnapshot",
+      "BasicLlamaRegisterSnapshot",
+      "BasicLlamaFactsSnapshot",
+      "BasicLlamaJsonSnapshot",
+      "parseBasicLlamaRegisterSnapshot",
+      "parseBasicLlamaFactsSnapshot",
+      "parseBasicLlamaIndicatorPath",
+      "readBasicLlamaExactRuntimeRecord",
+      "readBasicLlamaStandardArray",
+      "snapshotBasicLlamaJson",
+      "deepFreezeBasicLlamaValue",
+      "createRequest",
+      "parseResponse",
+      "extractContent",
+      "BasicCollectionBridgeError",
+    ]) {
+      expect(database).not.toHaveProperty(internalName);
+    }
+  });
+
+  test("makes every documented P1-6C bridge contract type public", () => {
+    const publicBridgeContractTypeWitness: [
+      BasicHermesDiscoveryRequest,
+      BasicHermesDiscoveryPort,
+      BasicHermesDiscoveryCandidate,
+      BasicHermesDiscoveryBatch,
+      BasicHermesSourcePolicy,
+      BasicHermesObservation,
+      BasicHermesOpenedJsonSource,
+      BasicHermesEvidencePromotionInput,
+      BasicLlamaCppDraftRequest,
+      BasicDraftModelPort,
+      BasicDraftBridgeInput,
+      BasicLlamaCppFetchResponse,
+      BasicLlamaCppFetch,
+      BasicLlamaCppTransportOptions,
+      BasicBridgeErrorCode,
+      BasicBridgePhase,
+      BasicBridgeFailure,
+      BasicBridgeResult<BasicMarketOverviewDraft>,
+    ] | null = null;
+
+    expect(publicBridgeContractTypeWitness).toBeNull();
   });
 });

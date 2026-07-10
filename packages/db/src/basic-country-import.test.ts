@@ -144,6 +144,39 @@ describe("Basic country import plan", () => {
     }
   });
 
+  test("does not consume P1-6C runtime artifacts while building the canonical import plan", () => {
+    const baselineBundle = createValidBundle();
+    const artifactBundle = createValidBundle();
+    const artifacts = asJsonRecord(artifactBundle.audit.run.sourceRegister);
+    artifacts.p1_6c = {
+      discovery: {
+        schemaVersion: "basic-hermes-discovery/v1",
+        title: "SEARXNG_TITLE_SENTINEL",
+        snippet: "SEARXNG_SNIPPET_SENTINEL",
+      },
+      promotedEvidence: {
+        rawBody: "RAW_CAPTURE_BODY_SENTINEL",
+        cachePath: ".cache/basic-country/ID/run-001",
+        stagingPath: "data/staging/indonesia/run-001",
+      },
+      draftBridge: {
+        providerExtras: "PROVIDER_EXTRAS_SENTINEL",
+        canonical: "CANONICAL_SENTINEL",
+        manifest: "MANIFEST_SENTINEL",
+        knowledge: "KNOWLEDGE_SENTINEL",
+        ai: "AI_SENTINEL",
+      },
+    };
+
+    const baselinePlan = buildBasicCountryImportPlan(baselineBundle);
+    const artifactPlan = buildBasicCountryImportPlan(artifactBundle);
+
+    expect(artifactPlan).toEqual(baselinePlan);
+    expect(JSON.stringify(artifactPlan)).not.toMatch(
+      /SEARXNG_|RAW_CAPTURE_|PROVIDER_|CANONICAL_|MANIFEST_|KNOWLEDGE_|AI_SENTINEL|\.cache\/basic-country|data\/staging/,
+    );
+  });
+
   test("keeps generated raw captures outside canonical import and audit loading", async () => {
     const fixture = writeRawCacheIsolationFixture("normal");
     const rawCaptureResult = await captureBasicRawSource(
