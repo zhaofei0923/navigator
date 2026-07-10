@@ -3,7 +3,8 @@ import { link, lstat, mkdir, open, readFile, readdir, rm, stat, unlink } from "n
 import { isAbsolute, join, relative, resolve } from "node:path";
 
 import { hasExactOwnKeys, SAFE_RUN_ID } from "../seed/basic-country-validation-utils.js";
-import { BASIC_RAW_CAPTURE_MAX_BYTES, BASIC_RAW_CAPTURE_SCHEMA_VERSION, BASIC_SOURCE_MAX_REDIRECTS, type BasicRawCaptureInput, type BasicRawCaptureManifest, type BasicSourceRequest, type BasicSourceTransport, type BasicSourceTransportResponse } from "./basic-source-adapter-contracts.js";
+import { BASIC_RAW_CAPTURE_MAX_BYTES, BASIC_RAW_CAPTURE_SCHEMA_VERSION, type BasicRawCaptureInput, type BasicRawCaptureManifest, type BasicSourceTransport, type BasicSourceTransportResponse } from "./basic-source-adapter-contracts.js";
+import { isBasicSourceRequestAllowed, isBasicSourceResponseAllowed } from "./basic-source-transport.js";
 
 export type { BasicRawCaptureInput } from "./basic-source-adapter-contracts.js";
 
@@ -15,6 +16,8 @@ export interface BasicRawCaptureResult {
 const SAFE_COUNTRY_CODE = /^[A-Z]{2}$/;
 const SAFE_SOURCE_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const SHA256 = /^[a-f0-9]{64}$/;
+const PUBLICATION_RETRY_ATTEMPTS = 400;
+const PUBLICATION_RETRY_MS = 5;
 
 export async function captureBasicRawSource(input: BasicRawCaptureInput, transport: BasicSourceTransport): Promise<BasicRawCaptureResult> {
   const sourceDirectory = await prepareSourceDirectory(input);
@@ -24,7 +27,9 @@ export async function captureBasicRawSource(input: BasicRawCaptureInput, transpo
   }
 
   const response = await transport.execute(input.request);
-  validateResponse(response, input.request);
+  if (!isBasicSourceResponseAllowed(response, input.request)) {
+    throw new Error("raw capture response is invalid");
+  }
   const body = await collectBody(response.body);
   const contentSha256 = sha256(body);
 
@@ -58,9 +63,15 @@ async function prepareSourceDirectory(input: BasicRawCaptureInput): Promise<stri
   if (!isAbsolute(input.repoRoot) || input.repoRoot.includes("\0") || input.adapterId.trim() === "" || input.adapterVersion.trim() === "" || !SAFE_COUNTRY_CODE.test(input.countryCode) || !SAFE_RUN_ID.test(input.runId) || !SAFE_SOURCE_ID.test(input.sourceId)) {
     throw new Error("raw capture path is not allowed");
   }
-  validateRequest(input.request);
+  if (!isBasicSourceRequestAllowed(input.request)) {
+    throw new Error("raw capture request is invalid");
+  }
   const sourceDirectory = resolve(input.repoRoot, ".cache", "basic-country", input.countryCode, input.runId, "raw", input.sourceId);
   if (relative(input.repoRoot, sourceDirectory).startsWith("..")) {
+    throw new Error("raw capture path is not allowed");
+  }
+  const rootDetails = await lstat(resolve(input.repoRoot)).catch(() => null);
+  if (rootDetails?.isSymbolicLink()) {
     throw new Error("raw capture path is not allowed");
   }
   await rejectSymlinkAncestors(input.repoRoot, sourceDirectory);
@@ -73,33 +84,46 @@ async function readVerifiedCapture(
   sourceDirectory: string,
   input: BasicRawCaptureInput,
 ): Promise<{ manifest: BasicRawCaptureManifest; body: Uint8Array } | null> {
-  const entries = await readdir(sourceDirectory);
-  const stableEntries = entries.filter((entry) => !entry.startsWith(".tmp-"));
-  const hasManifest = stableEntries.includes("capture.json");
-  if (!hasManifest) {
-    if (stableEntries.length > 0) {
+  let sawUnlockedPartial = false;
+  for (let attempt = 0; attempt < PUBLICATION_RETRY_ATTEMPTS; attempt += 1) {
+    const entries = await readdir(sourceDirectory);
+    const stableEntries = entries.filter((entry) => !entry.startsWith(".tmp-"));
+    const hasManifest = stableEntries.includes("capture.json");
+    if (!hasManifest) {
+      if (stableEntries.length === 0) {
+        return null;
+      }
+      if (await hasActivePublicationLock(sourceDirectory)) {
+        sawUnlockedPartial = false;
+        await delay(PUBLICATION_RETRY_MS);
+        continue;
+      }
+      if (!sawUnlockedPartial) {
+        sawUnlockedPartial = true;
+        continue;
+      }
       throw new Error("raw capture is incomplete");
     }
-    return null;
+    const manifest = parseManifest(await readJson(join(sourceDirectory, "capture.json")));
+    if (manifest === null || manifest.schemaVersion !== BASIC_RAW_CAPTURE_SCHEMA_VERSION || !matchesInput(manifest, input) || !isBasicSourceResponseAllowed(manifest.response, input.request)) {
+      throw new Error("raw capture manifest is invalid");
+    }
+    const payloadName = `${manifest.response.contentSha256}.bin`;
+    if (stableEntries.length !== 2 || !stableEntries.includes(payloadName)) {
+      throw new Error("raw capture payload is invalid");
+    }
+    const payloadPath = join(sourceDirectory, payloadName);
+    const payloadStats = await stat(payloadPath).catch(() => null);
+    if (payloadStats === null || payloadStats.size !== manifest.response.byteLength || payloadStats.size > BASIC_RAW_CAPTURE_MAX_BYTES) {
+      throw new Error("raw capture payload is invalid");
+    }
+    const body = new Uint8Array(await readFile(payloadPath).catch(() => Buffer.alloc(0)));
+    if (body.byteLength !== manifest.response.byteLength || sha256(body) !== manifest.response.contentSha256) {
+      throw new Error("raw capture payload is invalid");
+    }
+    return { manifest, body };
   }
-  const manifest = parseManifest(await readJson(join(sourceDirectory, "capture.json")));
-  if (manifest === null || manifest.schemaVersion !== BASIC_RAW_CAPTURE_SCHEMA_VERSION || !matchesInput(manifest, input) || !isSafeManifestResponse(manifest, input.request)) {
-    throw new Error("raw capture manifest is invalid");
-  }
-  const payloadName = `${manifest.response.contentSha256}.bin`;
-  if (stableEntries.length !== 2 || !stableEntries.includes(payloadName)) {
-    throw new Error("raw capture payload is invalid");
-  }
-  const payloadPath = join(sourceDirectory, payloadName);
-  const payloadStats = await stat(payloadPath).catch(() => null);
-  if (payloadStats === null || payloadStats.size !== manifest.response.byteLength || payloadStats.size > BASIC_RAW_CAPTURE_MAX_BYTES) {
-    throw new Error("raw capture payload is invalid");
-  }
-  const body = new Uint8Array(await readFile(payloadPath).catch(() => Buffer.alloc(0)));
-  if (body.byteLength !== manifest.response.byteLength || sha256(body) !== manifest.response.contentSha256) {
-    throw new Error("raw capture payload is invalid");
-  }
-  return { manifest, body };
+  throw new Error("raw capture publication did not complete");
 }
 
 function resultFromCache(cached: { manifest: BasicRawCaptureManifest; body: Uint8Array }): BasicRawCaptureResult {
@@ -120,16 +144,23 @@ async function collectBody(body: AsyncIterable<Uint8Array>): Promise<Uint8Array>
   const hash = createHash("sha256");
   const chunks: Uint8Array[] = [];
   let byteLength = 0;
-  for await (const chunk of body) {
-    if (!(chunk instanceof Uint8Array)) {
-      throw new Error("source response body is invalid");
+  try {
+    for await (const chunk of body) {
+      if (!(chunk instanceof Uint8Array)) {
+        throw new Error("source response body is invalid");
+      }
+      byteLength += chunk.byteLength;
+      if (byteLength > BASIC_RAW_CAPTURE_MAX_BYTES) {
+        throw new Error("source response body exceeds the capture limit");
+      }
+      hash.update(chunk);
+      chunks.push(chunk);
     }
-    byteLength += chunk.byteLength;
-    if (byteLength > BASIC_RAW_CAPTURE_MAX_BYTES) {
-      throw new Error("source response body exceeds the capture limit");
+  } catch (error) {
+    if (isCaptureBodyError(error)) {
+      throw error;
     }
-    hash.update(chunk);
-    chunks.push(chunk);
+    throw new Error("source response body read failed");
   }
   const captured = new Uint8Array(Buffer.concat(chunks));
   if (hash.digest("hex") !== sha256(captured)) {
@@ -206,52 +237,6 @@ async function acquireLock(sourceDirectory: string): Promise<string> {
   throw new Error("raw capture lock is unavailable");
 }
 
-function validateRequest(request: BasicSourceRequest): void {
-  if (request.method !== "GET" || request.accept !== "application/json" || new Set(request.allowedOrigins).size !== request.allowedOrigins.length || new Set(request.allowedQueryParameters).size !== request.allowedQueryParameters.length || !request.allowedOrigins.every(isReviewedOrigin) || !request.allowedQueryParameters.every((name) => /^[A-Za-z][A-Za-z0-9_-]*$/.test(name)) || !isAllowedUrl(request.url, request)) {
-    throw new Error("raw capture request is invalid");
-  }
-}
-
-function validateResponse(response: BasicSourceTransportResponse, request: BasicSourceRequest): void {
-  if (!isSafeResponse(response, request)) {
-    throw new Error("raw capture response is invalid");
-  }
-}
-
-function isSafeManifestResponse(manifest: BasicRawCaptureManifest, request: BasicSourceRequest): boolean {
-  return isSafeResponse(manifest.response, request);
-}
-
-function isSafeResponse(
-  response: Pick<BasicSourceTransportResponse, "status" | "finalUrl" | "contentType" | "redirectChain">,
-  request: BasicSourceRequest,
-): boolean {
-  const expectedFinalUrl = response.redirectChain.at(-1) ?? request.url;
-  return Number.isInteger(response.status) && response.status >= 200 && response.status < 300 && isJsonContentType(response.contentType) && response.redirectChain.length <= BASIC_SOURCE_MAX_REDIRECTS && response.finalUrl === expectedFinalUrl && isAllowedUrl(response.finalUrl, request) && response.redirectChain.every((url) => isAllowedUrl(url, request));
-}
-
-function isAllowedUrl(value: string, request: BasicSourceRequest): boolean {
-  try {
-    const url = new URL(value);
-    if (url.protocol !== "https:" || url.username !== "" || url.password !== "" || !request.allowedOrigins.includes(url.origin)) return false;
-    const names = new Set<string>();
-    for (const [name] of url.searchParams) {
-      if (!request.allowedQueryParameters.includes(name) || names.has(name)) return false;
-      names.add(name);
-    }
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function isReviewedOrigin(value: string): boolean { try { const url = new URL(value); return url.protocol === "https:" && url.origin === value && url.username === "" && url.password === ""; } catch { return false; } }
-
-function isJsonContentType(contentType: string): boolean {
-  const mediaType = contentType.split(";", 1)[0]?.trim().toLowerCase();
-  return mediaType === "application/json" || mediaType?.endsWith("+json") === true;
-}
-
 function matchesInput(manifest: BasicRawCaptureManifest, input: BasicRawCaptureInput): boolean {
   return manifest.countryCode === input.countryCode && manifest.runId === input.runId && manifest.sourceId === input.sourceId && manifest.adapterId === input.adapterId && manifest.adapterVersion === input.adapterVersion && manifest.request.method === input.request.method && manifest.request.url === input.request.url && manifest.request.accept === input.request.accept && sameStrings(manifest.request.allowedOrigins, sorted(input.request.allowedOrigins)) && sameStrings(manifest.request.allowedQueryParameters, sorted(input.request.allowedQueryParameters));
 }
@@ -275,6 +260,14 @@ function stringArray(value: unknown): value is string[] {
 function sorted(values: readonly string[]): string[] { return [...values].sort(); }
 function sameStrings(left: readonly string[], right: readonly string[]): boolean { return left.length === right.length && left.every((value, index) => value === right[index]); }
 function sha256(value: Uint8Array): string { return createHash("sha256").update(value).digest("hex"); }
+function isCaptureBodyError(error: unknown): error is Error { return error instanceof Error && ["source response body is invalid", "source response body exceeds the capture limit"].includes(error.message); }
+function delay(milliseconds: number): Promise<void> { return new Promise((resolveDelay) => setTimeout(resolveDelay, milliseconds)); }
+
+async function hasActivePublicationLock(sourceDirectory: string): Promise<boolean> {
+  const details = await lstat(join(sourceDirectory, ".tmp-capture.lock")).catch(() => null);
+  if (details?.isSymbolicLink()) throw new Error("raw capture path is not allowed");
+  return details?.isFile() === true;
+}
 
 async function readJson(pathname: string): Promise<unknown> {
   try { return JSON.parse(await readFile(pathname, "utf8")) as unknown; } catch { throw new Error("raw capture manifest is invalid"); }

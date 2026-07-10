@@ -31,11 +31,16 @@ export function createBasicSourceTransport(
       const redirectChain: string[] = [];
 
       for (;;) {
-        const response = await fetchImpl(currentUrl.href, {
-          method: "GET",
-          headers: { Accept: request.accept },
-          redirect: "manual",
-        });
+        let response: BasicSourceFetchResponse;
+        try {
+          response = await fetchImpl(currentUrl.href, {
+            method: "GET",
+            headers: { Accept: request.accept },
+            redirect: "manual",
+          });
+        } catch {
+          throw new Error("source fetch failed");
+        }
         if (isRedirect(response.status)) {
           if (redirectChain.length >= BASIC_SOURCE_MAX_REDIRECTS) {
             throw new Error("source redirect limit exceeded");
@@ -48,7 +53,7 @@ export function createBasicSourceTransport(
           redirectChain.push(currentUrl.href);
           continue;
         }
-        if (response.status < 200 || response.status >= 300) {
+        if (!isSuccessfulHttpStatus(response.status)) {
           throw new Error("source response status is not allowed");
         }
         const contentType = response.headers.get("content-type");
@@ -69,16 +74,41 @@ export function createBasicSourceTransport(
 }
 
 function validateRequestPolicy(request: BasicSourceRequest): void {
-  if (
-    request.method !== "GET" ||
-    request.accept !== "application/json" ||
-    !isUniqueStringList(request.allowedOrigins) ||
-    !isUniqueStringList(request.allowedQueryParameters) ||
-    !request.allowedOrigins.every(isHttpsOrigin) ||
-    !request.allowedQueryParameters.every(isSafeQueryName)
-  ) {
+  if (!isBasicSourceRequestAllowed(request)) {
     throw new Error("source request URL is not allowed");
   }
+}
+
+export function isBasicSourceRequestAllowed(
+  request: BasicSourceRequest,
+): boolean {
+  return (
+    request.method === "GET" &&
+    request.accept === "application/json" &&
+    isUniqueStringList(request.allowedOrigins) &&
+    isUniqueStringList(request.allowedQueryParameters) &&
+    request.allowedOrigins.every(isHttpsOrigin) &&
+    request.allowedQueryParameters.every(isSafeQueryName) &&
+    isAllowedUrlString(request.url, request)
+  );
+}
+
+export function isBasicSourceResponseAllowed(
+  response: Pick<
+    BasicSourceTransportResponse,
+    "status" | "finalUrl" | "contentType" | "redirectChain"
+  >,
+  request: BasicSourceRequest,
+): boolean {
+  const expectedFinalUrl = response.redirectChain.at(-1) ?? request.url;
+  return (
+    isSuccessfulHttpStatus(response.status) &&
+    isJsonContentType(response.contentType) &&
+    response.redirectChain.length <= BASIC_SOURCE_MAX_REDIRECTS &&
+    sameCanonicalUrl(response.finalUrl, expectedFinalUrl) &&
+    isAllowedUrlString(response.finalUrl, request) &&
+    response.redirectChain.every((url) => isAllowedUrlString(url, request))
+  );
 }
 
 function validateUrl(
@@ -128,6 +158,17 @@ function isAllowedUrl(url: URL, request: BasicSourceRequest): boolean {
   return true;
 }
 
+function isAllowedUrlString(
+  value: string,
+  request: BasicSourceRequest,
+): boolean {
+  try {
+    return isAllowedUrl(new URL(value), request);
+  } catch {
+    return false;
+  }
+}
+
 function isHttpsOrigin(value: string): boolean {
   try {
     const url = new URL(value);
@@ -149,6 +190,22 @@ function isRedirect(status: number): boolean {
   return [301, 302, 303, 307, 308].includes(status);
 }
 
+function isSuccessfulHttpStatus(status: number): boolean {
+  return isValidHttpStatus(status) && status >= 200 && status <= 299;
+}
+
+function isValidHttpStatus(status: number): boolean {
+  return Number.isFinite(status) && Number.isInteger(status) && status >= 100 && status <= 599;
+}
+
+function sameCanonicalUrl(left: string, right: string): boolean {
+  try {
+    return new URL(left).href === new URL(right).href;
+  } catch {
+    return false;
+  }
+}
+
 function isJsonContentType(contentType: string): boolean {
   const mediaType = contentType.split(";", 1)[0]?.trim().toLowerCase();
   return mediaType === "application/json" || mediaType?.endsWith("+json") === true;
@@ -160,8 +217,9 @@ async function* streamBody(
   if (body === null) {
     return;
   }
-  const reader = body.getReader();
+  let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
   try {
+    reader = body.getReader();
     for (;;) {
       const { done, value } = await reader.read();
       if (done) {
@@ -171,7 +229,13 @@ async function* streamBody(
         yield value;
       }
     }
+  } catch {
+    throw new Error("source response body read failed");
   } finally {
-    reader.releaseLock();
+    try {
+      reader?.releaseLock();
+    } catch {
+      // Lower-layer reader errors must never replace the redacted boundary error.
+    }
   }
 }

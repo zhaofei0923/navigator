@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import {
   createBasicSourceTransport,
   type BasicSourceFetch,
+  type BasicSourceFetchResponse,
 } from "./collection/basic-source-transport.js";
 
 const REQUEST = {
@@ -90,6 +91,52 @@ describe("Basic source transport", () => {
     );
   });
 
+  test.each([Number.NaN, 200.5, 600])(
+    "rejects invalid response status %s",
+    async (status) => {
+      const transport = createBasicSourceTransport(
+        createFetch([responseWithStatus(status)]),
+      );
+
+      await expect(transport.execute(REQUEST)).rejects.toThrow(
+        "source response status is not allowed",
+      );
+    },
+  );
+
+  test("redacts injected fetch failures", async () => {
+    const fetchImpl: BasicSourceFetch = async () => {
+      throw new Error(`${REQUEST.url}&secret=FETCH_DO_NOT_LEAK`);
+    };
+    const transport = createBasicSourceTransport(fetchImpl);
+
+    const error = await rejectWith(transport.execute(REQUEST));
+
+    expect(error.message).toBe("source fetch failed");
+    expect(error.message).not.toMatch(/FETCH_DO_NOT_LEAK|worldbank|secret/);
+  });
+
+  test("redacts response body reader failures", async () => {
+    const leakingBody = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.error(
+          new Error(`${REQUEST.url} RESPONSE_BODY_DO_NOT_LEAK`),
+        );
+      },
+    });
+    const transport = createBasicSourceTransport(
+      createFetch([
+        response(200, { "content-type": "application/json" }, leakingBody),
+      ]),
+    );
+    const result = await transport.execute(REQUEST);
+
+    const error = await rejectWith(readAll(result.body));
+
+    expect(error.message).toBe("source response body read failed");
+    expect(error.message).not.toMatch(/RESPONSE_BODY_DO_NOT_LEAK|worldbank/);
+  });
+
   test("rejects non-JSON response MIME types", async () => {
     const transport = createBasicSourceTransport(
       createFetch([response(200, { "content-type": "text/html" })]),
@@ -101,7 +148,9 @@ describe("Basic source transport", () => {
   });
 });
 
-function createFetch(responses: readonly Response[]): BasicSourceFetch {
+function createFetch(
+  responses: readonly BasicSourceFetchResponse[],
+): BasicSourceFetch {
   let index = 0;
   return async () => {
     const response = responses[index];
@@ -110,6 +159,14 @@ function createFetch(responses: readonly Response[]): BasicSourceFetch {
       throw new Error("unexpected fake fetch call");
     }
     return response;
+  };
+}
+
+function responseWithStatus(status: number): BasicSourceFetchResponse {
+  return {
+    status,
+    headers: new Headers({ "content-type": "application/json" }),
+    body: null,
   };
 }
 
@@ -145,4 +202,10 @@ async function rejectWith(promise: Promise<unknown>): Promise<Error> {
     return error instanceof Error ? error : new Error(String(error));
   }
   throw new Error("expected promise to reject");
+}
+
+async function readAll(body: AsyncIterable<Uint8Array>): Promise<void> {
+  for await (const _chunk of body) {
+    // The regression exercises lower-layer iteration failure, not payload use.
+  }
 }

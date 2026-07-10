@@ -148,6 +148,25 @@ describe("Basic immutable raw capture", () => {
     ).rejects.toThrow("raw capture path is not allowed");
   });
 
+  test("rejects a symlinked repo root before transport", async () => {
+    const container = createRepoRoot();
+    const realRepoRoot = createRepoRoot();
+    const linkedRepoRoot = join(container, "repo-link");
+    symlinkSync(realRepoRoot, linkedRepoRoot);
+    let calls = 0;
+    const noNetwork: BasicSourceTransport = {
+      async execute() {
+        calls += 1;
+        return response(BODY);
+      },
+    };
+
+    await expect(
+      captureBasicRawSource(input(linkedRepoRoot), noNetwork),
+    ).rejects.toThrow("raw capture path is not allowed");
+    expect(calls).toBe(0);
+  });
+
   test("does not overwrite an immutable identity with mismatched adapter metadata", async () => {
     const repoRoot = createRepoRoot();
     await captureBasicRawSource(input(repoRoot), transport(BODY));
@@ -213,6 +232,43 @@ describe("Basic immutable raw capture", () => {
     ).rejects.toThrow("raw capture is incomplete");
   });
 
+  test("waits for a lock-protected partial publication before reading", async () => {
+    const completedRoot = createRepoRoot();
+    await captureBasicRawSource(input(completedRoot), transport(BODY));
+    const manifest = readManifest(completedRoot);
+    const repoRoot = createRepoRoot();
+    mkdirSync(sourceDirectory(repoRoot), { recursive: true });
+    writeFileSync(payloadPath(repoRoot), BODY);
+    const lockPath = join(sourceDirectory(repoRoot), ".tmp-capture.lock");
+    writeFileSync(lockPath, "publishing");
+    let calls = 0;
+    const noNetwork: BasicSourceTransport = {
+      async execute() {
+        calls += 1;
+        throw new Error("transport must not be called");
+      },
+    };
+    const readResult = captureBasicRawSource(input(repoRoot), noNetwork);
+    const publication = new Promise<void>((resolvePublication) => {
+      setTimeout(() => {
+        writeManifest(repoRoot, manifest);
+        unlinkSync(lockPath);
+        resolvePublication();
+      }, 500);
+    });
+
+    const [captureResult] = await Promise.allSettled([readResult, publication]);
+
+    expect(captureResult.status).toBe("fulfilled");
+    if (captureResult.status === "fulfilled") {
+      expect(captureResult.value).toMatchObject({
+        reused: true,
+        contentSha256: CONTENT_SHA256,
+      });
+    }
+    expect(calls).toBe(0);
+  });
+
   test("ignores orphan temporary files", async () => {
     const repoRoot = createRepoRoot();
     mkdirSync(sourceDirectory(repoRoot), { recursive: true });
@@ -248,6 +304,66 @@ describe("Basic immutable raw capture", () => {
 
     expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
     expect(results.filter((result) => result.status === "rejected")).toHaveLength(1);
+  });
+
+  test("redacts injected response body iterator failures", async () => {
+    const repoRoot = createRepoRoot();
+    const leakingTransport: BasicSourceTransport = {
+      async execute() {
+        return {
+          ...response(BODY),
+          body: leakingChunks(),
+        };
+      },
+    };
+
+    const error = await rejectWith(
+      captureBasicRawSource(input(repoRoot), leakingTransport),
+    );
+
+    expect(error.message).toBe("source response body read failed");
+    expect(error.message).not.toMatch(/RAW_BODY_DO_NOT_LEAK|worldbank/);
+  });
+
+  test.each([Number.NaN, 200.5])(
+    "rejects invalid transport response status %s",
+    async (status) => {
+      const repoRoot = createRepoRoot();
+      const invalidTransport: BasicSourceTransport = {
+        async execute() {
+          return { ...response(BODY), status };
+        },
+      };
+
+      await expect(
+        captureBasicRawSource(input(repoRoot), invalidTransport),
+      ).rejects.toThrow("raw capture response is invalid");
+    },
+  );
+
+  test("accepts canonical trailing-slash equivalence and preserves source URL", async () => {
+    const repoRoot = createRepoRoot();
+    const captureInput = input(repoRoot);
+    captureInput.request = {
+      ...captureInput.request,
+      url: "https://api.worldbank.org",
+      allowedQueryParameters: [],
+    };
+    const normalizedTransport: BasicSourceTransport = {
+      async execute() {
+        return {
+          ...response(BODY),
+          finalUrl: "https://api.worldbank.org/",
+        };
+      },
+    };
+
+    await expect(
+      captureBasicRawSource(captureInput, normalizedTransport),
+    ).resolves.toMatchObject({ finalUrl: "https://api.worldbank.org/" });
+    expect(
+      (readManifest(repoRoot).request as Record<string, unknown>).url,
+    ).toBe("https://api.worldbank.org");
   });
 });
 
@@ -288,6 +404,12 @@ async function* chunks(body: Uint8Array): AsyncIterable<Uint8Array> {
   yield body;
 }
 
+async function* leakingChunks(): AsyncIterable<Uint8Array> {
+  throw new Error(
+    "https://api.worldbank.org/?secret=RAW_BODY_DO_NOT_LEAK",
+  );
+}
+
 function createRepoRoot(): string {
   const root = mkdtempSync(join(tmpdir(), "basic-raw-capture-"));
   temporaryRoots.add(root);
@@ -308,4 +430,13 @@ function readManifest(repoRoot: string): Record<string, unknown> {
 
 function writeManifest(repoRoot: string, manifest: unknown): void {
   writeFileSync(join(sourceDirectory(repoRoot), "capture.json"), JSON.stringify(manifest));
+}
+
+async function rejectWith(promise: Promise<unknown>): Promise<Error> {
+  try {
+    await promise;
+  } catch (error) {
+    return error instanceof Error ? error : new Error(String(error));
+  }
+  throw new Error("expected promise to reject");
 }
