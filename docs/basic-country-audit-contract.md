@@ -29,7 +29,7 @@ review-report.json:
 
 ## 2. 通用值与枚举
 
-`BasicCollectionJsonValue` 仅可为 `null`、布尔值、有限数值、字符串、上述值的数组，或键值同为该类型的对象。除该递归 JSON 值内的自由字符串外，所有声明为非 `null` `string` 的契约字段必须是非空字符串：`trim()` 后长度至少为 1。`locator` 和 `evidenceLocators` 的每一项也适用此规则；它们必须是可审计的、非空的证据位置字符串，不能以 `null`、空字符串或纯空白代替。
+`BasicCollectionJsonValue` 仅可为 `null`、布尔值、有限数值、字符串、上述值的数组，或键值同为该类型的对象。除该递归 JSON 值内的自由字符串以及 `LocalizedText.zh` / `LocalizedText.en` 外，所有声明为非 `null` `string` 的契约字段必须是非空字符串：`trim()` 后长度至少为 1。`locator` 和 `evidenceLocators` 的每一项也适用此规则；它们必须是可审计的、非空的证据位置字符串，不能以 `null`、空字符串或纯空白代替。
 
 所有时间戳必须是严格 UTC RFC3339：匹配 `YYYY-MM-DDTHH:mm:ssZ` 或 `YYYY-MM-DDTHH:mm:ss.SSSZ`（小数秒为 1--3 位）、日历日期和时分秒有效、且只允许大写结尾 `Z`；不得使用时区偏移、小写 `z`、缺失秒或闰秒。`contentSha256` 必须完全匹配 `/^[0-9a-f]{64}$/`，即 64 个小写十六进制字符。所有非 `null` URL 字段必须由 URL 解析器接受且协议仅为 `http:` 或 `https:`；其他绝对 URL 协议不允许。
 
@@ -75,7 +75,7 @@ marketOverview.techTags
 | `Credibility` | 采用共享类型登记的 `OFFICIAL`、`VERIFIED`、`ESTIMATED`、`UNVERIFIED` |
 | `IndustryTag`、`TechTag` | 仅采用 `@navigator/shared-types` 已登记枚举 |
 
-`LocalizedText` 的形状为 `{ zh: string; en: string }`，并沿用既有双语降级展示规则。除非下文明确为 `null`，字段均为必填且不可为 `null`。
+`LocalizedText` 必须是标准 plain object，且恰好拥有两个 own 字符串键 `zh` 与 `en`，不得缺少、增加或通过继承提供键。两侧值必须均为字符串；任一侧允许在 `trim()` 后为空，以保留既有双语降级展示规则，但 `zh.trim()` 与 `en.trim()` 不得同时为空。除非下文明确为 `null`，字段均为必填且不可为 `null`。
 
 ## 3. 工件字段
 

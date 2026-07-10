@@ -375,7 +375,7 @@ Expected: FAIL because `validateBasicCollectionAuditBundle` is missing.
 4. Validate strict UTC RFC3339 timestamps (`YYYY-MM-DDTHH:mm:ssZ` or 1 to 3 fractional digits before uppercase `Z`, with a valid calendar date and no offset), lowercase 64-character SHA-256, HTTP(S) URLs, uppercase two-letter country codes, safe run IDs/slugs, registered shared enums, and evidence locators that are non-empty after `trim()`.
 5. Accept only the exact `country.*` and `marketOverview.*` fieldPath allowlist in `docs/basic-country-audit-contract.md`, with `marketOverview.keyIndicators[non-negative-index].{label,value,unit,year}` using decimal non-negative indexes. Reject `workflow`, coverage paths, `reviewStatus`, `aiUsable`, `audit`, `knowledge`, manifest, staging, raw-cache, and every other path.
 6. Enforce evidence cardinality: candidate >= 1, missing = 0, conflict >= 2 distinct source IDs, untrusted >= 1.
-7. Validate the complete market-overview draft shape, exact LocalizedText and indicator keys, `reviewStatus = draft`, and `aiUsable = false`.
+7. Validate the complete market-overview draft shape, and validate `LocalizedText` as a plain object with exactly the own string keys `zh` and `en`; exclude those two values from the generic non-empty-string rule, allow either side to be empty after `trim()` for fallback, reject both sides empty after `trim()`, and validate exact indicator keys, `reviewStatus = draft`, and `aiUsable = false`.
 8. Treat `sourceUrl = null` as structurally valid only when `source` contains the existing `sourceUrl null` explanation marker.
 
 - [ ] **Step 4: Write RED blocker-classification tests**
