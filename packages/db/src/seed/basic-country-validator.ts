@@ -17,8 +17,6 @@ import {
 } from "@navigator/shared-types/coverage";
 
 import type {
-  BasicAuditRun,
-  BasicCanonicalData,
   BasicCollectionManifest,
   BasicCountryBundle,
   BasicCountryValidationResult,
@@ -50,19 +48,41 @@ const META_FIELDS = [
 
 const SAFE_COUNTRY_DIRECTORY = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const SAFE_RUN_ID = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
+const UTC_RFC3339_TIMESTAMP = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,3})?Z$/;
+const PRISMA_INT_MAX = 2147483647;
 
 export function validateBasicCountryBundle(
-  bundle: BasicCountryBundle,
+  bundle: unknown,
 ): BasicCountryValidationResult {
   const errors: string[] = [];
-  const country = bundle.canonical.country;
-  const marketOverview = bundle.canonical.marketOverview;
+
+  if (!isRecord(bundle)) {
+    errors.push("bundle must be an object");
+    return invalidResult(errors);
+  }
+
+  const canonical = readRequiredRecord(bundle.canonical, "canonical", errors);
+  const audit = readRequiredRecord(bundle.audit, "audit", errors);
+  const country = canonical
+    ? readRequiredRecord(canonical.country, "canonical.country", errors)
+    : null;
+  const marketOverview = canonical
+    ? readRequiredRecord(canonical.marketOverview, "canonical.marketOverview", errors)
+    : null;
+  const manifest = audit
+    ? readRequiredRecord(audit.manifest, "audit.manifest", errors)
+    : null;
+  const run = audit ? readRequiredRecord(audit.run, "audit.run", errors) : null;
+
+  if (!canonical || !country || !marketOverview || !manifest || !run) {
+    return invalidResult(errors);
+  }
 
   validateCountryIdentity(country, errors);
   validateMarketOverview(marketOverview, country.code, errors);
-  validateNonMarketCanonicalData(bundle.canonical, errors);
+  validateNonMarketCanonicalData(canonical, errors);
   validateCoverage(country, marketOverview, errors);
-  validateAudit(bundle, errors);
+  validateAudit(bundle.countryDirectory, manifest, run, errors);
 
   return {
     valid: errors.length === 0,
@@ -128,7 +148,7 @@ function validateCountryIdentity(country: JsonRecord, errors: string[]): void {
   validateLocalized(country.summary, "country.summary", errors);
   expectEnum(country.region, REGIONS, "country.region", errors);
   expectNonBlank(country.flagEmoji, "country.flagEmoji", errors);
-  expectIsoDate(country.updatedAt, "country.updatedAt", errors);
+  expectUtcRfc3339Timestamp(country.updatedAt, "country.updatedAt", errors);
   if (country.coverageLevel !== "BASIC") {
     errors.push("country.coverageLevel must be BASIC");
   }
@@ -146,11 +166,7 @@ function validateMarketOverview(
   }
 
   validateLocalized(marketOverview.overview, "market-overview.overview", errors);
-  expectFiniteNumberOrNull(
-    marketOverview.population,
-    "market-overview.population",
-    errors,
-  );
+  expectPopulation(marketOverview.population, errors);
   expectFiniteNumberOrNull(marketOverview.gdp, "market-overview.gdp", errors);
   expectFiniteNumberOrNull(
     marketOverview.gdpGrowth,
@@ -171,8 +187,16 @@ function validateMarketOverview(
 
   expectNonBlank(marketOverview.source, "market-overview.source", errors);
   validateSourceUrl(marketOverview.sourceUrl, marketOverview.source, errors);
-  expectIsoDate(marketOverview.collectedAt, "market-overview.collectedAt", errors);
-  expectIsoDate(marketOverview.updatedAt, "market-overview.updatedAt", errors);
+  expectUtcRfc3339Timestamp(
+    marketOverview.collectedAt,
+    "market-overview.collectedAt",
+    errors,
+  );
+  expectUtcRfc3339Timestamp(
+    marketOverview.updatedAt,
+    "market-overview.updatedAt",
+    errors,
+  );
   expectEnum(marketOverview.credibility, CREDIBILITIES, "market-overview.credibility", errors);
   if (marketOverview.credibility === "UNVERIFIED") {
     errors.push("market-overview.credibility must not be UNVERIFIED");
@@ -207,7 +231,7 @@ function validateMarketOverview(
 }
 
 function validateNonMarketCanonicalData(
-  canonical: BasicCanonicalData,
+  canonical: JsonRecord,
   errors: string[],
 ): void {
   const listModules = [
@@ -255,7 +279,11 @@ function validateCoverage(
       errors.push(`country.moduleCoverage[${index}] must be an object`);
       continue;
     }
-    expectIsoDate(item.updatedAt, `moduleCoverage[${index}].updatedAt`, errors);
+    expectUtcRfc3339Timestamp(
+      item.updatedAt,
+      `moduleCoverage[${index}].updatedAt`,
+      errors,
+    );
     if (!isEnumValue(item.moduleKey, MODULE_KEYS)) {
       errors.push(`moduleCoverage[${index}].moduleKey must be registered`);
       continue;
@@ -306,21 +334,29 @@ function validateCoverage(
   }
 }
 
-function validateAudit(bundle: BasicCountryBundle, errors: string[]): void {
-  if (!SAFE_COUNTRY_DIRECTORY.test(bundle.countryDirectory)) {
+function validateAudit(
+  countryDirectory: unknown,
+  manifest: JsonRecord,
+  run: JsonRecord,
+  errors: string[],
+): void {
+  if (
+    typeof countryDirectory !== "string" ||
+    !SAFE_COUNTRY_DIRECTORY.test(countryDirectory)
+  ) {
     errors.push("countryDirectory must be a safe slug");
   }
 
-  const { manifest, run } = bundle.audit;
   expectNonBlank(manifest.activeRunId, "audit.manifest.activeRunId", errors);
   expectNonBlank(manifest.mappingVersion, "audit.manifest.mappingVersion", errors);
-  if (!SAFE_RUN_ID.test(manifest.activeRunId)) {
+  expectNonBlank(run.runId, "audit.run.runId", errors);
+  if (typeof manifest.activeRunId !== "string" || !SAFE_RUN_ID.test(manifest.activeRunId)) {
     errors.push("audit.manifest.activeRunId must be a safe run id");
   }
   if (manifest.activeRunId !== run.runId) {
     errors.push("audit.manifest.activeRunId must match audit.run.runId");
   }
-  const expectedPath = `data/staging/${bundle.countryDirectory}/${manifest.activeRunId}`;
+  const expectedPath = `data/staging/${String(countryDirectory)}/${String(manifest.activeRunId)}`;
   if (manifest.auditBundlePath !== expectedPath) {
     errors.push(`audit.manifest.auditBundlePath must equal ${expectedPath}`);
   }
@@ -366,6 +402,18 @@ function buildSummary(country: JsonRecord): BasicCountryValidationResult["summar
     countryCode: typeof country.code === "string" ? country.code : "",
     coverageLevel: typeof country.coverageLevel === "string" ? country.coverageLevel : "",
     moduleStatuses,
+  };
+}
+
+function invalidResult(errors: string[]): BasicCountryValidationResult {
+  return {
+    valid: false,
+    errors,
+    summary: {
+      countryCode: "",
+      coverageLevel: "",
+      moduleStatuses: {},
+    },
   };
 }
 
@@ -466,10 +514,75 @@ function expectFiniteNumberOrNull(value: unknown, label: string, errors: string[
   }
 }
 
-function expectIsoDate(value: unknown, label: string, errors: string[]): void {
-  if (typeof value !== "string" || Number.isNaN(Date.parse(value))) {
-    errors.push(`${label} must be an ISO date string`);
+function expectPopulation(value: unknown, errors: string[]): void {
+  if (
+    value !== null &&
+    (typeof value !== "number" ||
+      !Number.isSafeInteger(value) ||
+      value < 0 ||
+      value > PRISMA_INT_MAX)
+  ) {
+    errors.push(
+      "market-overview.population must be a non-negative safe integer up to 2147483647 or null",
+    );
   }
+}
+
+function expectUtcRfc3339Timestamp(
+  value: unknown,
+  label: string,
+  errors: string[],
+): void {
+  if (!isUtcRfc3339Timestamp(value)) {
+    errors.push(`${label} must be a strict UTC RFC3339 timestamp`);
+  }
+}
+
+function isUtcRfc3339Timestamp(value: unknown): boolean {
+  if (typeof value !== "string") {
+    return false;
+  }
+  const match = UTC_RFC3339_TIMESTAMP.exec(value);
+  if (match === null) {
+    return false;
+  }
+  const [, year, month, day, hour, minute, second] = match;
+  if (
+    year === undefined ||
+    month === undefined ||
+    day === undefined ||
+    hour === undefined ||
+    minute === undefined ||
+    second === undefined
+  ) {
+    return false;
+  }
+  const numericYear = Number(year);
+  const numericMonth = Number(month);
+  const numericDay = Number(day);
+  const numericHour = Number(hour);
+  const numericMinute = Number(minute);
+  const numericSecond = Number(second);
+  return (
+    numericMonth >= 1 &&
+    numericMonth <= 12 &&
+    numericDay >= 1 &&
+    numericDay <= daysInMonth(numericYear, numericMonth) &&
+    numericHour <= 23 &&
+    numericMinute <= 59 &&
+    numericSecond <= 59
+  );
+}
+
+function daysInMonth(year: number, month: number): number {
+  if (month === 2) {
+    return isLeapYear(year) ? 29 : 28;
+  }
+  return [4, 6, 9, 11].includes(month) ? 30 : 31;
+}
+
+function isLeapYear(year: number): boolean {
+  return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
 }
 
 function isEnumValue<T extends string>(
@@ -493,6 +606,18 @@ function isHttpUrl(value: unknown): boolean {
 
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function readRequiredRecord(
+  value: unknown,
+  label: string,
+  errors: string[],
+): JsonRecord | null {
+  if (!isRecord(value)) {
+    errors.push(`${label} must be an object`);
+    return null;
+  }
+  return value;
 }
 
 function readManifest(

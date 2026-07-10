@@ -87,10 +87,98 @@ describe("P1-5 Basic country seed", () => {
         "country.code must be an uppercase two-letter country code",
         expect.stringContaining("country.region must be one of"),
         "country.flagEmoji must be a non-empty string",
-        "country.updatedAt must be an ISO date string",
-        "moduleCoverage[0].updatedAt must be an ISO date string",
+        "country.updatedAt must be a strict UTC RFC3339 timestamp",
+        "moduleCoverage[0].updatedAt must be a strict UTC RFC3339 timestamp",
       ]),
     );
+  });
+
+  test("requires strict UTC RFC3339 timestamps", () => {
+    for (const timestamp of [
+      "2026-02-28T00:00:00Z",
+      "2026-02-28T00:00:00.1Z",
+      "2026-02-28T00:00:00.12Z",
+      "2026-02-28T00:00:00.123Z",
+    ]) {
+      const bundle = createValidBundle();
+      bundle.canonical.country.updatedAt = timestamp;
+      expect(validateBasicCountryBundle(bundle).valid).toBe(true);
+    }
+
+    for (const timestamp of [
+      "2026-02-31T00:00:00Z",
+      "2026-01-01T00:00:00+08:00",
+      "2026-01-01",
+      "2026-01-01T00:00:00.1234Z",
+      "2026-01-01T00:00Z",
+    ]) {
+      const bundle = createValidBundle();
+      bundle.canonical.country.updatedAt = timestamp;
+      bundle.canonical.marketOverview.collectedAt = timestamp;
+      bundle.canonical.marketOverview.updatedAt = timestamp;
+      getRequiredArrayItem(
+        getModuleCoverage(bundle),
+        0,
+        "moduleCoverage",
+      ).updatedAt = timestamp;
+
+      expect(validateBasicCountryBundle(bundle).errors).toEqual(
+        expect.arrayContaining([
+          "country.updatedAt must be a strict UTC RFC3339 timestamp",
+          "market-overview.collectedAt must be a strict UTC RFC3339 timestamp",
+          "market-overview.updatedAt must be a strict UTC RFC3339 timestamp",
+          "moduleCoverage[0].updatedAt must be a strict UTC RFC3339 timestamp",
+        ]),
+      );
+    }
+  });
+
+  test("requires a Prisma Int-compatible population before import planning", () => {
+    for (const population of [1.5, -1, 2147483648, Number.MAX_SAFE_INTEGER + 1]) {
+      const bundle = createValidBundle();
+      bundle.canonical.marketOverview.population = population;
+
+      expect(validateBasicCountryBundle(bundle).errors).toContain(
+        "market-overview.population must be a non-negative safe integer up to 2147483647 or null",
+      );
+      expect(() => buildBasicCountryImportPlan(bundle)).toThrow(
+        "market-overview.population must be a non-negative safe integer up to 2147483647 or null",
+      );
+    }
+
+    const nullPopulationBundle = createValidBundle();
+    nullPopulationBundle.canonical.marketOverview.population = null;
+    expect(validateBasicCountryBundle(nullPopulationBundle).valid).toBe(true);
+  });
+
+  test("returns structured errors for malformed runtime bundles", () => {
+    const malformedInputs: unknown[] = [
+      null,
+      {},
+      { countryDirectory: "vietnam", canonical: null, audit: {} },
+      {
+        countryDirectory: "vietnam",
+        canonical: { country: null, marketOverview: null },
+        audit: { manifest: null, run: null },
+      },
+    ];
+
+    for (const input of malformedInputs) {
+      expect(() => validateBasicCountryBundle(input)).not.toThrow();
+      expect(validateBasicCountryBundle(input)).toMatchObject({
+        valid: false,
+        summary: {
+          countryCode: "",
+          coverageLevel: "",
+          moduleStatuses: {},
+        },
+      });
+      expect(validateBasicCountryBundle(input).errors).not.toEqual([]);
+    }
+
+    expect(() =>
+      buildBasicCountryImportPlan({ canonical: null } as unknown as BasicCountryBundle),
+    ).toThrow("canonical must be an object");
   });
 
   test("rejects blank localized fields and malformed market indicators", () => {
@@ -109,7 +197,7 @@ describe("P1-5 Basic country seed", () => {
       expect.arrayContaining([
         "country.summary must contain zh or en text",
         "market-overview.overview must contain zh or en text",
-        "market-overview.population must be a finite number or null",
+        "market-overview.population must be a non-negative safe integer up to 2147483647 or null",
         "market-overview.keyIndicators must be a non-empty array",
       ]),
     );
@@ -153,8 +241,8 @@ describe("P1-5 Basic country seed", () => {
     expect(result.errors).toEqual(
       expect.arrayContaining([
         "market-overview.sourceUrl must be an HTTP(S) URL or null",
-        "market-overview.collectedAt must be an ISO date string",
-        "market-overview.updatedAt must be an ISO date string",
+        "market-overview.collectedAt must be a strict UTC RFC3339 timestamp",
+        "market-overview.updatedAt must be a strict UTC RFC3339 timestamp",
         "market-overview.credibility must not be UNVERIFIED",
         "market-overview.reviewStatus must be published",
         "market-overview.aiUsable must be false",

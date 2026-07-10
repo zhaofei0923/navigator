@@ -1,4 +1,9 @@
-import type { ModuleKey } from "@navigator/shared-types/schema";
+import type {
+  IndustryTag,
+  ModuleKey,
+  Region,
+  TechTag,
+} from "@navigator/shared-types/schema";
 
 import type {
   BasicCountryBundle,
@@ -32,7 +37,7 @@ const MODULE_KEY_TO_PRISMA: Record<ModuleKey, string> = {
   reports: "REPORTS",
 };
 
-const REGION_TO_PRISMA: Record<string, string> = {
+const REGION_TO_PRISMA: Record<Region, string> = {
   "southeast-asia": "SOUTHEAST_ASIA",
   "south-asia": "SOUTH_ASIA",
   "middle-east": "MIDDLE_EAST",
@@ -42,7 +47,7 @@ const REGION_TO_PRISMA: Record<string, string> = {
   "central-asia": "CENTRAL_ASIA",
 };
 
-const INDUSTRY_TAG_TO_PRISMA: Record<string, string> = {
+const INDUSTRY_TAG_TO_PRISMA: Record<IndustryTag, string> = {
   solar: "SOLAR",
   wind: "WIND",
   storage: "STORAGE",
@@ -53,7 +58,7 @@ const INDUSTRY_TAG_TO_PRISMA: Record<string, string> = {
   epc: "EPC",
 };
 
-const TECH_TAG_TO_PRISMA: Record<string, string> = {
+const TECH_TAG_TO_PRISMA: Record<TechTag, string> = {
   "pv-module": "PV_MODULE",
   inverter: "INVERTER",
   "onshore-wind": "ONSHORE_WIND",
