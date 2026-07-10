@@ -146,7 +146,7 @@ describe("Basic country import plan", () => {
 
   test("keeps generated raw captures outside canonical import and audit loading", async () => {
     const fixture = writeRawCacheIsolationFixture("normal");
-    await captureBasicRawSource(
+    const rawCaptureResult = await captureBasicRawSource(
       rawCacheIsolationInput(fixture.repoRoot),
       rawCacheTransport(),
     );
@@ -161,6 +161,27 @@ describe("Basic country import plan", () => {
     );
     const serializedAuditBundle = JSON.stringify(auditBundle);
     const serializedImportPlan = JSON.stringify(importPlan);
+    const serializedRawCaptureResult = JSON.stringify(rawCaptureResult);
+
+    expect(Object.keys(rawCaptureResult).sort()).toEqual([
+      "body",
+      "byteLength",
+      "contentSha256",
+      "contentType",
+      "finalUrl",
+      "retrievedAt",
+      "reused",
+      "sourceId",
+    ]);
+    expect(Object.hasOwn(rawCaptureResult, "cachePath")).toBe(false);
+    for (const forbiddenValue of [
+      fixture.repoRoot,
+      ".cache/basic-country",
+      "cachePath",
+      "capture.json",
+    ]) {
+      expect(serializedRawCaptureResult).not.toContain(forbiddenValue);
+    }
 
     for (const serializedValue of [serializedAuditBundle, serializedImportPlan]) {
       expect(serializedValue).not.toContain(RAW_CAPTURE_SENTINEL);
