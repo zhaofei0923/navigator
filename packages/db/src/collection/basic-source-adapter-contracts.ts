@@ -81,7 +81,7 @@ export interface BasicRawCaptureReceipt {
 export interface BasicRawCaptureResult extends BasicRawCaptureReceipt {
   body: Uint8Array;
   finalUrl: string;
-  redirectChain: readonly string[];
+  readonly redirectChain: readonly string[];
   contentType: string;
   retrievedAt: string;
 }

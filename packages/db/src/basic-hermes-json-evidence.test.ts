@@ -329,6 +329,8 @@ describe("Hermes JSON evidence promotion", () => {
       expect(Object.isFrozen(first.redirectChain)).toBe(true);
       verifiedChain[0] = "https://mutated.example/data?format=json";
       expect(first.redirectChain).toEqual([redirectUrl, JSON_URL]);
+      expect(Reflect.set(first, "redirectChain", [])).toBe(false);
+      expect(first.redirectChain).toEqual([redirectUrl, JSON_URL]);
 
       const cached = await captureBasicRawSource(rawInput, {
         async execute() {

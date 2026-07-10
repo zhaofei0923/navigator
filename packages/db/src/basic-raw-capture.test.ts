@@ -102,6 +102,16 @@ describe("Basic immutable raw capture", () => {
       "https://api.worldbank.org/v2/country/VN/redirect?format=json",
       originalUrl,
     ]);
+    expect(Object.getOwnPropertyDescriptor(first, "redirectChain")).toMatchObject({
+      enumerable: true,
+      writable: false,
+      configurable: false,
+    });
+    expect(Reflect.set(first, "redirectChain", [])).toBe(false);
+    expect(first.redirectChain).toEqual([
+      "https://api.worldbank.org/v2/country/VN/redirect?format=json",
+      originalUrl,
+    ]);
     const mutatedUrl = "https://api.worldbank.org/mutated?format=json";
     expect(() => { first.finalUrl = mutatedUrl; }).not.toThrow();
     expect(first.finalUrl).toBe(mutatedUrl);
@@ -115,6 +125,19 @@ describe("Basic immutable raw capture", () => {
     expect(cached).toMatchObject({ reused: true, finalUrl: originalUrl, redirectChain: first.redirectChain });
     expect(cached.redirectChain).not.toBe(first.redirectChain);
     expect(Object.isFrozen(cached.redirectChain)).toBe(true);
+    expect(Object.getOwnPropertyDescriptor(cached, "redirectChain")).toMatchObject({
+      enumerable: true,
+      writable: false,
+      configurable: false,
+    });
+    expect(Reflect.set(cached, "redirectChain", [])).toBe(false);
+    expect(cached.redirectChain).toEqual([
+      "https://api.worldbank.org/v2/country/VN/redirect?format=json",
+      originalUrl,
+    ]);
+    const cachedMutatedUrl = "https://api.worldbank.org/cached-mutated?format=json";
+    expect(() => { cached.finalUrl = cachedMutatedUrl; }).not.toThrow();
+    expect(cached.finalUrl).toBe(cachedMutatedUrl);
   });
 
   test("does not expose the final source directory before complete publication", async () => {
