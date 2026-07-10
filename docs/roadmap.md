@@ -12,6 +12,7 @@
 2. **一张任务卡 = 一个 PR = 一件事**，附测试，独立可验收、可回滚。
 3. **人工确认关口**（AGENTS.md §11）在下文用 ⚠️ 标注，Codex 遇到必须停下等 Review。
 4. **两处待定项**（AI 系统 Prompt 正式文本、检索边界参数默认值）先用占位跑通管道，定稿后替换，不阻塞开发（见 [ai-advisor.md §4/§5](./ai-advisor.md)）。
+5. **当前任务集成路径**：经用户批准，默认执行“本地 feature 分支 → 独立 review → 合并到 `main` → merged-main 验证 → `git push origin main`”，不默认创建 PR。若以后改为 PR 工作流，适用 AGENTS.md 的“一张任务卡 = 一个 PR”规则；本路径不移除合并和推送验收。
 
 ---
 
@@ -69,7 +70,7 @@ graph LR
 
 ### P1 — 数据层 ⚠️
 
-> P1-1 至 P1-3 是 P2 Web 展示的技术前置；P1-4 是国家扩展计划与人工确认清单，不落库，不阻塞 P2。
+> P1-1 至 P1-3 是 P2 Web 展示的技术前置；P1-4 至 P1-6 定义国家扩展计划、Basic 模板校验和采集管道，不新增数据模型，最终国家清单、顺序、发布和升级均须人工确认。
 
 #### P1-1 Prisma schema（数据模型落地）⚠️
 - 目标：按 [data-schema.md](./data-schema.md) 建 `packages/db` schema：`Country`、`ModuleCoverage`、10 模块、`KnowledgeChunk`（pgvector）、`Lead`，枚举与元字段齐全。
@@ -87,9 +88,24 @@ graph LR
 - 人工确认：否。
 
 #### P1-4 首批国家建设计划与复制模板
-- 目标：按 [country-rollout.md](./country-rollout.md) 与 [indonesia-seed.md §5](./indonesia-seed.md) 整理国家建设计划、覆盖升级节奏与从印尼复制到新国家的 seed 模板规则，不落库。
+- 目标：按 [country-rollout.md](./country-rollout.md)、[basic-country-collection.md](./basic-country-collection.md) 与 [indonesia-seed.md §5](./indonesia-seed.md) 整理国家建设计划、覆盖升级节奏与从印尼复制到新国家的 seed 模板规则，不落库。
 - 验收：Complete / Standard / Basic 候选与人工确认项清晰；不得把国家优先级、覆盖升级结论、评分结果写入持久化字段；后续新增国家 seed 必须独立任务卡、独立验收。
 - 人工确认：否（仅文档候选；最终 30–50 国家清单、优先级与升级结论须人工确认）。
+
+#### P1-5 Basic 国家模板与通用校验器
+- 目标：在不修改数据模型的前提下，实现 Basic 国家 seed 模板和通用校验器，支持所有国家复用固定 10 模块结构。
+- 验收：校验 `market-overview` 为 `PARTIAL` 或 `COMPLETE`、其余九个模块均为 `BUILDING` 且没有 published 记录，使首次交付恰好派生 `BASIC` 并拒绝满足 `STANDARD` 的交付；校验 `BUILDING` 模块可缺省对象型记录、列表型模块可为空列表。校验 `market-overview` 具备 `source`、`sourceUrl`、`collectedAt`、`updatedAt`、`credibility`、`reviewStatus`、`aiUsable`、`countryCode`、`industryTags`、`techTags`，标签仅用已登记枚举且仅无适用项时为空，`sourceUrl = null` 时 `source` 说明原因，Basic `aiUsable = false`；展示字段为 `{ zh, en }` 并符合降级约定。校验 `collection-manifest.json` 的 `activeRunId` 解析到已提交审计包，并排除 `data/staging/` 与 `collection-manifest.json` 于 seed 记录、C 端响应、覆盖计数和 AI 检索；不得为单个国家添加特例。
+- 人工确认：否（不得变更数据模型；如需新字段，先按 AGENTS.md §11 单独确认）。
+
+#### P1-6 Basic 数据采集管道
+- 目标：实现确定性来源适配器、source register、通过 Windows `llama.cpp` 进行 schema-constrained 草稿生成，以及可离线运行的 fixtures；Hermes 与 SearXNG 按 [basic-country-collection.md](./basic-country-collection.md) 的发现和证据边界执行。
+- 验收：确定性采集结果可复现并带来源信息；审计包保留来源身份、原始 URL、检索时间、已知发布时间、内容 SHA-256、证据定位符和可信度，并将每个 canonical 字段路径映射到 source ID、精确原始值、标准化值、适用单位/年份和证据定位符；SearXNG 仅 discovery-only，浏览器打开原始来源后才可形成事实；本地模型输出始终为 `draft`；离线 fixtures 覆盖正常、缺失、冲突和不可信输入，并测试 `data/staging/`、`collection-manifest.json` 与其他 audit artifacts 不能进入 seed 记录、C 端响应、覆盖计数或 AI 检索；任何 CSV parser 依赖均须在引入前获得单独人工批准。
+- 人工确认：否（若引入 CSV parser 或其他新第三方依赖，须单独人工确认）。
+
+#### DATA-BASIC-<ISO2> 单国 Basic 数据任务卡
+- 目标：每张任务卡只采集一个 ISO 3166-1 alpha-2 国家，使用固定 10 模块模型完成 Basic 国家骨架和市场基础画像。
+- 验收：一国一任务卡、一分支、一审核周期，且仅合并一次到 `main`；合并后的 `main` 验证通过后，仅推送一次到 `origin/main`。数据先为 `draft`，仅在人工审核后发布；Basic 数据保持 `aiUsable = false` 且不产生知识片段；通过仓库校验和代表性 Web 检查，确认基础画像正常渲染、`BUILDING` 模块显示占位。
+- 人工确认：是（国家启动、发布、最终 30–50 国清单、国家顺序和覆盖升级均由人工决定）。
 
 ### P2 — Web 展示
 
