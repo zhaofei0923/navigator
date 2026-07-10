@@ -11,6 +11,7 @@ const RUN_INPUT_KEYS = [
   "adapters",
   "transport",
 ] as const;
+const MAX_TRANSPORT_PROTOTYPE_DEPTH = 16;
 
 export function snapshotBasicSourceAdapterRunInput(
   value: unknown,
@@ -84,9 +85,16 @@ function snapshotTransport(value: unknown): BasicSourceTransport | null {
     ) {
       return null;
     }
-    const execute = readDataMethod(value, "execute");
+    const originalTransport = value;
+    const execute = readDataMethod(originalTransport, "execute");
     if (execute === null) return null;
-    return Object.freeze({ execute: execute.bind(value) });
+    return Object.freeze({
+      execute(request: Parameters<BasicSourceTransport["execute"]>[0]) {
+        return Reflect.apply(execute, originalTransport, [request]) as ReturnType<
+          BasicSourceTransport["execute"]
+        >;
+      },
+    });
   } catch {
     return null;
   }
@@ -97,7 +105,20 @@ function readDataMethod(
   key: string,
 ): BasicSourceTransport["execute"] | null {
   let owner: object | null = value;
-  while (owner !== null) {
+  const visited = new Set<object>();
+  for (
+    let depth = 0;
+    owner !== null && depth < MAX_TRANSPORT_PROTOTYPE_DEPTH;
+    depth += 1
+  ) {
+    if (
+      owner === Object.prototype ||
+      owner === Function.prototype ||
+      visited.has(owner)
+    ) {
+      return null;
+    }
+    visited.add(owner);
     const descriptor = Object.getOwnPropertyDescriptor(owner, key);
     if (descriptor !== undefined) {
       return Object.hasOwn(descriptor, "value") &&

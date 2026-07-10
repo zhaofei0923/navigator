@@ -9,8 +9,10 @@ import type {
   BasicDeterministicAdapterOutput,
   BasicDeterministicObservation,
   BasicDeterministicSourceAdapter,
+  BasicSourceRequest,
   BasicSourceAdapterRunInput,
   BasicSourceTransport,
+  BasicSourceTransportResponse,
 } from "./collection/basic-source-adapter-contracts.js";
 import { runBasicDeterministicSourceAdapters } from "./collection/basic-source-adapter-runner.js";
 
@@ -560,6 +562,117 @@ describe("Basic deterministic source adapter runner", () => {
     expect(JSON.stringify(result)).not.toContain(URL_SENTINEL);
   });
 
+  test.each(["self", "alternating"] as const)(
+    "bounds %s-cyclic transport prototype traversal",
+    async (kind) => {
+      const probe = { prototypeReads: 0 };
+      const input = validRunInput(`run-${kind}-prototype-cycle`, []);
+      input.transport = cyclicPrototypeTransport(kind, probe);
+
+      const error = await captureFailure(
+        runBasicDeterministicSourceAdapters(input),
+      );
+
+      expect(error.message).toBe("source adapter run input is invalid");
+      expect(probe.prototypeReads).toBeLessThanOrEqual(4);
+    },
+  );
+
+  test("bounds over-deep transport prototype traversal", async () => {
+    const probe = { prototypeReads: 0 };
+    const input = validRunInput("run-deep-prototype-chain", []);
+    input.transport = deepPrototypeTransport(40, probe);
+
+    const error = await captureFailure(
+      runBasicDeterministicSourceAdapters(input),
+    );
+
+    expect(error.message).toBe("source adapter run input is invalid");
+    expect(probe.prototypeReads).toBeLessThanOrEqual(16);
+  });
+
+  test("preserves a normal class-prototype execute method and receiver", async () => {
+    class PrototypeTransport implements BasicSourceTransport {
+      calls = 0;
+
+      async execute(request: BasicSourceRequest) {
+        expect(this).toBe(instance);
+        this.calls += 1;
+        return responseForRequest(request);
+      }
+    }
+    const instance = new PrototypeTransport();
+
+    const result = await runBasicDeterministicSourceAdapters(
+      runInputForTransport("run-class-prototype", instance),
+    );
+
+    expect(instance.calls).toBe(1);
+    expect(result.receipts).toHaveLength(1);
+  });
+
+  test("never reads a captured execute function's throwing bind getter", async () => {
+    let bindReads = 0;
+    let executeCalls = 0;
+    let originalTransport: BasicSourceTransport;
+    const execute = async function executeWithReceiver(
+      this: BasicSourceTransport,
+      request: BasicSourceRequest,
+    ): Promise<BasicSourceTransportResponse> {
+      expect(this).toBe(originalTransport);
+      executeCalls += 1;
+      return responseForRequest(request);
+    };
+    Object.defineProperty(execute, "bind", {
+      configurable: true,
+      get() {
+        bindReads += 1;
+        throw new Error(`${PAYLOAD_SENTINEL} ${URL_SENTINEL}`);
+      },
+    });
+    originalTransport = { execute };
+
+    const result = await runBasicDeterministicSourceAdapters(
+      runInputForTransport("run-bind-getter", originalTransport),
+    );
+
+    expect(bindReads).toBe(0);
+    expect(executeCalls).toBe(1);
+    expect(result.receipts).toHaveLength(1);
+  });
+
+  test("never calls an overridden execute bind substitution", async () => {
+    let bindCalls = 0;
+    let executeCalls = 0;
+    let originalTransport: BasicSourceTransport;
+    const execute = async function executeWithReceiver(
+      this: BasicSourceTransport,
+      request: BasicSourceRequest,
+    ): Promise<BasicSourceTransportResponse> {
+      expect(this).toBe(originalTransport);
+      executeCalls += 1;
+      return responseForRequest(request);
+    };
+    Object.defineProperty(execute, "bind", {
+      configurable: true,
+      value() {
+        bindCalls += 1;
+        return async () => {
+          throw new Error(`${PAYLOAD_SENTINEL} ${URL_SENTINEL}`);
+        };
+      },
+    });
+    originalTransport = { execute };
+
+    const result = await runBasicDeterministicSourceAdapters(
+      runInputForTransport("run-bind-substitution", originalTransport),
+    );
+
+    expect(bindCalls).toBe(0);
+    expect(executeCalls).toBe(1);
+    expect(result.receipts).toHaveLength(1);
+  });
+
   test("rejects invalid source dates and adapter metadata", async () => {
     const invalidDateError = await captureFailure(
       runBasicDeterministicSourceAdapters({
@@ -743,6 +856,84 @@ function validRunInput(
     runId,
     adapters: [adapter("source-run-input", [observation()])],
     transport: transport(calls),
+  };
+}
+
+function runInputForTransport(
+  runId: string,
+  sourceTransport: BasicSourceTransport,
+): BasicSourceAdapterRunInput {
+  const input = validRunInput(runId, []);
+  input.transport = sourceTransport;
+  return input;
+}
+
+function cyclicPrototypeTransport(
+  kind: "self" | "alternating",
+  probe: { prototypeReads: number },
+): BasicSourceTransport {
+  const nextPrototype = (prototype: object): object => {
+    probe.prototypeReads += 1;
+    if (probe.prototypeReads > 12) {
+      throw new Error(`${PAYLOAD_SENTINEL} ${URL_SENTINEL}`);
+    }
+    return prototype;
+  };
+  if (kind === "self") {
+    let self: object;
+    self = new Proxy({}, {
+      getPrototypeOf() {
+        return nextPrototype(self);
+      },
+    });
+    return self as BasicSourceTransport;
+  }
+  let first: object;
+  let second: object;
+  first = new Proxy({}, {
+    getPrototypeOf() {
+      return nextPrototype(second);
+    },
+  });
+  second = new Proxy({}, {
+    getPrototypeOf() {
+      return nextPrototype(first);
+    },
+  });
+  return first as BasicSourceTransport;
+}
+
+function deepPrototypeTransport(
+  depth: number,
+  probe: { prototypeReads: number },
+): BasicSourceTransport {
+  let prototype: object = Object.create(null) as object;
+  for (let index = 0; index < depth; index += 1) {
+    const next = prototype;
+    prototype = new Proxy({}, {
+      getPrototypeOf() {
+        probe.prototypeReads += 1;
+        return next;
+      },
+    });
+  }
+  return prototype as BasicSourceTransport;
+}
+
+function responseForRequest(
+  request: BasicSourceRequest,
+): BasicSourceTransportResponse {
+  const sourceId = new URL(request.url).hostname.split(".")[0] ?? "unknown";
+  const body = bodyFor(sourceId);
+  return {
+    status: 200,
+    finalUrl: request.url,
+    contentType: "application/json",
+    retrievedAt: RETRIEVED_AT,
+    redirectChain: [],
+    body: (async function* stream() {
+      yield body;
+    })(),
   };
 }
 
