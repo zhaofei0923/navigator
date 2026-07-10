@@ -47,8 +47,8 @@ MVP 到商业化初期的国家数据目标：
 ### Basic
 
 - 国家基础画像可用。
-- 至少 `market-overview` 可展示。
-- 关键模块可处于 `BUILDING`，但必须有占位。
+- `market-overview` 为 `PARTIAL` 或 `COMPLETE`；其余九个模块均为 `BUILDING`、没有 published 记录且显示占位。
+- 覆盖等级必须恰好派生为 `BASIC`，不满足 `STANDARD` 判定；后续数据仅可在单独、经人工批准的升级任务中加入。
 - 数据元字段齐全。
 - 所有 Basic 数据保持 `aiUsable = false`，不创建知识片段；AI 顾问仅显示数据建设中提示。
 

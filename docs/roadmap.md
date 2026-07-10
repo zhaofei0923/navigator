@@ -12,6 +12,7 @@
 2. **一张任务卡 = 一个 PR = 一件事**，附测试，独立可验收、可回滚。
 3. **人工确认关口**（AGENTS.md §11）在下文用 ⚠️ 标注，Codex 遇到必须停下等 Review。
 4. **两处待定项**（AI 系统 Prompt 正式文本、检索边界参数默认值）先用占位跑通管道，定稿后替换，不阻塞开发（见 [ai-advisor.md §4/§5](./ai-advisor.md)）。
+5. **当前任务集成路径**：经用户批准，默认执行“本地 feature 分支 → 独立 review → 合并到 `main` → merged-main 验证 → `git push origin main`”，不默认创建 PR。若以后改为 PR 工作流，适用 AGENTS.md 的“一张任务卡 = 一个 PR”规则；本路径不移除合并和推送验收。
 
 ---
 
@@ -93,12 +94,12 @@ graph LR
 
 #### P1-5 Basic 国家模板与通用校验器
 - 目标：在不修改数据模型的前提下，实现 Basic 国家 seed 模板和通用校验器，支持所有国家复用固定 10 模块结构。
-- 验收：校验 `BUILDING` 模块可缺省对象型记录、列表型模块可为空列表、核心业务数据元字段齐全、展示字段为 `{ zh, en }` 并符合降级约定，以及覆盖等级由模块状态和数据派生；不得为单个国家添加特例。
+- 验收：校验 `market-overview` 为 `PARTIAL` 或 `COMPLETE`、其余九个模块均为 `BUILDING` 且没有 published 记录，使首次交付恰好派生 `BASIC` 并拒绝满足 `STANDARD` 的交付；校验 `BUILDING` 模块可缺省对象型记录、列表型模块可为空列表。校验 `market-overview` 具备 `source`、`sourceUrl`、`collectedAt`、`updatedAt`、`credibility`、`reviewStatus`、`aiUsable`、`countryCode`、`industryTags`、`techTags`，标签仅用已登记枚举且仅无适用项时为空，`sourceUrl = null` 时 `source` 说明原因，Basic `aiUsable = false`；展示字段为 `{ zh, en }` 并符合降级约定。校验 `collection-manifest.json` 的 `activeRunId` 解析到已提交审计包，并排除 `data/staging/` 与 `collection-manifest.json` 于 seed 记录、C 端响应、覆盖计数和 AI 检索；不得为单个国家添加特例。
 - 人工确认：否（不得变更数据模型；如需新字段，先按 AGENTS.md §11 单独确认）。
 
 #### P1-6 Basic 数据采集管道
 - 目标：实现确定性来源适配器、source register、通过 Windows `llama.cpp` 进行 schema-constrained 草稿生成，以及可离线运行的 fixtures；Hermes 与 SearXNG 按 [basic-country-collection.md](./basic-country-collection.md) 的发现和证据边界执行。
-- 验收：确定性采集结果可复现并带来源信息；SearXNG 仅 discovery-only，浏览器打开原始来源后才可形成事实；本地模型输出始终为 `draft`；离线 fixtures 覆盖正常、缺失、冲突和不可信输入；任何 CSV parser 依赖均须在引入前获得单独人工批准。
+- 验收：确定性采集结果可复现并带来源信息；审计包保留来源身份、原始 URL、检索时间、已知发布时间、内容 SHA-256、证据定位符和可信度，并将每个 canonical 字段路径映射到 source ID、精确原始值、标准化值、适用单位/年份和证据定位符；SearXNG 仅 discovery-only，浏览器打开原始来源后才可形成事实；本地模型输出始终为 `draft`；离线 fixtures 覆盖正常、缺失、冲突和不可信输入，并测试 `data/staging/`、`collection-manifest.json` 与其他 audit artifacts 不能进入 seed 记录、C 端响应、覆盖计数或 AI 检索；任何 CSV parser 依赖均须在引入前获得单独人工批准。
 - 人工确认：否（若引入 CSV parser 或其他新第三方依赖，须单独人工确认）。
 
 #### DATA-BASIC-<ISO2> 单国 Basic 数据任务卡

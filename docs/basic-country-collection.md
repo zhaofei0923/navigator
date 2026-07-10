@@ -7,8 +7,8 @@
 每个 Basic 国家使用与印尼（`ID`）相同的固定 10 模块模型，不得为任何国家增加特例文件、字段或页面。除既有 Complete 参考国家 `ID` 外，每个新选定的目标国家都必须完成其 `DATA-BASIC-<ISO2>` 任务卡并达到 `BASIC`，之后才可进入单独、经人工批准的 `STANDARD` 或 `COMPLETE` 升级任务；禁止新国家直接以 `STANDARD` 或 `COMPLETE` 进入产品。Basic 首次交付只建立该国的国家骨架和市场基础画像：
 
 - `country.json` 必须包含 ISO 3166-1 alpha-2 国家码、`{ zh, en }` 的国家名和摘要、地区、国旗展示字段、整体 `updatedAt`，以及全部 10 个模块的 `moduleCoverage`。
-- `country.json` 的 `coverageLevel` 必须由覆盖判定得出为 `BASIC`，不得人工覆盖。`market-overview` 为 `PARTIAL` 或 `COMPLETE`；其余九个模块可为 `BUILDING`，并保留统一占位，不创建虚构的占位业务记录。
-- `market-overview.json` 必须是每国唯一的对象记录，按 [data-schema.md §5.1](./data-schema.md) 填写可验证的基础市场画像、`keyIndicators` 和所有适用元字段。所有可读字段和指标标签均使用 `{ zh, en }`；缺任一语言按既有降级规则标注，不能留空或报错。
+- `country.json` 的 `coverageLevel` 必须由覆盖判定得出为**恰好** `BASIC`，不得人工覆盖。`market-overview` 为 `PARTIAL` 或 `COMPLETE`；其余九个模块必须均为 `BUILDING`、`dataCount = 0`，且没有任何 `published` 记录，并保留统一占位，不创建虚构的占位业务记录。满足 `STANDARD` 判定条件的交付必须拒绝；后续数据只能在单独、经人工批准的升级任务中提交。
+- `market-overview.json` 必须是每国唯一的对象记录，按 [data-schema.md §5.1](./data-schema.md) 填写可验证的基础市场画像、`keyIndicators` 和完整元字段：`source`、`sourceUrl`、`collectedAt`、`updatedAt`、`credibility`、`reviewStatus`、`aiUsable`、`countryCode`、`industryTags`、`techTags`。字段必须存在；标签仅可使用已登记的枚举，且仅当没有适用标签时才可为空。`sourceUrl` 仅可按现有 schema 规则为 `null`，此时 `source` 必须说明无链接原因。所有可读字段和指标标签均使用 `{ zh, en }`；缺任一语言按既有降级规则标注，不能留空或报错。Basic 的 `aiUsable` 必须为 `false`。
 - 所有发布的 Basic 记录均须符合 [data-governance.md](./data-governance.md) 的来源、时间、可信度、审核状态、标签和双语要求。Basic 数据始终为 `aiUsable = false`，本阶段不得产生或导入 `knowledge` 知识片段。
 
 完成的 Basic 国家可在 C 端展示国家基础画像和其余模块的 `BUILDING` 占位；它不提供该国的 AI 深度问答，也不因 `published` 状态自动进入 AI 检索。
@@ -47,15 +47,17 @@
 
 所有研究工作先保存在 canonical country seed 之外的按国家和批次隔离的暂存区。路径中的 `<ISO2>` 是 ISO 3166-1 alpha-2 国家码，`<country>` 是与 canonical data 目录一致的国家目录名，`<runId>` 是该次采集的稳定运行标识。每个产物必须可通过来源登记关联到同一批次：
 
-1. **raw cache**：`.cache/basic-country/<ISO2>/<runId>/raw/`，存放确定性采集器、浏览器或提取工具获取的原始响应、文件或页面快照；记录获取方式与时间，且**永不提交**。
-2. **source register**：`data/staging/<country>/<runId>/source-register.json`，记录来源名称、原始 URL、来源族、访问时间、许可或访问限制、可信度建议、覆盖字段和原始证据位置。
-3. **extracted facts**：`data/staging/<country>/<runId>/extracted-facts.json`，逐字段保存原始值、单位、年份、引用来源 ID、提取方法与不确定性说明。
+1. **raw cache**：`.cache/basic-country/<ISO2>/<runId>/raw/`，存放确定性采集器、浏览器或提取工具获取的原始响应、文件或页面快照；它是本地专用目录，记录获取方式与时间，且**永不提交**。
+2. **source register**：`data/staging/<country>/<runId>/source-register.json`，为每个 `sourceId` 保留来源身份、原始 URL、检索时间、已知时的发布时间、内容 SHA-256、证据定位符、来源族、许可或访问限制与可信度。
+3. **extracted facts**：`data/staging/<country>/<runId>/extracted-facts.json`，将每个 canonical JSON 字段路径映射到一个或多个 `sourceId`，并逐项保存精确原始值、标准化值、适用的单位和年份，以及证据定位符；同时记录提取方法与不确定性说明。
 4. **bilingual draft**：`data/staging/<country>/<runId>/market-overview.draft.json`，由本地模型或人工基于 extracted facts 形成 schema-constrained `{ zh, en }` 草稿，所有记录保持 `draft` 且 `aiUsable = false`。
 5. **review report**：`data/staging/<country>/<runId>/review-report.json`，记录审核结论、待解决冲突、缺失字段、来源抽检、注入风险、发布建议以及人工决定。
 
-人工批准后的 canonical data 仅写入 `data/<country>/`。暂存区和 raw cache 不得作为 canonical data 或 AI 知识源。
+人工批准后，canonical data 与同一 `<runId>` 的非 raw 审计包必须一并提交：`data/staging/<country>/<runId>/` 必须包含 `source-register.json`、`extracted-facts.json`、`market-overview.draft.json` 与 `review-report.json`。该已提交审计包不可变；任何修正必须创建新的 `<runId>`，不得改写已批准批次。
 
-暂存区中的内容不是产品数据，不能被 C 端、种子导入或 AI 检索使用。
+每个 `data/<country>/` 必须同时提交一个不被导入的 canonical sidecar：`collection-manifest.json`。它只包含 `activeRunId`、`mappingVersion` 及指向已提交审计包的引用，用于证明当前 canonical data 的出处；它是审计元数据，不是 Prisma 或 `data-schema.md` 字段。
+
+暂存区、`collection-manifest.json` 和 raw cache 不是产品数据，不能被 seed 记录、C 端响应、覆盖计数或 AI 检索使用。
 
 ## 5. 审核与发布闸门
 
@@ -65,7 +67,7 @@
 |---|---|---|
 | `draft` | 暂存产物可追溯；草稿通过结构和基础字段校验；未确认项明确标注 | 继续采集、提取、翻译和修订 |
 | `pending` | 来源登记、extracted facts、双语草稿和 review report 齐全；冲突与缺失已处理或有明确阻断结论 | 提交给人工审核者 |
-| `published` | 人工审核者确认事实、元字段、双语展示、可信度、覆盖派生和 C 端占位行为 | 写入 canonical seed，并可用于 C 端 Basic 展示 |
+| `published` | 人工审核者确认事实、元字段、双语展示、可信度、覆盖派生、审计包与 `collection-manifest.json` 的对应关系，以及 C 端占位行为 | 将 canonical seed、不可变非 raw 审计包和 sidecar 一并提交，并可用于 C 端 Basic 展示 |
 
 Basic 的 `published` 仅代表可展示，不代表可检索：所有 Basic 记录必须保持 `aiUsable = false`，并且不得创建知识片段。任何将 Basic 数据用于 AI 的提议均属于覆盖升级和人工决策，必须在单独任务卡中处理。
 
@@ -84,10 +86,11 @@ Basic 的 `published` 仅代表可展示，不代表可检索：所有 Basic 记
 每个 `DATA-BASIC-<ISO2>` 任务卡在人工发布前必须逐项验收：
 
 - [ ] 国家使用 ISO 3166-1 alpha-2 代码，并使用固定 10 模块的 `country.json` 骨架。
-- [ ] `market-overview.json` 是唯一对象记录，达到 `PARTIAL` 或 `COMPLETE`，其余模块按实际数据为 `BUILDING` 或已有合法状态。
-- [ ] `coverageLevel` 经既有规则派生为 `BASIC`，未手工覆盖；`BUILDING` 模块没有虚构记录。
-- [ ] 发布记录包含适用的元字段、合法标签、来源、采集与更新时间、可信度以及 `{ zh, en }` 展示文本或可见降级。
-- [ ] raw cache、source register、extracted facts、bilingual draft 和 review report 完整且可追溯。
+- [ ] `market-overview.json` 是唯一对象记录，达到 `PARTIAL` 或 `COMPLETE`；其余九个模块均为 `BUILDING`、`dataCount = 0`，且没有 `published` 记录。
+- [ ] `coverageLevel` 经既有规则派生为恰好 `BASIC`，未手工覆盖；交付不满足 `STANDARD` 判定，`BUILDING` 模块没有虚构记录。
+- [ ] `market-overview.json` 具备 `source`、`sourceUrl`、`collectedAt`、`updatedAt`、`credibility`、`reviewStatus`、`aiUsable`、`countryCode`、`industryTags`、`techTags`；标签仅使用已登记枚举，仅无适用标签时为空；`sourceUrl = null` 时 `source` 说明原因；`aiUsable = false`。
+- [ ] 已提交的 `data/staging/<country>/<runId>/` 包含 source register、extracted facts、bilingual draft 和 review report；raw cache 保持本地且未提交。`source-register.json` 保留来源身份、原始 URL、检索时间、已知发布时间、内容 SHA-256、证据定位符和可信度；`extracted-facts.json` 为每个 canonical 字段路径保留 source ID、精确原始值、标准化值、适用单位/年份和证据定位符。
+- [ ] `data/<country>/collection-manifest.json` 以 `activeRunId` 和 `mappingVersion` 指向已提交审计包，且仅作为非导入审计元数据。
 - [ ] 每个发布事实均由打开的原始来源支持；SearXNG 仅用于发现，未作为证据。
 - [ ] 本地模型输出保持草稿属性；人工审核者已完成 `pending -> published` 决定。
 - [ ] 全部 Basic 记录为 `aiUsable = false`，没有知识片段或 AI 检索入口的数据依赖。
