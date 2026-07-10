@@ -8,24 +8,45 @@ import { worldBankCountryAdapter } from "./collection/adapters/world-bank-countr
 import { WORLD_BANK_CORE_INDICATOR_ADAPTERS } from "./collection/adapters/world-bank-indicators.js";
 import type { BasicDeterministicSourceAdapter } from "./collection/basic-source-adapter-contracts.js";
 
-const COUNTRY_FIXTURE = readFixture("world-bank-country-vn.json");
+const COUNTRY_SHA256 =
+  "7ddd064eb77613024ad050f7b885a61c239c01692ec59ef4b352ed100f2b7525";
+const POPULATION_SHA256 =
+  "4f1ca6321f935f15850e5ada927c7d6f4a2a2d43b44a3c52b8d85cb899681cdd";
+const GDP_SHA256 =
+  "8fb1bd9738f682a7ac2e5cadf36afa6565687f30df51355b7cfb3afc4f182386";
+const GDP_GROWTH_SHA256 =
+  "b8360f2686bf2de0706bd454be394736912f6f91fa199e257089a867e1dcb483";
+
+const COUNTRY_FIXTURE = readVerifiedFixture(
+  "world-bank-country-vn.json",
+  COUNTRY_SHA256,
+);
 const INDICATOR_CASES = [
   {
-    fixture: readFixture("world-bank-population-vn.json"),
+    fixture: readVerifiedFixture(
+      "world-bank-population-vn.json",
+      POPULATION_SHA256,
+    ),
+    expectedSha256: POPULATION_SHA256,
     indicator: "SP.POP.TOTL",
     fieldPath: "marketOverview.population",
     unit: "people",
     value: 101598527,
   },
   {
-    fixture: readFixture("world-bank-gdp-vn.json"),
+    fixture: readVerifiedFixture("world-bank-gdp-vn.json", GDP_SHA256),
+    expectedSha256: GDP_SHA256,
     indicator: "NY.GDP.MKTP.CD",
     fieldPath: "marketOverview.gdp",
     unit: "current US$",
     value: 514697215165.065,
   },
   {
-    fixture: readFixture("world-bank-gdp-growth-vn.json"),
+    fixture: readVerifiedFixture(
+      "world-bank-gdp-growth-vn.json",
+      GDP_GROWTH_SHA256,
+    ),
+    expectedSha256: GDP_GROWTH_SHA256,
     indicator: "NY.GDP.MKTP.KD.ZG",
     fieldPath: "marketOverview.gdpGrowth",
     unit: "%",
@@ -38,9 +59,10 @@ describe("World Bank country adapter", () => {
     expect(COUNTRY_FIXTURE).toMatchObject({
       requestUrl: "https://api.worldbank.org/v2/country/VN?format=json",
       recordedAt: "2026-07-10T09:40:00Z",
-      contentSha256: "7ddd064eb77613024ad050f7b885a61c239c01692ec59ef4b352ed100f2b7525",
+      contentSha256: COUNTRY_SHA256,
     });
-    expect(sha256(COUNTRY_FIXTURE.body)).toBe(COUNTRY_FIXTURE.contentSha256);
+    expect(COUNTRY_FIXTURE.contentSha256).toBe(COUNTRY_SHA256);
+    expect(sha256(COUNTRY_FIXTURE.body)).toBe(COUNTRY_SHA256);
 
     expect(worldBankCountryAdapter.request("VN")).toEqual({
       method: "GET",
@@ -92,11 +114,12 @@ describe("World Bank country adapter", () => {
   });
 
   test.each([
-    ["a malformed envelope", Uint8Array.from([123])],
-    ["pagination", mutateCountry(({ metadata }) => ({ ...metadata, pages: 2 }))],
-    ["an extra country record", mutateCountry(({ metadata, records }) => [metadata, [...records, records[0]]])],
-    ["an ISO mismatch", mutateCountry(({ metadata, records }) => [metadata, [{ ...records[0], iso2Code: "ID" }]])],
-  ])("rejects %s", (_label, body) => {
+    ["a malformed envelope", () => Uint8Array.from([123])],
+    ["pagination", () => mutateCountry(({ metadata }) => ({ ...metadata, pages: 2 }))],
+    ["an extra country record", () => mutateCountry(({ metadata, records }) => [metadata, [...records, records[0]]])],
+    ["an ISO mismatch", () => mutateCountry(({ metadata, records }) => [metadata, [{ ...records[0], iso2Code: "ID" }]])],
+  ])("rejects %s", (_label, createBody) => {
+    const body = createBody();
     expect(() => worldBankCountryAdapter.extract(adapterInput(body))).toThrow(
       "world bank country response is invalid",
     );
@@ -115,9 +138,10 @@ describe("World Bank core indicator adapters", () => {
 
   test.each(INDICATOR_CASES)(
     "parses the hash-verified $indicator WDI fixture",
-    ({ fixture, indicator, fieldPath, unit, value }) => {
+    ({ fixture, expectedSha256, indicator, fieldPath, unit, value }) => {
       expect(fixture.recordedAt).toBe("2026-07-10T09:40:00Z");
-      expect(sha256(fixture.body)).toBe(fixture.contentSha256);
+      expect(fixture.contentSha256).toBe(expectedSha256);
+      expect(sha256(fixture.body)).toBe(expectedSha256);
 
       const adapter = adapterFor(indicator);
       expect(adapter.request("VN")).toEqual({
@@ -158,16 +182,17 @@ describe("World Bank core indicator adapters", () => {
   );
 
   test.each([
-    ["pagination", mutateIndicator(({ metadata, records }) => [{ ...metadata, pages: 2 }, records])],
-    ["a missing record", mutateIndicator(({ metadata }) => [metadata, []])],
-    ["a duplicate record", mutateIndicator(({ metadata, records }) => [metadata, [...records, records[0]]])],
-    ["a wrong country", mutateIndicator(({ metadata, records }) => [metadata, [{ ...records[0], country: { id: "ID" } }]])],
-    ["an invalid year", mutateIndicator(({ metadata, records }) => [metadata, [{ ...records[0], date: "25" }]])],
-    ["a non-finite value", mutateIndicator(({ metadata, records }) => [metadata, [{ ...records[0], value: "NaN" }]])],
-    ["an unexpected indicator", mutateIndicator(({ metadata, records }) => [metadata, [{ ...records[0], indicator: { id: "OTHER" } }]])],
-    ["malformed source-2 metadata", mutateIndicator(({ metadata, records }) => [{ ...metadata, sourceid: 2 }, records])],
-    ["an invalid source-2 update date", mutateIndicator(({ metadata, records }) => [{ ...metadata, lastupdated: "2026-99-99" }, records])],
-  ])("rejects %s", (_label, body) => {
+    ["pagination", () => mutateIndicator(({ metadata, records }) => [{ ...metadata, pages: 2 }, records])],
+    ["a missing record", () => mutateIndicator(({ metadata }) => [metadata, []])],
+    ["a duplicate record", () => mutateIndicator(({ metadata, records }) => [metadata, [...records, records[0]]])],
+    ["a wrong country", () => mutateIndicator(({ metadata, records }) => [metadata, [{ ...records[0], country: { id: "ID" } }]])],
+    ["an invalid year", () => mutateIndicator(({ metadata, records }) => [metadata, [{ ...records[0], date: "25" }]])],
+    ["a non-finite numeric value", () => replaceJsonToken(INDICATOR_CASES[0].fixture.body, '"value":101598527', '"value":1e400')],
+    ["an unexpected indicator", () => mutateIndicator(({ metadata, records }) => [metadata, [{ ...records[0], indicator: { id: "OTHER" } }]])],
+    ["malformed source-2 metadata", () => mutateIndicator(({ metadata, records }) => [{ ...metadata, sourceid: 2 }, records])],
+    ["an invalid source-2 update date", () => mutateIndicator(({ metadata, records }) => [{ ...metadata, lastupdated: "2026-99-99" }, records])],
+  ])("rejects %s", (_label, createBody) => {
+    const body = createBody();
     expect(() => adapterFor("SP.POP.TOTL").extract(adapterInput(body))).toThrow(
       "world bank indicator response is invalid",
     );
@@ -199,7 +224,10 @@ interface ParsedFixtureEnvelope {
   bodyBase64: string;
 }
 
-function readFixture(name: string): FixtureEnvelope {
+function readVerifiedFixture(
+  name: string,
+  expectedSha256: string,
+): FixtureEnvelope {
   const pathname = fileURLToPath(
     new URL(`../fixtures/source-adapters/${name}`, import.meta.url),
   );
@@ -207,11 +235,18 @@ function readFixture(name: string): FixtureEnvelope {
   if (!isFixtureEnvelope(parsed)) {
     throw new Error("fixture envelope is invalid");
   }
+  const body = new Uint8Array(Buffer.from(parsed.bodyBase64, "base64"));
+  if (
+    parsed.contentSha256 !== expectedSha256 ||
+    sha256(body) !== expectedSha256
+  ) {
+    throw new Error("fixture body digest is invalid");
+  }
   return {
     requestUrl: parsed.requestUrl,
     recordedAt: parsed.recordedAt,
     contentSha256: parsed.contentSha256,
-    body: new Uint8Array(Buffer.from(parsed.bodyBase64, "base64")),
+    body,
   };
 }
 
@@ -278,6 +313,21 @@ function mutateEnvelope(
         records: value[1].filter(isRecord),
       }),
     ),
+  );
+}
+
+function replaceJsonToken(
+  body: Uint8Array,
+  sourceToken: string,
+  replacementToken: string,
+): Uint8Array {
+  const text = new TextDecoder().decode(body);
+  const tokenIndex = text.indexOf(sourceToken);
+  if (tokenIndex < 0 || tokenIndex !== text.lastIndexOf(sourceToken)) {
+    throw new Error("fixture JSON token is invalid");
+  }
+  return new TextEncoder().encode(
+    `${text.slice(0, tokenIndex)}${replacementToken}${text.slice(tokenIndex + sourceToken.length)}`,
   );
 }
 
