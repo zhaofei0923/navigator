@@ -1,3 +1,16 @@
+import type { Credibility } from "@navigator/shared-types/schema";
+
+import type {
+  BasicCollectionJsonValue,
+  BasicPromptInjectionRisk,
+  BasicSourceAccessStatus,
+  BasicSourceFamily,
+} from "./basic-collection-contracts.js";
+import type {
+  BasicRawCaptureResult,
+  BasicSourceAdapterRunResult,
+} from "./basic-source-adapter-contracts.js";
+
 export const BASIC_HERMES_DISCOVERY_SCHEMA_VERSION =
   "basic-hermes-discovery/v1" as const;
 export const BASIC_HERMES_DISCOVERY_TIMEOUT_MS = 300_000;
@@ -34,6 +47,43 @@ export interface BasicHermesDiscoveryBatch {
   runId: string;
   countryCode: string;
   candidates: readonly BasicHermesDiscoveryCandidate[];
+}
+
+export interface BasicHermesSourcePolicy {
+  sourceId: string;
+  sourceName: string;
+  sourceUrl: string;
+  sourceFamily: BasicSourceFamily;
+  credibility: Credibility;
+  accessStatus: BasicSourceAccessStatus;
+  accessNotes: string | null;
+  publishedAt: string | null;
+  promptInjectionRisk: BasicPromptInjectionRisk;
+  approvedOrigins: readonly string[];
+  allowedQueryParameters: readonly string[];
+}
+
+export interface BasicHermesObservation {
+  fieldPath: string;
+  locator: string;
+  rawValue: BasicCollectionJsonValue;
+  normalizedValue: BasicCollectionJsonValue;
+  unit: string | null;
+  year: number | null;
+  uncertainty: string | null;
+}
+
+export interface BasicHermesOpenedJsonSource {
+  discoveryId: string;
+  policy: BasicHermesSourcePolicy;
+  capture: BasicRawCaptureResult;
+  observations: readonly BasicHermesObservation[];
+}
+
+export interface BasicHermesEvidencePromotionInput {
+  base: BasicSourceAdapterRunResult;
+  discovery: BasicHermesDiscoveryBatch;
+  openedSources: readonly BasicHermesOpenedJsonSource[];
 }
 
 export type BasicBridgeErrorCode =
