@@ -97,10 +97,25 @@ graph LR
 - 验收：校验 `market-overview` 为 `PARTIAL` 或 `COMPLETE`、其余九个模块均为 `BUILDING` 且没有 published 记录，使首次交付恰好派生 `BASIC` 并拒绝满足 `STANDARD` 的交付；校验 `BUILDING` 模块可缺省对象型记录、列表型模块可为空列表。校验 `market-overview` 具备 `source`、`sourceUrl`、`collectedAt`、`updatedAt`、`credibility`、`reviewStatus`、`aiUsable`、`countryCode`、`industryTags`、`techTags`，标签仅用已登记枚举且仅无适用项时为空，`sourceUrl = null` 时 `source` 说明原因，Basic `aiUsable = false`；展示字段为 `{ zh, en }` 并符合降级约定。校验 `collection-manifest.json` 的 `activeRunId` 解析到已提交审计包，并排除 `data/staging/` 与 `collection-manifest.json` 于 seed 记录、C 端响应、覆盖计数和 AI 检索；不得为单个国家添加特例。
 - 人工确认：否（不得变更数据模型；如需新字段，先按 AGENTS.md §11 单独确认）。
 
-#### P1-6 Basic 数据采集管道
-- 目标：实现确定性来源适配器、source register、通过 Windows `llama.cpp` 进行 schema-constrained 草稿生成，以及可离线运行的 fixtures；Hermes 与 SearXNG 按 [basic-country-collection.md](./basic-country-collection.md) 的发现和证据边界执行。
-- 验收：确定性采集结果可复现并带来源信息；审计包保留来源身份、原始 URL、检索时间、已知发布时间、内容 SHA-256、证据定位符和可信度，并将每个 canonical 字段路径映射到 source ID、精确原始值、标准化值、适用单位/年份和证据定位符；SearXNG 仅 discovery-only，浏览器打开原始来源后才可形成事实；本地模型输出始终为 `draft`；离线 fixtures 覆盖正常、缺失、冲突和不可信输入，并测试 `data/staging/`、`collection-manifest.json` 与其他 audit artifacts 不能进入 seed 记录、C 端响应、覆盖计数或 AI 检索；任何 CSV parser 依赖均须在引入前获得单独人工批准。
-- 人工确认：否（若引入 CSV parser 或其他新第三方依赖，须单独人工确认）。
+#### P1-6A Audit contract and offline fixtures
+- 目标：冻结 Basic 审计包的机器可读契约，并实现可离线运行的正常、缺失、冲突与不可信输入 fixtures；不得调用或 mock 模型、网络或采集运行时。
+- 验收：契约覆盖审计包的来源、事实、双语草稿与审核报告；离线 fixtures 可确定性验证，并区分结构有效、阻断原因和人工审核就绪；审计产物不能进入 seed 记录、C 端响应、覆盖计数或 AI 检索。
+- 人工确认：否（若引入第三方依赖或触及既有 AGENTS.md 人工闸门，须单独人工确认）。
+
+#### P1-6B Deterministic source adapters and raw capture
+- 目标：实现可复现的确定性来源适配器、raw capture 与 source register，保留来源身份、原始 URL、检索时间、已知发布时间、内容 SHA-256、证据定位符和可信度。
+- 验收：原始采集与证据登记可追溯；每个 canonical 字段路径可映射至 source ID、精确原始值、标准化值、适用单位/年份和证据定位符；raw cache 不提交且不进入 canonical 流程。
+- 人工确认：否（若引入第三方依赖或触及既有 AGENTS.md 人工闸门，须单独人工确认）。
+
+#### P1-6C Hermes discovery and llama.cpp schema draft bridge
+- 目标：在 [basic-country-collection.md](./basic-country-collection.md) 的发现与证据边界内接入 Hermes discovery 和 Windows `llama.cpp` schema-constrained 草稿桥接，并处理运行时与模型失败。
+- 验收：SearXNG 仅 discovery-only，必须打开原始来源后才可形成事实；本地模型输出始终为 `draft`、`aiUsable = false`，不直接写入 canonical seed 或发布。
+- 人工确认：否（若引入第三方依赖或触及既有 AGENTS.md 人工闸门，须单独人工确认）。
+
+#### P1-6D Offline end-to-end dry run and boundary verification
+- 目标：完成离线端到端 dry run，并验证采集、审计与发布边界不越界。
+- 验收：正常、缺失、冲突和不可信输入均通过预期路径；确认 `data/staging/`、`collection-manifest.json` 与其他 audit artifacts 不能进入 seed 记录、C 端响应、覆盖计数或 AI 检索；不得自动发布或自动选择冲突值。
+- 人工确认：否（若引入第三方依赖或触及既有 AGENTS.md 人工闸门，须单独人工确认）。
 
 #### DATA-BASIC-<ISO2> 单国 Basic 数据任务卡
 - 目标：每张任务卡只采集一个 ISO 3166-1 alpha-2 国家，使用固定 10 模块模型完成 Basic 国家骨架和市场基础画像。

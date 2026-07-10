@@ -1,6 +1,8 @@
 import { describe, expect, test } from "vitest";
 
 import { buildBasicCountryImportPlan } from "./seed/basic-country-import.js";
+import type { JsonRecord } from "./seed/basic-country-types.js";
+import { isPlainRecord } from "./seed/basic-country-validation-utils.js";
 import { validateBasicCountryBundle } from "./seed/basic-country-validator.js";
 import {
   createValidBundle,
@@ -8,6 +10,7 @@ import {
   getRecordArray,
   getRequiredArrayItem,
 } from "./basic-country-test-fixture.js";
+import { readBasicCollectionAuditFixture } from "./basic-collection-test-fixture.js";
 
 describe("Basic country import plan", () => {
   test("builds an isolated Basic Prisma import plan", () => {
@@ -84,4 +87,47 @@ describe("Basic country import plan", () => {
     expect(Object.keys(indicator).sort()).toEqual(["label", "unit", "value", "year"]);
     expect(JSON.stringify(plan)).not.toContain("AUDIT_SENTINEL");
   });
+
+  test("does not include committed audit artifacts in the Basic import plan", () => {
+    const bundle = createValidBundle();
+    const auditFixture = readBasicCollectionAuditFixture("normal");
+    bundle.audit.run = {
+      runId: auditFixture.runId,
+      sourceRegister: asJsonRecord(auditFixture.sourceRegister),
+      extractedFacts: asJsonRecord(auditFixture.extractedFacts),
+      marketOverviewDraft: asJsonRecord(auditFixture.marketOverviewDraft),
+      reviewReport: asJsonRecord(auditFixture.reviewReport),
+    };
+    bundle.audit.manifest = {
+      activeRunId: auditFixture.runId,
+      mappingVersion: "basic-v1",
+      auditBundlePath: `data/staging/${bundle.countryDirectory}/${auditFixture.runId}`,
+    };
+
+    const plan = buildBasicCountryImportPlan(bundle);
+    const serializedPlan = JSON.stringify(plan);
+
+    expect(plan.operations).toHaveLength(12);
+    expect(plan.operations.map(({ model }) => model)).toEqual([
+      "country", ...Array.from({ length: 10 }, () => "moduleCoverage"), "marketOverview",
+    ]);
+    for (const forbiddenValue of [
+      "AUDIT_SENTINEL",
+      "sourceRegister",
+      "extractedFacts",
+      "reviewReport",
+      "collection-manifest",
+      "data/staging",
+      ".cache/basic-country",
+    ]) {
+      expect(serializedPlan).not.toContain(forbiddenValue);
+    }
+  });
 });
+
+function asJsonRecord(value: unknown): JsonRecord {
+  if (!isPlainRecord(value)) {
+    throw new Error("audit artifact must be a plain record");
+  }
+  return value;
+}

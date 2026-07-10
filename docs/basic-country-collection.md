@@ -8,7 +8,7 @@
 
 - `country.json` 必须包含 ISO 3166-1 alpha-2 国家码、`{ zh, en }` 的国家名和摘要、地区、国旗展示字段、整体 `updatedAt`，以及全部 10 个模块的 `moduleCoverage`。
 - `country.json` 的 `coverageLevel` 必须由覆盖判定得出为**恰好** `BASIC`，不得人工覆盖。`market-overview` 为 `PARTIAL` 或 `COMPLETE`；其余九个模块必须均为 `BUILDING`、`dataCount = 0`，且没有任何 `published` 记录，并保留统一占位，不创建虚构的占位业务记录。满足 `STANDARD` 判定条件的交付必须拒绝；后续数据只能在单独、经人工批准的升级任务中提交。
-- `market-overview.json` 必须是每国唯一的对象记录，按 [data-schema.md §5.1](./data-schema.md) 填写可验证的基础市场画像、`keyIndicators` 和完整元字段：`source`、`sourceUrl`、`collectedAt`、`updatedAt`、`credibility`、`reviewStatus`、`aiUsable`、`countryCode`、`industryTags`、`techTags`。字段必须存在；标签仅可使用已登记的枚举，且仅当没有适用标签时才可为空。`sourceUrl` 仅可按现有 schema 规则为 `null`，此时 `source` 必须说明无链接原因。所有可读字段和指标标签均使用 `{ zh, en }`；缺任一语言按既有降级规则标注，不能留空或报错。Basic 的 `aiUsable` 必须为 `false`。
+- `market-overview.json` 必须是每国唯一的对象记录，按 [data-schema.md §5.1](./data-schema.md) 填写可验证的基础市场画像、`keyIndicators` 和完整元字段：`source`、`sourceUrl`、`collectedAt`、`updatedAt`、`credibility`、`reviewStatus`、`aiUsable`、`countryCode`、`industryTags`、`techTags`。字段必须存在；标签仅可使用已登记的枚举，且仅当没有适用标签时才可为空。`sourceUrl` 仅可为 HTTP(S) URL 或按现有 schema 规则为 `null`；为 `null` 时 `source` 必须包含字面量 `sourceUrl null` 说明无链接原因。所有可读字段和指标标签均使用 `{ zh, en }`；缺任一语言按既有降级规则标注，不能留空或报错。Basic 的 `aiUsable` 必须为 `false`。
 - 所有发布的 Basic 记录均须符合 [data-governance.md](./data-governance.md) 的来源、时间、可信度、审核状态、标签和双语要求。Basic 数据始终为 `aiUsable = false`，本阶段不得产生或导入 `knowledge` 知识片段。
 
 完成的 Basic 国家可在 C 端展示国家基础画像和其余模块的 `BUILDING` 占位；它不提供该国的 AI 深度问答，也不因 `published` 状态自动进入 AI 检索。
@@ -32,6 +32,10 @@
 
 采集运行在已批准的 Windows `llama.cpp` 与 WSL Hermes Agent 架构中。各参与方职责固定，自动化不能代替人工发布决定。
 
+P1-6A 提供 [basic-country-audit-contract.md](./basic-country-audit-contract.md) 中机器可读的 TypeScript 审计契约和确定性离线 fixtures。离线 fixtures 不调用也不 mock Windows `llama.cpp`；运行时或模型失败处理属于 P1-6C。冲突值绝不自动选择，未解决冲突必须保留并阻断人工审核就绪状态。以下材料均为不可信输入并阻断就绪：仅用于发现的搜索材料、`UNVERIFIED`、访问受限或访问状态未知的来源，以及疑似或确认的 prompt injection。审计契约中的 `sourceUrl` 完整表示字段存在；非 `null` 值必须为 HTTP(S) URL，该字段可为 `null`，但 `source` 必须包含字面量 `sourceUrl null` 说明无链接原因。
+
+审计事实覆盖不得 fail-open。每个 bundle 必须登记 `country.code/name/summary/region/flagEmoji/updatedAt`、market overview 草稿的 14 个可审计静态字段，以及每个 `keyIndicators[i]` 的 `label/value/unit/year`；缺任一路径产生 `MISSING_REQUIRED_FACT`。每个 market overview candidate evidence 的 `normalizedValue` 必须与对应草稿路径深度一致，country candidate 因无 country draft 只要求 evidence；不一致是结构错误。每个 evidence 来源必须至少有一条 passed source check，否则产生 `UNTRUSTED_INPUT`。有 blocker 时只有 `blocked/do-not-publish` 可保持结构有效；无 blocker 时既允许 `ready-for-human-review/request-human-review`，也允许保守的 `blocked/do-not-publish`，但两种交叉配对均无效。
+
 | 参与方 | 严格职责 | 禁止事项 |
 |---|---|---|
 | 确定性采集器 | 从稳定、许可的结构化来源拉取可复现字段，保存请求参数、原始响应和采集时间 | 不推断缺失值、不翻译事实、不设置审核状态 |
@@ -49,7 +53,7 @@
 
 1. **raw cache**：`.cache/basic-country/<ISO2>/<runId>/raw/`，存放确定性采集器、浏览器或提取工具获取的原始响应、文件或页面快照；它是本地专用目录，记录获取方式与时间，且**永不提交**。
 2. **source register**：`data/staging/<country>/<runId>/source-register.json`，为每个 `sourceId` 保留来源身份、原始 URL、检索时间、已知时的发布时间、内容 SHA-256、证据定位符、来源族、许可或访问限制与可信度。
-3. **extracted facts**：`data/staging/<country>/<runId>/extracted-facts.json`，将每个 canonical JSON 字段路径映射到一个或多个 `sourceId`，并逐项保存精确原始值、标准化值、适用的单位和年份，以及证据定位符；同时记录提取方法与不确定性说明。
+3. **extracted facts**：`data/staging/<country>/<runId>/extracted-facts.json`，完整覆盖固定 country/market overview 路径及草稿中每个关键指标的四个子路径，将每个路径映射到一个或多个 `sourceId`，并逐项保存精确原始值、与草稿深度一致的 candidate 标准化值、适用的单位和年份，以及证据定位符；同时记录提取方法与不确定性说明。
 4. **bilingual draft**：`data/staging/<country>/<runId>/market-overview.draft.json`，由本地模型或人工基于 extracted facts 形成 schema-constrained `{ zh, en }` 草稿，所有记录保持 `draft` 且 `aiUsable = false`。
 5. **review report**：`data/staging/<country>/<runId>/review-report.json`，记录审核结论、待解决冲突、缺失字段、来源抽检、注入风险、发布建议以及人工决定。
 
@@ -98,8 +102,10 @@ Basic 的 `published` 仅代表可展示，不代表可检索：所有 Basic 记
 - [ ] 国家使用 ISO 3166-1 alpha-2 代码，并使用固定 10 模块的 `country.json` 骨架。
 - [ ] `market-overview.json` 是唯一对象记录，达到 `PARTIAL` 或 `COMPLETE`；其余九个模块均为 `BUILDING`、`dataCount = 0`，且没有 `published` 记录。
 - [ ] `coverageLevel` 经既有规则派生为恰好 `BASIC`，未手工覆盖；交付不满足 `STANDARD` 判定，`BUILDING` 模块没有虚构记录。
-- [ ] `market-overview.json` 具备 `source`、`sourceUrl`、`collectedAt`、`updatedAt`、`credibility`、`reviewStatus`、`aiUsable`、`countryCode`、`industryTags`、`techTags`；标签仅使用已登记枚举，仅无适用标签时为空；`sourceUrl = null` 时 `source` 说明原因；`aiUsable = false`。
+- [ ] `market-overview.json` 具备 `source`、`sourceUrl`、`collectedAt`、`updatedAt`、`credibility`、`reviewStatus`、`aiUsable`、`countryCode`、`industryTags`、`techTags`；标签仅使用已登记枚举，仅无适用标签时为空；`sourceUrl` 为 HTTP(S) URL 或 `null`，为 `null` 时 `source` 包含字面量 `sourceUrl null`；`aiUsable = false`。
 - [ ] 已提交的 `data/staging/<country>/<runId>/` 包含 source register、extracted facts、bilingual draft 和 review report；raw cache 保持本地且未提交。`source-register.json` 保留来源身份、原始 URL、检索时间、已知发布时间、内容 SHA-256、证据定位符和可信度；`extracted-facts.json` 为每个 canonical 字段路径保留 source ID、精确原始值、标准化值、适用单位/年份和证据定位符。
+- [ ] 审计事实覆盖全部 20 个静态必需路径及每个 `keyIndicators[i]` 的四个子路径；market overview candidate normalized value 与草稿深度一致，country candidate 有 evidence，且每个 evidence 来源至少有一条 passed source check。
+- [ ] readiness 配对符合单向安全约束：有 blocker 仅允许 `blocked/do-not-publish`；无 blocker 允许 ready/request 或保守 blocked/do-not-publish，拒绝交叉配对。
 - [ ] `data/<country>/collection-manifest.json` 以 `activeRunId` 和 `mappingVersion` 指向已提交审计包，且仅作为非导入审计元数据。
 - [ ] 每个发布事实均由打开的原始来源支持；SearXNG 仅用于发现，未作为证据。
 - [ ] 本地模型输出保持草稿属性；人工审核者已完成 `pending -> published` 决定。
