@@ -32,6 +32,8 @@
 
 采集运行在已批准的 Windows `llama.cpp` 与 WSL Hermes Agent 架构中。各参与方职责固定，自动化不能代替人工发布决定。
 
+P1-6A 提供 [basic-country-audit-contract.md](./basic-country-audit-contract.md) 中机器可读的 TypeScript 审计契约和确定性离线 fixtures。离线 fixtures 不调用也不 mock Windows `llama.cpp`；运行时或模型失败处理属于 P1-6C。冲突值绝不自动选择，未解决冲突必须保留并阻断人工审核就绪状态。以下材料均为不可信输入并阻断就绪：仅用于发现的搜索材料、`UNVERIFIED`、访问受限或访问状态未知的来源，以及疑似或确认的 prompt injection。审计契约中的 `sourceUrl` 完整表示字段存在；该字段可为 `null`，但必须遵守本文件既有的 `source` 说明无链接原因规则。
+
 | 参与方 | 严格职责 | 禁止事项 |
 |---|---|---|
 | 确定性采集器 | 从稳定、许可的结构化来源拉取可复现字段，保存请求参数、原始响应和采集时间 | 不推断缺失值、不翻译事实、不设置审核状态 |
