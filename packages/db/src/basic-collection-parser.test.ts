@@ -119,13 +119,19 @@ describe("Basic collection audit parser boundaries", () => {
     ["workflow.status", false],
   ] as const)("%s is %s in the fieldPath allowlist", (fieldPath, valid) => {
     const bundle = createBasicCollectionAuditFixture();
-    bundle.extractedFacts.facts.push({
+    const existingFact = bundle.extractedFacts.facts.find(
+      (fact) => fact.fieldPath === fieldPath,
+    );
+    const testedFact = existingFact ?? {
       ...bundle.extractedFacts.facts[0]!,
       factId: "fact-allowlist",
       fieldPath,
-      status: "untrusted",
-      evidence: [{ ...bundle.extractedFacts.facts[0]!.evidence[0]! }],
-    });
+    };
+    testedFact.status = "untrusted";
+    testedFact.evidence = [{ ...bundle.extractedFacts.facts[0]!.evidence[0]! }];
+    if (existingFact === undefined) {
+      bundle.extractedFacts.facts.push(testedFact);
+    }
     bundle.reviewReport.status = "blocked";
     bundle.reviewReport.publicationRecommendation = "do-not-publish";
 
