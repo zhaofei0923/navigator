@@ -386,6 +386,129 @@ describe("bridgeBasicMarketOverviewDraft preflight", () => {
     await expectBlocked(value);
   });
 
+  test.each([
+    ["blank source runId", (value: BridgeCase) => {
+      value.bundle.sourceRegister.runId = " ";
+      value.bundle.extractedFacts.runId = " ";
+    }],
+    ["unsafe facts runId", (value: BridgeCase) => {
+      value.bundle.sourceRegister.runId = "run/unsafe";
+      value.bundle.extractedFacts.runId = "run/unsafe";
+    }],
+    ["non-ISO country identity", (value: BridgeCase) => {
+      value.bundle.sourceRegister.countryCode = "x1";
+      value.bundle.extractedFacts.countryCode = "x1";
+    }],
+    ["blank source name", (value: BridgeCase) => {
+      value.bundle.sourceRegister.sources[1]!.sourceName = " ";
+    }],
+    ["invalid unused source URL", (value: BridgeCase) => {
+      value.bundle.sourceRegister.sources[1]!.sourceUrl = "file:///secret";
+    }],
+    ["invalid retrievedAt", (value: BridgeCase) => {
+      value.bundle.sourceRegister.sources[1]!.retrievedAt = "2026-02-30T00:00:00Z";
+    }],
+    ["invalid publishedAt", (value: BridgeCase) => {
+      value.bundle.sourceRegister.sources[1]!.publishedAt = "2026-07-08";
+    }],
+    ["invalid content hash", (value: BridgeCase) => {
+      value.bundle.sourceRegister.sources[1]!.contentSha256 = "A".repeat(64);
+    }],
+    ["empty locator list", (value: BridgeCase) => {
+      value.bundle.sourceRegister.sources[1]!.evidenceLocators = [];
+    }],
+    ["blank registered locator", (value: BridgeCase) => {
+      value.bundle.sourceRegister.sources[1]!.evidenceLocators = [" "];
+    }],
+    ["invalid source family", (value: BridgeCase) => {
+      value.bundle.sourceRegister.sources[1]!.sourceFamily = "blog" as never;
+    }],
+    ["invalid access status", (value: BridgeCase) => {
+      value.bundle.sourceRegister.sources[1]!.accessStatus = "public" as never;
+    }],
+    ["blank access notes", (value: BridgeCase) => {
+      value.bundle.sourceRegister.sources[1]!.accessNotes = " ";
+    }],
+    ["invalid credibility", (value: BridgeCase) => {
+      value.bundle.sourceRegister.sources[1]!.credibility = "TRUSTED" as never;
+    }],
+    ["non-boolean discoveryOnly", (value: BridgeCase) => {
+      (value.bundle.sourceRegister.sources[1] as unknown as Record<string, unknown>).discoveryOnly = "false";
+    }],
+    ["invalid prompt risk", (value: BridgeCase) => {
+      value.bundle.sourceRegister.sources[1]!.promptInjectionRisk = "maybe" as never;
+    }],
+    ["blank factId", (value: BridgeCase) => {
+      factFor(value, "marketOverview.gdp").factId = " ";
+    }],
+    ["invalid extraction method", (value: BridgeCase) => {
+      factFor(value, "marketOverview.gdp").extractionMethod = "model" as never;
+    }],
+    ["blank uncertainty", (value: BridgeCase) => {
+      factFor(value, "marketOverview.gdp").uncertainty = " ";
+    }],
+    ["blank evidence sourceId", (value: BridgeCase) => {
+      factFor(value, "marketOverview.gdp").evidence[0]!.sourceId = " ";
+    }],
+    ["blank evidence locator", (value: BridgeCase) => {
+      value.bundle.sourceRegister.sources[0]!.evidenceLocators.push(" ");
+      factFor(value, "marketOverview.gdp").evidence[0]!.locator = " ";
+    }],
+    ["blank evidence unit", (value: BridgeCase) => {
+      factFor(value, "marketOverview.gdp").evidence[0]!.unit = " ";
+    }],
+    ["invalid evidence year", (value: BridgeCase) => {
+      (factFor(value, "marketOverview.gdp").evidence[0] as unknown as Record<string, unknown>).year = "2025";
+    }],
+  ])("enforces P1-6A parity for %s", async (_name, mutate) => {
+    const value = createCase();
+    mutate(value);
+    await expectBlocked(value);
+  });
+
+  test("canonicalizes identical negative-zero evidence only after equality validation", async () => {
+    const value = createCase();
+    const fact = factFor(value, "marketOverview.gdpGrowth");
+    fact.evidence[0]!.normalizedValue = -0;
+    fact.evidence.push({
+      ...structuredClone(fact.evidence[0]!),
+      sourceId: "source-2",
+      normalizedValue: -0,
+    });
+    let calls = 0;
+    value.input.model = {
+      async complete(request) {
+        calls += 1;
+        const protocol = JSON.parse(request.messages[0].content) as { draft: BasicMarketOverviewDraft };
+        expect(Object.is(protocol.draft.gdpGrowth, 0)).toBe(true);
+        expect(Object.is(protocol.draft.gdpGrowth, -0)).toBe(false);
+        return completion(protocol.draft);
+      },
+    };
+
+    const result = await bridgeBasicMarketOverviewDraft(value.input);
+
+    expect(calls).toBe(1);
+    expect(result).toMatchObject({ ok: true });
+    if (result.ok) {
+      expect(Object.is(result.data.gdpGrowth, 0)).toBe(true);
+      expect(Object.is(result.data.gdpGrowth, -0)).toBe(false);
+    }
+  });
+
+  test("blocks mixed negative-zero and zero evidence before the model", async () => {
+    const value = createCase();
+    const fact = factFor(value, "marketOverview.gdpGrowth");
+    fact.evidence[0]!.normalizedValue = -0;
+    fact.evidence.push({
+      ...structuredClone(fact.evidence[0]!),
+      sourceId: "source-2",
+      normalizedValue: 0,
+    });
+
+    await expectBlocked(value);
+  });
+
   test("blocks non-finite and cyclic normalized JSON before the model", async () => {
     const nonFinite = createCase();
     changeExpected(nonFinite, "marketOverview.gdp", Number.POSITIVE_INFINITY);
@@ -514,6 +637,104 @@ describe("bridgeBasicMarketOverviewDraft model and output failures", () => {
     await expectFailure(value.input, { code: "LLAMA_UNAVAILABLE", phase: "llama", retryable: true });
   });
 
+  test("rejects a throwing then accessor before invoking it", async () => {
+    const value = createCase();
+    let getterCalls = 0;
+    const thenable = Object.defineProperty({}, "then", {
+      get() { getterCalls += 1; throw new Error("then trap"); },
+    });
+    value.input.model = {
+      complete() { return thenable as never; },
+    };
+
+    await expectFailure(value.input, {
+      code: "LLAMA_RESPONSE_INVALID",
+      phase: "llama",
+      retryable: false,
+    });
+    expect(getterCalls).toBe(0);
+  });
+
+  test("rejects Promise subclasses and native Promises with hostile own descriptors", async () => {
+    class ProviderPromise extends Promise<unknown> {}
+    const subclass = createCase();
+    subclass.input.model = {
+      complete() {
+        return new ProviderPromise((resolve) => resolve(completion(subclass.expected)));
+      },
+    };
+    await expectFailure(subclass.input, {
+      code: "LLAMA_RESPONSE_INVALID",
+      phase: "llama",
+      retryable: false,
+    });
+
+    const ownThen = createCase();
+    let getterCalls = 0;
+    const pending = Promise.resolve(completion(ownThen.expected));
+    Object.defineProperty(pending, "then", {
+      get() { getterCalls += 1; throw new Error("own then trap"); },
+    });
+    ownThen.input.model = { complete() { return pending; } };
+    await expectFailure(ownThen.input, {
+      code: "LLAMA_RESPONSE_INVALID",
+      phase: "llama",
+      retryable: false,
+    });
+    expect(getterCalls).toBe(0);
+
+    const ownConstructor = createCase();
+    let constructorCalls = 0;
+    const constructorPending = Promise.resolve(completion(ownConstructor.expected));
+    Object.defineProperty(constructorPending, "constructor", {
+      get() { constructorCalls += 1; throw new Error("constructor trap"); },
+    });
+    ownConstructor.input.model = { complete() { return constructorPending; } };
+    await expectFailure(ownConstructor.input, {
+      code: "LLAMA_RESPONSE_INVALID",
+      phase: "llama",
+      retryable: false,
+    });
+    expect(constructorCalls).toBe(0);
+  });
+
+  test("sanitizes hostile and forged rejection reasons without escaping", async () => {
+    const proxyReason = createCase();
+    const hostileReason = throwingProxy({ secret: "provider" });
+    proxyReason.input.model = { complete() { return Promise.reject(hostileReason.proxy); } };
+    await expectFailure(proxyReason.input, {
+      code: "LLAMA_UNAVAILABLE",
+      phase: "llama",
+      retryable: true,
+    });
+    expect(hostileReason.traps).not.toHaveBeenCalled();
+
+    const proxyPrototype = createCase();
+    const hostilePrototype = throwingProxy({});
+    const nativeError = new Error("provider secret");
+    Object.setPrototypeOf(nativeError, hostilePrototype.proxy);
+    proxyPrototype.input.model = { complete() { return Promise.reject(nativeError); } };
+    await expectFailure(proxyPrototype.input, {
+      code: "LLAMA_UNAVAILABLE",
+      phase: "llama",
+      retryable: true,
+    });
+    expect(hostilePrototype.traps).not.toHaveBeenCalled();
+
+    const forged = createCase();
+    const forgedError = Object.create(BasicCollectionBridgeError.prototype) as object;
+    Object.defineProperty(forgedError, "message", {
+      enumerable: true,
+      value: "P1-6C bridge failed: LLAMA_TIMEOUT",
+    });
+    forged.input.model = { complete() { return Promise.reject(forgedError); } };
+    await expectFailure(forged.input, {
+      code: "LLAMA_UNAVAILABLE",
+      phase: "llama",
+      retryable: true,
+    });
+  });
+
   test.each([
     ["a non-object envelope", null],
     ["a missing choices property", {}],
@@ -593,6 +814,20 @@ describe("bridgeBasicMarketOverviewDraft model and output failures", () => {
       retryable: false,
     });
   });
+
+  test.each(["reviewStatus", "aiUsable"])(
+    "maps a missing %s lock to LLAMA_OUTPUT_SCHEMA_INVALID",
+    async (lock) => {
+      const value = createCase();
+      const draft = structuredClone(value.expected) as unknown as Record<string, unknown>;
+      delete draft[lock];
+      await expectFailure(createCase(completion(draft)).input, {
+        code: "LLAMA_OUTPUT_SCHEMA_INVALID",
+        phase: "draft",
+        retryable: false,
+      });
+    },
+  );
 
   test.each([
     ["an extra policy field", (draft: Record<string, unknown>) => { draft.policy = "forbidden"; }],

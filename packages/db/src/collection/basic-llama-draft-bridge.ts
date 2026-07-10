@@ -1,11 +1,8 @@
 import { isDeepStrictEqual } from "node:util";
-import { isProxy } from "node:util/types";
-
-import { CREDIBILITIES } from "@navigator/shared-types/schema";
+import { isNativeError, isPromise, isProxy } from "node:util/types";
 
 import { BasicCollectionBridgeError } from "./basic-collection-bridge-error.js";
 import {
-  BASIC_COLLECTION_AUDIT_SCHEMA_VERSION,
   BASIC_COLLECTION_REQUIRED_STATIC_FACT_PATHS,
   type BasicCollectionJsonValue,
   type BasicMarketOverviewDraft,
@@ -13,235 +10,239 @@ import {
 import {
   BASIC_LLAMA_DRAFT_OPERATION,
   BASIC_LLAMA_DRAFT_PROTOCOL_VERSION,
-  type BasicBridgeErrorCode,
-  type BasicBridgeFailure,
-  type BasicBridgeResult,
-  type BasicDraftBridgeInput,
-  type BasicLlamaCppDraftRequest,
+  type BasicBridgeErrorCode, type BasicBridgeFailure, type BasicBridgeResult,
+  type BasicDraftBridgeInput, type BasicLlamaCppDraftRequest,
 } from "./basic-hermes-llama-contracts.js";
 import {
   BASIC_LLAMA_DRAFT_JSON_SCHEMA,
   deepFreezeBasicLlamaValue,
+  parseBasicLlamaFactsSnapshot,
+  parseBasicLlamaIndicatorPath,
+  parseBasicLlamaRegisterSnapshot,
+  readBasicLlamaExactRuntimeRecord,
+  readBasicLlamaStandardArray,
   snapshotBasicLlamaJson,
+  type BasicLlamaFactSnapshot, type BasicLlamaFactsSnapshot,
+  type BasicLlamaRegisterSnapshot, type BasicLlamaSourceSnapshot,
 } from "./basic-llama-draft-schema.js";
 import { parseBasicMarketOverviewDraft } from "./basic-market-overview-draft-parser.js";
 
 const INPUT_KEYS = ["sourceRegister", "extractedFacts", "model"] as const;
-const REGISTER_KEYS = ["schemaVersion", "runId", "countryCode", "sources"] as const;
-const SOURCE_KEYS = ["sourceId", "sourceName", "sourceUrl", "retrievedAt", "publishedAt", "contentSha256", "evidenceLocators", "sourceFamily", "accessStatus", "accessNotes", "credibility", "discoveryOnly", "promptInjectionRisk"] as const;
-const FACTS_KEYS = ["schemaVersion", "runId", "countryCode", "facts"] as const;
-const FACT_KEYS = ["factId", "fieldPath", "status", "evidence", "extractionMethod", "uncertainty"] as const;
-const EVIDENCE_KEYS = ["sourceId", "locator", "rawValue", "normalizedValue", "unit", "year"] as const;
-const INDICATOR_PATH = /^marketOverview\.keyIndicators\[(0|[1-9]\d*)\]\.(label|value|unit|year)$/;
 const INDICATOR_KEYS = ["label", "value", "unit", "year"] as const;
-const SOURCE_FAMILIES = ["international-organization", "official-statistics", "government", "energy-authority", "regulator", "grid-operator", "industry-association", "verified-research"] as const;
-const EXTRACTION_METHODS = ["deterministic", "hermes", "manual"] as const;
 const INVALID = Symbol("invalid");
 const MAX_METHOD_DEPTH = 16;
-
-type JsonRecord = Record<string, BasicCollectionJsonValue>;
-interface SourceInfo { sourceId: string; locators: string[]; safe: boolean; }
-interface EvidenceInfo { sourceId: string; locator: string; normalizedValue: BasicCollectionJsonValue; }
-interface FactInfo { factId: string; fieldPath: string; status: string; evidence: EvidenceInfo[]; }
-interface RegisterInfo { schemaVersion: string; runId: string; countryCode: string; sources: SourceInfo[]; }
-interface FactsInfo { schemaVersion: string; runId: string; countryCode: string; facts: FactInfo[]; }
 type DataMethod = (...args: unknown[]) => unknown;
+interface GroundedFacts {
+  values: Map<string, BasicCollectionJsonValue>;
+  indicators: Map<number, Set<string>>;
+}
+type ContentResult =
+  | { ok: true; content: string }
+  | { ok: false; code: "LLAMA_RESPONSE_INVALID" | "LLAMA_OUTPUT_INCOMPLETE" };
 
 export async function bridgeBasicMarketOverviewDraft(
   value: BasicDraftBridgeInput,
 ): Promise<BasicBridgeResult<BasicMarketOverviewDraft>> {
-  const input = exactRuntimeRecord(value, INPUT_KEYS);
+  const input = readBasicLlamaExactRuntimeRecord(value, INPUT_KEYS);
   if (input === null) return failed("INPUT_INVALID", "input", false);
   const model = input.get("model");
   const complete = dataMethod(model, "complete");
   if (complete === null || !isObjectLike(model)) return failed("INPUT_INVALID", "input", false);
+
   const sourceSnapshot = snapshotBasicLlamaJson(input.get("sourceRegister"));
   const factsSnapshot = snapshotBasicLlamaJson(input.get("extractedFacts"));
   if (!sourceSnapshot.valid || !factsSnapshot.valid) return blocked();
   const expected = assembleExpectedDraft(sourceSnapshot.data, factsSnapshot.data);
   if (expected === null) return blocked();
+
   const request = createRequest(expected);
+  let pending: unknown;
+  try { pending = Reflect.apply(complete, model, [request]); }
+  catch (error) { return modelFailure(error); }
+  if (!isExactLocalPromise(pending)) return failed("LLAMA_RESPONSE_INVALID", "llama", false);
+
   let response: unknown;
-  try {
-    const pending = Reflect.apply(complete, model, [request]);
-    if (isObjectLike(pending) && isProxy(pending)) return failed("LLAMA_RESPONSE_INVALID", "llama", false);
-    response = await pending;
-  }
+  try { response = await pending; }
   catch (error) { return modelFailure(error); }
   return parseResponse(response, expected);
 }
 
-function assembleExpectedDraft(sourceValue: BasicCollectionJsonValue, factsValue: BasicCollectionJsonValue): BasicMarketOverviewDraft | null {
-  const register = parseRegister(sourceValue);
-  const extracted = parseFacts(factsValue);
-  if (register === null || extracted === null || register.schemaVersion !== BASIC_COLLECTION_AUDIT_SCHEMA_VERSION ||
-      extracted.schemaVersion !== BASIC_COLLECTION_AUDIT_SCHEMA_VERSION || register.runId !== extracted.runId ||
-      register.countryCode !== extracted.countryCode || !/^[A-Z]{2}$/.test(register.countryCode)) return null;
-  const sources = new Map<string, SourceInfo>();
-  for (const source of register.sources) {
-    if (sources.has(source.sourceId) || !source.safe) return null;
-    sources.set(source.sourceId, source);
-  }
-  const factIds = new Set<string>();
+function assembleExpectedDraft(
+  sourceValue: BasicCollectionJsonValue,
+  factsValue: BasicCollectionJsonValue,
+): BasicMarketOverviewDraft | null {
+  const register = parseBasicLlamaRegisterSnapshot(sourceValue);
+  const extracted = parseBasicLlamaFactsSnapshot(factsValue);
+  if (register === null || extracted === null || !identitiesMatch(register, extracted)) return null;
+  const sources = safeSources(register.sources);
+  if (sources === null) return null;
+  const grounded = collectGroundedFacts(extracted.facts, sources);
+  if (grounded === null || !hasRequiredFacts(grounded.values)) return null;
+  if (grounded.values.get("country.code") !== register.countryCode ||
+      grounded.values.get("marketOverview.countryCode") !== register.countryCode) return null;
+  const indices = completeIndicatorIndices(grounded.indicators);
+  if (indices === null) return null;
+  return parseAndCanonicalizeDraft(buildDraft(grounded.values, indices));
+}
+
+function identitiesMatch(register: BasicLlamaRegisterSnapshot, facts: BasicLlamaFactsSnapshot): boolean {
+  return register.runId === facts.runId && register.countryCode === facts.countryCode;
+}
+
+function safeSources(sources: readonly BasicLlamaSourceSnapshot[]): Map<string, BasicLlamaSourceSnapshot> | null {
+  if (sources.some(({ safe }) => !safe)) return null;
+  return new Map(sources.map((source) => [source.sourceId, source]));
+}
+
+function collectGroundedFacts(
+  facts: readonly BasicLlamaFactSnapshot[],
+  sources: ReadonlyMap<string, BasicLlamaSourceSnapshot>,
+): GroundedFacts | null {
   const values = new Map<string, BasicCollectionJsonValue>();
   const indicators = new Map<number, Set<string>>();
-  for (const fact of extracted.facts) {
-    if (factIds.has(fact.factId) || values.has(fact.fieldPath) || fact.status !== "candidate" || fact.evidence.length === 0) return null;
-    factIds.add(fact.factId);
-    const indicator = INDICATOR_PATH.exec(fact.fieldPath);
-    if (!BASIC_COLLECTION_REQUIRED_STATIC_FACT_PATHS.includes(fact.fieldPath as never) && indicator === null) return null;
-    if (indicator !== null) {
-      const index = Number(indicator[1]);
-      const keys = indicators.get(index) ?? new Set<string>();
-      keys.add(indicator[2]!);
-      indicators.set(index, keys);
-    }
+  for (const fact of facts) {
+    if (fact.status !== "candidate" || values.has(fact.fieldPath)) return null;
     const normalized = fact.evidence[0]!.normalizedValue;
-    for (const evidence of fact.evidence) {
-      const source = sources.get(evidence.sourceId);
-      if (source === undefined || !source.locators.includes(evidence.locator) || !isDeepStrictEqual(evidence.normalizedValue, normalized)) return null;
-    }
+    if (!validEvidence(fact, normalized, sources)) return null;
     values.set(fact.fieldPath, normalized);
+    const indicator = parseBasicLlamaIndicatorPath(fact.fieldPath);
+    if (indicator !== null) {
+      const keys = indicators.get(indicator.index) ?? new Set<string>();
+      keys.add(indicator.key);
+      indicators.set(indicator.index, keys);
+    }
   }
-  if (BASIC_COLLECTION_REQUIRED_STATIC_FACT_PATHS.some((path) => !values.has(path))) return null;
+  return { values, indicators };
+}
+
+function validEvidence(
+  fact: BasicLlamaFactSnapshot,
+  normalized: BasicCollectionJsonValue,
+  sources: ReadonlyMap<string, BasicLlamaSourceSnapshot>,
+): boolean {
+  return fact.evidence.every((evidence) => {
+    const source = sources.get(evidence.sourceId);
+    return source !== undefined && source.locators.includes(evidence.locator) &&
+      isDeepStrictEqual(evidence.normalizedValue, normalized);
+  });
+}
+
+function hasRequiredFacts(values: ReadonlyMap<string, BasicCollectionJsonValue>): boolean {
+  return BASIC_COLLECTION_REQUIRED_STATIC_FACT_PATHS.every((path) => values.has(path));
+}
+
+function completeIndicatorIndices(indicators: ReadonlyMap<number, Set<string>>): number[] | null {
   const indices = [...indicators.keys()].sort((left, right) => left - right);
-  if (indices.some((index, position) => index !== position || INDICATOR_KEYS.some((key) => !indicators.get(index)?.has(key)))) return null;
-  if (values.get("country.code") !== register.countryCode || values.get("marketOverview.countryCode") !== register.countryCode) return null;
-  const assembled = {
-    overview: values.get("marketOverview.overview"), population: values.get("marketOverview.population"),
-    gdp: values.get("marketOverview.gdp"), gdpGrowth: values.get("marketOverview.gdpGrowth"),
-    energyDemand: values.get("marketOverview.energyDemand"), renewableTarget: values.get("marketOverview.renewableTarget"),
+  const complete = indices.every((index, position) =>
+    index === position && INDICATOR_KEYS.every((key) => indicators.get(index)?.has(key)),
+  );
+  return complete ? indices : null;
+}
+
+function buildDraft(values: ReadonlyMap<string, BasicCollectionJsonValue>, indices: readonly number[]): unknown {
+  const read = (path: string) => values.get(path);
+  return {
+    overview: read("marketOverview.overview"),
+    population: read("marketOverview.population"),
+    gdp: read("marketOverview.gdp"),
+    gdpGrowth: read("marketOverview.gdpGrowth"),
+    energyDemand: read("marketOverview.energyDemand"),
+    renewableTarget: read("marketOverview.renewableTarget"),
     keyIndicators: indices.map((index) => ({
-      label: values.get(`marketOverview.keyIndicators[${index}].label`), value: values.get(`marketOverview.keyIndicators[${index}].value`),
-      unit: values.get(`marketOverview.keyIndicators[${index}].unit`), year: values.get(`marketOverview.keyIndicators[${index}].year`),
+      label: read(`marketOverview.keyIndicators[${index}].label`),
+      value: read(`marketOverview.keyIndicators[${index}].value`),
+      unit: read(`marketOverview.keyIndicators[${index}].unit`),
+      year: read(`marketOverview.keyIndicators[${index}].year`),
     })),
-    source: values.get("marketOverview.source"), sourceUrl: values.get("marketOverview.sourceUrl"),
-    collectedAt: values.get("marketOverview.collectedAt"), updatedAt: values.get("marketOverview.updatedAt"),
-    credibility: values.get("marketOverview.credibility"), reviewStatus: "draft", aiUsable: false,
-    countryCode: values.get("marketOverview.countryCode"), industryTags: values.get("marketOverview.industryTags"),
-    techTags: values.get("marketOverview.techTags"),
+    source: read("marketOverview.source"),
+    sourceUrl: read("marketOverview.sourceUrl"),
+    collectedAt: read("marketOverview.collectedAt"),
+    updatedAt: read("marketOverview.updatedAt"),
+    credibility: read("marketOverview.credibility"),
+    reviewStatus: "draft",
+    aiUsable: false,
+    countryCode: read("marketOverview.countryCode"),
+    industryTags: read("marketOverview.industryTags"),
+    techTags: read("marketOverview.techTags"),
   };
-  const parsed = parseBasicMarketOverviewDraft(assembled);
-  return parsed.data === null ? null : deepFreezeBasicLlamaValue(parsed.data);
 }
 
-function parseRegister(value: BasicCollectionJsonValue): RegisterInfo | null {
-  const record = exactJsonRecord(value, REGISTER_KEYS);
-  if (record === null) return null;
-  const sources = jsonArray(valueAt(record, "sources"));
-  const schemaVersion = textAt(record, "schemaVersion");
-  const runId = textAt(record, "runId");
-  const countryCode = textAt(record, "countryCode");
-  if (sources === null || schemaVersion === null || runId === null || countryCode === null) return null;
-  const parsed: SourceInfo[] = [];
-  for (const source of sources) { const item = parseSource(source); if (item === null) return null; parsed.push(item); }
-  return { schemaVersion, runId, countryCode, sources: parsed };
-}
-
-function parseSource(value: BasicCollectionJsonValue): SourceInfo | null {
-  const source = exactJsonRecord(value, SOURCE_KEYS);
-  if (source === null) return null;
-  const sourceId = textAt(source, "sourceId");
-  const sourceFamily = textAt(source, "sourceFamily");
-  const accessStatus = textAt(source, "accessStatus");
-  const credibility = textAt(source, "credibility");
-  const promptRisk = textAt(source, "promptInjectionRisk");
-  const discoveryOnly = valueAt(source, "discoveryOnly");
-  const locators = stringArray(valueAt(source, "evidenceLocators"));
-  if (sourceId === null || sourceFamily === null || accessStatus === null || credibility === null || promptRisk === null || locators === null ||
-      sourceId.trim() === "" || !hasStringFields(source, ["sourceName", "sourceUrl", "retrievedAt", "contentSha256"]) ||
-      !nullableString(valueAt(source, "publishedAt")) || !nullableString(valueAt(source, "accessNotes")) ||
-      !SOURCE_FAMILIES.includes(sourceFamily as never) || !CREDIBILITIES.includes(credibility as never) || typeof discoveryOnly !== "boolean") return null;
-  const safe = accessStatus === "open" && credibility !== "UNVERIFIED" && discoveryOnly === false && promptRisk === "none";
-  return { sourceId, locators, safe };
-}
-
-function parseFacts(value: BasicCollectionJsonValue): FactsInfo | null {
-  const record = exactJsonRecord(value, FACTS_KEYS);
-  if (record === null) return null;
-  const facts = jsonArray(valueAt(record, "facts"));
-  const schemaVersion = textAt(record, "schemaVersion");
-  const runId = textAt(record, "runId");
-  const countryCode = textAt(record, "countryCode");
-  if (facts === null || schemaVersion === null || runId === null || countryCode === null) return null;
-  const parsed: FactInfo[] = [];
-  for (const fact of facts) { const item = parseFact(fact); if (item === null) return null; parsed.push(item); }
-  return { schemaVersion, runId, countryCode, facts: parsed };
-}
-
-function parseFact(value: BasicCollectionJsonValue): FactInfo | null {
-  const fact = exactJsonRecord(value, FACT_KEYS);
-  if (fact === null) return null;
-  const evidence = jsonArray(valueAt(fact, "evidence"));
-  const factId = textAt(fact, "factId");
-  const fieldPath = textAt(fact, "fieldPath");
-  const status = textAt(fact, "status");
-  const extractionMethod = textAt(fact, "extractionMethod");
-  if (evidence === null || factId === null || fieldPath === null || status === null || extractionMethod === null ||
-      factId.trim() === "" || fieldPath.trim() === "" || !nullableString(valueAt(fact, "uncertainty")) || !EXTRACTION_METHODS.includes(extractionMethod as never)) return null;
-  const parsed: EvidenceInfo[] = [];
-  for (const item of evidence) { const result = parseEvidence(item); if (result === null) return null; parsed.push(result); }
-  return { factId, fieldPath, status, evidence: parsed };
-}
-
-function parseEvidence(value: BasicCollectionJsonValue): EvidenceInfo | null {
-  const evidence = exactJsonRecord(value, EVIDENCE_KEYS);
-  if (evidence === null) return null;
-  const sourceId = textAt(evidence, "sourceId");
-  const locator = textAt(evidence, "locator");
-  const year = valueAt(evidence, "year");
-  if (sourceId === null || locator === null || sourceId.trim() === "" || !nullableString(valueAt(evidence, "unit")) || !(year === null || typeof year === "number")) return null;
-  return { sourceId, locator, normalizedValue: valueAt(evidence, "normalizedValue") };
+function parseAndCanonicalizeDraft(value: unknown): BasicMarketOverviewDraft | null {
+  const parsed = parseBasicMarketOverviewDraft(value);
+  if (parsed.data === null) return null;
+  try {
+    const canonical: unknown = JSON.parse(JSON.stringify(parsed.data));
+    const reparsed = parseBasicMarketOverviewDraft(canonical);
+    return reparsed.data === null ? null : deepFreezeBasicLlamaValue(reparsed.data);
+  } catch { return null; }
 }
 
 function createRequest(expected: BasicMarketOverviewDraft): BasicLlamaCppDraftRequest {
-  const request: BasicLlamaCppDraftRequest = {
-    messages: [{ role: "user", content: JSON.stringify({ protocol: BASIC_LLAMA_DRAFT_PROTOCOL_VERSION, operation: BASIC_LLAMA_DRAFT_OPERATION, draft: expected }) }],
-    stream: false, temperature: 0, chat_template_kwargs: { enable_thinking: false },
+  const content = JSON.stringify({
+    protocol: BASIC_LLAMA_DRAFT_PROTOCOL_VERSION,
+    operation: BASIC_LLAMA_DRAFT_OPERATION,
+    draft: expected,
+  });
+  return deepFreezeBasicLlamaValue({
+    messages: [{ role: "user", content }],
+    stream: false,
+    temperature: 0,
+    chat_template_kwargs: { enable_thinking: false },
     response_format: { type: "json_schema", schema: BASIC_LLAMA_DRAFT_JSON_SCHEMA },
-  };
-  return deepFreezeBasicLlamaValue(request);
+  });
 }
 
 function parseResponse(value: unknown, expected: BasicMarketOverviewDraft): BasicBridgeResult<BasicMarketOverviewDraft> {
-  const envelope = plainRuntimeObject(value);
-  if (envelope === null) return failed("LLAMA_RESPONSE_INVALID", "llama", false);
-  const choicesValue = ownData(envelope, "choices");
-  if (choicesValue === INVALID) return failed("LLAMA_RESPONSE_INVALID", "llama", false);
-  const choices = standardRuntimeArray(choicesValue);
-  if (choices === null) return failed("LLAMA_RESPONSE_INVALID", "llama", false);
-  if (choices.length !== 1) return failed("LLAMA_OUTPUT_INCOMPLETE", "llama", false);
-  const choice = plainRuntimeObject(choices[0]);
-  if (choice === null) return failed("LLAMA_RESPONSE_INVALID", "llama", false);
-  const finishReason = ownData(choice, "finish_reason");
-  const messageValue = ownData(choice, "message");
-  if (finishReason === INVALID || messageValue === INVALID) return failed("LLAMA_RESPONSE_INVALID", "llama", false);
-  if (typeof finishReason !== "string" || finishReason !== "stop" || messageValue === undefined) return failed("LLAMA_OUTPUT_INCOMPLETE", "llama", false);
-  const message = plainRuntimeObject(messageValue);
-  if (message === null) return failed("LLAMA_RESPONSE_INVALID", "llama", false);
-  const content = ownData(message, "content");
-  if (content === INVALID) return failed("LLAMA_RESPONSE_INVALID", "llama", false);
-  if (typeof content !== "string" || content.trim() === "") return failed("LLAMA_OUTPUT_INCOMPLETE", "llama", false);
+  const extracted = extractContent(value);
+  if (!extracted.ok) return failed(extracted.code, "llama", false);
   let parsedValue: unknown;
-  try { parsedValue = JSON.parse(content) as unknown; }
+  try { parsedValue = JSON.parse(extracted.content) as unknown; }
   catch { return failed("LLAMA_OUTPUT_NOT_JSON", "llama", false); }
-  const draftRecord = plainRuntimeObject(parsedValue);
-  if (draftRecord !== null && (ownData(draftRecord, "reviewStatus") !== "draft" || ownData(draftRecord, "aiUsable") !== false)) return failed("DRAFT_LOCK_VIOLATION", "draft", false);
+  const record = plainRuntimeObject(parsedValue);
+  if (record !== null && (changedLock(record, "reviewStatus", "draft") || changedLock(record, "aiUsable", false))) {
+    return failed("DRAFT_LOCK_VIOLATION", "draft", false);
+  }
   const parsed = parseBasicMarketOverviewDraft(parsedValue);
   if (parsed.data === null) return failed("LLAMA_OUTPUT_SCHEMA_INVALID", "draft", false);
   if (!isDeepStrictEqual(parsed.data, expected)) return failed("LLAMA_OUTPUT_UNGROUNDED", "draft", false);
   return { ok: true, data: deepFreezeBasicLlamaValue(parsed.data) };
 }
 
-function exactRuntimeRecord(value: unknown, keys: readonly string[]): ReadonlyMap<string, unknown> | null {
+function extractContent(value: unknown): ContentResult {
+  const envelope = plainRuntimeObject(value);
+  if (envelope === null) return { ok: false, code: "LLAMA_RESPONSE_INVALID" };
+  const choicesValue = ownData(envelope, "choices");
+  if (choicesValue === INVALID) return { ok: false, code: "LLAMA_RESPONSE_INVALID" };
+  const choices = readBasicLlamaStandardArray(choicesValue);
+  if (choices === null) return { ok: false, code: "LLAMA_RESPONSE_INVALID" };
+  if (choices.length !== 1) return { ok: false, code: "LLAMA_OUTPUT_INCOMPLETE" };
+  const choice = plainRuntimeObject(choices[0]);
+  if (choice === null) return { ok: false, code: "LLAMA_RESPONSE_INVALID" };
+  const finish = ownData(choice, "finish_reason");
+  const messageValue = ownData(choice, "message");
+  if (finish === INVALID || messageValue === INVALID) return { ok: false, code: "LLAMA_RESPONSE_INVALID" };
+  if (finish !== "stop" || messageValue === undefined) return { ok: false, code: "LLAMA_OUTPUT_INCOMPLETE" };
+  const message = plainRuntimeObject(messageValue);
+  if (message === null) return { ok: false, code: "LLAMA_RESPONSE_INVALID" };
+  const content = ownData(message, "content");
+  if (content === INVALID) return { ok: false, code: "LLAMA_RESPONSE_INVALID" };
+  return typeof content === "string" && content.trim() !== ""
+    ? { ok: true, content }
+    : { ok: false, code: "LLAMA_OUTPUT_INCOMPLETE" };
+}
+
+function changedLock(record: object, key: string, expected: unknown): boolean {
+  const descriptor = Object.getOwnPropertyDescriptor(record, key);
+  return descriptor !== undefined && (!Object.hasOwn(descriptor, "value") || descriptor.value !== expected);
+}
+
+function isExactLocalPromise(value: unknown): value is Promise<unknown> {
   try {
-    if (!isPlainRuntimeObject(value)) return null;
-    const ownKeys = Reflect.ownKeys(value);
-    if (ownKeys.length !== keys.length || ownKeys.some((key) => typeof key !== "string" || !keys.includes(key))) return null;
-    const result = new Map<string, unknown>();
-    for (const key of keys) { const item = ownData(value, key); if (item === INVALID) return null; result.set(key, item); }
-    return result;
-  } catch { return null; }
+    return typeof value === "object" && value !== null && !isProxy(value) && isPromise(value) &&
+      Object.getPrototypeOf(value) === Promise.prototype &&
+      Object.getOwnPropertyDescriptor(value, "then") === undefined &&
+      Object.getOwnPropertyDescriptor(value, "constructor") === undefined;
+  } catch { return false; }
 }
 
 function dataMethod(value: unknown, key: string): DataMethod | null {
@@ -253,48 +254,43 @@ function dataMethod(value: unknown, key: string): DataMethod | null {
       if (isProxy(owner) || visited.has(owner)) return null;
       visited.add(owner);
       const descriptor = Object.getOwnPropertyDescriptor(owner, key);
-      if (descriptor !== undefined) return Object.hasOwn(descriptor, "value") && typeof descriptor.value === "function" && !isProxy(descriptor.value) ? descriptor.value as DataMethod : null;
+      if (descriptor !== undefined) {
+        return Object.hasOwn(descriptor, "value") && typeof descriptor.value === "function" && !isProxy(descriptor.value)
+          ? descriptor.value as DataMethod
+          : null;
+      }
       owner = Object.getPrototypeOf(owner) as object | null;
     }
     return null;
   } catch { return null; }
 }
 
-function standardRuntimeArray(value: unknown): unknown[] | null {
+function modelFailure(error: unknown): { ok: false; error: BasicBridgeFailure } {
   try {
-    if (typeof value !== "object" || value === null || isProxy(value) || !Array.isArray(value) || Object.getPrototypeOf(value) !== Array.prototype) return null;
-    const length = Object.getOwnPropertyDescriptor(value, "length");
-    if (length === undefined || !Object.hasOwn(length, "value") || typeof length.value !== "number" || Reflect.ownKeys(value).length !== length.value + 1) return null;
-    const result: unknown[] = [];
-    for (let index = 0; index < length.value; index += 1) { const item = ownData(value, String(index)); if (item === INVALID) return null; result.push(item); }
-    return result;
-  } catch { return null; }
+    if (typeof error !== "object" || error === null || isProxy(error) || !isNativeError(error)) return unavailable();
+    const prototype = Object.getPrototypeOf(error) as object | null;
+    if (prototype === null || isProxy(prototype) || prototype !== BasicCollectionBridgeError.prototype) return unavailable();
+    const descriptor = Object.getOwnPropertyDescriptor(error, "message");
+    if (descriptor === undefined || descriptor.enumerable || !Object.hasOwn(descriptor, "value")) return unavailable();
+    if (descriptor.value === "P1-6C bridge failed: LLAMA_TIMEOUT") return failed("LLAMA_TIMEOUT", "llama", true);
+    if (descriptor.value === "P1-6C bridge failed: LLAMA_UNAVAILABLE") return unavailable();
+    if (descriptor.value === "P1-6C bridge failed: LLAMA_RESPONSE_INVALID") return failed("LLAMA_RESPONSE_INVALID", "llama", false);
+    return unavailable();
+  } catch { return unavailable(); }
 }
 
 function ownData(value: object, key: string): unknown | typeof INVALID {
-  try { const descriptor = Object.getOwnPropertyDescriptor(value, key); return descriptor !== undefined && descriptor.enumerable && Object.hasOwn(descriptor, "value") ? descriptor.value : descriptor === undefined ? undefined : INVALID; }
-  catch { return INVALID; }
+  try {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (descriptor === undefined) return undefined;
+    return descriptor.enumerable && Object.hasOwn(descriptor, "value") ? descriptor.value : INVALID;
+  } catch { return INVALID; }
 }
 function plainRuntimeObject(value: unknown): object | null { return isPlainRuntimeObject(value) ? value : null; }
 function isPlainRuntimeObject(value: unknown): value is object { try { return typeof value === "object" && value !== null && !isProxy(value) && !Array.isArray(value) && Object.getPrototypeOf(value) === Object.prototype; } catch { return false; } }
 function isObjectLike(value: unknown): value is object { return (typeof value === "object" && value !== null) || typeof value === "function"; }
-function exactJsonRecord(value: BasicCollectionJsonValue, keys: readonly string[]): JsonRecord | null { if (!isJsonRecord(value)) return null; const actual = Object.keys(value); return actual.length === keys.length && keys.every((key) => Object.hasOwn(value, key)) ? value : null; }
-function isJsonRecord(value: BasicCollectionJsonValue): value is JsonRecord { return typeof value === "object" && value !== null && !Array.isArray(value); }
-function jsonArray(value: BasicCollectionJsonValue): BasicCollectionJsonValue[] | null { return Array.isArray(value) ? value : null; }
-function stringArray(value: BasicCollectionJsonValue): string[] | null { return Array.isArray(value) && value.every((item) => typeof item === "string") ? value : null; }
-function valueAt(record: JsonRecord, key: string): BasicCollectionJsonValue { return record[key]!; }
-function textAt(record: JsonRecord, key: string): string | null { const value = valueAt(record, key); return typeof value === "string" ? value : null; }
-function hasStringFields(record: JsonRecord, keys: readonly string[]): boolean { return keys.every((key) => typeof valueAt(record, key) === "string"); }
-function nullableString(value: BasicCollectionJsonValue): boolean { return value === null || typeof value === "string"; }
 function blocked(): BasicBridgeResult<never> { return failed("DRAFT_INPUT_BLOCKED", "draft", false); }
-function failed(code: BasicBridgeErrorCode, phase: BasicBridgeFailure["phase"], retryable: boolean): { ok: false; error: BasicBridgeFailure } { return { ok: false, error: { code, phase, retryable } }; }
-function modelFailure(error: unknown): { ok: false; error: BasicBridgeFailure } {
-  if (typeof error === "object" && error !== null && !isProxy(error) && error instanceof BasicCollectionBridgeError) {
-    const descriptor = Object.getOwnPropertyDescriptor(error, "message");
-    const message = descriptor !== undefined && Object.hasOwn(descriptor, "value") ? descriptor.value : INVALID;
-    if (message === "P1-6C bridge failed: LLAMA_TIMEOUT") return failed("LLAMA_TIMEOUT", "llama", true);
-    if (message === "P1-6C bridge failed: LLAMA_UNAVAILABLE") return failed("LLAMA_UNAVAILABLE", "llama", true);
-    if (message === "P1-6C bridge failed: LLAMA_RESPONSE_INVALID") return failed("LLAMA_RESPONSE_INVALID", "llama", false);
-  }
-  return failed("LLAMA_UNAVAILABLE", "llama", true);
+function unavailable(): { ok: false; error: BasicBridgeFailure } { return failed("LLAMA_UNAVAILABLE", "llama", true); }
+function failed(code: BasicBridgeErrorCode, phase: BasicBridgeFailure["phase"], retryable: boolean): { ok: false; error: BasicBridgeFailure } {
+  return { ok: false, error: { code, phase, retryable } };
 }
