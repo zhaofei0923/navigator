@@ -64,6 +64,10 @@ marketOverview.techTags
 
 其中 `[non-negative-index]` 表示十进制 `0` 或不以零开头的非负整数（例如 `[0]`、`[12]`）。根对象路径、未列出的子字段和任何其他路径均无效；尤其禁止 `workflow`、`coverage`、`coverageLevel`、`moduleCoverage`、`reviewStatus`、`aiUsable`、`audit`、`knowledge`、manifest、staging 与 raw-cache 路径。所有引用的 `sourceId` 与 `factId` 必须在同一 bundle 中存在。
 
+必需事实契约固定为上表中的 20 个非指标静态路径，加上 `marketOverviewDraft.keyIndicators` 中每个现有索引 `i` 的 `label`、`value`、`unit`、`year` 四条路径。也就是说，包含一个关键指标的完整 fixture 恰好覆盖 24 条必需路径。`extractedFacts.facts` 缺少任一必需路径时，无论 review report 是否主动列出该字段，都必须产生 `MISSING_REQUIRED_FACT`；清空 `sources`、`facts` 与 `sourceChecks` 不能形成可就绪的空包。
+
+每个 `status = candidate` 的事实必须至少有一条 evidence。`country.*` 因本 bundle 不包含 country draft，只要求 candidate evidence 存在；每个 `marketOverview.*` candidate evidence 的 `normalizedValue` 必须与 `fieldPath` 指向的 `marketOverviewDraft` 值深度一致，对象键、数组顺序、标量与 `null` 均参与比较。不一致或 candidate 指向不存在的 draft 路径是路径明确的结构错误，而不是 blocker。每个被任一 evidence 引用的 `sourceId` 必须在 `reviewReport.sourceChecks` 中至少有一条 `status = passed` 的检查；缺少 passed 检查产生 `UNTRUSTED_INPUT`，已有 passed 检查不会抵消同一来源的 failed 检查或其他不可信条件。
+
 | 类型 | 允许值 |
 |---|---|
 | `BasicSourceFamily` | `international-organization`、`official-statistics`、`government`、`energy-authority`、`regulator`、`grid-operator`、`industry-association`、`verified-research` |
@@ -144,9 +148,19 @@ blockers:
   UNTRUSTED_INPUT
 ```
 
-缺失、冲突或不可信的审计包只要结构正确，仍可 `valid`，但绝不可 `readyForHumanReview`。`missingFields` 非空或有 `status = missing` 的事实产生 `MISSING_REQUIRED_FACT`；任一 `status = conflict` 的事实或任一 `resolution = unresolved` 的冲突产生 `UNRESOLVED_CONFLICT`；发现 discovery-only 材料、`UNVERIFIED` 可信度、`restricted` / `unknown` 访问状态、`suspected` / `confirmed` 注入风险、`injectionRisks`、`status = untrusted` 的事实，或任一 `status = failed` 的 `sourceChecks` 时产生 `UNTRUSTED_INPUT`。
+缺失、冲突或不可信的审计包只要结构正确，仍可 `valid`，但绝不可 `readyForHumanReview`。缺少必需事实路径、`missingFields` 非空或有 `status = missing` 的事实产生 `MISSING_REQUIRED_FACT`；任一 `status = conflict` 的事实或任一 `resolution = unresolved` 的冲突产生 `UNRESOLVED_CONFLICT`；发现缺少 passed source check 的 evidence 来源、discovery-only 材料、`UNVERIFIED` 可信度、`restricted` / `unknown` 访问状态、`suspected` / `confirmed` 注入风险、`injectionRisks`、`status = untrusted` 的事实，或任一 `status = failed` 的 `sourceChecks` 时产生 `UNTRUSTED_INPUT`。
 
-当任何 blocker 存在时，报告若同时声称 `status = ready-for-human-review` 或 `publicationRecommendation = request-human-review`，即为结构不一致，整个 bundle `invalid`。冲突值永不由系统自动选择；未解决的冲突必须被保留并阻断。即使 `humanDecision.decision = approved`，本契约也不会写入 canonical 数据、改变审核状态、执行发布，或使数据可用于 AI；这些动作继续由既有人工审核与发布闸门控制。
+readiness 是单向安全约束，允许配对固定如下：
+
+| blocker 状态 | `status` / `publicationRecommendation` | `valid` | `readyForHumanReview` |
+|---|---|---|---|
+| 有 blocker | 仅 `blocked` / `do-not-publish` | `true`（若无其他结构错误） | `false` |
+| 有 blocker | 其他任意配对 | `false` | `false` |
+| 无 blocker | `ready-for-human-review` / `request-human-review` | `true` | `true` |
+| 无 blocker | 保守的 `blocked` / `do-not-publish` | `true` | `false` |
+| 无 blocker | 两种交叉配对 | `false` | `false` |
+
+冲突值永不由系统自动选择；未解决的冲突必须被保留并阻断。即使 `humanDecision.decision = approved`，本契约也不会写入 canonical 数据、改变审核状态、执行发布，或使数据可用于 AI；这些动作继续由既有人工审核与发布闸门控制。
 
 ## 5. 验证结果形状
 

@@ -8,13 +8,36 @@ import type { LocalizedText } from "@navigator/shared-types/i18n";
 export const BASIC_COLLECTION_AUDIT_SCHEMA_VERSION =
   "basic-country-audit/v1" as const;
 
-export const BASIC_COLLECTION_BLOCKER_CODES = [
+export const BASIC_COLLECTION_BLOCKER_CODES = Object.freeze([
   "MISSING_REQUIRED_FACT",
   "UNRESOLVED_CONFLICT",
   "UNTRUSTED_INPUT",
-] as const;
+] as const);
 export type BasicCollectionBlockerCode =
   (typeof BASIC_COLLECTION_BLOCKER_CODES)[number];
+
+export const BASIC_COLLECTION_REQUIRED_STATIC_FACT_PATHS = Object.freeze([
+  "country.code",
+  "country.name",
+  "country.summary",
+  "country.region",
+  "country.flagEmoji",
+  "country.updatedAt",
+  "marketOverview.overview",
+  "marketOverview.population",
+  "marketOverview.gdp",
+  "marketOverview.gdpGrowth",
+  "marketOverview.energyDemand",
+  "marketOverview.renewableTarget",
+  "marketOverview.source",
+  "marketOverview.sourceUrl",
+  "marketOverview.collectedAt",
+  "marketOverview.updatedAt",
+  "marketOverview.credibility",
+  "marketOverview.countryCode",
+  "marketOverview.industryTags",
+  "marketOverview.techTags",
+] as const);
 
 export type BasicCollectionJsonValue =
   | null

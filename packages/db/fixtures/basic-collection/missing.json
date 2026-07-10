@@ -13,7 +13,9 @@
         "retrievedAt": "2026-07-10T12:34:56.123Z",
         "publishedAt": "2026-07-09T00:00:00Z",
         "contentSha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-        "evidenceLocators": ["table:population"],
+        "evidenceLocators": [
+          "table:population"
+        ],
         "sourceFamily": "official-statistics",
         "accessStatus": "open",
         "accessNotes": null,
@@ -29,12 +31,141 @@
     "countryCode": "XZ",
     "facts": [
       {
-        "factId": "fact-missing-gdp",
-        "fieldPath": "marketOverview.gdp",
-        "status": "missing",
-        "evidence": [],
+        "factId": "fact-missing-country-code",
+        "fieldPath": "country.code",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-missing-primary",
+            "locator": "table:population",
+            "rawValue": "XZ",
+            "normalizedValue": "XZ",
+            "unit": null,
+            "year": null
+          }
+        ],
         "extractionMethod": "deterministic",
-        "uncertainty": "Synthetic GDP source did not report a value"
+        "uncertainty": null
+      },
+      {
+        "factId": "fact-missing-country-name",
+        "fieldPath": "country.name",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-missing-primary",
+            "locator": "table:population",
+            "rawValue": {
+              "zh": "Synthetic XZ",
+              "en": "Synthetic XZ"
+            },
+            "normalizedValue": {
+              "zh": "Synthetic XZ",
+              "en": "Synthetic XZ"
+            },
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
+      },
+      {
+        "factId": "fact-missing-country-summary",
+        "fieldPath": "country.summary",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-missing-primary",
+            "locator": "table:population",
+            "rawValue": {
+              "zh": "Synthetic summary",
+              "en": "Synthetic summary"
+            },
+            "normalizedValue": {
+              "zh": "Synthetic summary",
+              "en": "Synthetic summary"
+            },
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
+      },
+      {
+        "factId": "fact-missing-country-region",
+        "fieldPath": "country.region",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-missing-primary",
+            "locator": "table:population",
+            "rawValue": "TEST_REGION",
+            "normalizedValue": "TEST_REGION",
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
+      },
+      {
+        "factId": "fact-missing-country-flagEmoji",
+        "fieldPath": "country.flagEmoji",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-missing-primary",
+            "locator": "table:population",
+            "rawValue": "XZ",
+            "normalizedValue": "XZ",
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
+      },
+      {
+        "factId": "fact-missing-country-updatedAt",
+        "fieldPath": "country.updatedAt",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-missing-primary",
+            "locator": "table:population",
+            "rawValue": "2026-07-10T12:34:56.123Z",
+            "normalizedValue": "2026-07-10T12:34:56.123Z",
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
+      },
+      {
+        "factId": "fact-missing-overview",
+        "fieldPath": "marketOverview.overview",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-missing-primary",
+            "locator": "table:population",
+            "rawValue": {
+              "zh": "Synthetic XZ overview",
+              "en": "Synthetic XZ overview"
+            },
+            "normalizedValue": {
+              "zh": "Synthetic XZ overview",
+              "en": "Synthetic XZ overview"
+            },
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
       },
       {
         "factId": "fact-missing-population",
@@ -44,10 +175,299 @@
           {
             "sourceId": "source-missing-primary",
             "locator": "table:population",
-            "rawValue": "AUDIT_SENTINEL_MISSING",
+          "rawValue": "AUDIT_SENTINEL_MISSING",
             "normalizedValue": 123456,
-            "unit": "people",
-            "year": 2025
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
+      },
+      {
+        "factId": "fact-missing-gdp",
+        "fieldPath": "marketOverview.gdp",
+        "status": "missing",
+        "evidence": [],
+        "extractionMethod": "deterministic",
+        "uncertainty": "Synthetic GDP source did not report a value"
+      },
+      {
+        "factId": "fact-missing-gdpGrowth",
+        "fieldPath": "marketOverview.gdpGrowth",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-missing-primary",
+            "locator": "table:population",
+            "rawValue": 5.2,
+            "normalizedValue": 5.2,
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
+      },
+      {
+        "factId": "fact-missing-energyDemand",
+        "fieldPath": "marketOverview.energyDemand",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-missing-primary",
+            "locator": "table:population",
+            "rawValue": {
+              "zh": "Synthetic energy demand",
+              "en": "Synthetic energy demand"
+            },
+            "normalizedValue": {
+              "zh": "Synthetic energy demand",
+              "en": "Synthetic energy demand"
+            },
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
+      },
+      {
+        "factId": "fact-missing-renewableTarget",
+        "fieldPath": "marketOverview.renewableTarget",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-missing-primary",
+            "locator": "table:population",
+            "rawValue": {
+              "zh": "Synthetic renewable target",
+              "en": "Synthetic renewable target"
+            },
+            "normalizedValue": {
+              "zh": "Synthetic renewable target",
+              "en": "Synthetic renewable target"
+            },
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
+      },
+      {
+        "factId": "fact-missing-source",
+        "fieldPath": "marketOverview.source",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-missing-primary",
+            "locator": "table:population",
+            "rawValue": "Synthetic original source",
+            "normalizedValue": "Synthetic original source",
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
+      },
+      {
+        "factId": "fact-missing-sourceUrl",
+        "fieldPath": "marketOverview.sourceUrl",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-missing-primary",
+            "locator": "table:population",
+            "rawValue": "https://source-missing-primary.test/market-overview",
+            "normalizedValue": "https://source-missing-primary.test/market-overview",
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
+      },
+      {
+        "factId": "fact-missing-collectedAt",
+        "fieldPath": "marketOverview.collectedAt",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-missing-primary",
+            "locator": "table:population",
+            "rawValue": "2026-07-10T12:34:56.123Z",
+            "normalizedValue": "2026-07-10T12:34:56.123Z",
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
+      },
+      {
+        "factId": "fact-missing-updatedAt",
+        "fieldPath": "marketOverview.updatedAt",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-missing-primary",
+            "locator": "table:population",
+            "rawValue": "2026-07-10T12:34:56.123Z",
+            "normalizedValue": "2026-07-10T12:34:56.123Z",
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
+      },
+      {
+        "factId": "fact-missing-credibility",
+        "fieldPath": "marketOverview.credibility",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-missing-primary",
+            "locator": "table:population",
+            "rawValue": "OFFICIAL",
+            "normalizedValue": "OFFICIAL",
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
+      },
+      {
+        "factId": "fact-missing-countryCode",
+        "fieldPath": "marketOverview.countryCode",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-missing-primary",
+            "locator": "table:population",
+            "rawValue": "XZ",
+            "normalizedValue": "XZ",
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
+      },
+      {
+        "factId": "fact-missing-industryTags",
+        "fieldPath": "marketOverview.industryTags",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-missing-primary",
+            "locator": "table:population",
+            "rawValue": [
+              "solar"
+            ],
+            "normalizedValue": [
+              "solar"
+            ],
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
+      },
+      {
+        "factId": "fact-missing-techTags",
+        "fieldPath": "marketOverview.techTags",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-missing-primary",
+            "locator": "table:population",
+            "rawValue": [
+              "pv-module"
+            ],
+            "normalizedValue": [
+              "pv-module"
+            ],
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
+      },
+      {
+        "factId": "fact-missing-keyIndicators-0-label",
+        "fieldPath": "marketOverview.keyIndicators[0].label",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-missing-primary",
+            "locator": "table:population",
+            "rawValue": {
+              "zh": "Synthetic capacity",
+              "en": "Synthetic capacity"
+            },
+            "normalizedValue": {
+              "zh": "Synthetic capacity",
+              "en": "Synthetic capacity"
+            },
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
+      },
+      {
+        "factId": "fact-missing-keyIndicators-0-value",
+        "fieldPath": "marketOverview.keyIndicators[0].value",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-missing-primary",
+            "locator": "table:population",
+            "rawValue": "20",
+            "normalizedValue": "20",
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
+      },
+      {
+        "factId": "fact-missing-keyIndicators-0-unit",
+        "fieldPath": "marketOverview.keyIndicators[0].unit",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-missing-primary",
+            "locator": "table:population",
+            "rawValue": "GW",
+            "normalizedValue": "GW",
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
+      },
+      {
+        "factId": "fact-missing-keyIndicators-0-year",
+        "fieldPath": "marketOverview.keyIndicators[0].year",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-missing-primary",
+            "locator": "table:population",
+            "rawValue": 2025,
+            "normalizedValue": 2025,
+            "unit": null,
+            "year": null
           }
         ],
         "extractionMethod": "deterministic",
@@ -56,15 +476,27 @@
     ]
   },
   "marketOverviewDraft": {
-    "overview": { "zh": "Synthetic XZ overview", "en": "Synthetic XZ overview" },
+    "overview": {
+      "zh": "Synthetic XZ overview",
+      "en": "Synthetic XZ overview"
+    },
     "population": 123456,
     "gdp": null,
     "gdpGrowth": 5.2,
-    "energyDemand": { "zh": "Synthetic energy demand", "en": "Synthetic energy demand" },
-    "renewableTarget": { "zh": "Synthetic renewable target", "en": "Synthetic renewable target" },
+    "energyDemand": {
+      "zh": "Synthetic energy demand",
+      "en": "Synthetic energy demand"
+    },
+    "renewableTarget": {
+      "zh": "Synthetic renewable target",
+      "en": "Synthetic renewable target"
+    },
     "keyIndicators": [
       {
-        "label": { "zh": "Synthetic capacity", "en": "Synthetic capacity" },
+        "label": {
+          "zh": "Synthetic capacity",
+          "en": "Synthetic capacity"
+        },
         "value": "20",
         "unit": "GW",
         "year": 2025
@@ -78,15 +510,21 @@
     "reviewStatus": "draft",
     "aiUsable": false,
     "countryCode": "XZ",
-    "industryTags": ["solar"],
-    "techTags": ["pv-module"]
+    "industryTags": [
+      "solar"
+    ],
+    "techTags": [
+      "pv-module"
+    ]
   },
   "reviewReport": {
     "schemaVersion": "basic-country-audit/v1",
     "runId": "run-missing",
     "countryCode": "XZ",
     "status": "blocked",
-    "missingFields": ["marketOverview.gdp"],
+    "missingFields": [
+      "marketOverview.gdp"
+    ],
     "conflicts": [],
     "sourceChecks": [
       {

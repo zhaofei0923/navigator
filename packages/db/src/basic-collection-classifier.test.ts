@@ -29,6 +29,8 @@ describe("Basic collection audit classifier", () => {
     }],
     ["an unverified market overview draft", (bundle: Fixture) => {
       bundle.marketOverviewDraft.credibility = "UNVERIFIED";
+      firstEvidence(factFor(bundle, "marketOverview.credibility")).normalizedValue =
+        "UNVERIFIED";
       setBlocked(bundle);
     }],
     ["a suspected source prompt-injection risk", (bundle: Fixture) => {
@@ -100,6 +102,56 @@ describe("Basic collection audit classifier", () => {
     expect(result.blockers).toEqual([blocker]);
   });
 
+  test("does not fail open when sources, facts, and source checks are empty", () => {
+    const bundle = createBasicCollectionAuditFixture();
+    bundle.sourceRegister.sources = [];
+    bundle.extractedFacts.facts = [];
+    bundle.reviewReport.sourceChecks = [];
+    setBlocked(bundle);
+
+    const result = validateBasicCollectionAuditBundle(bundle);
+
+    expect(result).toMatchObject({ valid: true, readyForHumanReview: false });
+    expect(result.blockers).toEqual(["MISSING_REQUIRED_FACT"]);
+  });
+
+  test("returns MISSING_REQUIRED_FACT when one required path is absent", () => {
+    const bundle = createBasicCollectionAuditFixture();
+    bundle.extractedFacts.facts = bundle.extractedFacts.facts.filter(
+      ({ fieldPath }) => fieldPath !== "country.summary",
+    );
+    setBlocked(bundle);
+
+    const result = validateBasicCollectionAuditBundle(bundle);
+
+    expect(result).toMatchObject({ valid: true, readyForHumanReview: false });
+    expect(result.blockers).toEqual(["MISSING_REQUIRED_FACT"]);
+  });
+
+  test("rejects a candidate normalizedValue that differs from its draft path", () => {
+    const bundle = createBasicCollectionAuditFixture();
+    const fact = factFor(bundle, "marketOverview.gdp");
+    fact.evidence[0]!.normalizedValue = 1;
+
+    expectInvalid(
+      bundle,
+      "extractedFacts.facts[8].evidence[0].normalizedValue must deeply equal marketOverviewDraft.gdp",
+    );
+  });
+
+  test("returns UNTRUSTED_INPUT when an evidence source has no passed source check", () => {
+    const bundle = createBasicCollectionAuditFixture();
+    bundle.reviewReport.sourceChecks = bundle.reviewReport.sourceChecks.filter(
+      ({ sourceId }) => sourceId !== "source-1",
+    );
+    setBlocked(bundle);
+
+    const result = validateBasicCollectionAuditBundle(bundle);
+
+    expect(result).toMatchObject({ valid: true, readyForHumanReview: false });
+    expect(result.blockers).toEqual(["UNTRUSTED_INPUT"]);
+  });
+
   test.each([
     ["evidence", (bundle: Fixture) => {
       firstEvidence(bundle).sourceId = "missing-source";
@@ -138,12 +190,12 @@ describe("Basic collection audit classifier", () => {
   });
 
   test.each([
-    ["no blocker has a blocked status", (bundle: Fixture) => {
+    ["no blocker cross-pairs blocked with request-human-review", (bundle: Fixture) => {
       bundle.reviewReport.status = "blocked";
-    }, "reviewReport.status must be ready-for-human-review when no blockers exist", []],
-    ["no blocker has a do-not-publish recommendation", (bundle: Fixture) => {
+    }, "reviewReport.status and reviewReport.publicationRecommendation must use an allowed no-blocker pairing", []],
+    ["no blocker cross-pairs ready-for-human-review with do-not-publish", (bundle: Fixture) => {
       bundle.reviewReport.publicationRecommendation = "do-not-publish";
-    }, "reviewReport.publicationRecommendation must be request-human-review when no blockers exist", []],
+    }, "reviewReport.status and reviewReport.publicationRecommendation must use an allowed no-blocker pairing", []],
     ["a blocker has a ready status", (bundle: Fixture) => {
       firstSource(bundle).discoveryOnly = true;
       bundle.reviewReport.publicationRecommendation = "do-not-publish";
@@ -161,6 +213,19 @@ describe("Basic collection audit classifier", () => {
     expect(result.errors).toContain(error);
   });
 
+  test("allows a conservative blocked/do-not-publish report without blockers", () => {
+    const bundle = createBasicCollectionAuditFixture();
+    setBlocked(bundle);
+
+    const result = validateBasicCollectionAuditBundle(bundle);
+
+    expect(result).toMatchObject({
+      valid: true,
+      blockers: [],
+      readyForHumanReview: false,
+    });
+  });
+
   test("deduplicates combined blockers in contract order", () => {
     const bundle = createBasicCollectionAuditFixture();
     firstFact(bundle).status = "missing";
@@ -168,7 +233,7 @@ describe("Basic collection audit classifier", () => {
     bundle.extractedFacts.facts.push(
       {
         ...firstFact(bundle),
-        factId: "fact-2",
+        factId: "fact-25",
         status: "conflict",
         evidence: [
           { ...firstEvidenceFromSource("source-1"), sourceId: "source-1" },
@@ -177,7 +242,7 @@ describe("Basic collection audit classifier", () => {
       },
       {
         ...firstFact(bundle),
-        factId: "fact-3",
+        factId: "fact-26",
         status: "untrusted",
         evidence: [firstEvidenceFromSource("source-1")],
       },
@@ -186,7 +251,7 @@ describe("Basic collection audit classifier", () => {
     bundle.reviewReport.conflicts = [
       {
         fieldPath: "marketOverview.population",
-        factIds: ["fact-2"],
+        factIds: ["fact-25"],
         resolution: "unresolved",
         notes: "Needs human resolution",
       },
@@ -218,8 +283,19 @@ function firstFact(bundle: Fixture) {
   return fact;
 }
 
-function firstEvidence(bundle: Fixture) {
-  const evidence = firstFact(bundle).evidence[0];
+function factFor(bundle: Fixture, fieldPath: string) {
+  const fact = bundle.extractedFacts.facts.find(
+    (candidate) => candidate.fieldPath === fieldPath,
+  );
+  if (fact === undefined) throw new Error(`fixture fact ${fieldPath} is required`);
+  return fact;
+}
+
+function firstEvidence(bundleOrFact: Fixture | ReturnType<typeof firstFact>) {
+  const fact = "extractedFacts" in bundleOrFact
+    ? firstFact(bundleOrFact)
+    : bundleOrFact;
+  const evidence = fact.evidence[0];
   if (evidence === undefined) throw new Error("fixture evidence is required");
   return evidence;
 }

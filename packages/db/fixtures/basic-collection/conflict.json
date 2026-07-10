@@ -13,7 +13,9 @@
         "retrievedAt": "2026-07-10T12:34:56.123Z",
         "publishedAt": "2026-07-09T00:00:00Z",
         "contentSha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-        "evidenceLocators": ["table:population-primary"],
+        "evidenceLocators": [
+          "table:population-primary"
+        ],
         "sourceFamily": "official-statistics",
         "accessStatus": "open",
         "accessNotes": null,
@@ -28,7 +30,9 @@
         "retrievedAt": "2026-07-10T12:34:56.123Z",
         "publishedAt": "2026-07-08T00:00:00Z",
         "contentSha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
-        "evidenceLocators": ["table:population-secondary"],
+        "evidenceLocators": [
+          "table:population-secondary"
+        ],
         "sourceFamily": "official-statistics",
         "accessStatus": "open",
         "accessNotes": null,
@@ -43,6 +47,143 @@
     "runId": "run-conflict",
     "countryCode": "XZ",
     "facts": [
+      {
+        "factId": "fact-conflict-country-code",
+        "fieldPath": "country.code",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-conflict-primary",
+            "locator": "table:population-primary",
+            "rawValue": "XZ",
+            "normalizedValue": "XZ",
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
+      },
+      {
+        "factId": "fact-conflict-country-name",
+        "fieldPath": "country.name",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-conflict-primary",
+            "locator": "table:population-primary",
+            "rawValue": {
+              "zh": "Synthetic XZ",
+              "en": "Synthetic XZ"
+            },
+            "normalizedValue": {
+              "zh": "Synthetic XZ",
+              "en": "Synthetic XZ"
+            },
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
+      },
+      {
+        "factId": "fact-conflict-country-summary",
+        "fieldPath": "country.summary",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-conflict-primary",
+            "locator": "table:population-primary",
+            "rawValue": {
+              "zh": "Synthetic summary",
+              "en": "Synthetic summary"
+            },
+            "normalizedValue": {
+              "zh": "Synthetic summary",
+              "en": "Synthetic summary"
+            },
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
+      },
+      {
+        "factId": "fact-conflict-country-region",
+        "fieldPath": "country.region",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-conflict-primary",
+            "locator": "table:population-primary",
+            "rawValue": "TEST_REGION",
+            "normalizedValue": "TEST_REGION",
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
+      },
+      {
+        "factId": "fact-conflict-country-flagEmoji",
+        "fieldPath": "country.flagEmoji",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-conflict-primary",
+            "locator": "table:population-primary",
+            "rawValue": "XZ",
+            "normalizedValue": "XZ",
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
+      },
+      {
+        "factId": "fact-conflict-country-updatedAt",
+        "fieldPath": "country.updatedAt",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-conflict-primary",
+            "locator": "table:population-primary",
+            "rawValue": "2026-07-10T12:34:56.123Z",
+            "normalizedValue": "2026-07-10T12:34:56.123Z",
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
+      },
+      {
+        "factId": "fact-conflict-overview",
+        "fieldPath": "marketOverview.overview",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-conflict-primary",
+            "locator": "table:population-primary",
+            "rawValue": {
+              "zh": "Synthetic XZ overview",
+              "en": "Synthetic XZ overview"
+            },
+            "normalizedValue": {
+              "zh": "Synthetic XZ overview",
+              "en": "Synthetic XZ overview"
+            },
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
+      },
       {
         "factId": "fact-conflict-population",
         "fieldPath": "marketOverview.population",
@@ -67,19 +208,329 @@
         ],
         "extractionMethod": "deterministic",
         "uncertainty": "Synthetic sources disagree"
+      },
+      {
+        "factId": "fact-conflict-gdp",
+        "fieldPath": "marketOverview.gdp",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-conflict-primary",
+            "locator": "table:population-primary",
+            "rawValue": 25000000000,
+            "normalizedValue": 25000000000,
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
+      },
+      {
+        "factId": "fact-conflict-gdpGrowth",
+        "fieldPath": "marketOverview.gdpGrowth",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-conflict-primary",
+            "locator": "table:population-primary",
+            "rawValue": 5.2,
+            "normalizedValue": 5.2,
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
+      },
+      {
+        "factId": "fact-conflict-energyDemand",
+        "fieldPath": "marketOverview.energyDemand",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-conflict-primary",
+            "locator": "table:population-primary",
+            "rawValue": {
+              "zh": "Synthetic energy demand",
+              "en": "Synthetic energy demand"
+            },
+            "normalizedValue": {
+              "zh": "Synthetic energy demand",
+              "en": "Synthetic energy demand"
+            },
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
+      },
+      {
+        "factId": "fact-conflict-renewableTarget",
+        "fieldPath": "marketOverview.renewableTarget",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-conflict-primary",
+            "locator": "table:population-primary",
+            "rawValue": {
+              "zh": "Synthetic renewable target",
+              "en": "Synthetic renewable target"
+            },
+            "normalizedValue": {
+              "zh": "Synthetic renewable target",
+              "en": "Synthetic renewable target"
+            },
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
+      },
+      {
+        "factId": "fact-conflict-source",
+        "fieldPath": "marketOverview.source",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-conflict-primary",
+            "locator": "table:population-primary",
+            "rawValue": "Synthetic original source",
+            "normalizedValue": "Synthetic original source",
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
+      },
+      {
+        "factId": "fact-conflict-sourceUrl",
+        "fieldPath": "marketOverview.sourceUrl",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-conflict-primary",
+            "locator": "table:population-primary",
+            "rawValue": "https://source-conflict-primary.test/market-overview",
+            "normalizedValue": "https://source-conflict-primary.test/market-overview",
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
+      },
+      {
+        "factId": "fact-conflict-collectedAt",
+        "fieldPath": "marketOverview.collectedAt",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-conflict-primary",
+            "locator": "table:population-primary",
+            "rawValue": "2026-07-10T12:34:56.123Z",
+            "normalizedValue": "2026-07-10T12:34:56.123Z",
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
+      },
+      {
+        "factId": "fact-conflict-updatedAt",
+        "fieldPath": "marketOverview.updatedAt",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-conflict-primary",
+            "locator": "table:population-primary",
+            "rawValue": "2026-07-10T12:34:56.123Z",
+            "normalizedValue": "2026-07-10T12:34:56.123Z",
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
+      },
+      {
+        "factId": "fact-conflict-credibility",
+        "fieldPath": "marketOverview.credibility",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-conflict-primary",
+            "locator": "table:population-primary",
+            "rawValue": "OFFICIAL",
+            "normalizedValue": "OFFICIAL",
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
+      },
+      {
+        "factId": "fact-conflict-countryCode",
+        "fieldPath": "marketOverview.countryCode",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-conflict-primary",
+            "locator": "table:population-primary",
+            "rawValue": "XZ",
+            "normalizedValue": "XZ",
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
+      },
+      {
+        "factId": "fact-conflict-industryTags",
+        "fieldPath": "marketOverview.industryTags",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-conflict-primary",
+            "locator": "table:population-primary",
+            "rawValue": [
+              "solar"
+            ],
+            "normalizedValue": [
+              "solar"
+            ],
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
+      },
+      {
+        "factId": "fact-conflict-techTags",
+        "fieldPath": "marketOverview.techTags",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-conflict-primary",
+            "locator": "table:population-primary",
+            "rawValue": [
+              "pv-module"
+            ],
+            "normalizedValue": [
+              "pv-module"
+            ],
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
+      },
+      {
+        "factId": "fact-conflict-keyIndicators-0-label",
+        "fieldPath": "marketOverview.keyIndicators[0].label",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-conflict-primary",
+            "locator": "table:population-primary",
+            "rawValue": {
+              "zh": "Synthetic capacity",
+              "en": "Synthetic capacity"
+            },
+            "normalizedValue": {
+              "zh": "Synthetic capacity",
+              "en": "Synthetic capacity"
+            },
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
+      },
+      {
+        "factId": "fact-conflict-keyIndicators-0-value",
+        "fieldPath": "marketOverview.keyIndicators[0].value",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-conflict-primary",
+            "locator": "table:population-primary",
+            "rawValue": "20",
+            "normalizedValue": "20",
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
+      },
+      {
+        "factId": "fact-conflict-keyIndicators-0-unit",
+        "fieldPath": "marketOverview.keyIndicators[0].unit",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-conflict-primary",
+            "locator": "table:population-primary",
+            "rawValue": "GW",
+            "normalizedValue": "GW",
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
+      },
+      {
+        "factId": "fact-conflict-keyIndicators-0-year",
+        "fieldPath": "marketOverview.keyIndicators[0].year",
+        "status": "candidate",
+        "evidence": [
+          {
+            "sourceId": "source-conflict-primary",
+            "locator": "table:population-primary",
+            "rawValue": 2025,
+            "normalizedValue": 2025,
+            "unit": null,
+            "year": null
+          }
+        ],
+        "extractionMethod": "deterministic",
+        "uncertainty": null
       }
     ]
   },
   "marketOverviewDraft": {
-    "overview": { "zh": "Synthetic XZ overview", "en": "Synthetic XZ overview" },
+    "overview": {
+      "zh": "Synthetic XZ overview",
+      "en": "Synthetic XZ overview"
+    },
     "population": null,
     "gdp": 25000000000,
     "gdpGrowth": 5.2,
-    "energyDemand": { "zh": "Synthetic energy demand", "en": "Synthetic energy demand" },
-    "renewableTarget": { "zh": "Synthetic renewable target", "en": "Synthetic renewable target" },
+    "energyDemand": {
+      "zh": "Synthetic energy demand",
+      "en": "Synthetic energy demand"
+    },
+    "renewableTarget": {
+      "zh": "Synthetic renewable target",
+      "en": "Synthetic renewable target"
+    },
     "keyIndicators": [
       {
-        "label": { "zh": "Synthetic capacity", "en": "Synthetic capacity" },
+        "label": {
+          "zh": "Synthetic capacity",
+          "en": "Synthetic capacity"
+        },
         "value": "20",
         "unit": "GW",
         "year": 2025
@@ -93,8 +544,12 @@
     "reviewStatus": "draft",
     "aiUsable": false,
     "countryCode": "XZ",
-    "industryTags": ["solar"],
-    "techTags": ["pv-module"]
+    "industryTags": [
+      "solar"
+    ],
+    "techTags": [
+      "pv-module"
+    ]
   },
   "reviewReport": {
     "schemaVersion": "basic-country-audit/v1",
@@ -105,7 +560,9 @@
     "conflicts": [
       {
         "fieldPath": "marketOverview.population",
-        "factIds": ["fact-conflict-population"],
+        "factIds": [
+          "fact-conflict-population"
+        ],
         "resolution": "unresolved",
         "notes": "Synthetic source values remain unresolved"
       }

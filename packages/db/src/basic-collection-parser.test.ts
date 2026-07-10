@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 
+import type { BasicCollectionJsonValue } from "./collection/basic-collection-contracts.js";
 import { createBasicCollectionAuditFixture } from "./basic-collection-test-fixture.js";
 import { validateBasicCollectionAuditBundle } from "./collection/basic-collection-validator.js";
 
@@ -118,12 +119,20 @@ describe("Basic collection audit parser boundaries", () => {
     ["workflow.status", false],
   ] as const)("%s is %s in the fieldPath allowlist", (fieldPath, valid) => {
     const bundle = createBasicCollectionAuditFixture();
-    bundle.extractedFacts.facts[0]!.fieldPath = fieldPath;
+    bundle.extractedFacts.facts.push({
+      ...bundle.extractedFacts.facts[0]!,
+      factId: "fact-allowlist",
+      fieldPath,
+      status: "untrusted",
+      evidence: [{ ...bundle.extractedFacts.facts[0]!.evidence[0]! }],
+    });
+    bundle.reviewReport.status = "blocked";
+    bundle.reviewReport.publicationRecommendation = "do-not-publish";
 
     const result = validateBasicCollectionAuditBundle(bundle);
     expect(result.valid).toBe(valid);
     if (!valid) {
-      expectInvalid(bundle, "extractedFacts.facts[0].fieldPath");
+      expectInvalid(bundle, "extractedFacts.facts[24].fieldPath");
     }
   });
 
@@ -203,6 +212,11 @@ describe("Basic collection audit parser boundaries", () => {
       name: "a single-side fallback",
       mutate(bundle: AuditBundle) {
         bundle.marketOverviewDraft.overview.en = " ";
+        syncCandidate(
+          bundle,
+          "marketOverview.overview",
+          { ...bundle.marketOverviewDraft.overview },
+        );
       },
       valid: true,
       error: "",
@@ -234,6 +248,8 @@ describe("Basic collection audit parser boundaries", () => {
     const bundle = createBasicCollectionAuditFixture();
     bundle.marketOverviewDraft.sourceUrl = null;
     bundle.marketOverviewDraft.source = source;
+    syncCandidate(bundle, "marketOverview.sourceUrl", null);
+    syncCandidate(bundle, "marketOverview.source", source);
 
     const result = validateBasicCollectionAuditBundle(bundle);
     expect(result.valid).toBe(valid);
@@ -248,8 +264,9 @@ describe("Basic collection audit parser boundaries", () => {
       nested: [{ leaf: ["value", { enabled: true }] }],
     };
     const normalizedValue = [[{ score: 1 }], [{ score: 2 }]];
-    bundle.extractedFacts.facts[0]!.evidence[0]!.rawValue = rawValue;
-    bundle.extractedFacts.facts[0]!.evidence[0]!.normalizedValue = normalizedValue;
+    const inputEvidence = factFor(bundle, "country.code").evidence[0]!;
+    inputEvidence.rawValue = rawValue;
+    inputEvidence.normalizedValue = normalizedValue;
 
     const result = validateBasicCollectionAuditBundle(bundle);
     expect(result.valid).toBe(true);
@@ -257,7 +274,7 @@ describe("Basic collection audit parser boundaries", () => {
       return;
     }
 
-    const evidence = result.data.extractedFacts.facts[0]!.evidence[0]!;
+    const evidence = factFor(result.data, "country.code").evidence[0]!;
     expect(evidence.rawValue).toEqual(rawValue);
     expect(evidence.normalizedValue).toEqual(normalizedValue);
     expect(evidence.rawValue).not.toBe(rawValue);
@@ -283,4 +300,22 @@ function expectInvalid(value: unknown, expectedError: string): void {
   expect(result.errors).toEqual(
     expect.arrayContaining([expect.stringContaining(expectedError)]),
   );
+}
+
+function factFor(bundle: AuditBundle, fieldPath: string) {
+  const fact = bundle.extractedFacts.facts.find(
+    (candidate) => candidate.fieldPath === fieldPath,
+  );
+  if (fact === undefined) throw new Error(`fixture fact ${fieldPath} is required`);
+  return fact;
+}
+
+function syncCandidate(
+  bundle: AuditBundle,
+  fieldPath: string,
+  normalizedValue: BasicCollectionJsonValue,
+): void {
+  for (const evidence of factFor(bundle, fieldPath).evidence) {
+    evidence.normalizedValue = normalizedValue;
+  }
 }

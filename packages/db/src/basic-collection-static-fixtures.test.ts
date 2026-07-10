@@ -47,6 +47,33 @@ describe("committed Basic collection audit fixtures", () => {
   );
 
   test.each(EXPECTED_CLASSIFICATIONS)(
+    "$scenario fixture covers every required fact path",
+    ({ scenario }) => {
+      const bundle = readBasicCollectionAuditFixture(scenario);
+      const factsByPath = new Map(
+        bundle.extractedFacts.facts.map((fact) => [fact.fieldPath, fact]),
+      );
+
+      expect(bundle.extractedFacts.facts).toHaveLength(24);
+      expect([...factsByPath.keys()].sort()).toEqual(
+        requiredFixturePaths().sort(),
+      );
+      if (scenario === "normal") {
+        expect(bundle.extractedFacts.facts.every(({ status }) => status === "candidate"))
+          .toBe(true);
+      }
+      if (scenario === "missing") {
+        expect(factsByPath.get("marketOverview.gdp")?.status).toBe("missing");
+        expect(bundle.marketOverviewDraft.gdp).toBeNull();
+      }
+      if (scenario === "conflict") {
+        expect(factsByPath.get("marketOverview.population")?.status).toBe("conflict");
+        expect(bundle.marketOverviewDraft.population).toBeNull();
+      }
+    },
+  );
+
+  test.each(EXPECTED_CLASSIFICATIONS)(
     "$scenario sentinel is retained only in audit evidence",
     ({ scenario }) => {
       const bundle = readBasicCollectionAuditFixture(scenario);
@@ -59,3 +86,32 @@ describe("committed Basic collection audit fixtures", () => {
     },
   );
 });
+
+function requiredFixturePaths(): string[] {
+  return [
+    "country.code",
+    "country.name",
+    "country.summary",
+    "country.region",
+    "country.flagEmoji",
+    "country.updatedAt",
+    "marketOverview.overview",
+    "marketOverview.population",
+    "marketOverview.gdp",
+    "marketOverview.gdpGrowth",
+    "marketOverview.energyDemand",
+    "marketOverview.renewableTarget",
+    "marketOverview.source",
+    "marketOverview.sourceUrl",
+    "marketOverview.collectedAt",
+    "marketOverview.updatedAt",
+    "marketOverview.credibility",
+    "marketOverview.countryCode",
+    "marketOverview.industryTags",
+    "marketOverview.techTags",
+    "marketOverview.keyIndicators[0].label",
+    "marketOverview.keyIndicators[0].value",
+    "marketOverview.keyIndicators[0].unit",
+    "marketOverview.keyIndicators[0].year",
+  ];
+}

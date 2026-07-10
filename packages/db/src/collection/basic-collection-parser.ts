@@ -17,6 +17,7 @@ import {
 } from "../seed/basic-country-validation-utils.js";
 import {
   BASIC_COLLECTION_AUDIT_SCHEMA_VERSION,
+  BASIC_COLLECTION_REQUIRED_STATIC_FACT_PATHS,
   type BasicCollectionAuditBundle,
   type BasicCollectionAuditSummary,
   type BasicCollectionJsonValue,
@@ -51,7 +52,7 @@ const SOURCE_CHECK_KEYS = ["sourceId", "status", "notes"] as const;
 const INJECTION_RISK_KEYS = ["sourceId", "locator", "severity", "details"] as const;
 const HUMAN_DECISION_KEYS = ["decision", "reviewerId", "decidedAt", "notes"] as const;
 const SOURCE_FAMILIES = ["international-organization", "official-statistics", "government", "energy-authority", "regulator", "grid-operator", "industry-association", "verified-research"] as const;
-const FIELD_PATHS = new Set(["country.code", "country.name", "country.summary", "country.region", "country.flagEmoji", "country.updatedAt", "marketOverview.overview", "marketOverview.population", "marketOverview.gdp", "marketOverview.gdpGrowth", "marketOverview.energyDemand", "marketOverview.renewableTarget", "marketOverview.source", "marketOverview.sourceUrl", "marketOverview.collectedAt", "marketOverview.updatedAt", "marketOverview.credibility", "marketOverview.countryCode", "marketOverview.industryTags", "marketOverview.techTags"]);
+const FIELD_PATHS = new Set<string>(BASIC_COLLECTION_REQUIRED_STATIC_FACT_PATHS);
 const INDICATOR_PATH = /^marketOverview\.keyIndicators\[(?:0|[1-9]\d*)\]\.(?:label|value|unit|year)$/;
 
 export function parseBasicCollectionAuditBundle(value: unknown): BasicCollectionAuditParseResult {

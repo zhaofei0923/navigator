@@ -17,6 +17,9 @@
 - Raw cache remains `.cache/basic-country/<ISO2>/<runId>/raw/`, is never read by the loader, and is never committed.
 - Staging audit artifacts remain non-canonical and cannot enter Prisma import operations, C-end responses, coverage counts, or AI retrieval.
 - Search summaries, `UNVERIFIED` sources, restricted/unknown-access sources, and suspected/confirmed prompt injection are untrusted and block review readiness.
+- Required facts are fail-closed: 20 static country/market-overview paths plus four paths for every draft key indicator; every evidence source needs at least one passed source check.
+- Candidate `normalizedValue` must deeply equal its market-overview draft path; country candidates require evidence because the bundle has no country draft.
+- Readiness is one-way safe: blockers require blocked/do-not-publish; no blockers allow ready/request or conservative blocked/do-not-publish, while cross-pairings are invalid.
 - Conflicting evidence is retained without an automatically selected value; unresolved conflict always requires human review.
 - `sourceUrl` must be present. A canonical draft may use `null` only when `source` explains the missing link, matching the existing Basic validator rule.
 - Offline fixtures never mock or call the model. Model connectivity and schema-output failures belong to P1-6C.
@@ -79,7 +82,9 @@ blockers:
   UNTRUSTED_INPUT
 ```
 
-Document that a structurally valid missing/conflict/untrusted audit bundle is allowed but is not review-ready. A report that claims readiness while blockers exist is structurally inconsistent and therefore invalid.
+Document the frozen required-fact contract: all six `country.*` paths, all 14 non-indicator `marketOverview.*` draft paths, and `label/value/unit/year` for every draft key-indicator index. Missing any path emits `MISSING_REQUIRED_FACT`; each market-overview candidate normalized value deeply equals the corresponding draft value, country candidates require evidence, and every evidence source has at least one passed source check or emits `UNTRUSTED_INPUT`.
+
+Document that a structurally valid missing/conflict/untrusted audit bundle is allowed but is not review-ready. With blockers, only blocked/do-not-publish is valid. Without blockers, ready/request is valid and ready, conservative blocked/do-not-publish is valid but not ready, and either cross-pairing is invalid.
 
 - [ ] **Step 3: Resolve the four known ambiguities in the normative docs**
 
@@ -155,11 +160,11 @@ import type {
 export const BASIC_COLLECTION_AUDIT_SCHEMA_VERSION =
   "basic-country-audit/v1" as const;
 
-export const BASIC_COLLECTION_BLOCKER_CODES = [
+export const BASIC_COLLECTION_BLOCKER_CODES = Object.freeze([
   "MISSING_REQUIRED_FACT",
   "UNRESOLVED_CONFLICT",
   "UNTRUSTED_INPUT",
-] as const;
+] as const);
 export type BasicCollectionBlockerCode =
   (typeof BASIC_COLLECTION_BLOCKER_CODES)[number];
 
@@ -407,11 +412,12 @@ Run the focused test and confirm RED because classification is not implemented.
 `basic-collection-classifier.ts` must:
 
 1. Resolve every evidence `sourceId` and every review-report `sourceId`/`factId` against the reconstructed registers.
-2. Emit `MISSING_REQUIRED_FACT` for missing facts or listed missing fields.
+2. Emit `MISSING_REQUIRED_FACT` for every absent required static/indicator path, missing fact, or listed missing field; empty sources/facts/sourceChecks must not fail open.
 3. Emit `UNRESOLVED_CONFLICT` for `status = conflict` facts or unresolved report conflicts; never add a selected conflict value.
-4. Emit `UNTRUSTED_INPUT` for untrusted facts, discovery-only sources, non-open access, `UNVERIFIED`, prompt-injection risk, failed source checks, or injection-risk records.
-5. Deduplicate blocker codes in the constant order.
-6. Reject report/readiness inconsistencies as structural errors.
+4. Reject every market-overview candidate whose evidence `normalizedValue` does not deeply equal the corresponding draft path; country candidates require evidence but have no draft comparison.
+5. Emit `UNTRUSTED_INPUT` when an evidence source lacks a passed source check, or for untrusted facts, discovery-only sources, non-open access, `UNVERIFIED`, prompt-injection risk, failed source checks, or injection-risk records.
+6. Deduplicate blocker codes in the runtime-frozen constant order so public callers cannot mutate classifier behavior.
+7. Enforce readiness pairings: blockers allow only blocked/do-not-publish; no blockers allow ready/request or conservative blocked/do-not-publish; reject both cross-pairings.
 
 `basic-collection-validator.ts` must orchestrate parse + classify and return the discriminated result without throwing for unknown input.
 
@@ -459,16 +465,16 @@ git commit -m "feat: validate Basic collection audit bundles"
 
 - [ ] **Step 1: Commit four deterministic offline fixture bundles**
 
-Each fixture JSON is a test-only bundle envelope with exact keys from Task 2 and uses synthetic country code `XZ`, `.test` URLs, strict timestamps, lowercase 64-character hashes, and an `AUDIT_SENTINEL_<SCENARIO>` value in evidence.
+Each fixture JSON is a test-only bundle envelope with exact keys from Task 2 and uses synthetic country code `XZ`, `.test` URLs, strict timestamps, lowercase 64-character hashes, and an `AUDIT_SENTINEL_<SCENARIO>` value in evidence. With one draft key indicator, every fixture has exactly 24 required fact paths.
 
 Scenario requirements:
 
 | Fixture | Fact/report state | Expected result |
 |---|---|---|
-| `normal.json` | candidate evidence from open, original, non-UNVERIFIED sources; passed checks; draft/false | valid, ready, no blockers |
-| `missing.json` | nullable `marketOverview.gdp` is null with a missing fact and listed missing field | valid, not ready, `MISSING_REQUIRED_FACT` |
-| `conflict.json` | two distinct source values for population, unresolved conflict, draft population null | valid, not ready, `UNRESOLVED_CONFLICT` |
-| `untrusted.json` | discovery-only or UNVERIFIED evidence plus confirmed injection risk, draft value null | valid, not ready, `UNTRUSTED_INPUT` |
+| `normal.json` | all 24 facts candidate; open original source and passed checks; draft/false | valid, ready, no blockers |
+| `missing.json` | all 24 paths; `marketOverview.gdp` is a missing fact and draft GDP is null | valid, not ready, only `MISSING_REQUIRED_FACT` |
+| `conflict.json` | all 24 paths; population has two source values and an unresolved conflict; draft population is null | valid, not ready, only `UNRESOLVED_CONFLICT` |
+| `untrusted.json` | all 24 paths; discovery-only/UNVERIFIED evidence and confirmed injection risk; affected draft value is null | valid, not ready, only `UNTRUSTED_INPUT` |
 
 Run the validator tests against the committed files and compare two reads with `toEqual()` to prove deterministic offline behavior.
 
@@ -579,6 +585,9 @@ git commit -m "test: add Basic collection audit fixtures"
 - [ ] No dependency, lockfile, Prisma, migration, real-country data, Web, AI-advisor, permission, or billing changes.
 - [ ] All unknown JSON is parsed from allowlisted own keys and reconstructed; no audit input object is forwarded by reference.
 - [ ] Structural validity and review readiness remain separate concepts.
+- [ ] Required fact coverage, candidate/draft deep equality, and passed source checks fail closed.
+- [ ] No-blocker conservative blocked/do-not-publish is valid; both no-blocker cross-pairings and every blocker-ready pairing are invalid.
+- [ ] `BASIC_COLLECTION_BLOCKER_CODES` is runtime-frozen and public mutation cannot affect classifier order.
 - [ ] Search-only, restricted/unknown, UNVERIFIED, and injection-risk inputs cannot become review-ready.
 - [ ] Conflict evidence is retained with no automatically selected value.
 - [ ] Draft output cannot be `published` and cannot set `aiUsable = true`.

@@ -25,6 +25,7 @@ import type {
   BasicSourceRegister,
 } from "./index.js";
 import * as database from "./index.js";
+import { createBasicCollectionAuditFixture } from "./basic-collection-test-fixture.js";
 import {
   BASIC_COLLECTION_AUDIT_SCHEMA_VERSION,
   BASIC_COLLECTION_BLOCKER_CODES,
@@ -60,6 +61,34 @@ describe("@navigator/db", () => {
       "MISSING_REQUIRED_FACT",
       "UNRESOLVED_CONFLICT",
       "UNTRUSTED_INPUT",
+    ]);
+  });
+
+  test("runtime-freezes the public Basic collection blocker codes", () => {
+    expect(Object.isFrozen(BASIC_COLLECTION_BLOCKER_CODES)).toBe(true);
+  });
+
+  test("throws on public blocker-code mutation and preserves classification", () => {
+    const mutableCodes = BASIC_COLLECTION_BLOCKER_CODES as unknown as string[];
+    const originalCode = mutableCodes[0];
+
+    try {
+      expect(() => {
+        mutableCodes[0] = "MUTATED_BY_CALLER";
+      }).toThrow(TypeError);
+    } finally {
+      if (!Object.isFrozen(BASIC_COLLECTION_BLOCKER_CODES)) {
+        mutableCodes[0] = originalCode!;
+      }
+    }
+
+    expect(BASIC_COLLECTION_BLOCKER_CODES[0]).toBe("MISSING_REQUIRED_FACT");
+    const bundle = createBasicCollectionAuditFixture();
+    bundle.extractedFacts.facts = [];
+    bundle.reviewReport.status = "blocked";
+    bundle.reviewReport.publicationRecommendation = "do-not-publish";
+    expect(validateBasicCollectionAuditBundle(bundle).blockers).toEqual([
+      "MISSING_REQUIRED_FACT",
     ]);
   });
 
