@@ -16,6 +16,9 @@ export const BASIC_HERMES_DISCOVERY_SCHEMA_VERSION =
 export const BASIC_HERMES_DISCOVERY_TIMEOUT_MS = 300_000;
 export const BASIC_HERMES_DISCOVERY_MAX_QUERIES = 20;
 export const BASIC_HERMES_DISCOVERY_MAX_RESULTS = 50;
+export const BASIC_LLAMA_DRAFT_TIMEOUT_MS = 120_000;
+export const BASIC_LLAMA_DRAFT_MAX_REQUEST_BYTES = 1_048_576;
+export const BASIC_LLAMA_DRAFT_MAX_RESPONSE_BYTES = 262_144;
 
 export interface BasicHermesDiscoveryRequest {
   countryCode: string;
@@ -84,6 +87,46 @@ export interface BasicHermesEvidencePromotionInput {
   base: BasicSourceAdapterRunResult;
   discovery: BasicHermesDiscoveryBatch;
   openedSources: readonly BasicHermesOpenedJsonSource[];
+}
+
+export interface BasicLlamaCppDraftRequest {
+  messages: readonly [{ role: "user"; content: string }];
+  stream: false;
+  temperature: 0;
+  chat_template_kwargs: { enable_thinking: false };
+  response_format: {
+    type: "json_schema";
+    schema: Readonly<Record<string, unknown>>;
+  };
+}
+
+export interface BasicDraftModelPort {
+  complete(request: BasicLlamaCppDraftRequest): Promise<unknown>;
+}
+
+export interface BasicLlamaCppFetchResponse {
+  readonly status: number;
+  readonly redirected: boolean;
+  readonly headers: { get(name: string): string | null };
+  readonly body: ReadableStream<Uint8Array> | null;
+}
+
+export type BasicLlamaCppFetch = (
+  url: string,
+  init: {
+    method: "POST";
+    headers: { "Content-Type": "application/json"; Accept: "application/json" };
+    body: string;
+    redirect: "error";
+    signal: AbortSignal;
+  },
+) => Promise<BasicLlamaCppFetchResponse>;
+
+export interface BasicLlamaCppTransportOptions {
+  baseUrl: string;
+  model: string;
+  timeoutMs?: number;
+  fetchImpl: BasicLlamaCppFetch;
 }
 
 export type BasicBridgeErrorCode =
