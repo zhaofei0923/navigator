@@ -1,15 +1,33 @@
+import { readFileSync } from "node:fs";
+
 import type {
   BasicCollectionAuditBundle,
   BasicCollectionReviewReport,
   BasicExtractedFacts,
 } from "./collection/basic-collection-contracts.js";
 import { BASIC_COLLECTION_AUDIT_SCHEMA_VERSION } from "./collection/basic-collection-contracts.js";
+import { validateBasicCollectionAuditBundle } from "./collection/basic-collection-validator.js";
 
 export type BasicCollectionFixtureScenario =
   | "normal"
   | "missing"
   | "conflict"
   | "untrusted";
+
+export function readBasicCollectionAuditFixture(
+  scenario: BasicCollectionFixtureScenario,
+): BasicCollectionAuditBundle {
+  const fixtureUrl = new URL(
+    `../fixtures/basic-collection/${scenario}.json`,
+    import.meta.url,
+  );
+  const fixture = JSON.parse(readFileSync(fixtureUrl, "utf8")) as unknown;
+  const result = validateBasicCollectionAuditBundle(fixture);
+  if (!result.valid) {
+    throw new Error(result.errors.join("\n"));
+  }
+  return result.data;
+}
 
 export function createBasicCollectionAuditFixture(
   scenario: BasicCollectionFixtureScenario = "normal",
