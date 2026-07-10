@@ -52,6 +52,7 @@ describe("Basic immutable raw capture", () => {
       byteLength: BODY.byteLength,
       reused: false,
       body: BODY,
+      redirectChain: [],
     });
     expect(readFileSync(payloadPath(repoRoot))).toEqual(Buffer.from(BODY));
     expect(readManifest(repoRoot)).toEqual({
@@ -78,6 +79,39 @@ describe("Basic immutable raw capture", () => {
         contentSha256: CONTENT_SHA256,
       },
     });
+  });
+
+  test("returns fresh frozen redirect provenance for new and cached captures", async () => {
+    const repoRoot = createRepoRoot();
+    const originalUrl = "https://api.worldbank.org/v2/country/VN?format=json";
+    const redirectChain = [
+      "https://api.worldbank.org/v2/country/VN/redirect?format=json",
+      originalUrl,
+    ];
+    const first = await captureBasicRawSource(input(repoRoot), {
+      async execute() {
+        return { ...response(BODY), finalUrl: originalUrl, redirectChain };
+      },
+    });
+
+    expect(first.redirectChain).toEqual(redirectChain);
+    expect(first.redirectChain).not.toBe(redirectChain);
+    expect(Object.isFrozen(first.redirectChain)).toBe(true);
+    redirectChain[0] = "https://api.worldbank.org/mutated?format=json";
+    expect(first.redirectChain).toEqual([
+      "https://api.worldbank.org/v2/country/VN/redirect?format=json",
+      originalUrl,
+    ]);
+
+    const cached = await captureBasicRawSource(input(repoRoot), {
+      async execute() {
+        throw new Error("cache reuse must not fetch");
+      },
+    });
+
+    expect(cached).toMatchObject({ reused: true, redirectChain: first.redirectChain });
+    expect(cached.redirectChain).not.toBe(first.redirectChain);
+    expect(Object.isFrozen(cached.redirectChain)).toBe(true);
   });
 
   test("does not expose the final source directory before complete publication", async () => {
@@ -162,6 +196,7 @@ describe("Basic immutable raw capture", () => {
       finalUrl: "https://api.worldbank.org/v2/country/VN?format=json",
       contentType: "application/json",
       retrievedAt: "2026-07-10T09:40:00.000Z",
+      redirectChain: [],
     });
     expect(JSON.stringify(readManifest(repoRoot))).not.toContain(
       METADATA_SENTINEL,
@@ -272,8 +307,13 @@ describe("Basic immutable raw capture", () => {
 
   test.each([
     ["countryCode", "../VN"],
+    ["countryCode", " VN "],
     ["runId", "../run"],
+    ["runId", " run-20260710 "],
     ["sourceId", "WORLD_BANK"],
+    ["sourceId", " world-bank-country "],
+    ["adapterId", " world-bank-country "],
+    ["adapterVersion", " 1.0.0 "],
   ] as const)("rejects unsafe %s before transport", async (key, value) => {
     const repoRoot = createRepoRoot();
     let calls = 0;

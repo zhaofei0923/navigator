@@ -1,4 +1,7 @@
 import { createHash } from "node:crypto";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import { describe, expect, test } from "vitest";
 
@@ -9,6 +12,8 @@ import {
   BASIC_HERMES_DISCOVERY_SCHEMA_VERSION,
 } from "./collection/basic-hermes-llama-contracts.js";
 import { promoteBasicHermesJsonEvidence } from "./collection/basic-hermes-json-evidence.js";
+import { captureBasicRawSource } from "./collection/basic-raw-capture.js";
+import type { BasicSourceTransport } from "./collection/basic-source-adapter-contracts.js";
 
 const RUN_ID = "run-hermes-evidence-1";
 const COUNTRY_CODE = "ID";
@@ -93,7 +98,7 @@ function base(): Record<string, unknown> {
       runId: RUN_ID,
       countryCode: COUNTRY_CODE,
       facts: [{
-        factId: "fact-base-code",
+        factId: `fact-${createHash("sha256").update("country.code", "utf8").digest("hex").slice(0, 16)}`,
         fieldPath: "country.code",
         status: "candidate",
         evidence: [{
@@ -143,6 +148,7 @@ function capture(overrides: Record<string, unknown> = {}): Record<string, unknow
     reused: false,
     body: captured,
     finalUrl: JSON_URL,
+    redirectChain: [],
     contentType: "application/json; charset=utf-8",
     retrievedAt: "2026-07-10T09:45:00.000Z",
     ...overrides,
@@ -181,6 +187,45 @@ function input(overrides: Record<string, unknown> = {}): Record<string, unknown>
   };
 }
 
+function baseRecords(value: Record<string, unknown>): {
+  source: Record<string, unknown>;
+  fact: Record<string, unknown>;
+  receipt: Record<string, unknown>;
+} {
+  const baseValue = value.base as Record<string, unknown>;
+  const register = baseValue.sourceRegister as Record<string, unknown>;
+  const extracted = baseValue.extractedFacts as Record<string, unknown>;
+  return {
+    source: (register.sources as Record<string, unknown>[])[0]!,
+    fact: (extracted.facts as Record<string, unknown>[])[0]!,
+    receipt: (baseValue.receipts as Record<string, unknown>[])[0]!,
+  };
+}
+
+function baseOnly(
+  mutate: (source: Record<string, unknown>, fact: Record<string, unknown>) => void,
+): Record<string, unknown> {
+  const value = input({ openedSources: [] });
+  const { source, fact } = baseRecords(value);
+  mutate(source, fact);
+  return value;
+}
+
+function deterministicConflictBase(): Record<string, unknown> {
+  const value = baseOnly(() => undefined);
+  const { source, fact, receipt } = baseRecords(value);
+  const baseValue = value.base as Record<string, unknown>;
+  const register = baseValue.sourceRegister as Record<string, unknown>;
+  const sources = register.sources as Record<string, unknown>[];
+  const receipts = baseValue.receipts as Record<string, unknown>[];
+  const evidence = fact.evidence as Record<string, unknown>[];
+  sources.push({ ...source, sourceId: "base-source-2", sourceUrl: "https://base-two.example/source" });
+  receipts.push({ ...receipt, sourceId: "base-source-2" });
+  evidence.push({ ...evidence[0]!, sourceId: "base-source-2", rawValue: "MY", normalizedValue: "MY" });
+  fact.status = "conflict";
+  return value;
+}
+
 function expectFailure(value: unknown) {
   const result = promoteBasicHermesJsonEvidence(value);
   expect(result.ok).toBe(false);
@@ -208,6 +253,166 @@ describe("Hermes JSON evidence promotion", () => {
     expect(Object.isFrozen(result.data)).toBe(true);
     expect(Object.isFrozen(result.data.sourceRegister.sources[1])).toBe(true);
     expect(Object.isFrozen(result.data.extractedFacts.facts[1]!.evidence)).toBe(true);
+  });
+
+  test("preserves a verified A-to-B-to-A raw redirect chain but refuses its promotion", async () => {
+    const repoRoot = mkdtempSync(join(tmpdir(), "basic-hermes-redirect-"));
+    const redirectUrl = "https://redirect.example/data?format=json";
+    const verifiedChain = [redirectUrl, JSON_URL];
+    const captured = body();
+    const rawInput = {
+      repoRoot,
+      countryCode: COUNTRY_CODE,
+      runId: RUN_ID,
+      adapterId: "hermes-json",
+      adapterVersion: "1.0.0",
+      sourceId: "hermes-source",
+      request: {
+        method: "GET" as const,
+        url: JSON_URL,
+        accept: "application/json",
+        allowedOrigins: ["https://example.com", "https://redirect.example"],
+        allowedQueryParameters: ["format"],
+      },
+    };
+    const transport: BasicSourceTransport = {
+      async execute() {
+        return {
+          status: 200,
+          finalUrl: JSON_URL,
+          redirectChain: verifiedChain,
+          contentType: "application/json",
+          retrievedAt: "2026-07-10T09:45:00.000Z",
+          body: chunks(captured),
+        };
+      },
+    };
+
+    try {
+      const first = await captureBasicRawSource(rawInput, transport);
+      expect(first.redirectChain).toEqual([redirectUrl, JSON_URL]);
+      expect(first.redirectChain).not.toBe(verifiedChain);
+      expect(Object.isFrozen(first.redirectChain)).toBe(true);
+      verifiedChain[0] = "https://mutated.example/data?format=json";
+      expect(first.redirectChain).toEqual([redirectUrl, JSON_URL]);
+
+      const cached = await captureBasicRawSource(rawInput, {
+        async execute() {
+          throw new Error("verified cache reuse must not execute transport");
+        },
+      });
+      expect(cached).toMatchObject({ reused: true, redirectChain: [redirectUrl, JSON_URL] });
+      expect(cached.redirectChain).not.toBe(first.redirectChain);
+      expect(Object.isFrozen(cached.redirectChain)).toBe(true);
+
+      expect(expectFailure(input({ openedSources: [opened({ capture: first })] }))).toEqual({
+        code: "SOURCE_CAPTURE_INVALID",
+        phase: "source",
+        retryable: false,
+      });
+    } finally {
+      rmSync(repoRoot, { recursive: true, force: true });
+    }
+  });
+
+  test.each([
+    ["application/json", true],
+    ["application/problem+json", true],
+    ["application/vnd.hermes+json; charset=utf-8", true],
+    ["application/json; charset=\"utf-8\"", true],
+    ["x+json", false],
+    ["+json", false],
+    ["application/+json", false],
+    ["application/", false],
+    ["/json", false],
+    ["application /json", false],
+    ["application/json; char set=utf-8", false],
+    ["application/json;", false],
+  ])("accepts only complete JSON capture media types: %s", (contentType, accepted) => {
+    const result = promoteBasicHermesJsonEvidence(input({
+      openedSources: [opened({ capture: capture({ contentType }) })],
+    }));
+    expect(result.ok).toBe(accepted);
+  });
+
+  test("requires the exact P1-6C capture shape to include an empty redirect chain", () => {
+    const missingChain = capture();
+    delete missingChain.redirectChain;
+    expect(expectFailure(input({ openedSources: [opened({ capture: missingChain })] }))).toEqual({
+      code: "SOURCE_CAPTURE_INVALID",
+      phase: "source",
+      retryable: false,
+    });
+  });
+
+  test.each([
+    ["HTTP source URL", (source: Record<string, unknown>, _fact: Record<string, unknown>) => { source.sourceUrl = "http://base.example/source"; }],
+    ["credential source URL", (source: Record<string, unknown>, _fact: Record<string, unknown>) => { source.sourceUrl = "https://user:password@base.example/source"; }],
+    ["whitespace source URL", (source: Record<string, unknown>, _fact: Record<string, unknown>) => { source.sourceUrl = " https://base.example/source "; }],
+    ["restricted source", (source: Record<string, unknown>, _fact: Record<string, unknown>) => { source.accessStatus = "restricted"; }],
+    ["discovery-only source", (source: Record<string, unknown>, _fact: Record<string, unknown>) => { source.discoveryOnly = true; }],
+    ["Hermes base fact method", (_source: Record<string, unknown>, fact: Record<string, unknown>) => { fact.extractionMethod = "hermes"; }],
+    ["manual base fact method", (_source: Record<string, unknown>, fact: Record<string, unknown>) => { fact.extractionMethod = "manual"; }],
+    ["missing base fact status", (_source: Record<string, unknown>, fact: Record<string, unknown>) => { fact.status = "missing"; fact.evidence = []; }],
+    ["untrusted base fact status", (_source: Record<string, unknown>, fact: Record<string, unknown>) => { fact.status = "untrusted"; }],
+    ["wrong P1-6B fact ID", (_source: Record<string, unknown>, fact: Record<string, unknown>) => { fact.factId = "fact-not-a-field-hash"; }],
+    ["whitespace base fact path", (_source: Record<string, unknown>, fact: Record<string, unknown>) => { fact.fieldPath = " country.code "; }],
+  ] as const)("rejects a base result with %s", (_label, mutate) => {
+    expect(expectFailure(baseOnly(mutate)).code).toBe("EVIDENCE_INVALID");
+  });
+
+  test("rejects whitespace base source identities without normalizing receipts or evidence", () => {
+    const value = baseOnly(() => undefined);
+    const { source, fact, receipt } = baseRecords(value);
+    source.sourceId = " base-source ";
+    receipt.sourceId = " base-source ";
+    (fact.evidence as Record<string, unknown>[])[0]!.sourceId = " base-source ";
+
+    expect(expectFailure(value).code).toBe("EVIDENCE_INVALID");
+  });
+
+  test.each([
+    ["candidate", baseOnly(() => undefined)],
+    ["conflict", deterministicConflictBase()],
+  ] as const)("accepts a deterministic P1-6B %s base", (_label, baseValue) => {
+    expect(promoteBasicHermesJsonEvidence(baseValue)).toMatchObject({ ok: true });
+  });
+
+  test.each([
+    ["UNVERIFIED credibility", (source: Record<string, unknown>) => { source.credibility = "UNVERIFIED"; }],
+    ["suspected injection risk", (source: Record<string, unknown>) => { source.promptInjectionRisk = "suspected"; }],
+    ["confirmed injection risk", (source: Record<string, unknown>) => { source.promptInjectionRisk = "confirmed"; }],
+  ] as const)("accepts genuine P1-6B base metadata with %s", (_label, mutate) => {
+    const value = baseOnly((source) => mutate(source));
+    expect(promoteBasicHermesJsonEvidence(value)).toMatchObject({ ok: true });
+  });
+
+  test.each([
+    ["policy source ID", () => input({ openedSources: [opened({ policy: policy({ sourceId: " hermes-source " }), capture: capture({ sourceId: " hermes-source " }) })] })],
+    ["policy URL", () => input({ openedSources: [opened({ policy: policy({ sourceUrl: ` ${JSON_URL} ` }), capture: capture({ finalUrl: ` ${JSON_URL} ` }) })] })],
+    ["reviewed origin", () => input({ openedSources: [opened({ policy: policy({ approvedOrigins: [" https://example.com "] }) })] })],
+    ["reviewed query name", () => input({ openedSources: [opened({ policy: policy({ allowedQueryParameters: [" format "] }) })] })],
+    ["observation field path", () => input({ openedSources: [opened({ observations: [observation({ fieldPath: " marketOverview.population " })] })] })],
+    ["observation JSON pointer", () => input({ openedSources: [opened({ observations: [observation({ locator: " json:/facts/0/value " })] })] })],
+  ] as const)("rejects surrounding whitespace in %s instead of normalizing it", (_label, create) => {
+    expect(expectFailure(create()).code).toMatch(/SOURCE_CAPTURE_INVALID|EVIDENCE_INVALID/);
+  });
+
+  test("preserves nonblank human-readable policy strings and uncertainty exactly", () => {
+    const result = promoteBasicHermesJsonEvidence(input({
+      openedSources: [opened({
+        policy: policy({ sourceName: " Reviewed portal ", accessNotes: " Reviewed access note " }),
+        observations: [observation({ uncertainty: " reported " })],
+      })],
+    }));
+
+    expect(result).toMatchObject({ ok: true });
+    if (!result.ok) return;
+    expect(result.data.sourceRegister.sources[1]).toMatchObject({
+      sourceName: " Reviewed portal ",
+      accessNotes: " Reviewed access note ",
+    });
+    expect(result.data.extractedFacts.facts[1]?.uncertainty).toBe(" reported ");
   });
 
   test("drops discovery text, raw bodies, cache paths, policies, and AI or canonical fields", () => {
@@ -439,3 +644,7 @@ describe("Hermes JSON evidence promotion", () => {
     expect(() => { result.data.sourceRegister.sources[1]!.sourceName = "nope"; }).toThrow();
   });
 });
+
+async function* chunks(value: Uint8Array): AsyncIterable<Uint8Array> {
+  yield value;
+}

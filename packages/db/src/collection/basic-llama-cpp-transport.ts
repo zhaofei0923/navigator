@@ -1,5 +1,6 @@
 import { isProxy } from "node:util/types";
 import { BasicCollectionBridgeError } from "./basic-collection-bridge-error.js";
+import { isBasicJsonContentType } from "./basic-json-content-type.js";
 import {
   BASIC_LLAMA_DRAFT_MAX_REQUEST_BYTES,
   BASIC_LLAMA_DRAFT_MAX_RESPONSE_BYTES,
@@ -140,7 +141,7 @@ function readResponseMetadata(response: unknown): ReadableStream<Uint8Array> {
     const get = dataMethod(headers, "get");
     if (get === null) throw RESPONSE_INVALID;
     const contentType: unknown = Reflect.apply(get, headers, ["content-type"]);
-    if (typeof contentType !== "string" || !isJsonContentType(contentType)) throw RESPONSE_INVALID;
+    if (typeof contentType !== "string" || !isBasicJsonContentType(contentType)) throw RESPONSE_INVALID;
     return body as ReadableStream<Uint8Array>;
   } catch { throw RESPONSE_INVALID; }
 }
@@ -280,10 +281,6 @@ function completionUrl(baseUrl: string): string | null {
   return match !== null && Number(match[1]) <= 65_535 ? `${baseUrl}/chat/completions` : null;
 }
 function isSafeModelAlias(value: string): boolean { return /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(value); }
-function isJsonContentType(value: string): boolean {
-  const mediaType = value.split(";", 1)[0]?.trim().toLowerCase();
-  return mediaType === "application/json" || mediaType?.endsWith("+json") === true;
-}
 function joinChunks(chunks: readonly Uint8Array[], length: number): Uint8Array {
   const result = new Uint8Array(length);
   let offset = 0;

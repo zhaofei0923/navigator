@@ -203,7 +203,7 @@ function parseObservation(value: unknown): BasicDeterministicObservation {
     normalizedValue,
     unit: value.unit,
     year: value.year,
-    uncertainty: value.uncertainty === null ? null : value.uncertainty.trim(),
+    uncertainty: value.uncertainty,
   };
 }
 function reconstructJson(

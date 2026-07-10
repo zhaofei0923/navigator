@@ -272,6 +272,7 @@ function modelFailure(error: unknown): { ok: false; error: BasicBridgeFailure } 
     if (prototype === null || isProxy(prototype) || prototype !== BasicCollectionBridgeError.prototype) return unavailable();
     const descriptor = Object.getOwnPropertyDescriptor(error, "message");
     if (descriptor === undefined || descriptor.enumerable || !Object.hasOwn(descriptor, "value")) return unavailable();
+    if (descriptor.value === "P1-6C bridge failed: INPUT_INVALID") return failed("INPUT_INVALID", "llama", false);
     if (descriptor.value === "P1-6C bridge failed: LLAMA_TIMEOUT") return failed("LLAMA_TIMEOUT", "llama", true);
     if (descriptor.value === "P1-6C bridge failed: LLAMA_UNAVAILABLE") return unavailable();
     if (descriptor.value === "P1-6C bridge failed: LLAMA_RESPONSE_INVALID") return failed("LLAMA_RESPONSE_INVALID", "llama", false);

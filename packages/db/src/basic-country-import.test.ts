@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { rmSync } from "node:fs";
 
 import { afterEach, describe, expect, test, vi } from "vitest";
@@ -190,10 +191,14 @@ describe("Basic country import plan", () => {
     expect(discoveryResult.ok).toBe(true);
     if (!discoveryResult.ok) throw new Error("runtime discovery fixture must succeed");
 
+    const promotionFacts = structuredClone(bridgeFixture.extractedFacts);
+    for (const fact of promotionFacts.facts) {
+      fact.factId = `fact-${createHash("sha256").update(fact.fieldPath, "utf8").digest("hex").slice(0, 16)}`;
+    }
     const promotionResult = promoteBasicHermesJsonEvidence({
       base: {
         sourceRegister: structuredClone(bridgeFixture.sourceRegister),
-        extractedFacts: structuredClone(bridgeFixture.extractedFacts),
+        extractedFacts: promotionFacts,
         receipts: bridgeFixture.sourceRegister.sources.map((source) => ({
           sourceId: source.sourceId,
           contentSha256: source.contentSha256,
@@ -281,6 +286,7 @@ describe("Basic country import plan", () => {
       "contentSha256",
       "contentType",
       "finalUrl",
+      "redirectChain",
       "retrievedAt",
       "reused",
       "sourceId",

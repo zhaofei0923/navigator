@@ -15,6 +15,7 @@ import type {
   BasicMarketOverviewDraft,
 } from "./collection/basic-collection-contracts.js";
 import {
+  BASIC_LLAMA_DRAFT_MAX_REQUEST_BYTES,
   BASIC_LLAMA_DRAFT_OPERATION,
   BASIC_LLAMA_DRAFT_PROTOCOL_VERSION,
   type BasicBridgeFailure,
@@ -22,6 +23,7 @@ import {
   type BasicDraftModelPort,
   type BasicLlamaCppDraftRequest,
 } from "./collection/basic-hermes-llama-contracts.js";
+import { createBasicLlamaCppDraftTransport } from "./collection/basic-llama-cpp-transport.js";
 import { bridgeBasicMarketOverviewDraft } from "./collection/basic-llama-draft-bridge.js";
 
 const LOCALIZED_SCHEMA = {
@@ -620,6 +622,7 @@ describe("bridgeBasicMarketOverviewDraft preflight", () => {
 
 describe("bridgeBasicMarketOverviewDraft model and output failures", () => {
   test.each([
+    [new BasicCollectionBridgeError("INPUT_INVALID"), { code: "INPUT_INVALID", phase: "llama", retryable: false }],
     [new BasicCollectionBridgeError("LLAMA_TIMEOUT"), { code: "LLAMA_TIMEOUT", phase: "llama", retryable: true }],
     [new BasicCollectionBridgeError("LLAMA_UNAVAILABLE"), { code: "LLAMA_UNAVAILABLE", phase: "llama", retryable: true }],
     [new BasicCollectionBridgeError("LLAMA_RESPONSE_INVALID"), { code: "LLAMA_RESPONSE_INVALID", phase: "llama", retryable: false }],
@@ -629,6 +632,30 @@ describe("bridgeBasicMarketOverviewDraft model and output failures", () => {
     value.input.model = { async complete() { throw error; } };
     await expectFailure(value.input, failure);
     expect(value.requests).toHaveLength(0);
+  });
+
+  test("maps a real oversized grounded transport request to nonretryable input invalid without fetching", async () => {
+    const value = createCase();
+    changeExpected(value, "marketOverview.overview", {
+      zh: "x".repeat(BASIC_LLAMA_DRAFT_MAX_REQUEST_BYTES + 1),
+      en: "",
+    });
+    let fetchCalls = 0;
+    value.input.model = createBasicLlamaCppDraftTransport({
+      baseUrl: "http://127.0.0.1:8080/v1",
+      model: "qwen35b",
+      fetchImpl: async () => {
+        fetchCalls += 1;
+        throw new Error("oversized request must not fetch");
+      },
+    });
+
+    await expectFailure(value.input, {
+      code: "INPUT_INVALID",
+      phase: "llama",
+      retryable: false,
+    });
+    expect(fetchCalls).toBe(0);
   });
 
   test("catches synchronous model throws", async () => {

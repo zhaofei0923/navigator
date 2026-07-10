@@ -465,12 +465,33 @@ describe("Basic llama.cpp draft transport", () => {
     }).complete(REQUEST)).resolves.toEqual({ ok: true });
   });
 
-  test("accepts structured JSON media types", async () => {
-    await expect(createBasicLlamaCppDraftTransport({
+  test.each([
+    ["application/json", true],
+    ["application/problem+json", true],
+    ["application/vnd.llama+json; charset=utf-8", true],
+    ["application/json; charset=\"utf-8\"", true],
+    ["x+json", false],
+    ["+json", false],
+    ["application/+json", false],
+    ["application/", false],
+    ["/json", false],
+    ["application /json", false],
+    ["application/json; char set=utf-8", false],
+    ["application/json;", false],
+  ])("accepts only complete JSON media types: %s", async (contentType, accepted) => {
+    const transport = createBasicLlamaCppDraftTransport({
       baseUrl: URL,
       model: "qwen35b",
-      fetchImpl: createFetch([jsonResponse({ ok: true }, 200, { contentType: "application/vnd.llama+json; charset=utf-8" })]),
-    }).complete(REQUEST)).resolves.toEqual({ ok: true });
+      fetchImpl: createFetch([jsonResponse({ ok: true }, 200, { contentType })]),
+    });
+
+    if (accepted) {
+      await expect(transport.complete(REQUEST)).resolves.toEqual({ ok: true });
+    } else {
+      await expect(transport.complete(REQUEST)).rejects.toMatchObject({
+        message: "P1-6C bridge failed: LLAMA_RESPONSE_INVALID",
+      });
+    }
   });
 
   test("returns valid JSON null without interpreting provider semantics", async () => {

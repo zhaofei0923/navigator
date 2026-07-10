@@ -251,6 +251,47 @@ describe("Basic source transport", () => {
       "source response content type is not allowed",
     );
   });
+
+  test.each([
+    ["application/json", true],
+    ["application/problem+json", true],
+    ["application/vnd.source+json; charset=utf-8", true],
+    ["application/json; charset=\"utf-8\"", true],
+    ["x+json", false],
+    ["+json", false],
+    ["application/+json", false],
+    ["application/", false],
+    ["/json", false],
+    ["application /json", false],
+    ["application/json; char set=utf-8", false],
+    ["application/json;", false],
+  ])("accepts only complete JSON media types: %s", async (contentType, accepted) => {
+    const transport = createBasicSourceTransport(
+      createFetch([response(200, { "content-type": contentType })]),
+    );
+
+    if (accepted) {
+      await expect(transport.execute(REQUEST)).resolves.toMatchObject({ contentType });
+    } else {
+      await expect(transport.execute(REQUEST)).rejects.toThrow(
+        "source response content type is not allowed",
+      );
+    }
+  });
+
+  test.each([
+    ["URL", { ...REQUEST, url: ` ${REQUEST.url} ` }],
+    ["origin", { ...REQUEST, allowedOrigins: [` ${REQUEST.allowedOrigins[0]} `] }],
+    ["query name", { ...REQUEST, allowedQueryParameters: [" format "] }],
+  ])("rejects request %s with surrounding whitespace", async (_label, request) => {
+    const transport = createBasicSourceTransport(
+      createFetch([response(200, { "content-type": "application/json" })]),
+    );
+
+    await expect(transport.execute(request)).rejects.toThrow(
+      "source request URL is not allowed",
+    );
+  });
 });
 
 function createFetch(

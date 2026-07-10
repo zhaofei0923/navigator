@@ -214,7 +214,7 @@ function denseValues(value: unknown): readonly unknown[] | null {
 }
 
 export function canonicalBasicHermesDiscoveryUrl(value: unknown): string | null | "forbidden" {
-  if (typeof value !== "string") return null;
+  if (typeof value !== "string" || value !== value.trim()) return null;
   try {
     const url = new URL(value);
     if (url.protocol !== "https:" || url.username !== "" || url.password !== "" || isForbiddenLiteralAddress(url.hostname)) return "forbidden";

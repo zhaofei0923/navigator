@@ -284,6 +284,7 @@ function evidencePromotionInput(
         reused: false,
         body: rawBody,
         finalUrl: SOURCE_URL,
+        redirectChain: [],
         contentType: "application/json",
         retrievedAt: "2026-07-10T09:45:00.000Z",
       },
@@ -343,7 +344,7 @@ function baseAdapterResult(): Record<string, unknown> {
       runId: RUN_ID,
       countryCode: COUNTRY_CODE,
       facts: [{
-        factId: "fact-base-code",
+        factId: `fact-${createHash("sha256").update("country.code", "utf8").digest("hex").slice(0, 16)}`,
         fieldPath: "country.code",
         status: "candidate",
         evidence: [{
