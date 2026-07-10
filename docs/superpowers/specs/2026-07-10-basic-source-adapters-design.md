@@ -197,9 +197,10 @@ An adapter output with zero observations is rejected and produces no source-regi
 
 Observations are grouped by field path in stable lexical order. Equality and conflict use the tuple `(normalizedValue, unit, year)`, where JSON objects compare by recursively sorted own keys, arrays preserve order, numbers use `Object.is`, and all other scalars compare by type and value:
 
-- equal tuples produce one `candidate` fact with all evidence;
-- differing tuples produce one `conflict` fact with all evidence, even when only unit or year differs;
-- no value is guessed or selected;
+- Equal tuples from one or more `sourceId` values produce one `candidate` fact with all evidence.
+- Differing tuples from at least two distinct `sourceId` values produce one `conflict` fact with all evidence, even when only unit or year differs.
+- Differing tuples within one `sourceId` are malformed adapter output and fail closed; the runner neither selects a value nor fabricates another source.
+- Every `conflict` fact therefore contains evidence from at least two distinct `sourceId` values.
 - every emitted fact uses `extractionMethod = "deterministic"`.
 
 Evidence is sorted by `sourceId`, `locator`, canonical raw JSON, canonical normalized JSON, unit (`null` before text), then year (`null` before number). A fact's `uncertainty` is the lexically sorted set of distinct non-null, trimmed observation uncertainties joined with `" | "`, or `null` when the set is empty. The exact fact ID is `fact-` plus the first 16 lowercase hexadecimal characters of SHA-256 over the UTF-8 field path. Duplicate adapter source IDs are rejected before any cache or network work.

@@ -100,7 +100,14 @@ source register 的 `sourceUrl` 保留原始请求 URL；最终 URL 和重定向
 
 每个 observation 必须使用 P1-6A allowlisted canonical field path 和非空 locator。runner 必须验证每个 locator **恰好匹配** 被引用 source record 的 `evidenceLocators` 数组中的一个定位符。每个 `extracted-facts` `fieldPath` 最多出现一次；同一字段的多来源证据必须合并到该唯一事实的 `evidence` 中。
 
-runner 按 field path 的稳定字典序分组 observation。比较和冲突使用 `(normalizedValue, unit, year)` tuple：对象递归按排序后的 own keys 比较，数组保留顺序，数值使用 `Object.is`，其他标量比较类型和值。tuple 相同生成一个 `candidate` fact 并保留全部 evidence；tuple 不同生成一个 `conflict` fact 并保留全部 evidence，即使差异只在 unit 或 year；不得猜测或自动选择任何冲突值；所有 runner 生成的 fact 使用 `extractionMethod = "deterministic"`。
+runner 按 field path 的稳定字典序分组 observation。比较和冲突使用 `(normalizedValue, unit, year)` tuple：对象递归按排序后的 own keys 比较，数组保留顺序，数值使用 `Object.is`，其他标量比较类型和值。物化规则固定为：
+
+- Equal tuples from one or more `sourceId` values produce one `candidate` fact with all evidence.
+- Differing tuples from at least two distinct `sourceId` values produce one `conflict` fact with all evidence.
+- Differing tuples within one `sourceId` are malformed adapter output and fail closed; the runner neither selects a value nor fabricates another source.
+- Every `conflict` fact therefore contains evidence from at least two distinct `sourceId` values.
+
+所有 runner 生成的 fact 使用 `extractionMethod = "deterministic"`。
 
 evidence 按 `sourceId`、`locator`、canonical raw JSON、canonical normalized JSON、unit（`null` 在文本前）和 year（`null` 在数字前）稳定排序。fact 的 `uncertainty` 是去重、trim 后非空 uncertainty 的字典序拼接，以 `" | "` 分隔；没有时为 `null`。`factId` 固定为 `fact-` 加上 field path UTF-8 字节 SHA-256 的前 16 个小写十六进制字符。
 

@@ -17,7 +17,10 @@
 - Raw bytes remain under `.cache/basic-country/<ISO2>/<runId>/raw/`, are content-addressed and immutable, and never enter staging JSON, canonical imports, C-end responses, coverage counts, or AI retrieval.
 - `sourceUrl` preserves the original request URL. Redirect and final-URL metadata is local-only in `capture.json`.
 - Every fact path is P1-6A allowlisted; every raw/normalized value is reconstructed finite JSON; every evidence locator belongs to its registered source.
-- Observation equality uses `(normalizedValue, unit, year)`; equal tuples merge and differing tuples become a conflict. No code selects a conflicting value.
+- Equal tuples from one or more `sourceId` values produce one `candidate` fact with all evidence.
+- Differing tuples from at least two distinct `sourceId` values produce one `conflict` fact with all evidence.
+- Differing tuples within one `sourceId` are malformed adapter output and fail closed; the runner neither selects a value nor fabricates another source.
+- Every `conflict` fact therefore contains evidence from at least two distinct `sourceId` values.
 - Observation-free adapter output is rejected. The runner fixes `accessStatus = "open"`, `discoveryOnly = false`, and `extractionMethod = "deterministic"`.
 - World Bank adapters are country-neutral and emit only source-supported fields. Missing translations and null indicators are not invented.
 - Every behavior change follows RED -> GREEN -> REFACTOR, each task is committed independently, and all production TypeScript files remain at or below 300 lines.
@@ -215,7 +218,7 @@ git commit -m "feat: add World Bank Basic source adapters"
 
 - [ ] **Step 1: Write failing materialization tests**
 
-Assert stable source/fact ordering, strict JSON reconstruction, unit/year/locator preservation, hardcoded `accessStatus: "open"`, `discoveryOnly: false`, and `extractionMethod: "deterministic"`. Use two fake adapters with equal tuples and then tuples differing separately by normalized value, unit, and year:
+Assert stable source/fact ordering, strict JSON reconstruction, unit/year/locator preservation, hardcoded `accessStatus: "open"`, `discoveryOnly: false`, and `extractionMethod: "deterministic"`. Use two fake adapters with equal tuples and then tuples differing separately by normalized value, unit, and year. Also assert that differing tuples emitted by one source fail closed rather than producing a `conflict`:
 
 ```ts
 expect(equal.facts[0]?.status).toBe("candidate");
@@ -227,7 +230,7 @@ Assert duplicate source IDs and observation-free output fail before a result is 
 
 - [ ] **Step 2: Implement the runner**
 
-Sort adapters by source ID before execution. Capture and extract each source, reconstruct observation JSON, derive sorted unique `evidenceLocators`, construct exact `BasicSourceRecord` values, then group observations by path. Compare `(normalizedValue, unit, year)` using canonical JSON with sorted object keys and ordered arrays. Sort evidence by source ID, locator, canonical raw value, canonical normalized value, unit, and year. Aggregate unique non-null uncertainties in lexical order joined by `" | "`. Generate `fact-${sha256(fieldPath).slice(0, 16)}` and never choose among differing tuples.
+Sort adapters by source ID before execution. Capture and extract each source, reconstruct observation JSON, derive sorted unique `evidenceLocators`, construct exact `BasicSourceRecord` values, then group observations by path. Compare `(normalizedValue, unit, year)` using canonical JSON with sorted object keys and ordered arrays. Equal tuples become a candidate; differing tuples become a conflict only when evidence references at least two distinct source IDs, while same-source differing tuples fail closed. Sort evidence by source ID, locator, canonical raw value, canonical normalized value, unit, and year. Aggregate unique non-null uncertainties in lexical order joined by `" | "`. Generate `fact-${sha256(fieldPath).slice(0, 16)}` and never choose among differing tuples or fabricate a source.
 
 - [ ] **Step 3: Tighten P1-6A mapping validation**
 
@@ -299,6 +302,6 @@ Expected: all commands exit 0. Do not run Web E2E because this slice has no Web 
 - [ ] Cache paths and local capture metadata are absent from source register, facts, import plans, and package results.
 - [ ] Unsafe paths, symlinks, URL credentials, unallowlisted or duplicate query names, disallowed origins, redirects, MIME types, status codes, and oversize responses fail closed without echoing URL or payload data.
 - [ ] World Bank adapters remain country-neutral and do not invent translations or null values.
-- [ ] Conflicting evidence remains a conflict and is not automatically selected.
+- [ ] Cross-source differing tuples remain a conflict and are not automatically selected; same-source differing tuples fail closed.
 - [ ] P1-6A normal/missing/conflict/untrusted fixtures retain their classifications.
 - [ ] Independent task reviews and a final whole-branch review have no Critical or Important findings.

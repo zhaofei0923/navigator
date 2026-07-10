@@ -212,7 +212,7 @@ describe("Basic deterministic source adapter runner", () => {
     string,
     Partial<BasicDeterministicObservation>,
     Partial<BasicDeterministicObservation>,
-  ]>)("preserves a conflict when only %s differs", async (_name, left, right) => {
+  ]>)("preserves a conflict from two sources when only %s differs", async (_name, left, right) => {
     const result = await runPair(left, right);
     const fact = result.extractedFacts.facts[0];
 
@@ -226,6 +226,25 @@ describe("Basic deterministic source adapter runner", () => {
       "status",
       "uncertainty",
     ]);
+  });
+
+  test("rejects differing tuples emitted by one source", async () => {
+    const error = await captureFailure(
+      runBasicDeterministicSourceAdapters({
+        repoRoot: createRepoRoot(),
+        countryCode: "XZ",
+        runId: "run-single-source-conflict",
+        adapters: [
+          adapter("source-single", [
+            observation({ locator: "table:first", normalizedValue: 101 }),
+            observation({ locator: "table:second", normalizedValue: 102 }),
+          ]),
+        ],
+        transport: transport([]),
+      }),
+    );
+
+    expect(error.message).toBe("source adapter materialization is invalid");
   });
 
   test("rejects duplicate source IDs before request or transport work", async () => {
@@ -298,6 +317,33 @@ describe("Basic deterministic source adapter runner", () => {
     );
 
     expect(error.message).toMatch(/source adapter (output|observation) is invalid/);
+    expect(error.message).not.toContain(PAYLOAD_SENTINEL);
+    expect(error.message).not.toContain(URL_SENTINEL);
+  });
+
+  test.each([
+    "extra string property",
+    "symbol property",
+    "every accessor",
+    "every function",
+  ] as const)("rejects a sparse JSON array with a compensating %s", async (kind) => {
+    const probe = { executions: 0 };
+    const unsafeAdapter = withOutput(
+      adapter("source-unsafe-array", [observation()]),
+      outputWithObservation({ rawValue: unsafeSparseArray(kind, probe) }),
+    );
+    const error = await captureFailure(
+      runBasicDeterministicSourceAdapters({
+        repoRoot: createRepoRoot(),
+        countryCode: "XZ",
+        runId: `run-unsafe-array-${kind.replaceAll(" ", "-")}`,
+        adapters: [unsafeAdapter],
+        transport: transport([]),
+      }),
+    );
+
+    expect(error.message).toBe("source adapter observation is invalid");
+    expect(probe.executions).toBe(0);
     expect(error.message).not.toContain(PAYLOAD_SENTINEL);
     expect(error.message).not.toContain(URL_SENTINEL);
   });
@@ -483,6 +529,27 @@ function symbolJsonOutput(): BasicDeterministicAdapterOutput {
   const rawValue: Record<PropertyKey, unknown> = { own: URL_SENTINEL };
   rawValue[Symbol("payload")] = PAYLOAD_SENTINEL;
   return outputWithObservation({ rawValue });
+}
+
+function unsafeSparseArray(
+  kind: "extra string property" | "symbol property" | "every accessor" | "every function",
+  probe: { executions: number },
+): unknown[] {
+  const value = new Array<unknown>(2);
+  value[0] = "safe";
+  const sentinel = `${PAYLOAD_SENTINEL} ${URL_SENTINEL}`;
+  const property = kind === "symbol property" ? Symbol("sentinel") :
+    kind === "extra string property" ? "extra" : "every";
+  const descriptor: PropertyDescriptor = kind === "every accessor"
+    ? { enumerable: true, get: () => { probe.executions += 1; throw new Error(sentinel); } }
+    : {
+        enumerable: true,
+        value: kind === "every function"
+          ? () => { probe.executions += 1; throw new Error(sentinel); }
+          : sentinel,
+      };
+  Object.defineProperty(value, property, descriptor);
+  return value;
 }
 
 function withOutput(

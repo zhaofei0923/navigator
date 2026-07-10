@@ -255,12 +255,8 @@ function materializeFacts(observations: readonly SourcedObservation[]): BasicExt
     };
   });
 }
-function toEvidence(item: SourcedObservation): BasicFactEvidence {
-  return { sourceId: item.sourceId, locator: item.locator, rawValue: item.rawValue, normalizedValue: item.normalizedValue, unit: item.unit, year: item.year };
-}
-function tupleKey(item: SourcedObservation): string {
-  return `${canonicalJson(item.normalizedValue)}\0${canonicalJson(item.unit)}\0${canonicalJson(item.year)}`;
-}
+function toEvidence(item: SourcedObservation): BasicFactEvidence { return { sourceId: item.sourceId, locator: item.locator, rawValue: item.rawValue, normalizedValue: item.normalizedValue, unit: item.unit, year: item.year }; }
+function tupleKey(item: SourcedObservation): string { return `${canonicalJson(item.normalizedValue)}\0${canonicalJson(item.unit)}\0${canonicalJson(item.year)}`; }
 function canonicalJson(value: BasicCollectionJsonValue): string {
   if (value === null) return "null";
   if (typeof value === "number") return Object.is(value, -0) ? "-0" : JSON.stringify(value);
@@ -274,9 +270,7 @@ function compareEvidence(left: BasicFactEvidence, right: BasicFactEvidence): num
     compareText(canonicalJson(left.normalizedValue), canonicalJson(right.normalizedValue)) ||
     compareNullableText(left.unit, right.unit) || compareNullableNumber(left.year, right.year);
 }
-function exactDataRecord(value: unknown, keys: readonly string[]): value is Record<string, unknown> {
-  return hasExactOwnKeys(value, keys) && dataKeys(value, keys);
-}
+function exactDataRecord(value: unknown, keys: readonly string[]): value is Record<string, unknown> { return hasExactOwnKeys(value, keys) && dataKeys(value, keys); }
 function dataKeys(value: object, keys: readonly PropertyKey[]): boolean {
   return keys.every((key) => {
     const descriptor = Object.getOwnPropertyDescriptor(value, key);
@@ -284,9 +278,17 @@ function dataKeys(value: object, keys: readonly PropertyKey[]): boolean {
   });
 }
 function isStandardArray(value: unknown): value is unknown[] {
-  return Array.isArray(value) && Object.getPrototypeOf(value) === Array.prototype &&
-    Reflect.ownKeys(value).length === value.length + 1 &&
-    value.every((_item, index) => Object.hasOwn(value, index) && dataKeys(value, [String(index)]));
+  if (!Array.isArray(value) || Object.getPrototypeOf(value) !== Array.prototype) return false;
+  const lengthDescriptor = Object.getOwnPropertyDescriptor(value, "length");
+  if (lengthDescriptor === undefined || lengthDescriptor.enumerable || !Object.hasOwn(lengthDescriptor, "value")) return false;
+  const length: unknown = lengthDescriptor.value;
+  if (typeof length !== "number" || !Number.isSafeInteger(length) || length < 0 ||
+    Reflect.ownKeys(value).length !== length + 1) return false;
+  for (let index = 0; index < length; index += 1) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+    if (descriptor === undefined || !descriptor.enumerable || !Object.hasOwn(descriptor, "value")) return false;
+  }
+  return true;
 }
 function isFieldPath(value: string): boolean { return FIELD_PATHS.has(value) || INDICATOR_PATH.test(value); }
 function isTimestamp(value: unknown): value is string { const errors: string[] = []; expectUtcRfc3339Timestamp(value, "timestamp", errors); return errors.length === 0; }
