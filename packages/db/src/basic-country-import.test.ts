@@ -1,6 +1,13 @@
 import { rmSync } from "node:fs";
 
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
+
+import {
+  BASIC_HERMES_DISCOVERY_SCHEMA_VERSION,
+  bridgeBasicMarketOverviewDraft,
+  promoteBasicHermesJsonEvidence,
+  runBasicHermesDiscovery,
+} from "./index.js";
 
 import { buildBasicCountryImportPlan } from "./seed/basic-country-import.js";
 import { loadBasicCountryBundle } from "./seed/basic-country-loader.js";
@@ -15,6 +22,7 @@ import {
   writeBasicCountryFiles,
 } from "./basic-country-test-fixture.js";
 import {
+  createBasicCollectionAuditFixture,
   readBasicCollectionAuditFixture,
   type BasicCollectionFixtureScenario,
 } from "./basic-collection-test-fixture.js";
@@ -23,6 +31,9 @@ import { captureBasicRawSource } from "./collection/basic-raw-capture.js";
 import type { BasicSourceTransport } from "./collection/basic-source-adapter-contracts.js";
 
 const RAW_CAPTURE_SENTINEL = "RAW_CAPTURE_SENTINEL_P1_6B";
+const HERMES_TITLE_SENTINEL = "SEARXNG_TITLE_SENTINEL";
+const HERMES_SNIPPET_SENTINEL = "SEARXNG_SNIPPET_SENTINEL";
+const RUNTIME_PATH_SENTINEL = "/repo/.cache/basic-country/data/staging/P1-6C-SENTINEL";
 const rawCacheIsolationRoots = new Set<string>();
 
 afterEach(() => {
@@ -30,6 +41,7 @@ afterEach(() => {
     rmSync(root, { recursive: true, force: true });
   }
   rawCacheIsolationRoots.clear();
+  vi.unstubAllGlobals();
 });
 
 describe("Basic country import plan", () => {
@@ -144,37 +156,104 @@ describe("Basic country import plan", () => {
     }
   });
 
-  test("does not consume P1-6C runtime artifacts while building the canonical import plan", () => {
+  test("does not consume real P1-6C runtime results while building the canonical import plan", async () => {
+    const globalFetch = vi.fn();
+    vi.stubGlobal("fetch", globalFetch);
     const baselineBundle = createValidBundle();
     const artifactBundle = createValidBundle();
-    const artifacts = asJsonRecord(artifactBundle.audit.run.sourceRegister);
-    artifacts.p1_6c = {
-      discovery: {
-        schemaVersion: "basic-hermes-discovery/v1",
-        title: "SEARXNG_TITLE_SENTINEL",
-        snippet: "SEARXNG_SNIPPET_SENTINEL",
-      },
-      promotedEvidence: {
-        rawBody: "RAW_CAPTURE_BODY_SENTINEL",
-        cachePath: ".cache/basic-country/ID/run-001",
-        stagingPath: "data/staging/indonesia/run-001",
-      },
-      draftBridge: {
-        providerExtras: "PROVIDER_EXTRAS_SENTINEL",
-        canonical: "CANONICAL_SENTINEL",
-        manifest: "MANIFEST_SENTINEL",
-        knowledge: "KNOWLEDGE_SENTINEL",
-        ai: "AI_SENTINEL",
-      },
+    const bridgeFixture = createBasicCollectionAuditFixture();
+    const providerDiscovery = {
+      schemaVersion: BASIC_HERMES_DISCOVERY_SCHEMA_VERSION,
+      runId: bridgeFixture.runId,
+      countryCode: bridgeFixture.sourceRegister.countryCode,
+      candidates: [{
+        discoveryId: "candidate-1",
+        provider: "searxng",
+        query: "Example market policy",
+        title: HERMES_TITLE_SENTINEL,
+        snippet: `${HERMES_SNIPPET_SENTINEL} ${RUNTIME_PATH_SENTINEL}`,
+        url: "https://example.com/runtime-result",
+        discoveredAt: "2026-07-10T09:40:00.000Z",
+        discoveryOnly: true,
+      }],
     };
+    const discoveryResult = await runBasicHermesDiscovery({
+      countryCode: bridgeFixture.sourceRegister.countryCode,
+      runId: bridgeFixture.runId,
+      queries: ["Example market policy"],
+      maxResults: 1,
+    }, {
+      async discover() {
+        return providerDiscovery;
+      },
+    });
+    expect(discoveryResult.ok).toBe(true);
+    if (!discoveryResult.ok) throw new Error("runtime discovery fixture must succeed");
+
+    const promotionResult = promoteBasicHermesJsonEvidence({
+      base: {
+        sourceRegister: structuredClone(bridgeFixture.sourceRegister),
+        extractedFacts: structuredClone(bridgeFixture.extractedFacts),
+        receipts: bridgeFixture.sourceRegister.sources.map((source) => ({
+          sourceId: source.sourceId,
+          contentSha256: source.contentSha256,
+          byteLength: 0,
+          reused: false,
+        })),
+      },
+      discovery: discoveryResult.data,
+      openedSources: [],
+    });
+    expect(promotionResult.ok).toBe(true);
+    if (!promotionResult.ok) throw new Error("runtime promotion fixture must succeed");
+
+    const bridgeResult = await bridgeBasicMarketOverviewDraft({
+      sourceRegister: structuredClone(bridgeFixture.sourceRegister),
+      extractedFacts: structuredClone(bridgeFixture.extractedFacts),
+      model: {
+        async complete() {
+          return {
+            providerExtra: "PROVIDER_RESULT_SENTINEL",
+            choices: [{
+              finish_reason: "stop",
+              message: { content: JSON.stringify(bridgeFixture.marketOverviewDraft) },
+            }],
+          };
+        },
+      },
+    });
+    expect(bridgeResult.ok).toBe(true);
+    if (!bridgeResult.ok) throw new Error("runtime draft bridge fixture must succeed");
+
+    const artifacts = asJsonRecord(artifactBundle.audit.run.sourceRegister);
+    artifacts.runtimeBridgeResults = {
+      hermesDiscoveryResult: discoveryResult,
+      hermesEvidencePromotionResult: promotionResult,
+      llamaDraftBridgeResult: bridgeResult,
+    };
+    expect(JSON.stringify(artifacts.runtimeBridgeResults)).toContain(
+      HERMES_TITLE_SENTINEL,
+    );
 
     const baselinePlan = buildBasicCountryImportPlan(baselineBundle);
     const artifactPlan = buildBasicCountryImportPlan(artifactBundle);
+    const baselineBytes = JSON.stringify(baselinePlan);
+    const artifactBytes = JSON.stringify(artifactPlan);
 
     expect(artifactPlan).toEqual(baselinePlan);
-    expect(JSON.stringify(artifactPlan)).not.toMatch(
-      /SEARXNG_|RAW_CAPTURE_|PROVIDER_|CANONICAL_|MANIFEST_|KNOWLEDGE_|AI_SENTINEL|\.cache\/basic-country|data\/staging/,
-    );
+    expect(artifactBytes).toBe(baselineBytes);
+    for (const forbidden of [
+      "runtimeBridgeResults",
+      "hermesDiscoveryResult",
+      "hermesEvidencePromotionResult",
+      "llamaDraftBridgeResult",
+      HERMES_TITLE_SENTINEL,
+      HERMES_SNIPPET_SENTINEL,
+      RUNTIME_PATH_SENTINEL,
+    ]) {
+      expect(artifactBytes).not.toContain(forbidden);
+    }
+    expect(globalFetch).not.toHaveBeenCalled();
   });
 
   test("keeps generated raw captures outside canonical import and audit loading", async () => {

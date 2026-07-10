@@ -53,6 +53,7 @@ import {
   createBasicLlamaCppDraftTransport,
   promoteBasicHermesJsonEvidence,
   runBasicHermesDiscovery,
+  type BasicHermesDiscoveryBatch,
   type BasicLlamaCppDraftRequest,
   type BasicLlamaCppFetchResponse,
 } from "./index.js";
@@ -68,6 +69,19 @@ const CANONICAL_SENTINEL = "CANONICAL_SENTINEL";
 const MANIFEST_SENTINEL = "MANIFEST_SENTINEL";
 const KNOWLEDGE_SENTINEL = "KNOWLEDGE_SENTINEL";
 const AI_SENTINEL = "AI_SENTINEL";
+const BRIDGE_SECRET_SENTINELS = [
+  TITLE_SENTINEL,
+  SNIPPET_SENTINEL,
+  RAW_BODY_SENTINEL,
+  PROVIDER_EXTRAS_SENTINEL,
+  REPO_PATH_SENTINEL,
+  CACHE_PATH_SENTINEL,
+  STAGING_PATH_SENTINEL,
+  CANONICAL_SENTINEL,
+  MANIFEST_SENTINEL,
+  KNOWLEDGE_SENTINEL,
+  AI_SENTINEL,
+] as const;
 const RUN_ID = "run-isolation-1";
 const COUNTRY_CODE = "ID";
 const SOURCE_URL = "https://example.com/data?format=json";
@@ -81,10 +95,7 @@ afterEach(() => {
 describe("P1-6C Hermes and llama bridge isolation", () => {
   test("promotes only sanitized evidence after injected Hermes discovery without retaining caller values", async () => {
     const sentinels = installNoLiveIoSentinels();
-    const rawBody = new TextEncoder().encode(JSON.stringify({
-      facts: [{ value: 42 }],
-      raw: RAW_BODY_SENTINEL,
-    }));
+    const rawBody = capturedBody();
     const providerDiscovery = discoveryEnvelope();
     const discoveryResult = await runBasicHermesDiscovery({
       countryCode: COUNTRY_CODE,
@@ -99,47 +110,55 @@ describe("P1-6C Hermes and llama bridge isolation", () => {
 
     expect(discoveryResult).toMatchObject({ ok: true });
     if (!discoveryResult.ok) throw new Error("injected Hermes discovery must succeed");
+    const discoverySerialized = JSON.stringify(discoveryResult);
+    expect(discoverySerialized).toContain(TITLE_SENTINEL);
+    expect(discoverySerialized).toContain(SNIPPET_SENTINEL);
+
+    providerDiscovery.candidates[0]!.title = "mutated provider title";
+    providerDiscovery.candidates[0]!.snippet = "mutated provider snippet";
+
+    expect(JSON.stringify(discoveryResult)).toBe(discoverySerialized);
 
     const policy = reviewedPolicy();
-    const promotionInput = {
-      base: baseAdapterResult(),
-      discovery: discoveryResult.data,
-      openedSources: [{
-        discoveryId: "candidate-1",
-        policy,
-        capture: {
-          sourceId: "hermes-source",
-          contentSha256: sha256(rawBody),
-          byteLength: rawBody.byteLength,
-          reused: false,
-          body: rawBody,
-          finalUrl: SOURCE_URL,
-          contentType: "application/json",
-          retrievedAt: "2026-07-10T09:45:00.000Z",
-        },
-        observations: [{
-          fieldPath: "marketOverview.population",
-          locator: "json:/facts/0/value",
-          rawValue: 42,
-          normalizedValue: 42,
-          unit: "people",
-          year: 2025,
-          uncertainty: null,
-        }],
-      }],
-    };
+    const promotionInput = evidencePromotionInput(
+      discoveryResult.data,
+      rawBody,
+      policy,
+    );
 
     const result = promoteBasicHermesJsonEvidence(promotionInput);
-    expect(result).toMatchObject({ ok: true });
+    expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("fixture-shaped evidence promotion must succeed");
     const serialized = JSON.stringify(result);
 
     policy.sourceName = "mutated caller policy";
     rawBody.fill(0);
-    providerDiscovery.candidates[0]!.title = "mutated provider title";
 
     expect(JSON.stringify(result)).toBe(serialized);
     expectNoBridgeSecrets(serialized);
+
+    const failureBody = capturedBody();
+    const failureInput = evidencePromotionInput(
+      discoveryResult.data,
+      failureBody,
+      reviewedPolicy(),
+      "missing-candidate",
+    );
+    const serializedFailureInput = JSON.stringify(failureInput);
+    for (const sentinel of BRIDGE_SECRET_SENTINELS) {
+      expect(serializedFailureInput).toContain(sentinel);
+    }
+
+    const failure = promoteBasicHermesJsonEvidence(failureInput);
+
+    expect(failure.ok).toBe(false);
+    if (failure.ok) throw new Error("missing discovery reference must fail promotion");
+    expect(failure.error).toEqual({
+      code: "EVIDENCE_INVALID",
+      phase: "evidence",
+      retryable: false,
+    });
+    expectNoBridgeSecrets(JSON.stringify(failure));
     expectNoLiveIo(sentinels);
   });
 
@@ -165,6 +184,12 @@ describe("P1-6C Hermes and llama bridge isolation", () => {
     sourceRegister.sources[0]!.sourceName = "mutated caller source";
     extractedFacts.facts[0]!.evidence[0]!.normalizedValue = "mutated caller fact";
     providerExtras.repoPath = "mutated provider extra";
+    providerResponse.choices[0]!.finish_reason = "length";
+    providerResponse.choices[0]!.message.content = "mutated provider content";
+    providerResponse.choices.push({
+      finish_reason: "stop",
+      message: { content: "second mutated provider choice" },
+    });
 
     expect(JSON.stringify(success)).toBe(successSerialized);
     expectNoBridgeSecrets(successSerialized);
@@ -225,10 +250,52 @@ function discoveryEnvelope(): {
       provider: "searxng",
       query: "Indonesia solar policy",
       title: TITLE_SENTINEL,
-      snippet: SNIPPET_SENTINEL,
+      snippet: BRIDGE_SECRET_SENTINELS.join(" | "),
       url: SOURCE_URL,
       discoveredAt: "2026-07-10T09:40:00.000Z",
       discoveryOnly: true,
+    }],
+  };
+}
+
+function capturedBody(): Uint8Array {
+  return new TextEncoder().encode(JSON.stringify({
+    facts: [{ value: 42 }],
+    raw: RAW_BODY_SENTINEL,
+  }));
+}
+
+function evidencePromotionInput(
+  discovery: BasicHermesDiscoveryBatch,
+  rawBody: Uint8Array,
+  policy: Record<string, unknown>,
+  discoveryId = "candidate-1",
+) {
+  return {
+    base: baseAdapterResult(),
+    discovery,
+    openedSources: [{
+      discoveryId,
+      policy,
+      capture: {
+        sourceId: "hermes-source",
+        contentSha256: sha256(rawBody),
+        byteLength: rawBody.byteLength,
+        reused: false,
+        body: rawBody,
+        finalUrl: SOURCE_URL,
+        contentType: "application/json",
+        retrievedAt: "2026-07-10T09:45:00.000Z",
+      },
+      observations: [{
+        fieldPath: "marketOverview.population",
+        locator: "json:/facts/0/value",
+        rawValue: 42,
+        normalizedValue: 42,
+        unit: "people",
+        year: 2025,
+        uncertainty: null,
+      }],
     }],
   };
 }
@@ -300,7 +367,14 @@ function baseAdapterResult(): Record<string, unknown> {
   };
 }
 
-function completion(draft: unknown, extras: Record<string, unknown>): Record<string, unknown> {
+interface MutableProviderCompletion extends Record<string, unknown> {
+  choices: Array<{
+    finish_reason: string;
+    message: { content: string };
+  }>;
+}
+
+function completion(draft: unknown, extras: Record<string, unknown>): MutableProviderCompletion {
   return {
     ...extras,
     choices: [{
@@ -356,19 +430,7 @@ function sha256(value: Uint8Array): string {
 }
 
 function expectNoBridgeSecrets(serialized: string): void {
-  for (const forbidden of [
-    TITLE_SENTINEL,
-    SNIPPET_SENTINEL,
-    RAW_BODY_SENTINEL,
-    PROVIDER_EXTRAS_SENTINEL,
-    REPO_PATH_SENTINEL,
-    CACHE_PATH_SENTINEL,
-    STAGING_PATH_SENTINEL,
-    CANONICAL_SENTINEL,
-    MANIFEST_SENTINEL,
-    KNOWLEDGE_SENTINEL,
-    AI_SENTINEL,
-  ]) {
+  for (const forbidden of BRIDGE_SECRET_SENTINELS) {
     expect(serialized).not.toContain(forbidden);
   }
   expect(serialized).not.toMatch(

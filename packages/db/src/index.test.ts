@@ -56,6 +56,67 @@ import type {
   BasicSourceRecord,
   BasicSourceRegister,
 } from "./index.js";
+
+// @ts-expect-error BasicHermesSourcedObservation is package-private.
+import type { BasicHermesSourcedObservation } from "./index.js";
+// @ts-expect-error BasicMarketOverviewDraftParseResult is package-private.
+import type { BasicMarketOverviewDraftParseResult } from "./index.js";
+// @ts-expect-error BasicLlamaSourceSnapshot is package-private.
+import type { BasicLlamaSourceSnapshot } from "./index.js";
+// @ts-expect-error BasicLlamaEvidenceSnapshot is package-private.
+import type { BasicLlamaEvidenceSnapshot } from "./index.js";
+// @ts-expect-error BasicLlamaFactSnapshot is package-private.
+import type { BasicLlamaFactSnapshot } from "./index.js";
+// @ts-expect-error BasicLlamaRegisterSnapshot is package-private.
+import type { BasicLlamaRegisterSnapshot } from "./index.js";
+// @ts-expect-error BasicLlamaFactsSnapshot is package-private.
+import type { BasicLlamaFactsSnapshot } from "./index.js";
+// @ts-expect-error BasicLlamaJsonSnapshot is package-private.
+import type { BasicLlamaJsonSnapshot } from "./index.js";
+
+// @ts-expect-error snapshotBasicHermesDiscoveryCandidate is package-private.
+type SnapshotBasicHermesDiscoveryCandidateLeak = typeof import("./index.js")["snapshotBasicHermesDiscoveryCandidate"];
+// @ts-expect-error canonicalBasicHermesDiscoveryUrl is package-private.
+type CanonicalBasicHermesDiscoveryUrlLeak = typeof import("./index.js")["canonicalBasicHermesDiscoveryUrl"];
+// @ts-expect-error materializeBasicHermesFacts is package-private.
+type MaterializeBasicHermesFactsLeak = typeof import("./index.js")["materializeBasicHermesFacts"];
+// @ts-expect-error factId is package-private.
+type FactIdLeak = typeof import("./index.js")["factId"];
+// @ts-expect-error parseCapturedJson is package-private.
+type ParseCapturedJsonLeak = typeof import("./index.js")["parseCapturedJson"];
+// @ts-expect-error pointer is package-private.
+type PointerLeak = typeof import("./index.js")["pointer"];
+// @ts-expect-error source is package-private.
+type SourceMapperLeak = typeof import("./index.js")["source"];
+// @ts-expect-error parseBasicMarketOverviewDraft is package-private.
+type ParseBasicMarketOverviewDraftLeak = typeof import("./index.js")["parseBasicMarketOverviewDraft"];
+// @ts-expect-error parseBasicMarketOverviewDraftForAudit is package-private.
+type ParseBasicMarketOverviewDraftForAuditLeak = typeof import("./index.js")["parseBasicMarketOverviewDraftForAudit"];
+// @ts-expect-error BASIC_LLAMA_DRAFT_JSON_SCHEMA is package-private.
+type BasicLlamaDraftJsonSchemaLeak = typeof import("./index.js")["BASIC_LLAMA_DRAFT_JSON_SCHEMA"];
+// @ts-expect-error parseBasicLlamaRegisterSnapshot is package-private.
+type ParseBasicLlamaRegisterSnapshotLeak = typeof import("./index.js")["parseBasicLlamaRegisterSnapshot"];
+// @ts-expect-error parseBasicLlamaFactsSnapshot is package-private.
+type ParseBasicLlamaFactsSnapshotLeak = typeof import("./index.js")["parseBasicLlamaFactsSnapshot"];
+// @ts-expect-error parseBasicLlamaIndicatorPath is package-private.
+type ParseBasicLlamaIndicatorPathLeak = typeof import("./index.js")["parseBasicLlamaIndicatorPath"];
+// @ts-expect-error readBasicLlamaExactRuntimeRecord is package-private.
+type ReadBasicLlamaExactRuntimeRecordLeak = typeof import("./index.js")["readBasicLlamaExactRuntimeRecord"];
+// @ts-expect-error readBasicLlamaStandardArray is package-private.
+type ReadBasicLlamaStandardArrayLeak = typeof import("./index.js")["readBasicLlamaStandardArray"];
+// @ts-expect-error snapshotBasicLlamaJson is package-private.
+type SnapshotBasicLlamaJsonLeak = typeof import("./index.js")["snapshotBasicLlamaJson"];
+// @ts-expect-error deepFreezeBasicLlamaValue is package-private.
+type DeepFreezeBasicLlamaValueLeak = typeof import("./index.js")["deepFreezeBasicLlamaValue"];
+// @ts-expect-error createRequest is package-private.
+type CreateRequestLeak = typeof import("./index.js")["createRequest"];
+// @ts-expect-error parseResponse is package-private.
+type ParseResponseLeak = typeof import("./index.js")["parseResponse"];
+// @ts-expect-error extractContent is package-private.
+type ExtractContentLeak = typeof import("./index.js")["extractContent"];
+// @ts-expect-error BasicCollectionBridgeError is package-private.
+type BasicCollectionBridgeErrorLeak = typeof import("./index.js")["BasicCollectionBridgeError"];
+
 import * as database from "./index.js";
 import { createBasicCollectionAuditFixture } from "./basic-collection-test-fixture.js";
 import {
@@ -259,7 +320,7 @@ describe("@navigator/db", () => {
     expect(bridgeBasicMarketOverviewDraft).toBeTypeOf("function");
   });
 
-  test("exports immutable documented P1-6C protocol limits", () => {
+  test("exports the exact documented P1-6C protocol limits", () => {
     expect(BASIC_HERMES_DISCOVERY_SCHEMA_VERSION).toBe("basic-hermes-discovery/v1");
     expect(BASIC_HERMES_DISCOVERY_TIMEOUT_MS).toBe(300_000);
     expect(BASIC_HERMES_DISCOVERY_MAX_QUERIES).toBe(20);
@@ -269,19 +330,6 @@ describe("@navigator/db", () => {
     expect(BASIC_LLAMA_DRAFT_MAX_RESPONSE_BYTES).toBe(262_144);
     expect(BASIC_LLAMA_DRAFT_PROTOCOL_VERSION).toBe("basic-country-draft/v1");
     expect(BASIC_LLAMA_DRAFT_OPERATION).toBe("return-exact-draft");
-    for (const constant of [
-      BASIC_HERMES_DISCOVERY_SCHEMA_VERSION,
-      BASIC_HERMES_DISCOVERY_TIMEOUT_MS,
-      BASIC_HERMES_DISCOVERY_MAX_QUERIES,
-      BASIC_HERMES_DISCOVERY_MAX_RESULTS,
-      BASIC_LLAMA_DRAFT_TIMEOUT_MS,
-      BASIC_LLAMA_DRAFT_MAX_REQUEST_BYTES,
-      BASIC_LLAMA_DRAFT_MAX_RESPONSE_BYTES,
-      BASIC_LLAMA_DRAFT_PROTOCOL_VERSION,
-      BASIC_LLAMA_DRAFT_OPERATION,
-    ]) {
-      expect(Object.isFrozen(constant)).toBe(true);
-    }
   });
 
   test("keeps P1-6C parser and bridge implementation helpers private", () => {
