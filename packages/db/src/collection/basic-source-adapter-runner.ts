@@ -25,6 +25,7 @@ import {
   type BasicSourcedObservation,
 } from "./basic-source-fact-materializer.js";
 import { snapshotBasicSourceRequest } from "./basic-source-metadata.js";
+import { snapshotBasicSourceAdapterRunInput } from "./basic-source-run-input.js";
 const OUTPUT_KEYS = ["publishedAt", "promptInjectionRisk", "accessNotes", "observations"] as const;
 const OBSERVATION_KEYS = ["fieldPath", "locator", "rawValue", "normalizedValue", "unit", "year", "uncertainty"] as const;
 const SOURCE_FAMILIES = ["international-organization", "official-statistics", "government", "energy-authority", "regulator", "grid-operator", "industry-association", "verified-research"] as const;
@@ -33,9 +34,16 @@ const FIELD_PATHS = new Set<string>(BASIC_COLLECTION_REQUIRED_STATIC_FACT_PATHS)
 const INDICATOR_PATH = /^marketOverview\.keyIndicators\[(?:0|[1-9]\d*)\]\.(?:label|value|unit|year)$/;
 const SAFE_SOURCE_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export async function runBasicDeterministicSourceAdapters(
-  input: BasicSourceAdapterRunInput,
+  value: BasicSourceAdapterRunInput,
 ): Promise<BasicSourceAdapterRunResult> {
-  const adapters = prepareAdapters(input.adapters);
+  const {
+    repoRoot,
+    countryCode,
+    runId,
+    adapters: adapterValues,
+    transport,
+  } = snapshotBasicSourceAdapterRunInput(value);
+  const adapters = prepareAdapters(adapterValues);
   if (adapters.length === 0) {
     throw new Error("source adapter run must contain observations");
   }
@@ -43,25 +51,25 @@ export async function runBasicDeterministicSourceAdapters(
   const observations: BasicSourcedObservation[] = [];
   const receipts: BasicRawCaptureReceipt[] = [];
   for (const adapter of adapters) {
-    const request = requestFrom(adapter, input.countryCode);
+    const request = requestFrom(adapter, countryCode);
     const requestUrl = request.url;
     const capture = await captureBasicRawSource(
       {
-        repoRoot: input.repoRoot,
-        countryCode: input.countryCode,
-        runId: input.runId,
+        repoRoot,
+        countryCode,
+        runId,
         adapterId: adapter.adapterId,
         adapterVersion: adapter.adapterVersion,
         sourceId: adapter.sourceId,
         request,
       },
-      input.transport,
+      transport,
     );
     if (!isTimestamp(capture.retrievedAt)) {
       throw new Error("source adapter materialization is invalid");
     }
     const output = extractFrom(adapter, {
-      countryCode: input.countryCode,
+      countryCode,
       requestUrl,
       finalUrl: capture.finalUrl,
       contentType: capture.contentType,
@@ -95,14 +103,14 @@ export async function runBasicDeterministicSourceAdapters(
   return {
     sourceRegister: {
       schemaVersion: BASIC_COLLECTION_AUDIT_SCHEMA_VERSION,
-      runId: input.runId,
-      countryCode: input.countryCode,
+      runId,
+      countryCode,
       sources,
     },
     extractedFacts: {
       schemaVersion: BASIC_COLLECTION_AUDIT_SCHEMA_VERSION,
-      runId: input.runId,
-      countryCode: input.countryCode,
+      runId,
+      countryCode,
       facts: materializeBasicSourceFacts(observations),
     },
     receipts,

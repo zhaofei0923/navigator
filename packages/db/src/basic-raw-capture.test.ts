@@ -28,6 +28,8 @@ const BODY = new TextEncoder().encode('{"value":1234}');
 const CONTENT_SHA256 =
   "07a9415d68c1cc231402a4b0c4a01aa291945f4a25dc1ffb228a697346c88d4b";
 const METADATA_SENTINEL = "RAW_METADATA_DO_NOT_LEAK_1f2a";
+const TRANSPORT_FAILURE_SENTINEL =
+  "https://api.worldbank.org/private?token=TRANSPORT_SECRET_DO_NOT_LEAK";
 
 afterEach(() => {
   for (const root of temporaryRoots) {
@@ -449,6 +451,27 @@ describe("Basic immutable raw capture", () => {
 
     expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
     expect(results.filter((result) => result.status === "rejected")).toHaveLength(1);
+  });
+
+  test("redacts injected transport execution failures at the capture boundary", async () => {
+    const repoRoot = createRepoRoot();
+    const leakingTransport: BasicSourceTransport = {
+      async execute() {
+        throw new Error(
+          `${TRANSPORT_FAILURE_SENTINEL} ${METADATA_SENTINEL}`,
+        );
+      },
+    };
+
+    const error = await rejectWith(
+      captureBasicRawSource(input(repoRoot), leakingTransport),
+    );
+
+    expect(error.message).toBe("raw capture transport failed");
+    expect(error.message).not.toContain(TRANSPORT_FAILURE_SENTINEL);
+    expect(error.message).not.toContain(METADATA_SENTINEL);
+    expect(error.stack ?? "").not.toContain(TRANSPORT_FAILURE_SENTINEL);
+    expect((error as Error & { cause?: unknown }).cause).toBeUndefined();
   });
 
   test("redacts injected response body iterator failures", async () => {

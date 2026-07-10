@@ -40,9 +40,10 @@ export async function captureBasicRawSource(
   const cached = await readVerifiedCapture(paths.sourceDirectory, input);
   if (cached !== null) return resultFromCache(cached);
 
-  const response = snapshotBasicSourceTransportResponse(
-    await transport.execute(input.request),
-  );
+  let transportResponse: BasicSourceTransportResponse;
+  try { transportResponse = await transport.execute(input.request); }
+  catch { throw new Error("raw capture transport failed"); }
+  const response = snapshotBasicSourceTransportResponse(transportResponse);
   if (!isBasicSourceResponseAllowed(response, input.request)) {
     throw new Error("raw capture response is invalid");
   }

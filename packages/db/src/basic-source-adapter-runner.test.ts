@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -9,6 +9,7 @@ import type {
   BasicDeterministicAdapterOutput,
   BasicDeterministicObservation,
   BasicDeterministicSourceAdapter,
+  BasicSourceAdapterRunInput,
   BasicSourceTransport,
 } from "./collection/basic-source-adapter-contracts.js";
 import { runBasicDeterministicSourceAdapters } from "./collection/basic-source-adapter-runner.js";
@@ -370,6 +371,195 @@ describe("Basic deterministic source adapter runner", () => {
     expect(error.message).not.toContain(URL_SENTINEL);
   });
 
+  test.each([
+    "extra string key",
+    "symbol key",
+    "accessor key",
+    "custom prototype",
+  ] as const)(
+    "rejects a run input with an %s without executing accessors",
+    async (kind) => {
+      const probe = { executions: 0 };
+      const calls: string[] = [];
+      const unsafeInput = runInputWithUnsafeShape(kind, probe, calls);
+
+      const error = await captureFailure(
+        runBasicDeterministicSourceAdapters(unsafeInput),
+      );
+
+      expect(error.message).toBe("source adapter run input is invalid");
+      expect(probe.executions).toBe(0);
+      expect(calls).toEqual([]);
+      expect(error.message).not.toContain(PAYLOAD_SENTINEL);
+      expect(error.message).not.toContain(URL_SENTINEL);
+    },
+  );
+
+  test.each([
+    "sparse",
+    "extra property",
+    "accessor index",
+    "custom prototype",
+  ] as const)(
+    "rejects a %s adapters array without executing accessors",
+    async (kind) => {
+      const probe = { executions: 0 };
+      const calls: string[] = [];
+      const input = validRunInput(
+        `run-unsafe-adapters-${kind.replaceAll(" ", "-")}`,
+        calls,
+      );
+      (
+        input as unknown as {
+          adapters: BasicDeterministicSourceAdapter[];
+        }
+      ).adapters = unsafeAdaptersArray(kind, probe);
+
+      const error = await captureFailure(
+        runBasicDeterministicSourceAdapters(input),
+      );
+
+      expect(error.message).toBe("source adapter run input is invalid");
+      expect(probe.executions).toBe(0);
+      expect(calls).toEqual([]);
+      expect(error.message).not.toContain(PAYLOAD_SENTINEL);
+      expect(error.message).not.toContain(URL_SENTINEL);
+    },
+  );
+
+  test.each([
+    ["repoRoot", 123],
+    ["countryCode", null],
+    ["runId", { sentinel: PAYLOAD_SENTINEL }],
+    ["adapters", "not-an-array"],
+    ["transport", {}],
+  ] as const)("rejects a malformed run input %s field", async (field, value) => {
+    const input = validRunInput(`run-malformed-${field}`, []);
+    const malformed = { ...input, [field]: value } as BasicSourceAdapterRunInput;
+
+    const error = await captureFailure(
+      runBasicDeterministicSourceAdapters(malformed),
+    );
+
+    expect(error.message).toBe("source adapter run input is invalid");
+    expect(error.message).not.toContain(PAYLOAD_SENTINEL);
+    expect(error.message).not.toContain(URL_SENTINEL);
+  });
+
+  test("uses one immutable run snapshot across two adapter captures", async () => {
+    const repoRoot = createRepoRoot();
+    const mutatedRepoRoot = createRepoRoot();
+    const requestCountries: string[] = [];
+    const extractCountries: string[] = [];
+    const sourceA = trackedAdapter(
+      "source-a",
+      requestCountries,
+      extractCountries,
+    );
+    const sourceB = trackedAdapter(
+      "source-b",
+      requestCountries,
+      extractCountries,
+    );
+    let executionCalls = 0;
+    let mutableInput: BasicSourceAdapterRunInput;
+    const stableTransport: BasicSourceTransport = {
+      async execute(request) {
+        expect(this).toBe(stableTransport);
+        executionCalls += 1;
+        if (executionCalls === 1) {
+          mutableInput.repoRoot = mutatedRepoRoot;
+          mutableInput.countryCode = "YY";
+          mutableInput.runId = `run-mutated-${PAYLOAD_SENTINEL}`;
+          (mutableInput.adapters as BasicDeterministicSourceAdapter[]).splice(
+            0,
+            2,
+            adapter("source-mutated", [observation()]),
+          );
+          mutableInput.transport = {
+            async execute() {
+              throw new Error(`${PAYLOAD_SENTINEL} ${URL_SENTINEL}`);
+            },
+          };
+          const mutableSourceB = sourceB as {
+            sourceId: string;
+            sourceName: string;
+            request: BasicDeterministicSourceAdapter["request"];
+            extract: BasicDeterministicSourceAdapter["extract"];
+          };
+          mutableSourceB.sourceId = "source-mutated";
+          mutableSourceB.sourceName = PAYLOAD_SENTINEL;
+          mutableSourceB.request = () => {
+            throw new Error(`${PAYLOAD_SENTINEL} ${URL_SENTINEL}`);
+          };
+          mutableSourceB.extract = () => {
+            throw new Error(`${PAYLOAD_SENTINEL} ${URL_SENTINEL}`);
+          };
+          stableTransport.execute = async () => {
+            throw new Error(`${PAYLOAD_SENTINEL} ${URL_SENTINEL}`);
+          };
+        }
+        const sourceId = new URL(request.url).hostname.split(".")[0] ?? "unknown";
+        const body = bodyFor(sourceId);
+        return {
+          status: 200,
+          finalUrl: request.url,
+          contentType: "application/json",
+          retrievedAt: RETRIEVED_AT,
+          redirectChain: [],
+          body: (async function* stream() {
+            yield body;
+          })(),
+        };
+      },
+    };
+    mutableInput = {
+      repoRoot,
+      countryCode: "XZ",
+      runId: "run-input-snapshot",
+      adapters: [sourceB, sourceA],
+      transport: stableTransport,
+    };
+
+    const result = await runBasicDeterministicSourceAdapters(mutableInput);
+
+    expect(executionCalls).toBe(2);
+    expect(requestCountries).toEqual(["XZ", "XZ"]);
+    expect(extractCountries).toEqual(["XZ", "XZ"]);
+    expect(result.sourceRegister).toMatchObject({
+      runId: "run-input-snapshot",
+      countryCode: "XZ",
+      sources: [
+        { sourceId: "source-a", sourceName: "Source source-a" },
+        { sourceId: "source-b", sourceName: "Source source-b" },
+      ],
+    });
+    expect(result.extractedFacts).toMatchObject({
+      runId: "run-input-snapshot",
+      countryCode: "XZ",
+    });
+    expect(result.receipts.map(({ sourceId }) => sourceId)).toEqual([
+      "source-a",
+      "source-b",
+    ]);
+    expect(
+      existsSync(
+        join(
+          repoRoot,
+          ".cache",
+          "basic-country",
+          "XZ",
+          "run-input-snapshot",
+          "raw",
+          "source-b",
+        ),
+      ),
+    ).toBe(true);
+    expect(existsSync(join(mutatedRepoRoot, ".cache"))).toBe(false);
+    expect(JSON.stringify(result)).not.toContain(PAYLOAD_SENTINEL);
+    expect(JSON.stringify(result)).not.toContain(URL_SENTINEL);
+  });
+
   test("rejects invalid source dates and adapter metadata", async () => {
     const invalidDateError = await captureFailure(
       runBasicDeterministicSourceAdapters({
@@ -429,6 +619,31 @@ describe("Basic deterministic source adapter runner", () => {
       "Source source-metadata-snapshot",
     );
     expect(JSON.stringify(result)).not.toContain(PAYLOAD_SENTINEL);
+  });
+
+  test("redacts transport execution failures at the raw capture boundary", async () => {
+    const leakingTransport: BasicSourceTransport = {
+      async execute() {
+        throw new Error(`${PAYLOAD_SENTINEL} ${URL_SENTINEL}`);
+      },
+    };
+
+    const error = await captureFailure(
+      runBasicDeterministicSourceAdapters({
+        repoRoot: createRepoRoot(),
+        countryCode: "XZ",
+        runId: "run-transport-rejection",
+        adapters: [adapter("source-transport-rejection", [observation()])],
+        transport: leakingTransport,
+      }),
+    );
+
+    expect(error.message).toBe("raw capture transport failed");
+    expect(error.message).not.toContain(PAYLOAD_SENTINEL);
+    expect(error.message).not.toContain(URL_SENTINEL);
+    expect(error.stack ?? "").not.toContain(PAYLOAD_SENTINEL);
+    expect(error.stack ?? "").not.toContain(URL_SENTINEL);
+    expect((error as Error & { cause?: unknown }).cause).toBeUndefined();
   });
 
   test.each(["request", "extract"] as const)(
@@ -497,6 +712,101 @@ function adapter(
       };
     },
   };
+}
+
+function trackedAdapter(
+  sourceId: string,
+  requestCountries: string[],
+  extractCountries: string[],
+): BasicDeterministicSourceAdapter {
+  const source = adapter(sourceId, [observation()]);
+  const request = source.request;
+  const extract = source.extract;
+  source.request = function trackedRequest(countryCode) {
+    requestCountries.push(countryCode);
+    return request.call(this, countryCode);
+  };
+  source.extract = function trackedExtract(input) {
+    extractCountries.push(input.countryCode);
+    return extract.call(this, input);
+  };
+  return source;
+}
+
+function validRunInput(
+  runId: string,
+  calls: string[],
+): BasicSourceAdapterRunInput {
+  return {
+    repoRoot: createRepoRoot(),
+    countryCode: "XZ",
+    runId,
+    adapters: [adapter("source-run-input", [observation()])],
+    transport: transport(calls),
+  };
+}
+
+function runInputWithUnsafeShape(
+  kind: "extra string key" | "symbol key" | "accessor key" | "custom prototype",
+  probe: { executions: number },
+  calls: string[],
+): BasicSourceAdapterRunInput {
+  const input: Record<PropertyKey, unknown> = {
+    ...validRunInput(`run-unsafe-input-${kind.replaceAll(" ", "-")}`, calls),
+  };
+  if (kind === "custom prototype") {
+    Object.setPrototypeOf(input, Object.create(Object.prototype));
+    return input as unknown as BasicSourceAdapterRunInput;
+  }
+  const property =
+    kind === "extra string key"
+      ? "unexpected"
+      : kind === "symbol key"
+        ? Symbol("unexpected")
+        : "countryCode";
+  Object.defineProperty(input, property, {
+    configurable: true,
+    enumerable: true,
+    ...(kind === "extra string key"
+      ? { value: PAYLOAD_SENTINEL, writable: true }
+      : {
+          get() {
+            probe.executions += 1;
+            throw new Error(`${PAYLOAD_SENTINEL} ${URL_SENTINEL}`);
+          },
+        }),
+  });
+  return input as unknown as BasicSourceAdapterRunInput;
+}
+
+function unsafeAdaptersArray(
+  kind: "sparse" | "extra property" | "accessor index" | "custom prototype",
+  probe: { executions: number },
+): BasicDeterministicSourceAdapter[] {
+  const source = adapter("source-unsafe-container", [observation()]);
+  if (kind === "sparse") {
+    const sparse = new Array<BasicDeterministicSourceAdapter>(2);
+    sparse[0] = source;
+    return sparse;
+  }
+  const adapters = [source];
+  if (kind === "custom prototype") {
+    Object.setPrototypeOf(adapters, Object.create(Array.prototype));
+    return adapters;
+  }
+  Object.defineProperty(
+    adapters,
+    kind === "extra property" ? "unexpected" : "0",
+    {
+      configurable: true,
+      enumerable: true,
+      get() {
+        probe.executions += 1;
+        throw new Error(`${PAYLOAD_SENTINEL} ${URL_SENTINEL}`);
+      },
+    },
+  );
+  return adapters;
 }
 
 function observation(
