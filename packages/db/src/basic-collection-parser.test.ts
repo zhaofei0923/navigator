@@ -1,13 +1,35 @@
 import { describe, expect, test } from "vitest";
 
 import type { BasicCollectionJsonValue } from "./collection/basic-collection-contracts.js";
-import { createBasicCollectionAuditFixture } from "./basic-collection-test-fixture.js";
+import {
+  createBasicCollectionAuditFixture,
+  readBasicCollectionAuditFixture,
+} from "./basic-collection-test-fixture.js";
+import { parseBasicCollectionAuditBundle } from "./collection/basic-collection-parser.js";
 import { validateBasicCollectionAuditBundle } from "./collection/basic-collection-validator.js";
 
 type AuditBundle = ReturnType<typeof createBasicCollectionAuditFixture>;
 type UnknownRecord = Record<string, unknown>;
 
 describe("Basic collection audit parser boundaries", () => {
+  test("keeps draft error labels and fixture classifications after draft parsing is shared", () => {
+    const invalid = createBasicCollectionAuditFixture();
+    invalid.marketOverviewDraft.sourceUrl = "ftp://example.com";
+    expect(parseBasicCollectionAuditBundle(invalid).errors).toEqual(
+      expect.arrayContaining(["marketOverviewDraft.sourceUrl must be an HTTP(S) URL"]),
+    );
+
+    for (const scenario of ["normal", "missing", "conflict", "untrusted"] as const) {
+      const result = validateBasicCollectionAuditBundle(
+        readBasicCollectionAuditFixture(scenario),
+      );
+      expect(result.valid).toBe(true);
+      if (result.valid) {
+        expect(result.readyForHumanReview).toBe(scenario === "normal");
+      }
+    }
+  });
+
   test.each([
     {
       name: "a symbol own key",
