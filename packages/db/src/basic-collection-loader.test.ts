@@ -1,6 +1,8 @@
+import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, test } from "vitest";
 
@@ -20,6 +22,20 @@ afterEach(() => {
 });
 
 describe("Basic collection audit loader", () => {
+  test("ignores raw Basic captures through the repository .gitignore", () => {
+    const repositoryRoot = fileURLToPath(new URL("../../../", import.meta.url));
+    const rawCapturePath =
+      ".cache/basic-country/XZ/run-001/raw/source/capture.json";
+
+    expect(
+      execFileSync(
+        "git",
+        ["check-ignore", "--no-index", rawCapturePath],
+        { cwd: repositoryRoot, encoding: "utf8" },
+      ),
+    ).toBe(`${rawCapturePath}\n`);
+  });
+
   test("loads only the four documented staging artifacts", async () => {
     const fixture = writeFixtureStaging("normal");
     mkdirSync(join(fixture.repoRoot, "data", fixture.countryDirectory), {

@@ -1,6 +1,21 @@
 import { describe, expect, test } from "vitest";
 
 import type {
+  BasicDeterministicAdapterInput,
+  BasicDeterministicAdapterOutput,
+  BasicDeterministicObservation,
+  BasicDeterministicSourceAdapter,
+  BasicRawCaptureInput,
+  BasicRawCaptureManifest,
+  BasicRawCaptureReceipt,
+  BasicRawCaptureResult,
+  BasicSourceAdapterRunInput,
+  BasicSourceAdapterRunResult,
+  BasicSourceFetch,
+  BasicSourceFetchResponse,
+  BasicSourceRequest,
+  BasicSourceTransport,
+  BasicSourceTransportResponse,
   BasicCollectionAuditBundle,
   BasicCollectionAuditSummary,
   BasicCollectionAuditValidationResult,
@@ -27,14 +42,22 @@ import type {
 import * as database from "./index.js";
 import { createBasicCollectionAuditFixture } from "./basic-collection-test-fixture.js";
 import {
+  BASIC_RAW_CAPTURE_MAX_BYTES,
+  BASIC_RAW_CAPTURE_SCHEMA_VERSION,
+  BASIC_SOURCE_MAX_REDIRECTS,
   BASIC_COLLECTION_AUDIT_SCHEMA_VERSION,
   BASIC_COLLECTION_BLOCKER_CODES,
+  WORLD_BANK_CORE_INDICATOR_ADAPTERS,
   buildBasicCountryImportPlan,
+  captureBasicRawSource,
+  createBasicSourceTransport,
   createBasicCountryBundle,
   loadBasicCollectionAuditBundle,
   loadBasicCountryBundle,
+  runBasicDeterministicSourceAdapters,
   validateBasicCountryBundle,
   validateBasicCollectionAuditBundle,
+  worldBankCountryAdapter,
   workspaceName,
 } from "./index.js";
 
@@ -62,6 +85,34 @@ describe("@navigator/db", () => {
       "UNRESOLVED_CONFLICT",
       "UNTRUSTED_INPUT",
     ]);
+  });
+
+  test("exports the reviewed deterministic source adapter API", () => {
+    expect(createBasicSourceTransport).toBeTypeOf("function");
+    expect(captureBasicRawSource).toBeTypeOf("function");
+    expect(runBasicDeterministicSourceAdapters).toBeTypeOf("function");
+    expect(worldBankCountryAdapter).toMatchObject({
+      sourceId: "world-bank-country",
+    });
+    expect(WORLD_BANK_CORE_INDICATOR_ADAPTERS).toHaveLength(3);
+    expect(BASIC_RAW_CAPTURE_SCHEMA_VERSION).toBe(
+      "basic-country-raw-capture/v1",
+    );
+    expect(BASIC_RAW_CAPTURE_MAX_BYTES).toBe(10 * 1024 * 1024);
+    expect(BASIC_SOURCE_MAX_REDIRECTS).toBe(3);
+  });
+
+  test("does not expose raw-cache internals from the package barrel", () => {
+    for (const internalName of [
+      "prepareSourceDirectory",
+      "publishCapture",
+      "publishNoClobber",
+      "readVerifiedCapture",
+      "isBasicSourceRequestAllowed",
+      "isBasicSourceResponseAllowed",
+    ]) {
+      expect(database).not.toHaveProperty(internalName);
+    }
   });
 
   test("runtime-freezes the public Basic collection blocker codes", () => {
@@ -119,5 +170,27 @@ describe("@navigator/db", () => {
     ] | null = null;
 
     expect(publicContractTypeWitness).toBeNull();
+  });
+
+  test("makes every reviewed source adapter contract type public", () => {
+    const publicSourceAdapterTypeWitness: [
+      BasicSourceFetchResponse,
+      BasicSourceFetch,
+      BasicSourceRequest,
+      BasicSourceTransportResponse,
+      BasicSourceTransport,
+      BasicDeterministicObservation,
+      BasicDeterministicAdapterOutput,
+      BasicDeterministicAdapterInput,
+      BasicDeterministicSourceAdapter,
+      BasicRawCaptureReceipt,
+      BasicRawCaptureManifest,
+      BasicRawCaptureInput,
+      BasicRawCaptureResult,
+      BasicSourceAdapterRunInput,
+      BasicSourceAdapterRunResult,
+    ] | null = null;
+
+    expect(publicSourceAdapterTypeWitness).toBeNull();
   });
 });

@@ -1,6 +1,9 @@
-import { describe, expect, test } from "vitest";
+import { rmSync } from "node:fs";
+
+import { afterEach, describe, expect, test } from "vitest";
 
 import { buildBasicCountryImportPlan } from "./seed/basic-country-import.js";
+import { loadBasicCountryBundle } from "./seed/basic-country-loader.js";
 import type { JsonRecord } from "./seed/basic-country-types.js";
 import { isPlainRecord } from "./seed/basic-country-validation-utils.js";
 import { validateBasicCountryBundle } from "./seed/basic-country-validator.js";
@@ -9,8 +12,25 @@ import {
   getRecord,
   getRecordArray,
   getRequiredArrayItem,
+  writeBasicCountryFiles,
 } from "./basic-country-test-fixture.js";
-import { readBasicCollectionAuditFixture } from "./basic-collection-test-fixture.js";
+import {
+  readBasicCollectionAuditFixture,
+  type BasicCollectionFixtureScenario,
+} from "./basic-collection-test-fixture.js";
+import { loadBasicCollectionAuditBundle } from "./collection/basic-collection-loader.js";
+import { captureBasicRawSource } from "./collection/basic-raw-capture.js";
+import type { BasicSourceTransport } from "./collection/basic-source-adapter-contracts.js";
+
+const RAW_CAPTURE_SENTINEL = "RAW_CAPTURE_SENTINEL_P1_6B";
+const rawCacheIsolationRoots = new Set<string>();
+
+afterEach(() => {
+  for (const root of rawCacheIsolationRoots) {
+    rmSync(root, { recursive: true, force: true });
+  }
+  rawCacheIsolationRoots.clear();
+});
 
 describe("Basic country import plan", () => {
   test("builds an isolated Basic Prisma import plan", () => {
@@ -123,6 +143,38 @@ describe("Basic country import plan", () => {
       expect(serializedPlan).not.toContain(forbiddenValue);
     }
   });
+
+  test("keeps generated raw captures outside canonical import and audit loading", async () => {
+    const fixture = writeRawCacheIsolationFixture("normal");
+    await captureBasicRawSource(
+      rawCacheIsolationInput(fixture.repoRoot),
+      rawCacheTransport(),
+    );
+
+    const auditBundle = loadBasicCollectionAuditBundle(
+      fixture.repoRoot,
+      fixture.countryDirectory,
+      fixture.runId,
+    );
+    const importPlan = buildBasicCountryImportPlan(
+      loadBasicCountryBundle(fixture.repoRoot, fixture.countryDirectory),
+    );
+    const serializedAuditBundle = JSON.stringify(auditBundle);
+    const serializedImportPlan = JSON.stringify(importPlan);
+
+    for (const serializedValue of [serializedAuditBundle, serializedImportPlan]) {
+      expect(serializedValue).not.toContain(RAW_CAPTURE_SENTINEL);
+      expect(serializedValue).not.toContain("basic-country-raw-capture/v1");
+      expect(serializedValue).not.toContain(
+        ".cache/basic-country/XZ/run-001/raw/source/capture.json",
+      );
+      expect(serializedValue).not.toContain("capture.json");
+    }
+    expect(importPlan.aiEligibleKnowledgeIds).toEqual([]);
+    expect(JSON.stringify(importPlan.aiEligibleKnowledgeIds)).not.toContain(
+      RAW_CAPTURE_SENTINEL,
+    );
+  });
 });
 
 function asJsonRecord(value: unknown): JsonRecord {
@@ -130,4 +182,75 @@ function asJsonRecord(value: unknown): JsonRecord {
     throw new Error("audit artifact must be a plain record");
   }
   return value;
+}
+
+function writeRawCacheIsolationFixture(
+  scenario: BasicCollectionFixtureScenario,
+): {
+  repoRoot: string;
+  countryDirectory: string;
+  runId: string;
+} {
+  const bundle = createValidBundle();
+  const auditBundle = readBasicCollectionAuditFixture(scenario);
+  bundle.audit.manifest = {
+    activeRunId: auditBundle.runId,
+    mappingVersion: "basic-v1",
+    auditBundlePath: `data/staging/${bundle.countryDirectory}/${auditBundle.runId}`,
+  };
+  bundle.audit.run = {
+    runId: auditBundle.runId,
+    sourceRegister: asJsonRecord(auditBundle.sourceRegister),
+    extractedFacts: asJsonRecord(auditBundle.extractedFacts),
+    marketOverviewDraft: asJsonRecord(auditBundle.marketOverviewDraft),
+    reviewReport: asJsonRecord(auditBundle.reviewReport),
+  };
+  const files = writeBasicCountryFiles(bundle);
+  rawCacheIsolationRoots.add(files.repoRoot);
+
+  return {
+    repoRoot: files.repoRoot,
+    countryDirectory: bundle.countryDirectory,
+    runId: auditBundle.runId,
+  };
+}
+
+function rawCacheIsolationInput(repoRoot: string) {
+  return {
+    repoRoot,
+    countryCode: "XZ",
+    runId: "run-001",
+    adapterId: "raw-isolation",
+    adapterVersion: "1.0.0",
+    sourceId: "source",
+    request: {
+      method: "GET" as const,
+      url: "https://raw.example/capture?format=json",
+      accept: "application/json",
+      allowedOrigins: ["https://raw.example"],
+      allowedQueryParameters: ["format"],
+    },
+  };
+}
+
+function rawCacheTransport(): BasicSourceTransport {
+  const body = new TextEncoder().encode(
+    `{"marker":"${RAW_CAPTURE_SENTINEL}"}`,
+  );
+  return {
+    async execute() {
+      return {
+        status: 200,
+        finalUrl: "https://raw.example/capture?format=json",
+        contentType: "application/json",
+        retrievedAt: "2026-07-10T09:40:00.000Z",
+        redirectChain: [],
+        body: chunks(body),
+      };
+    },
+  };
+}
+
+async function* chunks(body: Uint8Array): AsyncIterable<Uint8Array> {
+  yield body;
 }
