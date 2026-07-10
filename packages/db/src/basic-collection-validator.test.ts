@@ -4,7 +4,10 @@ import type {
   BasicCollectionJsonValue,
   BasicFactEvidence,
 } from "./collection/basic-collection-contracts.js";
-import { createBasicCollectionAuditFixture } from "./basic-collection-test-fixture.js";
+import {
+  createBasicCollectionAuditFixture,
+  readBasicCollectionAuditFixture,
+} from "./basic-collection-test-fixture.js";
 import { validateBasicCollectionAuditBundle } from "./collection/basic-collection-validator.js";
 
 describe("Basic collection audit validation", () => {
@@ -101,7 +104,7 @@ describe("Basic collection audit validation", () => {
     ["untrusted", ["UNTRUSTED_INPUT"], false],
   ] as const)("classifies %s audit input", (scenario, blockers, ready) => {
     const result = validateBasicCollectionAuditBundle(
-      createBasicCollectionAuditFixture(scenario),
+      readBasicCollectionAuditFixture(scenario),
     );
 
     expect(result.valid).toBe(true);

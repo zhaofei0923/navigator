@@ -30,7 +30,6 @@ export function readBasicCollectionAuditFixture(
 }
 
 export function createBasicCollectionAuditFixture(
-  scenario: BasicCollectionFixtureScenario = "normal",
 ): BasicCollectionAuditBundle {
   const runId = "run-001";
   const countryCode = "XZ";
@@ -43,7 +42,7 @@ export function createBasicCollectionAuditFixture(
       countryCode,
       sources: [createSource("source-1"), createSource("source-2")],
     },
-    extractedFacts: createFacts(scenario, runId, countryCode),
+    extractedFacts: createFacts(runId, countryCode),
     marketOverviewDraft: {
       overview: { zh: "市场概览", en: "Market overview" },
       population: 1000000,
@@ -70,7 +69,7 @@ export function createBasicCollectionAuditFixture(
       industryTags: ["solar"],
       techTags: ["pv-module"],
     },
-    reviewReport: createReviewReport(scenario, runId, countryCode),
+    reviewReport: createReviewReport(runId, countryCode),
   };
 }
 
@@ -94,7 +93,6 @@ function createSource(sourceId: string) {
 }
 
 function createFacts(
-  scenario: BasicCollectionFixtureScenario,
   runId: string,
   countryCode: string,
 ): BasicExtractedFacts {
@@ -106,23 +104,6 @@ function createFacts(
     extractionMethod: "deterministic" as const,
     uncertainty: null,
   };
-  if (scenario === "missing") {
-    fact.fieldPath = "country.summary";
-    return {
-      schemaVersion: BASIC_COLLECTION_AUDIT_SCHEMA_VERSION,
-      runId,
-      countryCode,
-      facts: [{ ...fact, status: "missing", evidence: [], uncertainty: "Not found" }],
-    };
-  }
-  if (scenario === "conflict") {
-    return {
-      schemaVersion: BASIC_COLLECTION_AUDIT_SCHEMA_VERSION,
-      runId,
-      countryCode,
-      facts: [{ ...fact, status: "conflict", evidence: [createEvidence("source-1"), createEvidence("source-2")] }],
-    };
-  }
   return {
     schemaVersion: BASIC_COLLECTION_AUDIT_SCHEMA_VERSION,
     runId,
@@ -143,44 +124,19 @@ function createEvidence(sourceId: string) {
 }
 
 function createReviewReport(
-  scenario: BasicCollectionFixtureScenario,
   runId: string,
   countryCode: string,
 ): BasicCollectionReviewReport {
-  const blocked = scenario !== "normal";
   return {
     schemaVersion: BASIC_COLLECTION_AUDIT_SCHEMA_VERSION,
     runId,
     countryCode,
-    status: blocked ? "blocked" : "ready-for-human-review",
-    missingFields: scenario === "missing" ? ["country.summary"] : [],
-    conflicts:
-      scenario === "conflict"
-        ? [
-            {
-              fieldPath: "marketOverview.population",
-              factIds: ["fact-1"],
-              resolution: "unresolved",
-              notes: "Sources disagree",
-            },
-          ]
-        : [],
-    sourceChecks:
-      scenario === "untrusted"
-        ? [{ sourceId: "source-1", status: "failed", notes: "Integrity check failed" }]
-        : [],
-    injectionRisks:
-      scenario === "untrusted"
-        ? [
-            {
-              sourceId: "source-1",
-              locator: "page 1",
-              severity: "suspected",
-              details: "Instruction-like text detected",
-            },
-          ]
-        : [],
-    publicationRecommendation: blocked ? "do-not-publish" : "request-human-review",
+    status: "ready-for-human-review",
+    missingFields: [],
+    conflicts: [],
+    sourceChecks: [],
+    injectionRisks: [],
+    publicationRecommendation: "request-human-review",
     humanDecision: null,
   };
 }
