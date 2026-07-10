@@ -4,7 +4,7 @@
 
 ## 1. 范围与完成定义
 
-每个 Basic 国家使用与印尼（`ID`）相同的固定 10 模块模型，不得为任何国家增加特例文件、字段或页面。Basic 首次交付只建立该国的国家骨架和市场基础画像：
+每个 Basic 国家使用与印尼（`ID`）相同的固定 10 模块模型，不得为任何国家增加特例文件、字段或页面。除既有 Complete 参考国家 `ID` 外，每个新选定的目标国家都必须完成其 `DATA-BASIC-<ISO2>` 任务卡并达到 `BASIC`，之后才可进入单独、经人工批准的 `STANDARD` 或 `COMPLETE` 升级任务；禁止新国家直接以 `STANDARD` 或 `COMPLETE` 进入产品。Basic 首次交付只建立该国的国家骨架和市场基础画像：
 
 - `country.json` 必须包含 ISO 3166-1 alpha-2 国家码、`{ zh, en }` 的国家名和摘要、地区、国旗展示字段、整体 `updatedAt`，以及全部 10 个模块的 `moduleCoverage`。
 - `country.json` 的 `coverageLevel` 必须由覆盖判定得出为 `BASIC`，不得人工覆盖。`market-overview` 为 `PARTIAL` 或 `COMPLETE`；其余九个模块可为 `BUILDING`，并保留统一占位，不创建虚构的占位业务记录。
@@ -45,13 +45,15 @@
 
 ## 4. 暂存产物
 
-所有研究工作先保存在 canonical country seed 之外的按国家和批次隔离的暂存区。每个产物必须可通过来源登记关联到同一批次：
+所有研究工作先保存在 canonical country seed 之外的按国家和批次隔离的暂存区。路径中的 `<ISO2>` 是 ISO 3166-1 alpha-2 国家码，`<country>` 是与 canonical data 目录一致的国家目录名，`<runId>` 是该次采集的稳定运行标识。每个产物必须可通过来源登记关联到同一批次：
 
-1. **raw cache**：确定性采集器、浏览器或提取工具获取的原始响应、文件或页面快照；记录获取方式与时间。
-2. **source register**：来源名称、原始 URL、来源族、访问时间、许可或访问限制、可信度建议、覆盖字段和原始证据位置。
-3. **extracted facts**：逐字段的原始值、单位、年份、引用来源 ID、提取方法与不确定性说明。
-4. **bilingual draft**：由本地模型或人工基于 extracted facts 形成的 schema-constrained `{ zh, en }` 草稿，所有记录保持 `draft` 且 `aiUsable = false`。
-5. **review report**：审核结论、待解决冲突、缺失字段、来源抽检、注入风险、发布建议以及人工决定记录。
+1. **raw cache**：`.cache/basic-country/<ISO2>/<runId>/raw/`，存放确定性采集器、浏览器或提取工具获取的原始响应、文件或页面快照；记录获取方式与时间，且**永不提交**。
+2. **source register**：`data/staging/<country>/<runId>/source-register.json`，记录来源名称、原始 URL、来源族、访问时间、许可或访问限制、可信度建议、覆盖字段和原始证据位置。
+3. **extracted facts**：`data/staging/<country>/<runId>/extracted-facts.json`，逐字段保存原始值、单位、年份、引用来源 ID、提取方法与不确定性说明。
+4. **bilingual draft**：`data/staging/<country>/<runId>/market-overview.draft.json`，由本地模型或人工基于 extracted facts 形成 schema-constrained `{ zh, en }` 草稿，所有记录保持 `draft` 且 `aiUsable = false`。
+5. **review report**：`data/staging/<country>/<runId>/review-report.json`，记录审核结论、待解决冲突、缺失字段、来源抽检、注入风险、发布建议以及人工决定。
+
+人工批准后的 canonical data 仅写入 `data/<country>/`。暂存区和 raw cache 不得作为 canonical data 或 AI 知识源。
 
 暂存区中的内容不是产品数据，不能被 C 端、种子导入或 AI 检索使用。
 

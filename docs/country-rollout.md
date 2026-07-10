@@ -18,6 +18,8 @@ MVP 到商业化初期的国家数据目标：
 
 所有国家使用同一套 10 模块结构，差异只体现在数据深度，不体现在页面结构。
 
+除既有 Complete 参考国家 `ID` 外，每个新选定的目标国家必须先完成其 `DATA-BASIC-<ISO2>` 任务卡并达到 Basic；只有在此后，才可由人工批准单独的 Standard 或 Complete 升级任务。禁止新国家直接以 Standard 或 Complete 进入产品。
+
 ---
 
 ## 2. 首批国家候选
@@ -72,7 +74,7 @@ MVP 到商业化初期的国家数据目标：
 4. 经人工审核完成 `draft -> pending -> published`；Basic 发布记录保持 `aiUsable = false`。
 5. 运行覆盖等级判定与数据质量检查，确认国家为 Basic。
 6. 通过代表性 Web 占位与基础画像验收后对外展示。
-7. 后续 Standard 或 Complete 升级以单独任务卡提交，由人工决定是否启用合格的 published 数据用于 AI。
+7. 后续 Standard 或 Complete 升级以单独任务卡提交；仅已完成 `DATA-BASIC-<ISO2>` 并达到 Basic 的国家可升级，由人工决定是否启用合格的 published 数据用于 AI。
 
 ---
 
