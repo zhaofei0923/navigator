@@ -85,7 +85,7 @@ function createSource(sourceId: string) {
     publishedAt: "2026-07-08T00:00:00Z",
     contentSha256:
       "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
-    evidenceLocators: ["page 1"],
+    evidenceLocators: ["page 1", "table 1"],
     sourceFamily: "official-statistics" as const,
     accessStatus: "open" as const,
     accessNotes: null,

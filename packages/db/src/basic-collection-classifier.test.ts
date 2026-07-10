@@ -128,6 +128,31 @@ describe("Basic collection audit classifier", () => {
     expect(result.blockers).toEqual(["MISSING_REQUIRED_FACT"]);
   });
 
+  test("rejects duplicate extracted-fact field paths as a structural error", () => {
+    const bundle = createBasicCollectionAuditFixture();
+    bundle.extractedFacts.facts.push({
+      ...firstFact(bundle),
+      factId: "fact-duplicate-path",
+      evidence: firstFact(bundle).evidence.map((item) => ({ ...item })),
+    });
+
+    expectInvalid(
+      bundle,
+      "extractedFacts.facts[24].fieldPath duplicates extractedFacts.facts[0].fieldPath",
+    );
+  });
+
+  test("rejects evidence whose locator is not exactly registered by its source", () => {
+    const bundle = createBasicCollectionAuditFixture();
+    firstSource(bundle).evidenceLocators = ["table 1"];
+    firstEvidence(bundle).locator = "table 1 ";
+
+    expectInvalid(
+      bundle,
+      "extractedFacts.facts[0].evidence[0].locator must match a registered evidenceLocator for source-1",
+    );
+  });
+
   test("rejects a candidate normalizedValue that differs from its draft path", () => {
     const bundle = createBasicCollectionAuditFixture();
     const fact = factFor(bundle, "marketOverview.gdp");
@@ -230,28 +255,20 @@ describe("Basic collection audit classifier", () => {
     const bundle = createBasicCollectionAuditFixture();
     firstFact(bundle).status = "missing";
     firstFact(bundle).evidence = [];
-    bundle.extractedFacts.facts.push(
-      {
-        ...firstFact(bundle),
-        factId: "fact-25",
-        status: "conflict",
-        evidence: [
-          { ...firstEvidenceFromSource("source-1"), sourceId: "source-1" },
-          { ...firstEvidenceFromSource("source-2"), sourceId: "source-2" },
-        ],
-      },
-      {
-        ...firstFact(bundle),
-        factId: "fact-26",
-        status: "untrusted",
-        evidence: [firstEvidenceFromSource("source-1")],
-      },
-    );
+    const conflictFact = factFor(bundle, "country.code");
+    conflictFact.status = "conflict";
+    conflictFact.evidence = [
+      firstEvidenceFromSource("source-1"),
+      firstEvidenceFromSource("source-2"),
+    ];
+    const untrustedFact = factFor(bundle, "country.name");
+    untrustedFact.status = "untrusted";
+    untrustedFact.evidence = [firstEvidenceFromSource("source-1")];
     bundle.reviewReport.missingFields = ["country.summary"];
     bundle.reviewReport.conflicts = [
       {
-        fieldPath: "marketOverview.population",
-        factIds: ["fact-25"],
+        fieldPath: "country.code",
+        factIds: [conflictFact.factId],
         resolution: "unresolved",
         notes: "Needs human resolution",
       },

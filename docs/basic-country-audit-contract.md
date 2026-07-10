@@ -109,6 +109,16 @@ marketOverview.techTags
 
 每个 `BasicFactEvidence` 包含 `sourceId`（引用已登记的非空 ID）、`locator`（非空证据定位符字符串）、`rawValue`（`BasicCollectionJsonValue`）、`normalizedValue`（`BasicCollectionJsonValue`）、`unit`（非空字符串或 `null`）和 `year`（有限数值或 `null`）。
 
+Each extracted-facts fieldPath occurs at most once.
+Each evidence locator must exactly match one locator in the referenced source record's evidenceLocators array.
+
+Tuple-based deterministic evidence follows these structural rules without changing the schema:
+
+- Equal tuples from one or more `sourceId` values produce one `candidate` fact with all evidence.
+- Differing tuples from at least two distinct `sourceId` values produce one `conflict` fact with all evidence.
+- Differing tuples within one `sourceId` are malformed adapter output and fail closed; the runner neither selects a value nor fabricates another source.
+- Every `conflict` fact therefore contains evidence from at least two distinct `sourceId` values.
+
 ### 3.3 `market-overview.draft.json`
 
 该草稿是唯一的 `BasicMarketOverviewDraft` 对象，不带 `schemaVersion` 包装。它包含：

@@ -103,17 +103,17 @@ graph LR
 - 人工确认：否（若引入第三方依赖或触及既有 AGENTS.md 人工闸门，须单独人工确认）。
 
 #### P1-6B Deterministic source adapters and raw capture
-- 目标：实现可复现的确定性来源适配器、raw capture 与 source register，保留来源身份、原始 URL、检索时间、已知发布时间、内容 SHA-256、证据定位符和可信度。
+- 目标：按 [basic-country-source-adapters.md](./basic-country-source-adapters.md) 实现可复现的确定性来源适配器、raw capture 与 source register，保留来源身份、原始 URL、检索时间、已知发布时间、内容 SHA-256、证据定位符和可信度。
 - 验收：原始采集与证据登记可追溯；每个 canonical 字段路径可映射至 source ID、精确原始值、标准化值、适用单位/年份和证据定位符；raw cache 不提交且不进入 canonical 流程。
 - 人工确认：否（若引入第三方依赖或触及既有 AGENTS.md 人工闸门，须单独人工确认）。
 
 #### P1-6C Hermes discovery and llama.cpp schema draft bridge
-- 目标：在 [basic-country-collection.md](./basic-country-collection.md) 的发现与证据边界内接入 Hermes discovery 和 Windows `llama.cpp` schema-constrained 草稿桥接，并处理运行时与模型失败。
+- 目标：在 [basic-country-collection.md](./basic-country-collection.md) 的发现与证据边界内接入 Hermes discovery 和 Windows `llama.cpp` schema-constrained 草稿桥接，并处理运行时与模型失败；P1-6B 的 raw capture 与 provenance boundary 以 [basic-country-source-adapters.md](./basic-country-source-adapters.md) 为准。
 - 验收：SearXNG 仅 discovery-only，必须打开原始来源后才可形成事实；本地模型输出始终为 `draft`、`aiUsable = false`，不直接写入 canonical seed 或发布。
 - 人工确认：否（若引入第三方依赖或触及既有 AGENTS.md 人工闸门，须单独人工确认）。
 
 #### P1-6D Offline end-to-end dry run and boundary verification
-- 目标：完成离线端到端 dry run，并验证采集、审计与发布边界不越界。
+- 目标：完成离线端到端 dry run，并验证采集、审计与发布边界不越界，包括 [basic-country-source-adapters.md](./basic-country-source-adapters.md) 定义的 raw capture 与 provenance boundary。
 - 验收：正常、缺失、冲突和不可信输入均通过预期路径；确认 `data/staging/`、`collection-manifest.json` 与其他 audit artifacts 不能进入 seed 记录、C 端响应、覆盖计数或 AI 检索；不得自动发布或自动选择冲突值。
 - 人工确认：否（若引入第三方依赖或触及既有 AGENTS.md 人工闸门，须单独人工确认）。
 
