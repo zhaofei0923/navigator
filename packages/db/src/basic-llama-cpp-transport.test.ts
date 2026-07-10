@@ -161,6 +161,7 @@ describe("Basic llama.cpp draft transport", () => {
       getReader() {
         return {
           read: () => new Promise((resolve) => { resolveRead = resolve; }),
+          cancel() {},
           releaseLock() {},
         };
       },
@@ -225,6 +226,49 @@ describe("Basic llama.cpp draft transport", () => {
   });
 
   test.each([
+    { name: "resolving cancel", cancel: () => Promise.resolve() },
+    { name: "throwing cancel", cancel: () => { throw new Error(SECRET); } },
+    { name: "rejecting cancel", cancel: () => Promise.reject(new Error(SECRET)) },
+  ])("cancels a non-cooperative pending read on timeout with $name", async ({ cancel }) => {
+    vi.useFakeTimers();
+    let cancelCalls = 0;
+    const body = bodyWithReader({
+      read: () => new Promise(() => {}),
+      cancel: () => { cancelCalls += 1; return cancel(); },
+      releaseLock() {},
+    });
+    const pending = completeBody(body, 10);
+    const outcome = pending.then(() => "settled", () => "settled");
+    await vi.advanceTimersByTimeAsync(10);
+    const error = await rejectWith(pending);
+    expect(error.message).toBe("P1-6C bridge failed: LLAMA_TIMEOUT");
+    expect(error.message).not.toContain(SECRET);
+    expect(cancelCalls).toBe(1);
+    await vi.runAllTimersAsync();
+    await outcome;
+  });
+
+  test.each([
+    { name: "resolving cancel", cancel: () => Promise.resolve() },
+    { name: "throwing cancel", cancel: () => { throw new Error(SECRET); } },
+    { name: "rejecting cancel", cancel: () => Promise.reject(new Error(SECRET)) },
+  ])("cancels and releases an overflowing response with $name", async ({ cancel }) => {
+    let cancelCalls = 0;
+    let releaseCalls = 0;
+    const body = bodyWithReader(readerForResults(
+      [{ value: new Uint8Array(BASIC_LLAMA_DRAFT_MAX_RESPONSE_BYTES + 1), done: false }],
+      () => { cancelCalls += 1; return cancel(); },
+      () => { releaseCalls += 1; },
+    ));
+    const error = await rejectWith(completeBody(body));
+    expect(error.message).toBe("P1-6C bridge failed: LLAMA_RESPONSE_INVALID");
+    expect(error.message).not.toContain(SECRET);
+    expect(cancelCalls).toBe(1);
+    expect(releaseCalls).toBe(1);
+    await Promise.resolve();
+  });
+
+  test.each([
     [response(200, stream([new Uint8Array([0xc3])])), "invalid UTF-8"],
     [response(200, stream([bytes("{")])), "invalid JSON"],
     [{ status: 200, redirected: false, headers: { get: () => "application/json" }, body: {} }, "malformed body"],
@@ -238,28 +282,43 @@ describe("Basic llama.cpp draft transport", () => {
     expect(error.message).not.toContain(SECRET);
   });
 
-  test("redacts hostile reader and read-result failures as unavailable", async () => {
-    const readerGetter = {
-      status: 200,
-      redirected: false,
-      headers: { get: () => "application/json" },
-      body: { getReader() { throw new Error(SECRET); } },
-    } as unknown as BasicLlamaCppFetchResponse;
-    const readResult = {
-      status: 200,
-      redirected: false,
-      headers: { get: () => "application/json" },
-      body: { getReader() { return { read: async () => new Proxy({}, { get() { throw new Error(SECRET); } }), releaseLock() {} }; } },
-    } as unknown as BasicLlamaCppFetchResponse;
-    for (const responseValue of [readerGetter, readResult]) {
-      const error = await rejectWith(createBasicLlamaCppDraftTransport({
-        baseUrl: URL,
-        model: "qwen35b",
-        fetchImpl: createFetch([responseValue]),
-      }).complete(REQUEST));
-      expect(error.message).toBe("P1-6C bridge failed: LLAMA_UNAVAILABLE");
-      expect(error.message).not.toContain(SECRET);
-    }
+  test.each([
+    { name: "getReader accessor", body: () => ({ get getReader() { throw new Error(SECRET); } }) },
+    { name: "getReader value", body: () => ({ getReader: 7 }) },
+    { name: "getReader invocation", body: () => ({ getReader() { throw new Error(SECRET); } }) },
+    { name: "reader value", body: () => ({ getReader() { return null; } }) },
+    { name: "read accessor", body: () => bodyWithReader({ get read() { throw new Error(SECRET); }, cancel() {}, releaseLock() {} }) },
+    { name: "missing cancel", body: () => bodyWithReader(jsonReader({ cancel: undefined })) },
+    { name: "cancel accessor", body: () => bodyWithReader({ ...jsonReader(), get cancel() { throw new Error(SECRET); } }) },
+    { name: "missing releaseLock", body: () => bodyWithReader(jsonReader({ releaseLock: undefined })) },
+    { name: "releaseLock accessor", body: () => bodyWithReader({ ...jsonReader(), get releaseLock() { throw new Error(SECRET); } }) },
+  ] as readonly { name: string; body: () => unknown }[])("maps malformed $name shape to response invalid without provider text", async ({ body }) => {
+    const error = await rejectWith(completeBody(body() as unknown as ReadableStream<Uint8Array>));
+    expect(error.message).toBe("P1-6C bridge failed: LLAMA_RESPONSE_INVALID");
+    expect(error.message).not.toContain(SECRET);
+  });
+
+  test.each([
+    { name: "primitive result", results: () => [validChunk(), 7] },
+    { name: "result accessor", results: () => [validChunk(), { value: undefined, get done() { throw new Error(SECRET); } }] },
+    { name: "non-boolean done", results: () => [validChunk(), { value: undefined, done: "yes" }] },
+    { name: "done result with value", results: () => [validChunk(), { value: bytes(SECRET), done: true }] },
+    { name: "non-Uint8Array chunk", results: () => [{ value: SECRET, done: false }] },
+    { name: "extra result key", results: () => [validChunk(), { value: undefined, done: true, extra: SECRET }] },
+    { name: "missing result value", results: () => [validChunk(), { done: true }] },
+  ])("maps malformed $name to response invalid without provider text", async ({ results }) => {
+    const error = await rejectWith(completeBody(bodyWithReader(readerForResults(results()))));
+    expect(error.message).toBe("P1-6C bridge failed: LLAMA_RESPONSE_INVALID");
+    expect(error.message).not.toContain(SECRET);
+  });
+
+  test.each([
+    { name: "synchronous read throw", read: () => { throw new Error(SECRET); } },
+    { name: "rejected read promise", read: () => Promise.reject(new Error(SECRET)) },
+  ])("maps a correctly captured $name to unavailable", async ({ read }) => {
+    const error = await rejectWith(completeBody(bodyWithReader({ read, cancel() {}, releaseLock() {} })));
+    expect(error.message).toBe("P1-6C bridge failed: LLAMA_UNAVAILABLE");
+    expect(error.message).not.toContain(SECRET);
   });
 
   test("redacts hostile response, headers, and body getter failures", async () => {
@@ -275,6 +334,78 @@ describe("Basic llama.cpp draft transport", () => {
       expect(error.message).toBe("P1-6C bridge failed: LLAMA_RESPONSE_INVALID");
       expect(error.message).not.toContain(SECRET);
     }
+  });
+
+  test("rejects option, request, schema, and fetch proxies before invoking traps", async () => {
+    const options = trackedProxy({ baseUrl: URL, model: "qwen35b", fetchImpl: createFetch([]) });
+    expectInputError(() => createBasicLlamaCppDraftTransport(options.proxy));
+    expectNoTrapCalls(options.calls);
+
+    const transport = createBasicLlamaCppDraftTransport({ baseUrl: URL, model: "qwen35b", fetchImpl: createFetch([]) });
+    const request = trackedProxy({ ...REQUEST });
+    expect((await rejectWith(transport.complete(request.proxy))).message).toBe("P1-6C bridge failed: INPUT_INVALID");
+    expectNoTrapCalls(request.calls);
+
+    const schema = trackedProxy({ type: "object" });
+    const schemaRequest = { ...REQUEST, response_format: { type: "json_schema" as const, schema: schema.proxy } };
+    expect((await rejectWith(transport.complete(schemaRequest))).message).toBe("P1-6C bridge failed: INPUT_INVALID");
+    expectNoTrapCalls(schema.calls);
+
+    const fetchImpl = trackedProxy(async () => jsonResponse({}));
+    expectInputError(() => createBasicLlamaCppDraftTransport({ baseUrl: URL, model: "qwen35b", fetchImpl: fetchImpl.proxy }));
+    expectNoTrapCalls(fetchImpl.calls);
+  });
+
+  test.each([
+    { name: "headers", create: () => {
+      const tracked = trackedProxy({ get: () => "application/json" });
+      return { response: { status: 200, redirected: false, headers: tracked.proxy, body: stream([bytes("{}")]) }, tracked };
+    } },
+    { name: "headers.get method", create: () => {
+      const tracked = trackedProxy(() => "application/json");
+      return { response: { status: 200, redirected: false, headers: { get: tracked.proxy }, body: stream([bytes("{}")]) }, tracked };
+    } },
+    { name: "body", create: () => {
+      const tracked = trackedProxy(stream([bytes("{}")]));
+      return { response: { status: 200, redirected: false, headers: { get: () => "application/json" }, body: tracked.proxy }, tracked };
+    } },
+    { name: "getReader method", create: () => {
+      const tracked = trackedProxy(() => jsonReader());
+      return { response: response(200, { getReader: tracked.proxy } as unknown as ReadableStream<Uint8Array>), tracked };
+    } },
+    { name: "reader", create: () => {
+      const tracked = trackedProxy(jsonReader());
+      return { response: response(200, bodyWithReader(tracked.proxy)), tracked };
+    } },
+    { name: "read method", create: () => {
+      const tracked = trackedProxy(async () => validDone());
+      return { response: response(200, bodyWithReader({ read: tracked.proxy, cancel() {}, releaseLock() {} })), tracked };
+    } },
+    { name: "cancel method", create: () => {
+      const tracked = trackedProxy(() => Promise.resolve());
+      return { response: response(200, bodyWithReader(jsonReader({ cancel: tracked.proxy }))), tracked };
+    } },
+    { name: "releaseLock method", create: () => {
+      const tracked = trackedProxy(() => undefined);
+      return { response: response(200, bodyWithReader(jsonReader({ releaseLock: tracked.proxy }))), tracked };
+    } },
+  ])("rejects a proxied $name without invoking traps", async ({ create }) => {
+    const { response: responseValue, tracked } = create();
+    const error = await rejectWith(createBasicLlamaCppDraftTransport({
+      baseUrl: URL,
+      model: "qwen35b",
+      fetchImpl: createFetch([responseValue as BasicLlamaCppFetchResponse]),
+    }).complete(REQUEST));
+    expect(error.message).toBe("P1-6C bridge failed: LLAMA_RESPONSE_INVALID");
+    expect(error.message).not.toContain(SECRET);
+    expectNoTrapCalls(tracked.calls);
+  });
+
+  test("rejects a proxied read result before reflection traps", async () => {
+    const tracked = trackedReflectionProxy(validDone());
+    const error = await rejectWith(completeBody(bodyWithReader(readerForResults([validChunk(), tracked.proxy]))));
+    expect(error.message).toBe("P1-6C bridge failed: LLAMA_RESPONSE_INVALID");
+    expectNoReflectionTrapCalls(tracked.calls);
   });
 
   test("snapshots endpoint, model, fetch, and timeout before caller mutation", async () => {
@@ -350,6 +481,85 @@ describe("Basic llama.cpp draft transport", () => {
     }).complete(REQUEST)).resolves.toBeNull();
   });
 });
+
+interface TrapCalls {
+  get: number;
+  getOwnPropertyDescriptor: number;
+  getPrototypeOf: number;
+  ownKeys: number;
+  apply: number;
+}
+
+function bodyWithReader(reader: unknown): ReadableStream<Uint8Array> {
+  return { getReader() { return reader; } } as unknown as ReadableStream<Uint8Array>;
+}
+
+function jsonReader(overrides: Readonly<Record<string, unknown>> = {}): Record<string, unknown> {
+  return { ...readerForResults([validChunk(), validDone()]), ...overrides };
+}
+
+function readerForResults(
+  results: readonly unknown[],
+  cancel: () => unknown = () => undefined,
+  releaseLock: () => unknown = () => undefined,
+): Record<string, unknown> {
+  let index = 0;
+  return { read: () => Promise.resolve(results[index++]), cancel, releaseLock };
+}
+
+function validChunk(): { value: Uint8Array; done: false } { return { value: bytes("{}"), done: false }; }
+function validDone(): { value: undefined; done: true } { return { value: undefined, done: true }; }
+
+function completeBody(body: ReadableStream<Uint8Array>, timeoutMs?: number): Promise<unknown> {
+  const fetchImpl: BasicLlamaCppFetch = async () => response(200, body);
+  return createBasicLlamaCppDraftTransport({
+    baseUrl: URL,
+    model: "qwen35b",
+    ...(timeoutMs === undefined ? {} : { timeoutMs }),
+    fetchImpl,
+  }).complete(REQUEST);
+}
+
+function trackedProxy<T extends object>(target: T): { proxy: T; calls: TrapCalls } {
+  const calls: TrapCalls = { get: 0, getOwnPropertyDescriptor: 0, getPrototypeOf: 0, ownKeys: 0, apply: 0 };
+  const trapped = (name: keyof TrapCalls): never => { calls[name] += 1; throw new Error(SECRET); };
+  return {
+    proxy: new Proxy(target, {
+      get: () => trapped("get"),
+      getOwnPropertyDescriptor: () => trapped("getOwnPropertyDescriptor"),
+      getPrototypeOf: () => trapped("getPrototypeOf"),
+      ownKeys: () => trapped("ownKeys"),
+      apply: () => trapped("apply"),
+    }),
+    calls,
+  };
+}
+
+function trackedReflectionProxy<T extends object>(target: T): {
+  proxy: T;
+  calls: Pick<TrapCalls, "getOwnPropertyDescriptor" | "getPrototypeOf" | "ownKeys">;
+} {
+  const calls = { getOwnPropertyDescriptor: 0, getPrototypeOf: 0, ownKeys: 0 };
+  const trapped = (name: keyof typeof calls): never => { calls[name] += 1; throw new Error(SECRET); };
+  return {
+    proxy: new Proxy(target, {
+      getOwnPropertyDescriptor: () => trapped("getOwnPropertyDescriptor"),
+      getPrototypeOf: () => trapped("getPrototypeOf"),
+      ownKeys: () => trapped("ownKeys"),
+    }),
+    calls,
+  };
+}
+
+function expectNoTrapCalls(calls: TrapCalls): void {
+  expect(calls).toEqual({ get: 0, getOwnPropertyDescriptor: 0, getPrototypeOf: 0, ownKeys: 0, apply: 0 });
+}
+
+function expectNoReflectionTrapCalls(
+  calls: Pick<TrapCalls, "getOwnPropertyDescriptor" | "getPrototypeOf" | "ownKeys">,
+): void {
+  expect(calls).toEqual({ getOwnPropertyDescriptor: 0, getPrototypeOf: 0, ownKeys: 0 });
+}
 
 function createFetch(responses: readonly BasicLlamaCppFetchResponse[]): ReturnType<typeof vi.fn<BasicLlamaCppFetch>> {
   let index = 0;

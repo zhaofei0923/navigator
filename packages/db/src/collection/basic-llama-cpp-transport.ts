@@ -1,3 +1,4 @@
+import { isProxy } from "node:util/types";
 import { BasicCollectionBridgeError } from "./basic-collection-bridge-error.js";
 import {
   BASIC_LLAMA_DRAFT_MAX_REQUEST_BYTES,
@@ -9,29 +10,20 @@ import {
   type BasicLlamaCppFetchResponse,
   type BasicLlamaCppTransportOptions,
 } from "./basic-hermes-llama-contracts.js";
-
 const OPTION_KEYS = ["baseUrl", "model", "timeoutMs", "fetchImpl"] as const;
 const REQUEST_KEYS = ["messages", "stream", "temperature", "chat_template_kwargs", "response_format"] as const;
 const MESSAGE_KEYS = ["role", "content"] as const;
 const THINKING_KEYS = ["enable_thinking"] as const;
 const RESPONSE_FORMAT_KEYS = ["type", "schema"] as const;
+const READ_RESULT_KEYS = ["value", "done"] as const;
 const MAX_JSON_DEPTH = 64;
+const MAX_METHOD_PROTOTYPE_DEPTH = 16;
 const RESPONSE_INVALID = Symbol("response-invalid");
 const UNAVAILABLE = Symbol("unavailable");
 const JSON_INVALID = Symbol("json-invalid");
-
 type LlamaFailure = "LLAMA_UNAVAILABLE" | "LLAMA_RESPONSE_INVALID";
-
-interface TransportSnapshot {
-  url: string;
-  model: string;
-  timeoutMs: number;
-  fetchImpl: BasicLlamaCppFetch;
-}
-
-export function createBasicLlamaCppDraftTransport(
-  options: BasicLlamaCppTransportOptions,
-): BasicDraftModelPort {
+interface TransportSnapshot { url: string; model: string; timeoutMs: number; fetchImpl: BasicLlamaCppFetch; }
+export function createBasicLlamaCppDraftTransport(options: BasicLlamaCppTransportOptions): BasicDraftModelPort {
   const snapshot = snapshotOptions(options);
   if (snapshot === null) throw bridgeError("INPUT_INVALID");
   return Object.freeze({
@@ -42,7 +34,6 @@ export function createBasicLlamaCppDraftTransport(
     },
   });
 }
-
 function snapshotOptions(value: unknown): TransportSnapshot | null {
   const properties = exactProperties(value, OPTION_KEYS, ["baseUrl", "model", "fetchImpl"]);
   if (properties === null) return null;
@@ -51,14 +42,13 @@ function snapshotOptions(value: unknown): TransportSnapshot | null {
   const fetchImpl = properties.get("fetchImpl");
   const timeoutMs = properties.get("timeoutMs") ?? BASIC_LLAMA_DRAFT_TIMEOUT_MS;
   if (
-    typeof baseUrl !== "string" || typeof model !== "string" || typeof fetchImpl !== "function" ||
+    typeof baseUrl !== "string" || typeof model !== "string" || typeof fetchImpl !== "function" || isProxy(fetchImpl) ||
     typeof timeoutMs !== "number" || !Number.isSafeInteger(timeoutMs) || timeoutMs <= 0 ||
     !isSafeModelAlias(model)
   ) return null;
   const url = completionUrl(baseUrl);
   return url === null ? null : Object.freeze({ url, model, timeoutMs, fetchImpl: fetchImpl as BasicLlamaCppFetch });
 }
-
 function serializeRequest(value: unknown, model: string): string | null {
   const properties = exactProperties(value, REQUEST_KEYS, REQUEST_KEYS);
   const messages = properties === null ? null : tupleValues(properties.get("messages"), 1);
@@ -85,11 +75,11 @@ function serializeRequest(value: unknown, model: string): string | null {
     return new TextEncoder().encode(body).byteLength <= BASIC_LLAMA_DRAFT_MAX_REQUEST_BYTES ? body : null;
   } catch { return null; }
 }
-
 function execute(snapshot: TransportSnapshot, body: string): Promise<unknown> {
   return new Promise((resolve, reject) => {
     const controller = new AbortController();
     let settled = false;
+    let cancelReader: (() => void) | null = null;
     const settle = (callback: () => void) => {
       if (settled) return;
       settled = true;
@@ -99,6 +89,7 @@ function execute(snapshot: TransportSnapshot, body: string): Promise<unknown> {
     const fail = (code: "LLAMA_TIMEOUT" | LlamaFailure) => settle(() => reject(bridgeError(code)));
     const timer = setTimeout(() => {
       try { controller.abort(); } catch { /* Timeout remains authoritative. */ }
+      cancelReader?.();
       fail("LLAMA_TIMEOUT");
     }, snapshot.timeoutMs);
     let fetchResult: Promise<BasicLlamaCppFetchResponse>;
@@ -114,7 +105,7 @@ function execute(snapshot: TransportSnapshot, body: string): Promise<unknown> {
     fetchResult.then(
       (response) => {
         if (settled) return;
-        readResponse(response, controller, () => settled).then(
+        readResponse(response, controller, () => settled, (cancel) => { cancelReader = cancel; }).then(
           (result) => settle(() => resolve(result)),
           (failure: unknown) => {
             if (settled) return;
@@ -126,14 +117,10 @@ function execute(snapshot: TransportSnapshot, body: string): Promise<unknown> {
     );
   });
 }
-
-async function readResponse(
-  response: unknown,
-  controller: AbortController,
-  isSettled: () => boolean,
-): Promise<unknown> {
+async function readResponse(response: unknown, controller: AbortController, isSettled: () => boolean,
+  registerCancel: (cancel: (() => void) | null) => void): Promise<unknown> {
   const body = readResponseMetadata(response);
-  const bytes = await readBody(body, controller, isSettled);
+  const bytes = await readBody(body, controller, isSettled, registerCancel);
   if (bytes === null || isSettled()) throw UNAVAILABLE;
   try {
     const parsed: unknown = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
@@ -142,65 +129,102 @@ async function readResponse(
     return reconstructed;
   } catch (error) { throw error === RESPONSE_INVALID ? error : RESPONSE_INVALID; }
 }
-
 function readResponseMetadata(response: unknown): ReadableStream<Uint8Array> {
   try {
-    if ((typeof response !== "object" && typeof response !== "function") || response === null) throw RESPONSE_INVALID;
+    if (!isObjectLike(response) || isProxy(response)) throw RESPONSE_INVALID;
     const status: unknown = Reflect.get(response, "status");
     const redirected: unknown = Reflect.get(response, "redirected");
     const headers: unknown = Reflect.get(response, "headers");
     const body: unknown = Reflect.get(response, "body");
-    if (typeof status !== "number" || !Number.isInteger(status) || status < 200 || status > 299 || redirected !== false || body === null || typeof body !== "object") throw RESPONSE_INVALID;
-    if ((typeof headers !== "object" && typeof headers !== "function") || headers === null) throw RESPONSE_INVALID;
-    const get: unknown = Reflect.get(headers, "get");
-    if (typeof get !== "function") throw RESPONSE_INVALID;
+    if (typeof status !== "number" || !Number.isInteger(status) || status < 200 || status > 299 || redirected !== false || !isObjectLike(headers) || !isObjectLike(body) || isProxy(headers) || isProxy(body)) throw RESPONSE_INVALID;
+    const get = dataMethod(headers, "get");
+    if (get === null) throw RESPONSE_INVALID;
     const contentType: unknown = Reflect.apply(get, headers, ["content-type"]);
     if (typeof contentType !== "string" || !isJsonContentType(contentType)) throw RESPONSE_INVALID;
     return body as ReadableStream<Uint8Array>;
   } catch { throw RESPONSE_INVALID; }
 }
-
-async function readBody(
-  body: ReadableStream<Uint8Array>,
-  controller: AbortController,
-  isSettled: () => boolean,
-): Promise<Uint8Array | null> {
-  let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
+async function readBody(body: ReadableStream<Uint8Array>, controller: AbortController, isSettled: () => boolean,
+  registerCancel: (cancel: (() => void) | null) => void): Promise<Uint8Array | null> {
+  const getReader = dataMethod(body, "getReader");
+  if (getReader === null) throw RESPONSE_INVALID;
+  let reader: unknown;
+  try { reader = Reflect.apply(getReader, body, []); }
+  catch { throw RESPONSE_INVALID; }
+  if (!isObjectLike(reader) || isProxy(reader)) throw RESPONSE_INVALID;
+  const read = dataMethod(reader, "read");
+  const cancel = dataMethod(reader, "cancel");
+  const releaseLock = dataMethod(reader, "releaseLock");
+  if (read === null || cancel === null || releaseLock === null) throw RESPONSE_INVALID;
+  const cancelCurrent = () => observeMethod(cancel, reader);
+  registerCancel(cancelCurrent);
   try {
-    const getReader: unknown = Reflect.get(body, "getReader");
-    if (typeof getReader !== "function") throw RESPONSE_INVALID;
-    reader = Reflect.apply(getReader, body, []) as ReadableStreamDefaultReader<Uint8Array>;
     const chunks: Uint8Array[] = [];
     let length = 0;
     for (;;) {
-      const result: unknown = await reader.read();
+      let pending: unknown;
+      try { pending = Reflect.apply(read, reader, []); }
+      catch { throw UNAVAILABLE; }
+      if (!isObjectLike(pending) || isProxy(pending) || dataMethod(pending, "then") === null) throw RESPONSE_INVALID;
+      let result: unknown;
+      try { result = await Promise.resolve(pending); }
+      catch { throw UNAVAILABLE; }
       if (isSettled()) return null;
-      if ((typeof result !== "object" && typeof result !== "function") || result === null) throw UNAVAILABLE;
-      const done: unknown = Reflect.get(result, "done");
-      const value: unknown = Reflect.get(result, "value");
-      if (typeof done !== "boolean") throw UNAVAILABLE;
-      if (done) return joinChunks(chunks, length);
-      if (!(value instanceof Uint8Array)) throw UNAVAILABLE;
+      const properties = exactProperties(result, READ_RESULT_KEYS, READ_RESULT_KEYS);
+      if (properties === null) throw RESPONSE_INVALID;
+      const done = properties.get("done");
+      const value = properties.get("value");
+      if (typeof done !== "boolean") throw RESPONSE_INVALID;
+      if (done) {
+        if (value !== undefined) throw RESPONSE_INVALID;
+        return joinChunks(chunks, length);
+      }
+      if (typeof value !== "object" || value === null || isProxy(value) || !(value instanceof Uint8Array)) throw RESPONSE_INVALID;
       length += value.byteLength;
       if (length > BASIC_LLAMA_DRAFT_MAX_RESPONSE_BYTES) {
         try { controller.abort(); } catch { /* The response limit remains authoritative. */ }
+        cancelCurrent();
         throw RESPONSE_INVALID;
       }
       chunks.push(value);
     }
-  } catch (error) { throw error === RESPONSE_INVALID ? error : UNAVAILABLE; }
-  finally {
-    try { reader?.releaseLock(); } catch { /* Reader cleanup cannot alter the boundary failure. */ }
+  } finally {
+    registerCancel(null);
+    observeMethod(releaseLock, reader);
   }
 }
-
-function exactProperties(
-  value: unknown,
-  allowedKeys: readonly string[],
-  requiredKeys: readonly string[],
-): ReadonlyMap<string, unknown> | null {
+type DataMethod = (...args: unknown[]) => unknown;
+function dataMethod(value: object, key: string): DataMethod | null {
   try {
-    if (typeof value !== "object" || value === null || Array.isArray(value) || Object.getPrototypeOf(value) !== Object.prototype) return null;
+    let owner: object | null = value;
+    const visited = new Set<object>();
+    for (let depth = 0; owner !== null && depth < MAX_METHOD_PROTOTYPE_DEPTH; depth += 1) {
+      if (isProxy(owner) || visited.has(owner)) return null;
+      visited.add(owner);
+      const descriptor = Object.getOwnPropertyDescriptor(owner, key);
+      if (descriptor !== undefined) {
+        const method = Object.hasOwn(descriptor, "value") ? descriptor.value : null;
+        return typeof method === "function" && !isProxy(method) ? method as DataMethod : null;
+      }
+      owner = Object.getPrototypeOf(owner) as object | null;
+    }
+    return null;
+  } catch { return null; }
+}
+
+function observeMethod(method: DataMethod, target: object): void {
+  try { Promise.resolve(Reflect.apply(method, target, [])).then(() => undefined, () => undefined); }
+  catch { /* Cleanup cannot replace the timeout or response failure. */ }
+}
+
+function isObjectLike(value: unknown): value is object {
+  return (typeof value === "object" && value !== null) || typeof value === "function";
+}
+
+function exactProperties(value: unknown, allowedKeys: readonly string[],
+  requiredKeys: readonly string[]): ReadonlyMap<string, unknown> | null {
+  try {
+    if (typeof value !== "object" || value === null || isProxy(value) || Array.isArray(value) || Object.getPrototypeOf(value) !== Object.prototype) return null;
     const keys = Reflect.ownKeys(value);
     if (keys.some((key) => typeof key !== "string" || !allowedKeys.includes(key)) || requiredKeys.some((key) => !keys.includes(key))) return null;
     const result = new Map<string, unknown>();
@@ -215,7 +239,7 @@ function exactProperties(
 
 function tupleValues(value: unknown, length: number): readonly unknown[] | null {
   try {
-    if (!Array.isArray(value) || Object.getPrototypeOf(value) !== Array.prototype || value.length !== length || Reflect.ownKeys(value).length !== length + 1) return null;
+    if (typeof value !== "object" || value === null || isProxy(value) || !Array.isArray(value) || Object.getPrototypeOf(value) !== Array.prototype || value.length !== length || Reflect.ownKeys(value).length !== length + 1) return null;
     const result: unknown[] = [];
     for (let index = 0; index < length; index += 1) {
       const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
@@ -231,6 +255,7 @@ function snapshotJson(value: unknown, depth: number): unknown {
     if (value === null || typeof value === "string" || typeof value === "boolean") return value;
     if (typeof value === "number") return Number.isFinite(value) ? value : JSON_INVALID;
     if (depth >= MAX_JSON_DEPTH || typeof value !== "object") return JSON_INVALID;
+    if (isProxy(value)) return JSON_INVALID;
     if (Array.isArray(value)) {
       const values = tupleValues(value, value.length);
       if (values === null) return JSON_INVALID;
