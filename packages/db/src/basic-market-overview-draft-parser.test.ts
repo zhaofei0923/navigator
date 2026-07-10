@@ -4,6 +4,10 @@ import { createBasicCollectionAuditFixture } from "./basic-collection-test-fixtu
 import { parseBasicMarketOverviewDraft } from "./collection/basic-market-overview-draft-parser.js";
 
 type DraftInput = Record<string, unknown>;
+type TrapCalls = Record<
+  "get" | "getOwnPropertyDescriptor" | "getPrototypeOf" | "ownKeys",
+  number
+>;
 
 function createDraft(): DraftInput {
   const cloned = structuredClone(
@@ -20,6 +24,40 @@ function expectInvalid(value: unknown, error: string): void {
   const result = parseBasicMarketOverviewDraft(value);
   expect(result.data).toBeNull();
   expect(result.errors).toEqual(expect.arrayContaining([expect.stringContaining(error)]));
+}
+
+function proxyWithThrowingReflectionTraps<T extends object>(target: T): {
+  proxy: T;
+  calls: TrapCalls;
+} {
+  const calls: TrapCalls = {
+    get: 0,
+    getOwnPropertyDescriptor: 0,
+    getPrototypeOf: 0,
+    ownKeys: 0,
+  };
+  const trapped = (name: keyof TrapCalls): never => {
+    calls[name] += 1;
+    throw new Error(`unexpected ${name} trap`);
+  };
+  return {
+    proxy: new Proxy(target, {
+      get: () => trapped("get"),
+      getOwnPropertyDescriptor: () => trapped("getOwnPropertyDescriptor"),
+      getPrototypeOf: () => trapped("getPrototypeOf"),
+      ownKeys: () => trapped("ownKeys"),
+    }),
+    calls,
+  };
+}
+
+function expectNoTrapCalls(calls: TrapCalls): void {
+  expect(calls).toEqual({
+    get: 0,
+    getOwnPropertyDescriptor: 0,
+    getPrototypeOf: 0,
+    ownKeys: 0,
+  });
 }
 
 describe("parseBasicMarketOverviewDraft", () => {
@@ -60,11 +98,6 @@ describe("parseBasicMarketOverviewDraft", () => {
       error: "marketOverviewDraft must have exactly",
     },
     {
-      name: "an accessor draft key",
-      mutate(draft: DraftInput) { Object.defineProperty(draft, "overview", { enumerable: true, get: () => ({ zh: "ZH", en: "EN" }) }); },
-      error: "marketOverviewDraft must use enumerable data properties",
-    },
-    {
       name: "an inherited draft key",
       mutate(draft: DraftInput) { Object.setPrototypeOf(draft, { overview: draft.overview }); },
       error: "marketOverviewDraft must have exactly",
@@ -72,6 +105,105 @@ describe("parseBasicMarketOverviewDraft", () => {
   ])("rejects $name", ({ mutate, error }) => {
     const draft = createDraft();
     mutate(draft);
+    expectInvalid(draft, error);
+  });
+
+  test("rejects an accessor draft key without invoking its getter", () => {
+    const draft = createDraft();
+    let getterCalls = 0;
+    Object.defineProperty(draft, "overview", {
+      enumerable: true,
+      get() {
+        getterCalls += 1;
+        return { zh: "ZH", en: "EN" };
+      },
+    });
+
+    expectInvalid(draft, "marketOverviewDraft must use enumerable data properties");
+    expect(getterCalls).toBe(0);
+  });
+
+  test.each([
+    {
+      name: "top-level draft",
+      createValue() {
+        return proxyWithThrowingReflectionTraps(createDraft());
+      },
+      error: "marketOverviewDraft must have exactly",
+    },
+    {
+      name: "localized object",
+      createValue() {
+        const draft = createDraft();
+        const tracked = proxyWithThrowingReflectionTraps({ zh: "ZH", en: "EN" });
+        draft.overview = tracked.proxy;
+        return { proxy: draft, calls: tracked.calls };
+      },
+      error: "marketOverviewDraft.overview must have exactly",
+    },
+    {
+      name: "indicator",
+      createValue() {
+        const draft = createDraft();
+        const indicators = draft.keyIndicators as unknown[];
+        const tracked = proxyWithThrowingReflectionTraps(
+          indicators[0] as Record<string, unknown>,
+        );
+        indicators[0] = tracked.proxy;
+        return { proxy: draft, calls: tracked.calls };
+      },
+      error: "marketOverviewDraft.keyIndicators[0] must have exactly",
+    },
+    {
+      name: "array",
+      createValue() {
+        const draft = createDraft();
+        const tracked = proxyWithThrowingReflectionTraps(
+          draft.keyIndicators as unknown[],
+        );
+        draft.keyIndicators = tracked.proxy;
+        return { proxy: draft, calls: tracked.calls };
+      },
+      error: "marketOverviewDraft.keyIndicators must be a standard JSON array",
+    },
+  ])("rejects a $name proxy before invoking reflection traps", ({ createValue, error }) => {
+    const tracked = createValue();
+
+    expectInvalid(tracked.proxy, error);
+    expectNoTrapCalls(tracked.calls);
+  });
+
+  test.each([
+    {
+      name: "self-referential draft field",
+      mutate(draft: DraftInput) {
+        draft.overview = draft;
+      },
+      error: "marketOverviewDraft.overview must have exactly",
+    },
+    {
+      name: "self-referential localized value",
+      mutate(draft: DraftInput) {
+        const localized: DraftInput = { zh: "ZH", en: "EN" };
+        localized.zh = localized;
+        draft.overview = localized;
+      },
+      error: "marketOverviewDraft.overview.zh must be a string",
+    },
+    {
+      name: "self-referential indicator array",
+      mutate(draft: DraftInput) {
+        const indicators: unknown[] = [];
+        indicators.push(indicators);
+        draft.keyIndicators = indicators;
+      },
+      error: "marketOverviewDraft.keyIndicators[0] must have exactly",
+    },
+  ])("rejects a $name without throwing or hanging", ({ mutate, error }) => {
+    const draft = createDraft();
+    mutate(draft);
+
+    expect(() => parseBasicMarketOverviewDraft(draft)).not.toThrow();
     expectInvalid(draft, error);
   });
 

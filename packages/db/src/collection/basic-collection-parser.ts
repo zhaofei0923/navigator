@@ -25,7 +25,7 @@ import {
   type BasicSourceRecord,
   type BasicSourceRegister,
 } from "./basic-collection-contracts.js";
-import { parseBasicMarketOverviewDraft } from "./basic-market-overview-draft-parser.js";
+import { parseBasicMarketOverviewDraftForAudit } from "./basic-market-overview-draft-parser.js";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -59,7 +59,9 @@ export function parseBasicCollectionAuditBundle(value: unknown): BasicCollection
   const runId = run(bundle.runId, "runId", errors);
   const sourceRegister = parseSourceRegister(bundle.sourceRegister, errors);
   const extractedFacts = parseExtractedFacts(bundle.extractedFacts, errors);
-  const parsedDraft = parseBasicMarketOverviewDraft(bundle.marketOverviewDraft);
+  const parsedDraft = parseBasicMarketOverviewDraftForAudit(
+    bundle.marketOverviewDraft,
+  );
   errors.push(...parsedDraft.errors);
   const marketOverviewDraft = parsedDraft.data;
   const reviewReport = parseReport(bundle.reviewReport, errors);

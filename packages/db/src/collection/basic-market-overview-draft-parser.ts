@@ -1,3 +1,5 @@
+import { isProxy } from "node:util/types";
+
 import {
   CREDIBILITIES,
   INDUSTRY_TAGS,
@@ -28,6 +30,23 @@ export interface BasicMarketOverviewDraftParseResult {
 }
 
 export function parseBasicMarketOverviewDraft(
+  value: unknown,
+): BasicMarketOverviewDraftParseResult {
+  const parsed = reconstructBasicMarketOverviewDraft(value);
+  return {
+    data: parsed.errors.length === 0 ? parsed.data : null,
+    errors: parsed.errors,
+  };
+}
+
+export function parseBasicMarketOverviewDraftForAudit(value: unknown): {
+  data: BasicMarketOverviewDraft | null;
+  errors: string[];
+} {
+  return reconstructBasicMarketOverviewDraft(value);
+}
+
+function reconstructBasicMarketOverviewDraft(
   value: unknown,
 ): BasicMarketOverviewDraftParseResult {
   const errors: string[] = [];
@@ -63,7 +82,7 @@ export function parseBasicMarketOverviewDraft(
     industryTags: enumValues(draft.get("industryTags"), INDUSTRY_TAGS, "marketOverviewDraft.industryTags", errors),
     techTags: enumValues(draft.get("techTags"), TECH_TAGS, "marketOverviewDraft.techTags", errors),
   };
-  return { data: errors.length === 0 ? data : null, errors };
+  return { data, errors };
 }
 
 function indicators(value: unknown, errors: string[]): BasicDraftKeyIndicator[] {
@@ -104,7 +123,13 @@ function exactDataRecord(
   errors: string[],
 ): ReadonlyMap<string, unknown> | null {
   try {
-    if (typeof value !== "object" || value === null || Array.isArray(value) || Object.getPrototypeOf(value) !== Object.prototype) {
+    if (
+      typeof value !== "object" ||
+      value === null ||
+      isProxy(value) ||
+      Array.isArray(value) ||
+      Object.getPrototypeOf(value) !== Object.prototype
+    ) {
       errors.push(`${label} must have exactly ${keyList(expectedKeys)} own keys`);
       return null;
     }
@@ -131,7 +156,13 @@ function exactDataRecord(
 
 function standardArray(value: unknown, label: string, errors: string[]): unknown[] | null {
   try {
-    if (!Array.isArray(value) || Object.getPrototypeOf(value) !== Array.prototype) throw new Error();
+    if (
+      typeof value !== "object" ||
+      value === null ||
+      isProxy(value) ||
+      !Array.isArray(value) ||
+      Object.getPrototypeOf(value) !== Array.prototype
+    ) throw new Error();
     const lengthDescriptor = Object.getOwnPropertyDescriptor(value, "length");
     if (lengthDescriptor === undefined || lengthDescriptor.enumerable || !Object.hasOwn(lengthDescriptor, "value") || typeof lengthDescriptor.value !== "number" || !Number.isSafeInteger(lengthDescriptor.value) || lengthDescriptor.value < 0 || Reflect.ownKeys(value).length !== lengthDescriptor.value + 1) throw new Error();
     const result: unknown[] = [];

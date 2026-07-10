@@ -30,6 +30,22 @@ describe("Basic collection audit parser boundaries", () => {
     }
   });
 
+  test("aggregates draft field and country identity errors", () => {
+    const bundle = createBasicCollectionAuditFixture();
+    bundle.marketOverviewDraft.sourceUrl = "ftp://example.com";
+    bundle.marketOverviewDraft.countryCode = "YY";
+
+    const result = parseBasicCollectionAuditBundle(bundle);
+
+    expect(result.data).toBeNull();
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        "marketOverviewDraft.sourceUrl must be an HTTP(S) URL",
+        "marketOverviewDraft.countryCode must match sourceRegister.countryCode",
+      ]),
+    );
+  });
+
   test.each([
     {
       name: "a symbol own key",
