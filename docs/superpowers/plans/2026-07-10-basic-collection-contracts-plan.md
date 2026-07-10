@@ -372,8 +372,8 @@ Expected: FAIL because `validateBasicCollectionAuditBundle` is missing.
 1. Accept only standard plain objects with exact own string keys for every envelope and nested record.
 2. Reconstruct each output object and array instead of forwarding input references.
 3. Recursively reconstruct finite JSON values; reject `undefined`, non-finite numbers, bigint, symbol, function, cycles, custom prototypes, inherited keys, and symbol keys.
-4. Validate strict UTC RFC3339 timestamps, lowercase 64-character SHA-256, HTTP(S) URLs, uppercase two-letter country codes, safe run IDs/slugs, registered shared enums, and non-empty evidence locators.
-5. Accept only the documented Basic canonical fact paths. Reject `reviewStatus`, `aiUsable`, `coverageLevel`, `moduleCoverage`, `knowledge`, `audit`, manifest, staging, raw-cache, and arbitrary paths.
+4. Validate strict UTC RFC3339 timestamps (`YYYY-MM-DDTHH:mm:ssZ` or 1 to 3 fractional digits before uppercase `Z`, with a valid calendar date and no offset), lowercase 64-character SHA-256, HTTP(S) URLs, uppercase two-letter country codes, safe run IDs/slugs, registered shared enums, and evidence locators that are non-empty after `trim()`.
+5. Accept only the exact `country.*` and `marketOverview.*` fieldPath allowlist in `docs/basic-country-audit-contract.md`, with `marketOverview.keyIndicators[non-negative-index].{label,value,unit,year}` using decimal non-negative indexes. Reject `workflow`, coverage paths, `reviewStatus`, `aiUsable`, `audit`, `knowledge`, manifest, staging, raw-cache, and every other path.
 6. Enforce evidence cardinality: candidate >= 1, missing = 0, conflict >= 2 distinct source IDs, untrusted >= 1.
 7. Validate the complete market-overview draft shape, exact LocalizedText and indicator keys, `reviewStatus = draft`, and `aiUsable = false`.
 8. Treat `sourceUrl = null` as structurally valid only when `source` contains the existing `sourceUrl null` explanation marker.
@@ -408,7 +408,7 @@ Run the focused test and confirm RED because classification is not implemented.
 
 1. Resolve every evidence `sourceId` and every review-report `sourceId`/`factId` against the reconstructed registers.
 2. Emit `MISSING_REQUIRED_FACT` for missing facts or listed missing fields.
-3. Emit `UNRESOLVED_CONFLICT` for conflict facts or unresolved report conflicts; never add a selected conflict value.
+3. Emit `UNRESOLVED_CONFLICT` for `status = conflict` facts or unresolved report conflicts; never add a selected conflict value.
 4. Emit `UNTRUSTED_INPUT` for untrusted facts, discovery-only sources, non-open access, `UNVERIFIED`, prompt-injection risk, failed source checks, or injection-risk records.
 5. Deduplicate blocker codes in the constant order.
 6. Reject report/readiness inconsistencies as structural errors.

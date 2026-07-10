@@ -8,7 +8,7 @@
 
 - `country.json` 必须包含 ISO 3166-1 alpha-2 国家码、`{ zh, en }` 的国家名和摘要、地区、国旗展示字段、整体 `updatedAt`，以及全部 10 个模块的 `moduleCoverage`。
 - `country.json` 的 `coverageLevel` 必须由覆盖判定得出为**恰好** `BASIC`，不得人工覆盖。`market-overview` 为 `PARTIAL` 或 `COMPLETE`；其余九个模块必须均为 `BUILDING`、`dataCount = 0`，且没有任何 `published` 记录，并保留统一占位，不创建虚构的占位业务记录。满足 `STANDARD` 判定条件的交付必须拒绝；后续数据只能在单独、经人工批准的升级任务中提交。
-- `market-overview.json` 必须是每国唯一的对象记录，按 [data-schema.md §5.1](./data-schema.md) 填写可验证的基础市场画像、`keyIndicators` 和完整元字段：`source`、`sourceUrl`、`collectedAt`、`updatedAt`、`credibility`、`reviewStatus`、`aiUsable`、`countryCode`、`industryTags`、`techTags`。字段必须存在；标签仅可使用已登记的枚举，且仅当没有适用标签时才可为空。`sourceUrl` 仅可按现有 schema 规则为 `null`，此时 `source` 必须说明无链接原因。所有可读字段和指标标签均使用 `{ zh, en }`；缺任一语言按既有降级规则标注，不能留空或报错。Basic 的 `aiUsable` 必须为 `false`。
+- `market-overview.json` 必须是每国唯一的对象记录，按 [data-schema.md §5.1](./data-schema.md) 填写可验证的基础市场画像、`keyIndicators` 和完整元字段：`source`、`sourceUrl`、`collectedAt`、`updatedAt`、`credibility`、`reviewStatus`、`aiUsable`、`countryCode`、`industryTags`、`techTags`。字段必须存在；标签仅可使用已登记的枚举，且仅当没有适用标签时才可为空。`sourceUrl` 仅可为 HTTP(S) URL 或按现有 schema 规则为 `null`；为 `null` 时 `source` 必须包含字面量 `sourceUrl null` 说明无链接原因。所有可读字段和指标标签均使用 `{ zh, en }`；缺任一语言按既有降级规则标注，不能留空或报错。Basic 的 `aiUsable` 必须为 `false`。
 - 所有发布的 Basic 记录均须符合 [data-governance.md](./data-governance.md) 的来源、时间、可信度、审核状态、标签和双语要求。Basic 数据始终为 `aiUsable = false`，本阶段不得产生或导入 `knowledge` 知识片段。
 
 完成的 Basic 国家可在 C 端展示国家基础画像和其余模块的 `BUILDING` 占位；它不提供该国的 AI 深度问答，也不因 `published` 状态自动进入 AI 检索。
@@ -32,7 +32,7 @@
 
 采集运行在已批准的 Windows `llama.cpp` 与 WSL Hermes Agent 架构中。各参与方职责固定，自动化不能代替人工发布决定。
 
-P1-6A 提供 [basic-country-audit-contract.md](./basic-country-audit-contract.md) 中机器可读的 TypeScript 审计契约和确定性离线 fixtures。离线 fixtures 不调用也不 mock Windows `llama.cpp`；运行时或模型失败处理属于 P1-6C。冲突值绝不自动选择，未解决冲突必须保留并阻断人工审核就绪状态。以下材料均为不可信输入并阻断就绪：仅用于发现的搜索材料、`UNVERIFIED`、访问受限或访问状态未知的来源，以及疑似或确认的 prompt injection。审计契约中的 `sourceUrl` 完整表示字段存在；该字段可为 `null`，但必须遵守本文件既有的 `source` 说明无链接原因规则。
+P1-6A 提供 [basic-country-audit-contract.md](./basic-country-audit-contract.md) 中机器可读的 TypeScript 审计契约和确定性离线 fixtures。离线 fixtures 不调用也不 mock Windows `llama.cpp`；运行时或模型失败处理属于 P1-6C。冲突值绝不自动选择，未解决冲突必须保留并阻断人工审核就绪状态。以下材料均为不可信输入并阻断就绪：仅用于发现的搜索材料、`UNVERIFIED`、访问受限或访问状态未知的来源，以及疑似或确认的 prompt injection。审计契约中的 `sourceUrl` 完整表示字段存在；非 `null` 值必须为 HTTP(S) URL，该字段可为 `null`，但 `source` 必须包含字面量 `sourceUrl null` 说明无链接原因。
 
 | 参与方 | 严格职责 | 禁止事项 |
 |---|---|---|
@@ -100,7 +100,7 @@ Basic 的 `published` 仅代表可展示，不代表可检索：所有 Basic 记
 - [ ] 国家使用 ISO 3166-1 alpha-2 代码，并使用固定 10 模块的 `country.json` 骨架。
 - [ ] `market-overview.json` 是唯一对象记录，达到 `PARTIAL` 或 `COMPLETE`；其余九个模块均为 `BUILDING`、`dataCount = 0`，且没有 `published` 记录。
 - [ ] `coverageLevel` 经既有规则派生为恰好 `BASIC`，未手工覆盖；交付不满足 `STANDARD` 判定，`BUILDING` 模块没有虚构记录。
-- [ ] `market-overview.json` 具备 `source`、`sourceUrl`、`collectedAt`、`updatedAt`、`credibility`、`reviewStatus`、`aiUsable`、`countryCode`、`industryTags`、`techTags`；标签仅使用已登记枚举，仅无适用标签时为空；`sourceUrl = null` 时 `source` 说明原因；`aiUsable = false`。
+- [ ] `market-overview.json` 具备 `source`、`sourceUrl`、`collectedAt`、`updatedAt`、`credibility`、`reviewStatus`、`aiUsable`、`countryCode`、`industryTags`、`techTags`；标签仅使用已登记枚举，仅无适用标签时为空；`sourceUrl` 为 HTTP(S) URL 或 `null`，为 `null` 时 `source` 包含字面量 `sourceUrl null`；`aiUsable = false`。
 - [ ] 已提交的 `data/staging/<country>/<runId>/` 包含 source register、extracted facts、bilingual draft 和 review report；raw cache 保持本地且未提交。`source-register.json` 保留来源身份、原始 URL、检索时间、已知发布时间、内容 SHA-256、证据定位符和可信度；`extracted-facts.json` 为每个 canonical 字段路径保留 source ID、精确原始值、标准化值、适用单位/年份和证据定位符。
 - [ ] `data/<country>/collection-manifest.json` 以 `activeRunId` 和 `mappingVersion` 指向已提交审计包，且仅作为非导入审计元数据。
 - [ ] 每个发布事实均由打开的原始来源支持；SearXNG 仅用于发现，未作为证据。
