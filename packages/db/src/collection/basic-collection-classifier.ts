@@ -21,9 +21,13 @@ export function classifyBasicCollectionAuditBundle(
 ): BasicCollectionAuditClassification {
   const errors: string[] = [];
   const blockerSet = new Set<BasicCollectionBlockerCode>();
-  const sourceIds = new Set(bundle.sourceRegister.sources.map((source) => source.sourceId));
+  const sourcesById = new Map(
+    bundle.sourceRegister.sources.map((source) => [source.sourceId, source]),
+  );
+  const sourceIds = new Set(sourcesById.keys());
   const factIds = new Set(bundle.extractedFacts.facts.map((fact) => fact.factId));
   const factPaths = new Set(bundle.extractedFacts.facts.map((fact) => fact.fieldPath));
+  const firstFactIndexByPath = new Map<string, number>();
   const passedSourceIds = new Set(
     bundle.reviewReport.sourceChecks
       .filter(({ status }) => status === "passed")
@@ -32,10 +36,23 @@ export function classifyBasicCollectionAuditBundle(
   const evidenceSourceIds = new Set<string>();
 
   for (const [index, fact] of bundle.extractedFacts.facts.entries()) {
+    const firstFactIndex = firstFactIndexByPath.get(fact.fieldPath);
+    if (firstFactIndex === undefined) {
+      firstFactIndexByPath.set(fact.fieldPath, index);
+    } else {
+      errors.push(
+        `extractedFacts.facts[${index}].fieldPath duplicates extractedFacts.facts[${firstFactIndex}].fieldPath`,
+      );
+    }
     for (const [evidenceIndex, evidence] of fact.evidence.entries()) {
       evidenceSourceIds.add(evidence.sourceId);
-      if (!sourceIds.has(evidence.sourceId)) {
+      const source = sourcesById.get(evidence.sourceId);
+      if (source === undefined) {
         errors.push(`extractedFacts.facts[${index}].evidence[${evidenceIndex}].sourceId must reference a registered sourceId`);
+      } else if (!source.evidenceLocators.includes(evidence.locator)) {
+        errors.push(
+          `extractedFacts.facts[${index}].evidence[${evidenceIndex}].locator must match a registered evidenceLocator for ${evidence.sourceId}`,
+        );
       }
     }
     validateCandidateNormalizedValues(bundle, fact, index, errors);
