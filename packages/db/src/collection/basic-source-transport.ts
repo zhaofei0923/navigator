@@ -4,6 +4,7 @@ import {
   type BasicSourceTransport,
   type BasicSourceTransportResponse,
 } from "./basic-source-adapter-contracts.js";
+import { isBasicJsonContentType } from "./basic-json-content-type.js";
 import { snapshotBasicSourceRequest, snapshotBasicSourceTransportResponse } from "./basic-source-metadata.js";
 
 export interface BasicSourceFetchResponse {
@@ -56,7 +57,7 @@ export function createBasicSourceTransport(
           "content-type",
           "source response content type is not allowed",
         );
-        if (contentType === null || !isJsonContentType(contentType)) {
+        if (contentType === null || !isBasicJsonContentType(contentType)) {
           throw new Error("source response content type is not allowed");
         }
         const body = readResponseBody(response);
@@ -95,7 +96,7 @@ export function isBasicSourceResponseAllowed(
   const expectedFinalUrl = response.redirectChain.at(-1) ?? request.url;
   return (
     isSuccessfulHttpStatus(response.status) &&
-    isJsonContentType(response.contentType) &&
+    isBasicJsonContentType(response.contentType) &&
     response.redirectChain.length <= BASIC_SOURCE_MAX_REDIRECTS &&
     sameCanonicalUrl(response.finalUrl, expectedFinalUrl) &&
     isAllowedUrlString(response.finalUrl, request) &&
@@ -212,6 +213,7 @@ function validateRedirectUrl(
   request: BasicSourceRequest,
 ): URL {
   try {
+    if (location !== location.trim()) throw new Error("invalid source URL");
     return validateUrl(new URL(location, currentUrl).href, request, "redirect");
   } catch {
     throw new Error("source redirect URL is not allowed");
@@ -239,7 +241,7 @@ function isAllowedUrl(url: URL, request: BasicSourceRequest): boolean {
 
 function isAllowedUrlString(value: string, request: BasicSourceRequest): boolean {
   try {
-    return isAllowedUrl(new URL(value), request);
+    return value === value.trim() && isAllowedUrl(new URL(value), request);
   } catch {
     return false;
   }
@@ -248,7 +250,7 @@ function isAllowedUrlString(value: string, request: BasicSourceRequest): boolean
 function isHttpsOrigin(value: string): boolean {
   try {
     const url = new URL(value);
-    return url.protocol === "https:" && url.origin === value && url.username === "" && url.password === "";
+    return value === value.trim() && url.protocol === "https:" && url.origin === value && url.username === "" && url.password === "";
   } catch {
     return false;
   }
@@ -264,11 +266,6 @@ function sameCanonicalUrl(left: string, right: string): boolean {
   } catch {
     return false;
   }
-}
-
-function isJsonContentType(contentType: string): boolean {
-  const mediaType = contentType.split(";", 1)[0]?.trim().toLowerCase();
-  return mediaType === "application/json" || mediaType?.endsWith("+json") === true;
 }
 
 async function* streamBody(

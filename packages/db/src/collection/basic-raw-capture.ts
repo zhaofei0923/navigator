@@ -49,12 +49,7 @@ export async function captureBasicRawSource(
   }
   const body = await collectBody(response.body);
   const contentSha256 = sha256(body);
-  const manifest = createBasicRawCaptureManifest(
-    input,
-    response,
-    contentSha256,
-    body.byteLength,
-  );
+  const manifest = createBasicRawCaptureManifest(input, response, contentSha256, body.byteLength);
   if (
     !(await publishCapture(
       paths.rawDirectory,
@@ -76,7 +71,8 @@ export async function captureBasicRawSource(
 function validateCaptureInput(input: BasicRawCaptureInput): void {
   if (
     !isAbsolute(input.repoRoot) || input.repoRoot.includes("\0") ||
-    input.adapterId.trim() === "" || input.adapterVersion.trim() === "" ||
+    input.adapterId.trim() === "" || input.adapterId !== input.adapterId.trim() ||
+    input.adapterVersion.trim() === "" || input.adapterVersion !== input.adapterVersion.trim() ||
     !SAFE_COUNTRY_CODE.test(input.countryCode) || !SAFE_RUN_ID.test(input.runId) ||
     !SAFE_SOURCE_ID.test(input.sourceId)
   ) {
@@ -231,16 +227,19 @@ async function collectBody(body: AsyncIterable<Uint8Array>): Promise<Uint8Array>
 
 function captureResult(
   sourceId: string,
-  response: Pick<BasicSourceTransportResponse, "finalUrl" | "contentType" | "retrievedAt">,
+  response: Pick<BasicSourceTransportResponse, "finalUrl" | "contentType" | "retrievedAt" | "redirectChain">,
   body: Uint8Array,
   contentSha256: string,
   reused: boolean,
 ): BasicRawCaptureResult {
-  return {
+  const result: BasicRawCaptureResult = {
     sourceId, contentSha256, byteLength: body.byteLength, reused, body,
     finalUrl: response.finalUrl, contentType: response.contentType,
     retrievedAt: response.retrievedAt,
+    redirectChain: [],
   };
+  Object.defineProperty(result, "redirectChain", { value: Object.freeze(Array.from(response.redirectChain)), enumerable: true, writable: false, configurable: false });
+  return result;
 }
 
 function resultFromCache({ manifest, body }: VerifiedCapture): BasicRawCaptureResult {

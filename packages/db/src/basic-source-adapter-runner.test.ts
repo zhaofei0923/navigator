@@ -197,6 +197,33 @@ describe("Basic deterministic source adapter runner", () => {
     expect(materializedRaw).toEqual({ nested: [{ value: "original" }], rank: 2 });
   });
 
+  test("preserves source metadata exactly and trims uncertainty", async () => {
+    const source = {
+      ...adapter("source-preserved", [observation({ uncertainty: " reported " })]),
+      sourceName: " Reviewed source ",
+    };
+    source.extract = () => ({
+      publishedAt: PUBLISHED_AT,
+      promptInjectionRisk: "none",
+      accessNotes: " Reviewed access note ",
+      observations: [observation({ uncertainty: " reported " })],
+    });
+
+    const result = await runBasicDeterministicSourceAdapters({
+      repoRoot: createRepoRoot(),
+      countryCode: "XZ",
+      runId: "run-preserved-text",
+      adapters: [source],
+      transport: transport([]),
+    });
+
+    expect(result.sourceRegister.sources[0]).toMatchObject({
+      sourceName: " Reviewed source ",
+      accessNotes: " Reviewed access note ",
+    });
+    expect(result.extractedFacts.facts[0]?.uncertainty).toBe("reported");
+  });
+
   test("treats canonical objects with sorted keys and ordered arrays as one tuple", async () => {
     const result = await runPair(
       { normalizedValue: { a: 1, values: [1, 2] } },

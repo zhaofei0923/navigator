@@ -1,12 +1,8 @@
 import {
   CREDIBILITIES,
-  INDUSTRY_TAGS,
-  TECH_TAGS,
 } from "@navigator/shared-types/schema";
 
 import {
-  KEY_INDICATOR_KEYS,
-  LOCALIZED_TEXT_KEYS,
   SAFE_COUNTRY_DIRECTORY,
   SAFE_RUN_ID,
   expectUtcRfc3339Timestamp,
@@ -22,7 +18,6 @@ import {
   type BasicCollectionAuditSummary,
   type BasicCollectionJsonValue,
   type BasicCollectionReviewReport,
-  type BasicDraftKeyIndicator,
   type BasicExtractedFact,
   type BasicExtractedFacts,
   type BasicFactEvidence,
@@ -30,6 +25,7 @@ import {
   type BasicSourceRecord,
   type BasicSourceRegister,
 } from "./basic-collection-contracts.js";
+import { parseBasicMarketOverviewDraftForAudit } from "./basic-market-overview-draft-parser.js";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -45,7 +41,6 @@ const SOURCE_KEYS = ["sourceId", "sourceName", "sourceUrl", "retrievedAt", "publ
 const FACTS_KEYS = ["schemaVersion", "runId", "countryCode", "facts"] as const;
 const FACT_KEYS = ["factId", "fieldPath", "status", "evidence", "extractionMethod", "uncertainty"] as const;
 const EVIDENCE_KEYS = ["sourceId", "locator", "rawValue", "normalizedValue", "unit", "year"] as const;
-const DRAFT_KEYS = ["overview", "population", "gdp", "gdpGrowth", "energyDemand", "renewableTarget", "keyIndicators", "source", "sourceUrl", "collectedAt", "updatedAt", "credibility", "reviewStatus", "aiUsable", "countryCode", "industryTags", "techTags"] as const;
 const REPORT_KEYS = ["schemaVersion", "runId", "countryCode", "status", "missingFields", "conflicts", "sourceChecks", "injectionRisks", "publicationRecommendation", "humanDecision"] as const;
 const CONFLICT_KEYS = ["fieldPath", "factIds", "resolution", "notes"] as const;
 const SOURCE_CHECK_KEYS = ["sourceId", "status", "notes"] as const;
@@ -64,7 +59,11 @@ export function parseBasicCollectionAuditBundle(value: unknown): BasicCollection
   const runId = run(bundle.runId, "runId", errors);
   const sourceRegister = parseSourceRegister(bundle.sourceRegister, errors);
   const extractedFacts = parseExtractedFacts(bundle.extractedFacts, errors);
-  const marketOverviewDraft = parseDraft(bundle.marketOverviewDraft, errors);
+  const parsedDraft = parseBasicMarketOverviewDraftForAudit(
+    bundle.marketOverviewDraft,
+  );
+  errors.push(...parsedDraft.errors);
+  const marketOverviewDraft = parsedDraft.data;
   const reviewReport = parseReport(bundle.reviewReport, errors);
   if (sourceRegister === null || extractedFacts === null || marketOverviewDraft === null || reviewReport === null) return { data: null, errors, summary };
   matchIdentities(runId, sourceRegister, extractedFacts, marketOverviewDraft, reviewReport, errors);
@@ -110,23 +109,6 @@ function parseEvidence(value: unknown, label: string, errors: string[]): BasicFa
   const record = exactRecord(value, EVIDENCE_KEYS, label, errors);
   if (record === null) return null;
   return { sourceId: text(record.sourceId, `${label}.sourceId`, errors), locator: text(record.locator, `${label}.locator`, errors), rawValue: json(record.rawValue, `${label}.rawValue`, errors), normalizedValue: json(record.normalizedValue, `${label}.normalizedValue`, errors), unit: nullableText(record.unit, `${label}.unit`, errors), year: nullableNumber(record.year, `${label}.year`, errors) };
-}
-
-function parseDraft(value: unknown, errors: string[]): BasicMarketOverviewDraft | null {
-  const record = exactRecord(value, DRAFT_KEYS, "marketOverviewDraft", errors);
-  if (record === null) return null;
-  const source = text(record.source, "marketOverviewDraft.source", errors);
-  const sourceUrl = nullableUrl(record.sourceUrl, "marketOverviewDraft.sourceUrl", errors);
-  if (sourceUrl === null && !source.includes("sourceUrl null")) errors.push("marketOverviewDraft.source must explain why sourceUrl is null");
-  if (record.reviewStatus !== "draft") errors.push("marketOverviewDraft.reviewStatus must be draft");
-  if (record.aiUsable !== false) errors.push("marketOverviewDraft.aiUsable must be false");
-  return { overview: localized(record.overview, "marketOverviewDraft.overview", errors), population: nullableNumber(record.population, "marketOverviewDraft.population", errors), gdp: nullableNumber(record.gdp, "marketOverviewDraft.gdp", errors), gdpGrowth: nullableNumber(record.gdpGrowth, "marketOverviewDraft.gdpGrowth", errors), energyDemand: localized(record.energyDemand, "marketOverviewDraft.energyDemand", errors), renewableTarget: localized(record.renewableTarget, "marketOverviewDraft.renewableTarget", errors), keyIndicators: values(record.keyIndicators, "marketOverviewDraft.keyIndicators", errors, (item, label) => parseIndicator(item, label, errors)), source, sourceUrl, collectedAt: timestamp(record.collectedAt, "marketOverviewDraft.collectedAt", errors), updatedAt: timestamp(record.updatedAt, "marketOverviewDraft.updatedAt", errors), credibility: enumValue(record.credibility, CREDIBILITIES, "marketOverviewDraft.credibility", errors), reviewStatus: "draft", aiUsable: false, countryCode: country(record.countryCode, "marketOverviewDraft.countryCode", errors), industryTags: enumValues(record.industryTags, INDUSTRY_TAGS, "marketOverviewDraft.industryTags", errors), techTags: enumValues(record.techTags, TECH_TAGS, "marketOverviewDraft.techTags", errors) };
-}
-
-function parseIndicator(value: unknown, label: string, errors: string[]): BasicDraftKeyIndicator | null {
-  const record = exactRecord(value, KEY_INDICATOR_KEYS, label, errors);
-  if (record === null) return null;
-  return { label: localized(record.label, `${label}.label`, errors), value: text(record.value, `${label}.value`, errors), unit: text(record.unit, `${label}.unit`, errors), year: number(record.year, `${label}.year`, errors) };
 }
 
 function parseReport(value: unknown, errors: string[]): BasicCollectionReviewReport | null {
@@ -191,14 +173,6 @@ function json(value: unknown, label: string, errors: string[], ancestors = new W
   for (const key of Object.keys(value)) Object.defineProperty(output, key, { value: json(value[key], `${label}.${key}`, errors, ancestors), enumerable: true, writable: true, configurable: true });
   ancestors.delete(value);
   return output;
-}
-
-function localized(value: unknown, label: string, errors: string[]) {
-  const record = exactRecord(value, LOCALIZED_TEXT_KEYS, label, errors);
-  if (record === null) return { zh: "", en: "" };
-  const zh = string(record.zh, `${label}.zh`, errors); const en = string(record.en, `${label}.en`, errors);
-  if (zh.trim() === "" && en.trim() === "") errors.push(`${label} must contain zh or en text`);
-  return { zh, en };
 }
 
 function strings(value: unknown, label: string, errors: string[], required: boolean): string[] { const array = jsonArray(value, label, errors); if (array === null) return []; if (required && array.length === 0) errors.push(`${label} must be a non-empty array`); return array.map((item, index) => text(item, `${label}[${index}]`, errors)); }
