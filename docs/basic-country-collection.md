@@ -55,7 +55,17 @@
 
 人工批准后，canonical data 与同一 `<runId>` 的非 raw 审计包必须一并提交：`data/staging/<country>/<runId>/` 必须包含 `source-register.json`、`extracted-facts.json`、`market-overview.draft.json` 与 `review-report.json`。该已提交审计包不可变；任何修正必须创建新的 `<runId>`，不得改写已批准批次。
 
-每个 `data/<country>/` 必须同时提交一个不被导入的 canonical sidecar：`collection-manifest.json`。它只包含 `activeRunId`、`mappingVersion` 及指向已提交审计包的引用，用于证明当前 canonical data 的出处；它是审计元数据，不是 Prisma 或 `data-schema.md` 字段。
+每个 `data/<country>/` 必须同时提交一个不被导入的 canonical sidecar：`collection-manifest.json`。它只包含 `activeRunId`、`mappingVersion` 及指向已提交审计包的引用，用于证明当前 canonical data 的出处；它是审计元数据，不是 Prisma 或 `data-schema.md` 字段。文件必须显式包含以下三个字段，且 `auditBundlePath` 固定为 `data/staging/<country>/<activeRunId>`：
+
+```json
+{
+  "activeRunId": "<runId>",
+  "mappingVersion": "<mappingVersion>",
+  "auditBundlePath": "data/staging/<country>/<activeRunId>"
+}
+```
+
+P1-5 只接受当前已登记的地区和行业/技术标签枚举。未登记值会阻断校验，必须通过单独、经批准的数据模型变更处理，绝不得被强制映射到相近枚举。P1-5 同时校验国家代码为两个大写字母；由于当前模型没有完整 ISO 注册表，实际 ISO 成员资格仍须由来源和人工审核确认。
 
 暂存区、`collection-manifest.json` 和 raw cache 不是产品数据，不能被 seed 记录、C 端响应、覆盖计数或 AI 检索使用。
 
