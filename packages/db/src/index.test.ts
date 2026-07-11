@@ -56,6 +56,10 @@ import type {
   BasicSourceRecord,
   BasicSourceRegister,
   BasicApprovedCountryPublicationInput,
+  BasicActivationCountPort,
+  BasicActivationModel,
+  BasicActivationScope,
+  BasicCountryActivationPreflightResult,
 } from "./index.js";
 
 // @ts-expect-error BasicHermesSourcedObservation is package-private.
@@ -151,6 +155,7 @@ import {
   runBasicDeterministicSourceAdapters,
   runBasicHermesDiscovery,
   promoteBasicHermesJsonEvidence,
+  preflightBasicCountryActivation,
   validateBasicCountryBundle,
   validateApprovedBasicCountryPublication,
   validateBasicCollectionAuditBundle,
@@ -170,11 +175,19 @@ describe("@navigator/db", () => {
     expect(buildBasicCountryImportPlan).toBeTypeOf("function");
     expect(createBasicCountryBundleFromApprovedAudit).toBeTypeOf("function");
     expect(validateApprovedBasicCountryPublication).toBeTypeOf("function");
+    expect(preflightBasicCountryActivation).toBeTypeOf("function");
     expect(BASIC_COUNTRY_CANONICAL_MAPPING_VERSION).toBe(
       "basic-country-canonical/v1",
     );
     const inputTypeWitness: BasicApprovedCountryPublicationInput | null = null;
     expect(inputTypeWitness).toBeNull();
+    const preflightTypeWitness: [
+      BasicActivationModel,
+      BasicActivationScope,
+      BasicActivationCountPort,
+      BasicCountryActivationPreflightResult,
+    ] | null = null;
+    expect(preflightTypeWitness).toBeNull();
   });
 
   test("exports the Basic collection audit API", () => {

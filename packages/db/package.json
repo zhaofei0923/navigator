@@ -7,6 +7,7 @@
     "lint": "tsc --project tsconfig.json --noEmit --pretty false",
     "prisma": "prisma",
     "prisma:validate": "DATABASE_URL=${DATABASE_URL:-postgresql://navigator:navigator@localhost:5432/navigator} prisma validate --schema prisma/schema.prisma",
+    "preflight:basic-activation": "node --experimental-transform-types --experimental-loader ../../scripts/node-ts-source-loader.mjs src/seed/basic-country-activation-preflight-cli.ts",
     "seed:indonesia": "node src/seed/indonesia-seed.ts",
     "typecheck": "tsc --project tsconfig.json --noEmit --pretty false",
     "test": "vitest run"
