@@ -14,6 +14,7 @@ import {
 import { deepFreezeBasicOfflineValue } from "./basic-offline-value.js";
 
 const EMPTY_SUMMARY = { countryCode: "", runId: "", sourceCount: 0, factCount: 0 } as const;
+type SafeValidationContext = Pick<BasicCollectionAuditValidationResult, "blockers" | "summary">;
 const BOUNDARY_VALUES: Omit<BasicOfflineBoundaryVerdict, "aiEligibleKnowledgeIds"> = {
   rawCache: "not-produced",
   stagingWrite: "not-attempted",
@@ -35,13 +36,14 @@ export function createBasicOfflineFailureResult(
   outcomes: readonly BasicOfflineStageOutcome[],
   blockedStage: BasicOfflineDryRunStage["name"],
   blockers: readonly BasicCollectionBlockerCode[] = [],
+  validation?: SafeValidationContext,
 ): BasicOfflineDryRunResult {
   const normalized = [...outcomes];
   normalized[BASIC_OFFLINE_STAGE_NAMES.indexOf(blockedStage)] = "blocked";
   return createBasicOfflineResult(
     scenario,
     normalized,
-    invalidValidation(blockers, `P1-6D ${blockedStage} failed`),
+    invalidValidation(blockers, `P1-6D ${blockedStage} failed`, validation),
     null,
   );
 }
@@ -68,13 +70,20 @@ export function createBasicOfflineResult(
 function invalidValidation(
   blockers: readonly BasicCollectionBlockerCode[],
   error: string,
+  validation?: SafeValidationContext,
 ): BasicCollectionAuditValidationResult {
+  const summary = validation?.summary ?? EMPTY_SUMMARY;
   return {
     valid: false,
     data: null,
     errors: [error],
     readyForHumanReview: false,
-    blockers: [...blockers],
-    summary: EMPTY_SUMMARY,
+    blockers: [...(validation?.blockers ?? blockers)],
+    summary: {
+      countryCode: summary.countryCode,
+      runId: summary.runId,
+      sourceCount: summary.sourceCount,
+      factCount: summary.factCount,
+    },
   };
 }

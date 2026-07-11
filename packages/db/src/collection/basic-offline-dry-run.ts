@@ -24,7 +24,12 @@ import {
   createBasicOfflineStageOutcomes,
 } from "./basic-offline-dry-run-result.js";
 import { preflightBasicOfflineCollection } from "./basic-offline-source-preflight.js";
-import { isRecord, snapshotBasicOfflineValue } from "./basic-offline-value.js";
+import { parseBasicMarketOverviewDraft } from "./basic-market-overview-draft-parser.js";
+import {
+  deepFreezeBasicOfflineValue,
+  isRecord,
+  snapshotBasicOfflineValue,
+} from "./basic-offline-value.js";
 import type { BasicSourceAdapterRunResult } from "./basic-source-adapter-contracts.js";
 
 const NORMAL_INPUT_KEYS = [
@@ -92,9 +97,17 @@ export async function runBasicOfflineDryRun(
 
   let draft: BasicMarketOverviewDraft;
   try {
+    const bridgeSnapshot = snapshotBasicOfflineValue({
+      sourceRegister: run.sourceRegister,
+      extractedFacts: run.extractedFacts,
+    });
+    if (!bridgeSnapshot.valid || !hasExactKeys(bridgeSnapshot.data, ["sourceRegister", "extractedFacts"])) {
+      return createBasicOfflineFailureResult(scenario, stages, "draft-bridge");
+    }
+    const bridgeMaterial = deepFreezeBasicOfflineValue(bridgeSnapshot.data);
     const pending = Reflect.apply(parsed.bridge.bridge, parsed.bridge, [{
-      sourceRegister: run.sourceRegister as BasicSourceRegister,
-      extractedFacts: run.extractedFacts as BasicExtractedFacts,
+      sourceRegister: bridgeMaterial.sourceRegister as unknown as BasicSourceRegister,
+      extractedFacts: bridgeMaterial.extractedFacts as unknown as BasicExtractedFacts,
       model: parsed.model,
     }]);
     if (!isExactPromise(pending)) return createBasicOfflineFailureResult(scenario, stages, "draft-bridge");
@@ -102,7 +115,9 @@ export async function runBasicOfflineDryRun(
     if (!bridge.valid || !hasExactKeys(bridge.data, ["ok", "data"]) || bridge.data.ok !== true) {
       return createBasicOfflineFailureResult(scenario, stages, "draft-bridge");
     }
-    draft = bridge.data.data as unknown as BasicMarketOverviewDraft;
+    const parsedDraft = parseBasicMarketOverviewDraft(bridge.data.data);
+    if (parsedDraft.data === null) return createBasicOfflineFailureResult(scenario, stages, "draft-bridge");
+    draft = parsedDraft.data;
   } catch {
     return createBasicOfflineFailureResult(scenario, stages, "draft-bridge");
   }
@@ -131,7 +146,13 @@ export async function runBasicOfflineDryRun(
     return createBasicOfflineFailureResult(scenario, stages, "validate");
   }
   if (!validation.valid || validation.blockers.length > 0 || !validation.readyForHumanReview) {
-    return createBasicOfflineFailureResult(scenario, stages, "validate", validation.blockers);
+    return createBasicOfflineFailureResult(
+      scenario,
+      stages,
+      "validate",
+      validation.blockers,
+      validation,
+    );
   }
   stages[5] = "passed";
 
@@ -177,7 +198,7 @@ function readNormalInput(value: unknown): NormalInputSnapshot | null {
 function exactPort(value: unknown, keys: readonly string[], method: string): object | null {
   const record = exactDataRecord(value, keys);
   if (record === null || typeof record[method] !== "function" || isProxy(record[method])) return null;
-  return record;
+  return Object.freeze(record);
 }
 
 function exactDataRecord(value: unknown, keys: readonly string[]): Record<string, unknown> | null {
