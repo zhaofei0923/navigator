@@ -17,6 +17,9 @@ export { runBasicHermesDiscovery } from "./collection/basic-hermes-discovery.js"
 export { promoteBasicHermesJsonEvidence } from "./collection/basic-hermes-json-evidence.js";
 export { createBasicLlamaCppDraftTransport } from "./collection/basic-llama-cpp-transport.js";
 export { bridgeBasicMarketOverviewDraft } from "./collection/basic-llama-draft-bridge.js";
+export { assembleBasicCollectionAuditBundle } from "./collection/basic-offline-audit-assembler.js";
+export { createBasicCollectionAuditArtifacts } from "./collection/basic-offline-audit-artifacts.js";
+export { runBasicOfflineDryRun } from "./collection/basic-offline-dry-run.js";
 export {
   worldBankCountryAdapter,
 } from "./collection/adapters/world-bank-country.js";
@@ -116,3 +119,21 @@ export type {
   BasicSourceRecord,
   BasicSourceRegister,
 } from "./collection/basic-collection-contracts.js";
+export type {
+  BasicCollectionAuditArtifactName,
+  BasicCollectionAuditArtifacts,
+} from "./collection/basic-offline-audit-artifacts.js";
+export type {
+  BasicCollectionAuditAssemblyInput,
+  BasicOfflineDryRunScenario,
+  BasicOfflineDryRunInput,
+  BasicOfflineNormalDryRunInput,
+  BasicOfflineBlockedDryRunInput,
+  BasicOfflineDryRunResult,
+  BasicOfflineDryRunStage,
+  BasicOfflineStageName,
+  BasicOfflineStageOutcome,
+  BasicOfflineBoundaryVerdict,
+  BasicOfflineRunnerPort,
+  BasicOfflineDraftBridgePort,
+} from "./collection/basic-offline-dry-run-contracts.js";

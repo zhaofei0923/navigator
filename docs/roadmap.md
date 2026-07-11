@@ -113,8 +113,8 @@ graph LR
 - 人工确认：否（若引入第三方依赖或触及既有 AGENTS.md 人工闸门，须单独人工确认）。
 
 #### P1-6D Offline end-to-end dry run and boundary verification
-- 目标：完成离线端到端 dry run，并验证采集、审计与发布边界不越界，包括 [basic-country-source-adapters.md](./basic-country-source-adapters.md) 定义的 raw capture 与 provenance boundary。
-- 验收：正常、缺失、冲突和不可信输入均通过预期路径；确认 `data/staging/`、`collection-manifest.json` 与其他 audit artifacts 不能进入 seed 记录、C 端响应、覆盖计数或 AI 检索；不得自动发布或自动选择冲突值。
+- 目标：按 [basic-country-offline-dry-run.md](./basic-country-offline-dry-run.md) 完成离线、无发布能力的 P1-6A/B/C orchestration 与 boundary verification；P1-6B 的 raw capture/provenance boundary 仍以 [basic-country-source-adapters.md](./basic-country-source-adapters.md) 为准。
+- 验收：仅 `normal` 可调用 injected P1-6B runner；runner 返回后先以 source/fact 快照与显式 `sourceChecks`/`injectionRisks` 完成不依赖 draft 的 preflight，任何 failed check、injection risk、missing/conflict/untrusted 或不可信来源均须在 injected P1-6C bridge/model 前停止。成功结果须为 `blockers = []`、`readyForHumanReview = true` 的固定四文件递归冻结映射。`missing`、`conflict`、`untrusted` union 不含 runner/bridge/model，runtime 拒绝这些额外 own keys，两个 model-capable stages 均为 `skipped`，并分别且仅有 `MISSING_REQUIRED_FACT`、`UNRESOLVED_CONFLICT`、`UNTRUSTED_INPUT`；冲突处置必须新 run。DB 与 Web 各自在本包测试边界内证明 import/coverage/AI eligibility 和 country service/route 隔离，DB 测试不得导入 Web，也不得发明 sentinel seam。`boundaryVerdict` 的 `KnowledgeChunk = 0`、`aiUsable = true` 记录数 0、`aiEligibleKnowledgeIds = []` 仅为 fixed negative-only attestation，不是 artifact/AI payload，不得声称运行当前不存在的 RAG。生产 API 不 I/O、不返回 canonical/Prisma/coverage/AI/publish payload；测试不得真实 fetch、Hermes、llama transport 或 child process。
 - 人工确认：否（若引入第三方依赖或触及既有 AGENTS.md 人工闸门，须单独人工确认）。
 
 #### DATA-BASIC-<ISO2> 单国 Basic 数据任务卡
