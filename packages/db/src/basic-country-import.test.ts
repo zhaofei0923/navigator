@@ -22,11 +22,7 @@ import {
   getRequiredArrayItem,
   writeBasicCountryFiles,
 } from "./basic-country-test-fixture.js";
-import {
-  createBasicCollectionAuditFixture,
-  readBasicCollectionAuditFixture,
-  type BasicCollectionFixtureScenario,
-} from "./basic-collection-test-fixture.js";
+import { createBasicCollectionAuditFixture } from "./basic-collection-test-fixture.js";
 import { loadBasicCollectionAuditBundle } from "./collection/basic-collection-loader.js";
 import { captureBasicRawSource } from "./collection/basic-raw-capture.js";
 import type { BasicSourceTransport } from "./collection/basic-source-adapter-contracts.js";
@@ -121,23 +117,14 @@ describe("Basic country import plan", () => {
     expect(JSON.stringify(plan)).not.toContain("AUDIT_SENTINEL");
   });
 
-  test("does not include committed audit artifacts in the Basic import plan", () => {
+  test("rejects extra audit runtime keys and excludes approved audit artifacts", () => {
     const bundle = createValidBundle();
-    const auditFixture = readBasicCollectionAuditFixture("normal");
-    bundle.audit.run = {
-      runId: auditFixture.runId,
-      sourceRegister: asJsonRecord(auditFixture.sourceRegister),
-      extractedFacts: asJsonRecord(auditFixture.extractedFacts),
-      marketOverviewDraft: asJsonRecord(auditFixture.marketOverviewDraft),
-      reviewReport: asJsonRecord(auditFixture.reviewReport),
+    getRecord(bundle.audit.run.sourceRegister, "sourceRegister").runtime = {
+      cachePath: RUNTIME_PATH_SENTINEL,
     };
-    bundle.audit.manifest = {
-      activeRunId: auditFixture.runId,
-      mappingVersion: "basic-v1",
-      auditBundlePath: `data/staging/${bundle.countryDirectory}/${auditFixture.runId}`,
-    };
+    expect(() => buildBasicCountryImportPlan(bundle)).toThrow();
 
-    const plan = buildBasicCountryImportPlan(bundle);
+    const plan = buildBasicCountryImportPlan(createValidBundle());
     const serializedPlan = JSON.stringify(plan);
 
     expect(plan.operations).toHaveLength(12);
@@ -240,13 +227,10 @@ describe("Basic country import plan", () => {
       HERMES_TITLE_SENTINEL,
     );
 
+    expect(() => buildBasicCountryImportPlan(artifactBundle)).toThrow();
     const baselinePlan = buildBasicCountryImportPlan(baselineBundle);
-    const artifactPlan = buildBasicCountryImportPlan(artifactBundle);
     const baselineBytes = JSON.stringify(baselinePlan);
-    const artifactBytes = JSON.stringify(artifactPlan);
 
-    expect(artifactPlan).toEqual(baselinePlan);
-    expect(artifactBytes).toBe(baselineBytes);
     for (const forbidden of [
       "runtimeBridgeResults",
       "hermesDiscoveryResult",
@@ -256,13 +240,13 @@ describe("Basic country import plan", () => {
       HERMES_SNIPPET_SENTINEL,
       RUNTIME_PATH_SENTINEL,
     ]) {
-      expect(artifactBytes).not.toContain(forbidden);
+      expect(baselineBytes).not.toContain(forbidden);
     }
     expect(globalFetch).not.toHaveBeenCalled();
   });
 
   test("keeps generated raw captures outside canonical import and audit loading", async () => {
-    const fixture = writeRawCacheIsolationFixture("normal");
+    const fixture = writeRawCacheIsolationFixture();
     const rawCaptureResult = await captureBasicRawSource(
       rawCacheIsolationInput(fixture.repoRoot),
       rawCacheTransport(),
@@ -323,34 +307,19 @@ function asJsonRecord(value: unknown): JsonRecord {
   return value;
 }
 
-function writeRawCacheIsolationFixture(
-  scenario: BasicCollectionFixtureScenario,
-): {
+function writeRawCacheIsolationFixture(): {
   repoRoot: string;
   countryDirectory: string;
   runId: string;
 } {
   const bundle = createValidBundle();
-  const auditBundle = readBasicCollectionAuditFixture(scenario);
-  bundle.audit.manifest = {
-    activeRunId: auditBundle.runId,
-    mappingVersion: "basic-v1",
-    auditBundlePath: `data/staging/${bundle.countryDirectory}/${auditBundle.runId}`,
-  };
-  bundle.audit.run = {
-    runId: auditBundle.runId,
-    sourceRegister: asJsonRecord(auditBundle.sourceRegister),
-    extractedFacts: asJsonRecord(auditBundle.extractedFacts),
-    marketOverviewDraft: asJsonRecord(auditBundle.marketOverviewDraft),
-    reviewReport: asJsonRecord(auditBundle.reviewReport),
-  };
   const files = writeBasicCountryFiles(bundle);
   rawCacheIsolationRoots.add(files.repoRoot);
 
   return {
     repoRoot: files.repoRoot,
     countryDirectory: bundle.countryDirectory,
-    runId: auditBundle.runId,
+    runId: bundle.audit.run.runId,
   };
 }
 

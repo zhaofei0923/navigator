@@ -55,6 +55,7 @@ import type {
   BasicSourceFamily,
   BasicSourceRecord,
   BasicSourceRegister,
+  BasicApprovedCountryPublicationInput,
 } from "./index.js";
 
 // @ts-expect-error BasicHermesSourcedObservation is package-private.
@@ -116,6 +117,8 @@ type ParseResponseLeak = typeof import("./index.js")["parseResponse"];
 type ExtractContentLeak = typeof import("./index.js")["extractContent"];
 // @ts-expect-error BasicCollectionBridgeError is package-private.
 type BasicCollectionBridgeErrorLeak = typeof import("./index.js")["BasicCollectionBridgeError"];
+// @ts-expect-error canonical publication mapping helpers are package-private.
+type BasicCountryPublicationMappingLeak = typeof import("./index.js")["mapBasicCountryCanonicalPublication"];
 
 import * as database from "./index.js";
 import { createBasicCollectionAuditFixture } from "./basic-collection-test-fixture.js";
@@ -134,6 +137,7 @@ import {
   BASIC_SOURCE_MAX_REDIRECTS,
   BASIC_COLLECTION_AUDIT_SCHEMA_VERSION,
   BASIC_COLLECTION_BLOCKER_CODES,
+  BASIC_COUNTRY_CANONICAL_MAPPING_VERSION,
   WORLD_BANK_CORE_INDICATOR_ADAPTERS,
   buildBasicCountryImportPlan,
   bridgeBasicMarketOverviewDraft,
@@ -141,12 +145,14 @@ import {
   createBasicSourceTransport,
   createBasicLlamaCppDraftTransport,
   createBasicCountryBundle,
+  createBasicCountryBundleFromApprovedAudit,
   loadBasicCollectionAuditBundle,
   loadBasicCountryBundle,
   runBasicDeterministicSourceAdapters,
   runBasicHermesDiscovery,
   promoteBasicHermesJsonEvidence,
   validateBasicCountryBundle,
+  validateApprovedBasicCountryPublication,
   validateBasicCollectionAuditBundle,
   worldBankCountryAdapter,
   workspaceName,
@@ -162,6 +168,13 @@ describe("@navigator/db", () => {
     expect(loadBasicCountryBundle).toBeTypeOf("function");
     expect(validateBasicCountryBundle).toBeTypeOf("function");
     expect(buildBasicCountryImportPlan).toBeTypeOf("function");
+    expect(createBasicCountryBundleFromApprovedAudit).toBeTypeOf("function");
+    expect(validateApprovedBasicCountryPublication).toBeTypeOf("function");
+    expect(BASIC_COUNTRY_CANONICAL_MAPPING_VERSION).toBe(
+      "basic-country-canonical/v1",
+    );
+    const inputTypeWitness: BasicApprovedCountryPublicationInput | null = null;
+    expect(inputTypeWitness).toBeNull();
   });
 
   test("exports the Basic collection audit API", () => {

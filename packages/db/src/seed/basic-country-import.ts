@@ -23,7 +23,7 @@ import {
   readFiniteNumber,
   readString,
 } from "./basic-country-validation-utils.js";
-import { validateBasicCountryBundle } from "./basic-country-validator.js";
+import { validateApprovedBasicCountryPublication } from "./basic-country-publication.js";
 
 export type {
   BasicCountryImportPlan,
@@ -77,7 +77,7 @@ const TECH_TAG_TO_PRISMA = {
 export function buildBasicCountryImportPlan(
   bundle: BasicCountryBundle,
 ): BasicCountryImportPlan {
-  const validation = validateBasicCountryBundle(bundle);
+  const validation = validateApprovedBasicCountryPublication(bundle);
   if (!validation.valid) {
     throw new Error(validation.errors.join("\n"));
   }
