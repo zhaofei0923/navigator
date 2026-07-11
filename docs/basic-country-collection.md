@@ -34,7 +34,7 @@
 
 P1-6A 提供 [basic-country-audit-contract.md](./basic-country-audit-contract.md) 中机器可读的 TypeScript 审计契约和确定性离线 fixtures。离线 fixtures 不调用也不 mock Windows `llama.cpp`；运行时或模型失败处理属于 P1-6C。冲突值绝不自动选择，未解决冲突必须保留并阻断人工审核就绪状态。以下材料均为不可信输入并阻断就绪：仅用于发现的搜索材料、`UNVERIFIED`、访问受限或访问状态未知的来源，以及疑似或确认的 prompt injection。审计契约中的 `sourceUrl` 完整表示字段存在；非 `null` 值必须为 HTTP(S) URL，该字段可为 `null`，但 `source` 必须包含字面量 `sourceUrl null` 说明无链接原因。
 
-P1-6D 只在内存中编排和验证 P1-6A/B/C 既有边界，不创建 raw cache、真实 staging、manifest、canonical、Prisma、覆盖或发布动作。它不能替代本节的采集、审核或人工发布闸门；其四文件审计映射仅可用于离线验证，任何冲突修正均须新 run，不能改写旧包。
+P1-6D 只在内存中编排和验证 P1-6A/B/C 既有边界，不创建 raw cache、真实 staging、manifest、canonical、Prisma、覆盖或发布动作。Normal 在 P1-6B runner 后必须以 source/fact 快照和显式 checks/risks 完成不依赖模型草稿的 preflight，任何来源风险或 blocker 均在 P1-6C bridge/model 前停止。它不能替代本节的采集、审核或人工发布闸门；其四文件审计映射仅可用于离线验证，任何冲突修正均须新 run，不能改写旧包。
 
 审计事实覆盖不得 fail-open。每个 bundle 必须登记 `country.code/name/summary/region/flagEmoji/updatedAt`、market overview 草稿的 14 个可审计静态字段，以及每个 `keyIndicators[i]` 的 `label/value/unit/year`；缺任一路径产生 `MISSING_REQUIRED_FACT`。每个 market overview candidate evidence 的 `normalizedValue` 必须与对应草稿路径深度一致，country candidate 因无 country draft 只要求 evidence；不一致是结构错误。每个 evidence 来源必须至少有一条 passed source check，否则产生 `UNTRUSTED_INPUT`。有 blocker 时只有 `blocked/do-not-publish` 可保持结构有效；无 blocker 时既允许 `ready-for-human-review/request-human-review`，也允许保守的 `blocked/do-not-publish`，但两种交叉配对均无效。
 

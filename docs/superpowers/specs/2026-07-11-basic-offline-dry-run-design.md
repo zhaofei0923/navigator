@@ -28,44 +28,49 @@ The normal path receives an injected runner returning the existing `BasicSourceA
 
 ## Architecture
 
-Four small collection modules will be added:
+Five small collection modules will be added:
 
 1. `basic-offline-dry-run-contracts.ts`: scenario unions, port/result types, fixed artifact names and negative boundary verdict types.
-2. `basic-offline-audit-assembler.ts`: explicit check/risk inputs to a conservative P1-6A review report and frozen bundle.
-3. `basic-offline-audit-artifacts.ts`: strict P1-6A validation to the fixed, frozen four-file map.
-4. `basic-offline-dry-run.ts`: normal-vs-blocked control flow and boundary verdict only.
+2. `basic-offline-source-preflight.ts`: model-free validation of runner source/fact snapshots plus explicit checks/risks.
+3. `basic-offline-audit-assembler.ts`: explicit check/risk inputs to a conservative P1-6A review report and frozen bundle.
+4. `basic-offline-audit-artifacts.ts`: strict P1-6A validation to the fixed, frozen four-file map.
+5. `basic-offline-dry-run.ts`: normal-vs-blocked control flow and boundary verdict only.
 
-The assembler is the only component that derives report fields. It does not infer successful source checks, decide conflict winners, or create a human decision. The artifact module accepts valid blocked bundles because reviewability is distinct from readiness. The orchestrator has no `fs`, `path`, `child_process`, transport or Web imports.
+Preflight validates source/fact structure, identities, required paths, references and source trust blockers without constructing or reading a model draft. It does not infer successful source checks. The assembler is the only component that derives report fields；it does not decide conflict winners or create a human decision. The artifact module accepts valid blocked bundles because reviewability is distinct from readiness. The orchestrator has no `fs`, `path`, `child_process`, transport or Web imports.
 
 ## Data Flow
 
 ```text
 normal input
   -> injected P1-6B runner -> sourceRegister + extractedFacts
+  -> model-free preflight(sourceRegister, extractedFacts, explicit checks/risks)
+     -> any missing/conflict/untrusted/source risk: stop before bridge/model
   -> injected P1-6C bridge + injected model -> marketOverviewDraft
   -> assembler + explicit sourceChecks/injectionRisks -> P1-6A bundle
   -> P1-6A validator -> four frozen artifacts + negative boundary verdict
 
 missing/conflict/untrusted material
+  -> exact own-key guard; runner/bridge/model keys are rejected
+  -> model-free preflight -> expected blocker
   -> assembler + P1-6A validator -> four frozen artifacts + blocked verdict
-  -> runner / bridge / model: unreachable and skipped
+  -> runner / draft-bridge stages: skipped
 ```
 
 The only allowed test filesystem use is serializing returned artifact values into a temporary directory for the existing `loadBasicCollectionAuditBundle()` round trip. Neither production function writes that directory.
 
 ## Failure Handling
 
-Unknown, malformed or exceptional input is blocked before a runner or bridge call. Normal dependency failures produce no artifacts and cannot select a fallback draft. Blocked scenarios must be P1-6A structurally valid and carry exactly their scenario blocker; otherwise they are invalid input, not a successful blocked dry run. All failures use stable redacted diagnostics.
+Unknown, malformed or exceptional input is blocked before a runner or bridge call. After the normal runner returns, preflight must stop any failed source check、injection risk、discovery-only/unverified/restricted/unknown source、untrusted/conflict/missing fact or other blocker before bridge/model. This is not circular: draft grounding remains a later bridge/final-validation concern, while source safety is decided from source/fact snapshots and explicit checks/risks. Normal dependency failures produce no artifacts and cannot select a fallback draft. Blocked scenarios must be P1-6A structurally valid and carry exactly their scenario blocker；extra runner/bridge/model own keys are invalid input. All failures use stable redacted diagnostics.
 
-The implementation clones untrusted dependency values, validates them, then returns deep-frozen snapshots. This prevents a later mutation of an injected model/runner result from changing a package, and prevents callers from mutating a result into a publishable shape.
+The implementation clones untrusted dependency values, validates them, then returns recursively frozen snapshots. Documented `Readonly` types are only a shallow static surface；runtime deep freeze and nested mutation tests provide the deep immutability guarantee. This prevents a later mutation of an injected model/runner result from changing a package, and prevents callers from mutating a result into a publishable shape.
 
 ## Boundary Verification
 
-The returned negative boundary verdict shows only what P1-6D emitted or attempted. Separate tests provide the stronger repository proof: sentinels cannot enter `buildBasicCountryImportPlan()`, representative `buildCountryDetailResponse()`/route output, coverage validation, or current AI eligibility material. The AI assertion is exactly zero KnowledgeChunks, zero `aiUsable = true`, and `aiEligibleKnowledgeIds: []`; it makes no claim to run a RAG retrieval.
+The returned boundary verdict is fixed negative-only attestation, not artifact content or a consumable AI eligibility payload. DB tests prove artifact/import/coverage/AI boundaries and statically forbid Web/canonical/coverage/AI imports from P1-6D production modules. Web tests independently prove the country service and route consume the canonical seed registry, import no P1-6D API and expose no P1-6D fields. DB tests never import Web code, and neither package invents a sentinel injection seam. The AI assertion is exactly zero KnowledgeChunks, zero `aiUsable = true`, and `aiEligibleKnowledgeIds: []`; it makes no claim to run a RAG retrieval.
 
 ## Test Strategy
 
-Use Vitest with injected ports only. The normal test proves ordered runner then bridge invocation and a ready bundle. Three isolated tests prove each blocked scenario produces four loader-compatible artifacts while runner/bridge/model spies remain uncalled. Artifact tests cover invalid bundles, deep immutability and exact names. Cross-boundary tests use distinct raw/discovery/provider/path/manifest sentinels. No test performs a real fetch, invokes Hermes, builds a llama transport or starts a child process.
+Use Vitest with injected ports only. Normal tests prove runner → preflight → bridge ordering and prove every preflight blocker leaves bridge/model uncalled. Blocked union tests use compile-time `@ts-expect-error` assertions, runtime exact-own-key rejection and skipped stages；they do not use disconnected spies. Artifact tests cover invalid bundles, recursive immutability and exact names. DB and Web boundary regressions run in their own packages with static architecture scans. No test performs a real fetch, invokes Hermes, builds a llama transport or starts a child process.
 
 ## Out of Scope
 
