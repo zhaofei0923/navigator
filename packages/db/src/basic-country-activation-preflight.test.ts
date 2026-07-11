@@ -611,12 +611,16 @@ describe("DATA-BASIC-ID preflight CLI boundary", () => {
       host: compilerHost,
     });
     const checker = program.getTypeChecker();
+    const constructorSymbols = new Set<ts.Symbol>();
+    const constructorDeclarationNames = new Set<ts.Identifier>();
     const rootSymbols = new Set<ts.Symbol>();
     const rootDeclarations = new Set<ts.Identifier>();
     const rootInitializers = new Set<ts.Expression>();
     const rootedCalls: string[] = [];
     const unrelatedCalls: string[] = [];
     const violations = new Set<string>();
+    let exactAdapterSymbol: ts.Symbol | null = null;
+    const adapterDeclarationNames = new Set<ts.Identifier>();
 
     const isPrismaClientTypeNode = (type: ts.TypeNode | undefined): boolean =>
       type !== undefined &&
@@ -654,10 +658,17 @@ describe("DATA-BASIC-ID preflight CLI boundary", () => {
 
     const isConstructedClient = (expression: ts.Expression): boolean => {
       const candidate = unwrap(expression);
+      const constructorSymbol =
+        ts.isNewExpression(candidate) &&
+        ts.isIdentifier(candidate.expression)
+          ? symbolAt(candidate.expression)
+          : null;
       return (
         ts.isNewExpression(candidate) &&
         ts.isIdentifier(candidate.expression) &&
-        candidate.expression.text === "PrismaClient"
+        (candidate.expression.text === "PrismaClient" ||
+          (constructorSymbol !== null &&
+            constructorSymbols.has(constructorSymbol)))
       );
     };
 
@@ -769,6 +780,25 @@ describe("DATA-BASIC-ID preflight CLI boundary", () => {
       );
     };
 
+    const collectConstructorSymbols = (node: ts.Node): void => {
+      const constructorName = ts.isImportSpecifier(node)
+        ? (node.propertyName?.text ?? node.name.text) === "PrismaClient"
+          ? node.name
+          : null
+        : ts.isClassDeclaration(node) && node.name?.text === "PrismaClient"
+          ? node.name
+          : null;
+      if (constructorName !== null) {
+        const symbol = symbolAt(constructorName);
+        if (symbol !== null) {
+          constructorSymbols.add(symbol);
+          constructorDeclarationNames.add(constructorName);
+        }
+      }
+      ts.forEachChild(node, collectConstructorSymbols);
+    };
+    collectConstructorSymbols(sourceFile);
+
     const collectRoots = (node: ts.Node): void => {
       if (
         ts.isVariableDeclaration(node) &&
@@ -807,6 +837,48 @@ describe("DATA-BASIC-ID preflight CLI boundary", () => {
       ts.forEachChild(node, collectRoots);
     };
     collectRoots(sourceFile);
+
+    const resolveExactAdapterSymbol = (): ts.Symbol | null => {
+      const candidate = sourceFile.statements.find(
+        (statement): statement is ts.FunctionDeclaration =>
+          ts.isFunctionDeclaration(statement) &&
+          statement.name?.text ===
+            "createPrismaBasicActivationCountPort" &&
+          ts.getModifiers(statement)?.some(
+            (modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword,
+          ) === true,
+      );
+      if (candidate?.name === undefined) {
+        return null;
+      }
+      const symbol = symbolAt(candidate.name);
+      const declarations = symbol?.declarations ?? [];
+      if (
+        symbol === null ||
+        declarations.length !== 1 ||
+        declarations[0] !== candidate ||
+        candidate.getSourceFile() !== sourceFile ||
+        candidate.body === undefined ||
+        candidate.parameters.length !== 1
+      ) {
+        return null;
+      }
+      const parameter = candidate.parameters[0];
+      if (
+        parameter === undefined ||
+        !ts.isIdentifier(parameter.name) ||
+        !isPrismaClientTypeNode(parameter.type)
+      ) {
+        return null;
+      }
+      const parameterSymbol = symbolAt(parameter.name);
+      if (parameterSymbol === null || !rootSymbols.has(parameterSymbol)) {
+        return null;
+      }
+      adapterDeclarationNames.add(candidate.name);
+      return symbol;
+    };
+    exactAdapterSymbol = resolveExactAdapterSymbol();
 
     interface MemberSegment {
       readonly access: "dot" | "element";
@@ -862,38 +934,7 @@ describe("DATA-BASIC-ID preflight CLI boundary", () => {
         return false;
       }
       const symbol = symbolAt(call.expression);
-      const declarations = symbol?.declarations ?? [];
-      if (declarations.length !== 1) {
-        return false;
-      }
-      const implementation = declarations[0];
-      if (
-        implementation === undefined ||
-        !ts.isFunctionDeclaration(implementation) ||
-        implementation.getSourceFile() !== sourceFile ||
-        implementation.parent !== sourceFile ||
-        implementation.body === undefined ||
-        implementation.name?.text !==
-          "createPrismaBasicActivationCountPort" ||
-        !ts.getModifiers(implementation)?.some(
-          (modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword,
-        ) ||
-        implementation.parameters.length !== 1
-      ) {
-        return false;
-      }
-      const parameter = implementation.parameters[0];
-      if (
-        parameter === undefined ||
-        !ts.isIdentifier(parameter.name) ||
-        !isPrismaClientTypeNode(parameter.type)
-      ) {
-        return false;
-      }
-      const parameterSymbol = symbolAt(parameter.name);
-      return (
-        parameterSymbol !== null && rootSymbols.has(parameterSymbol)
-      );
+      return symbol !== null && symbol === exactAdapterSymbol;
     };
 
     interface RootExpressionChain {
@@ -1073,6 +1114,90 @@ describe("DATA-BASIC-ID preflight CLI boundary", () => {
       inspectRootExpressionUse(expression, kind, false);
     };
 
+    const isTypePosition = (identifier: ts.Identifier): boolean => {
+      let current: ts.Node | undefined = identifier.parent;
+      while (current !== undefined && !ts.isSourceFile(current)) {
+        if (ts.isTypeNode(current)) {
+          return !(
+            ts.isExpressionWithTypeArguments(current) &&
+            ts.isHeritageClause(current.parent)
+          );
+        }
+        if (ts.isExpression(current) || ts.isStatement(current)) {
+          return false;
+        }
+        current = current.parent;
+      }
+      return false;
+    };
+
+    const isNonValueName = (identifier: ts.Identifier): boolean => {
+      const parent = identifier.parent;
+      return (
+        (ts.isPropertyAccessExpression(parent) && parent.name === identifier) ||
+        (ts.isPropertyAssignment(parent) && parent.name === identifier) ||
+        (ts.isVariableDeclaration(parent) && parent.name === identifier) ||
+        (ts.isParameter(parent) && parent.name === identifier) ||
+        (ts.isFunctionDeclaration(parent) && parent.name === identifier) ||
+        (ts.isClassDeclaration(parent) && parent.name === identifier)
+      );
+    };
+
+    const inspectConstructorValue = (identifier: ts.Identifier): void => {
+      const symbol = symbolAt(identifier);
+      const isConstructor =
+        (symbol !== null && constructorSymbols.has(symbol)) ||
+        (constructorSymbols.size === 0 &&
+          identifier.text === "PrismaClient");
+      if (
+        !isConstructor ||
+        constructorDeclarationNames.has(identifier) ||
+        isTypePosition(identifier) ||
+        isNonValueName(identifier)
+      ) {
+        return;
+      }
+      const parent = identifier.parent;
+      if (
+        ts.isNewExpression(parent) &&
+        parent.expression === identifier &&
+        (rootInitializers.has(parent) || allowedFactoryConstructor(parent))
+      ) {
+        return;
+      }
+      violations.add(
+        "unsupported-constructor-use@" + identifier.getStart(sourceFile),
+      );
+    };
+
+    const inspectAdapterValue = (identifier: ts.Identifier): void => {
+      const symbol = symbolAt(identifier);
+      if (
+        symbol === null ||
+        symbol !== exactAdapterSymbol ||
+        adapterDeclarationNames.has(identifier) ||
+        isTypePosition(identifier)
+      ) {
+        return;
+      }
+      const parent = identifier.parent;
+      const argument =
+        ts.isCallExpression(parent) && parent.arguments.length === 1
+          ? parent.arguments[0]
+          : undefined;
+      if (
+        ts.isCallExpression(parent) &&
+        argument !== undefined &&
+        parent.expression === identifier &&
+        exactAdapterCall(parent, argument)
+      ) {
+        return;
+      }
+      violations.add(
+        "unsupported-adapter-use@" + identifier.getStart(sourceFile),
+      );
+    };
+
     const calleeContainsRoot = (node: ts.Node): boolean => {
       let found = false;
       const inspect = (candidate: ts.Node): void => {
@@ -1090,6 +1215,10 @@ describe("DATA-BASIC-ID preflight CLI boundary", () => {
     };
 
     const inspectUses = (node: ts.Node): void => {
+      if (ts.isIdentifier(node)) {
+        inspectConstructorValue(node);
+        inspectAdapterValue(node);
+      }
       if (
         ts.isIdentifier(node) &&
         !rootDeclarations.has(node)
@@ -1289,6 +1418,26 @@ describe("DATA-BASIC-ID preflight CLI boundary", () => {
     ["direct constructor adapter handoff", "export function createPrismaBasicActivationCountPort(client: PrismaClient) { client.policy.count(); } createPrismaBasicActivationCountPort(new PrismaClient());"],
     ["direct explicit factory adapter handoff", "export function createPrismaBasicActivationCountPort(client: PrismaClient) { client.policy.count(); } function make(): PrismaClient { return new PrismaClient(); } createPrismaBasicActivationCountPort(make());"],
     ["direct inferred factory adapter handoff", "export function createPrismaBasicActivationCountPort(client: PrismaClient) { client.policy.count(); } const make = () => new PrismaClient(); createPrismaBasicActivationCountPort(make());"],
+    ["constructor alias", "const ClientCtor = PrismaClient;"],
+    ["constructor bind", "const BoundClient = PrismaClient.bind(null);"],
+    ["constructor call", "PrismaClient.call(null);"],
+    ["constructor apply", "PrismaClient.apply(null, []);"],
+    ["constructor helper argument", "consume(PrismaClient);"],
+    ["constructor return", "function expose() { return PrismaClient; }"],
+    ["constructor object holder", "const holder = { PrismaClient };"],
+    ["constructor array holder", "const holder = [PrismaClient];"],
+    ["constructor spread", "const holder = { ...PrismaClient };"],
+    ["adapter reassignment", "export function createPrismaBasicActivationCountPort(client: PrismaClient) { client.policy.count(); } createPrismaBasicActivationCountPort = evil; const db = new PrismaClient(); createPrismaBasicActivationCountPort(db);"],
+    ["adapter compound reassignment", "export function createPrismaBasicActivationCountPort(client: PrismaClient) { client.policy.count(); } createPrismaBasicActivationCountPort ||= evil;"],
+    ["adapter alias", "export function createPrismaBasicActivationCountPort(client: PrismaClient) { client.policy.count(); } const alias = createPrismaBasicActivationCountPort;"],
+    ["adapter object holder", "export function createPrismaBasicActivationCountPort(client: PrismaClient) { client.policy.count(); } const holder = { createPrismaBasicActivationCountPort };"],
+    ["adapter array holder", "export function createPrismaBasicActivationCountPort(client: PrismaClient) { client.policy.count(); } const holder = [createPrismaBasicActivationCountPort];"],
+    ["adapter property storage", "export function createPrismaBasicActivationCountPort(client: PrismaClient) { client.policy.count(); } holder.adapter = createPrismaBasicActivationCountPort;"],
+    ["adapter helper argument", "export function createPrismaBasicActivationCountPort(client: PrismaClient) { client.policy.count(); } consume(createPrismaBasicActivationCountPort);"],
+    ["adapter return", "export function createPrismaBasicActivationCountPort(client: PrismaClient) { client.policy.count(); } function expose() { return createPrismaBasicActivationCountPort; }"],
+    ["adapter call indirection", "export function createPrismaBasicActivationCountPort(client: PrismaClient) { client.policy.count(); } createPrismaBasicActivationCountPort.call(null, client);"],
+    ["adapter apply indirection", "export function createPrismaBasicActivationCountPort(client: PrismaClient) { client.policy.count(); } createPrismaBasicActivationCountPort.apply(null, [client]);"],
+    ["adapter bind indirection", "export function createPrismaBasicActivationCountPort(client: PrismaClient) { client.policy.count(); } const bound = createPrismaBasicActivationCountPort.bind(null);"],
   ])("rejects Prisma-rooted mutation fixture: %s", (_label, source) => {
     expect(analyzePrismaUsage(source).violations).not.toEqual([]);
   });
