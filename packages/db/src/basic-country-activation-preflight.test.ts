@@ -951,6 +951,7 @@ describe("DATA-BASIC-ID preflight CLI boundary", () => {
     const inspectRootExpressionUse = (
       expression: ts.Expression,
       label: string,
+      allowHandoff: boolean,
     ): void => {
       const { current, segments, wrapped } = rootExpressionChain(expression);
 
@@ -980,6 +981,7 @@ describe("DATA-BASIC-ID preflight CLI boundary", () => {
         segments.length === 1 &&
         segments[0]?.name === "$disconnect";
       const allowedHandoff =
+        allowHandoff &&
         !wrapped &&
         segments.length === 0 &&
         ts.isCallExpression(parent) &&
@@ -1068,7 +1070,7 @@ describe("DATA-BASIC-ID preflight CLI boundary", () => {
       ) {
         return;
       }
-      inspectRootExpressionUse(expression, kind);
+      inspectRootExpressionUse(expression, kind, false);
     };
 
     const calleeContainsRoot = (node: ts.Node): boolean => {
@@ -1094,7 +1096,7 @@ describe("DATA-BASIC-ID preflight CLI boundary", () => {
       ) {
         const symbol = symbolAt(node);
         if (symbol !== null && rootSymbols.has(symbol)) {
-          inspectRootExpressionUse(node, node.text);
+          inspectRootExpressionUse(node, node.text, true);
         }
       }
       if (ts.isNewExpression(node) && isConstructedClient(node)) {
@@ -1284,6 +1286,9 @@ describe("DATA-BASIC-ID preflight CLI boundary", () => {
     ["untyped adapter implementation overload", "function createPrismaBasicActivationCountPort(client: PrismaClient): void; function createPrismaBasicActivationCountPort(client: unknown) {} const db = new PrismaClient(); createPrismaBasicActivationCountPort(db);"],
     ["typed adapter implementation overload", "function createPrismaBasicActivationCountPort(client: PrismaClient): void; function createPrismaBasicActivationCountPort(client: PrismaClient) {} const db = new PrismaClient(); createPrismaBasicActivationCountPort(db);"],
     ["same-name shadow adapter", "export function createPrismaBasicActivationCountPort(client: PrismaClient) { client.policy.count(); } { function createPrismaBasicActivationCountPort(client: PrismaClient) { client.policy.count(); } const db = new PrismaClient(); createPrismaBasicActivationCountPort(db); }"],
+    ["direct constructor adapter handoff", "export function createPrismaBasicActivationCountPort(client: PrismaClient) { client.policy.count(); } createPrismaBasicActivationCountPort(new PrismaClient());"],
+    ["direct explicit factory adapter handoff", "export function createPrismaBasicActivationCountPort(client: PrismaClient) { client.policy.count(); } function make(): PrismaClient { return new PrismaClient(); } createPrismaBasicActivationCountPort(make());"],
+    ["direct inferred factory adapter handoff", "export function createPrismaBasicActivationCountPort(client: PrismaClient) { client.policy.count(); } const make = () => new PrismaClient(); createPrismaBasicActivationCountPort(make());"],
   ])("rejects Prisma-rooted mutation fixture: %s", (_label, source) => {
     expect(analyzePrismaUsage(source).violations).not.toEqual([]);
   });
