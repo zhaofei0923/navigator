@@ -95,7 +95,7 @@ describe("Basic country import plan", () => {
     for (const invalidBundle of [cyclicBundle, bigintBundle]) {
       expect(validateBasicCountryBundle(invalidBundle).valid).toBe(false);
       expect(() => buildBasicCountryImportPlan(invalidBundle)).toThrow(
-        "must have exactly zh and en own keys",
+        "publication bundle must be safely snapshotable",
       );
     }
   });
@@ -142,6 +142,28 @@ describe("Basic country import plan", () => {
     ]) {
       expect(serializedPlan).not.toContain(forbiddenValue);
     }
+  });
+
+  test.each([
+    ["accessor", addImportAccessorExtra],
+    ["non-enumerable key", addImportNonEnumerableExtra],
+    ["symbol key", addImportSymbolExtra],
+  ] as const)("rejects an original bundle graph with an unsafe %s", (
+    _label,
+    addUnsafeExtra,
+  ) => {
+    const bundle = createValidBundle();
+    const unsafe = addUnsafeExtra(bundle);
+
+    expect(() => buildBasicCountryImportPlan(bundle)).toThrow();
+    expect(unsafe.getterCount()).toBe(0);
+    try {
+      buildBasicCountryImportPlan(bundle);
+    } catch (error: unknown) {
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).not.toContain(unsafe.secret);
+    }
+    expect(unsafe.getterCount()).toBe(0);
   });
 
   test("does not consume real P1-6C runtime results while building the canonical import plan", async () => {
@@ -305,6 +327,42 @@ function asJsonRecord(value: unknown): JsonRecord {
     throw new Error("audit artifact must be a plain record");
   }
   return value;
+}
+
+interface ImportUnsafeExtraProbe {
+  secret: string;
+  getterCount(): number;
+}
+
+function addImportAccessorExtra(value: object): ImportUnsafeExtraProbe {
+  const secret = "IMPORT_ACCESSOR_SECRET";
+  let count = 0;
+  Object.defineProperty(value, "runtime", {
+    enumerable: true,
+    get() {
+      count += 1;
+      return secret;
+    },
+  });
+  return { secret, getterCount: () => count };
+}
+
+function addImportNonEnumerableExtra(value: object): ImportUnsafeExtraProbe {
+  const secret = "IMPORT_NON_ENUMERABLE_SECRET";
+  Object.defineProperty(value, "runtime", {
+    enumerable: false,
+    value: secret,
+  });
+  return { secret, getterCount: () => 0 };
+}
+
+function addImportSymbolExtra(value: object): ImportUnsafeExtraProbe {
+  const secret = "IMPORT_SYMBOL_SECRET";
+  Object.defineProperty(value, Symbol(secret), {
+    enumerable: true,
+    value: secret,
+  });
+  return { secret, getterCount: () => 0 };
 }
 
 function writeRawCacheIsolationFixture(): {

@@ -237,6 +237,47 @@ describe("approved Basic country publication", () => {
     );
   });
 
+  test.each([
+    ["accessor", addAccessorExtra],
+    ["non-enumerable key", addNonEnumerableExtra],
+    ["symbol key", addSymbolExtra],
+  ] as const)("the generator rejects an original graph with an unsafe %s", (
+    _label,
+    addUnsafeExtra,
+  ) => {
+    const input = createPublicationInput();
+    const unsafe = addUnsafeExtra(input);
+
+    let errorMessage = "";
+    try {
+      createBasicCountryBundleFromApprovedAudit(input);
+    } catch (error: unknown) {
+      expect(error).toBeInstanceOf(Error);
+      errorMessage = (error as Error).message;
+    }
+    expect(errorMessage).toBe("approved audit input must be safely snapshotable");
+    expect(unsafe.getterCount()).toBe(0);
+    expect(errorMessage).not.toContain(unsafe.secret);
+  });
+
+  test.each([
+    ["accessor", addAccessorExtra],
+    ["non-enumerable key", addNonEnumerableExtra],
+    ["symbol key", addSymbolExtra],
+  ] as const)("the validator rejects an original graph with an unsafe %s", (
+    _label,
+    addUnsafeExtra,
+  ) => {
+    const bundle = createValidBundle();
+    const unsafe = addUnsafeExtra(bundle);
+
+    const result = validateApprovedBasicCountryPublication(bundle);
+
+    expect(result.valid).toBe(false);
+    expect(unsafe.getterCount()).toBe(0);
+    expect(result.errors.join("\n")).not.toContain(unsafe.secret);
+  });
+
   test("publishes the documented mapping version", () => {
     expect(BASIC_COUNTRY_CANONICAL_MAPPING_VERSION).toBe(
       "basic-country-canonical/v1",
@@ -277,4 +318,49 @@ function blockReview(bundle: BasicCountryBundle): void {
   const report = reviewReport(bundle);
   report.status = "blocked";
   report.publicationRecommendation = "do-not-publish";
+}
+
+interface UnsafeExtraProbe {
+  secret: string;
+  getterCount(): number;
+}
+
+function addAccessorExtra(value: object): UnsafeExtraProbe {
+  const secret = "ACCESSOR_SECRET";
+  let count = 0;
+  Object.defineProperty(value, "runtime", {
+    enumerable: true,
+    get() {
+      count += 1;
+      return secret;
+    },
+  });
+  return {
+    secret,
+    getterCount: () => count,
+  };
+}
+
+function addNonEnumerableExtra(value: object): UnsafeExtraProbe {
+  const secret = "NON_ENUMERABLE_SECRET";
+  Object.defineProperty(value, "runtime", {
+    enumerable: false,
+    value: secret,
+  });
+  return {
+    secret,
+    getterCount: () => 0,
+  };
+}
+
+function addSymbolExtra(value: object): UnsafeExtraProbe {
+  const secret = "SYMBOL_SECRET";
+  Object.defineProperty(value, Symbol(secret), {
+    enumerable: true,
+    value: secret,
+  });
+  return {
+    secret,
+    getterCount: () => 0,
+  };
 }

@@ -1,4 +1,4 @@
-import { isDeepStrictEqual } from "node:util";
+import { isDeepStrictEqual, types } from "node:util";
 
 import type { BasicCollectionAuditBundle } from "../collection/basic-collection-contracts.js";
 import { validateBasicCollectionAuditBundle } from "../collection/basic-collection-validator.js";
@@ -32,6 +32,7 @@ export function createBasicCountryBundleFromApprovedAudit(
 ): BasicCountryBundle {
   let snapshot: BasicApprovedCountryPublicationInput;
   try {
+    assertSafeJsonGraph(input);
     snapshot = structuredClone(input);
   } catch {
     throw new Error(INPUT_SNAPSHOT_ERROR);
@@ -64,6 +65,7 @@ export function validateApprovedBasicCountryPublication(
 ): BasicCountryValidationResult {
   let snapshot: unknown;
   try {
+    assertSafeJsonGraph(bundle);
     snapshot = structuredClone(bundle);
   } catch {
     return invalid(SNAPSHOT_ERROR);
@@ -149,4 +151,71 @@ function invalid(error: string): BasicCountryValidationResult {
     errors: [error],
     summary: { countryCode: "", coverageLevel: "", moduleStatuses: {} },
   };
+}
+
+function assertSafeJsonGraph(value: unknown): void {
+  inspectSafeJsonValue(value, new WeakSet<object>(), new WeakSet<object>());
+}
+
+function inspectSafeJsonValue(
+  value: unknown,
+  active: WeakSet<object>,
+  inspected: WeakSet<object>,
+): void {
+  if (
+    value === null ||
+    typeof value === "string" ||
+    typeof value === "boolean"
+  ) {
+    return;
+  }
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) throw new Error();
+    return;
+  }
+  if (typeof value !== "object" || types.isProxy(value)) {
+    throw new Error();
+  }
+  if (active.has(value)) throw new Error();
+  if (inspected.has(value)) return;
+
+  const array = Array.isArray(value);
+  const prototype = Object.getPrototypeOf(value);
+  if (
+    (array && prototype !== Array.prototype) ||
+    (!array && prototype !== Object.prototype)
+  ) {
+    throw new Error();
+  }
+
+  active.add(value);
+  const keys = Reflect.ownKeys(value);
+  let arrayIndexCount = 0;
+  for (const key of keys) {
+    if (typeof key === "symbol") throw new Error();
+    const descriptor = Reflect.getOwnPropertyDescriptor(value, key);
+    if (descriptor === undefined || !("value" in descriptor)) {
+      throw new Error();
+    }
+    if (array && key === "length") continue;
+    if (!descriptor.enumerable) throw new Error();
+    if (array) {
+      if (!isArrayIndexKey(key)) throw new Error();
+      arrayIndexCount += 1;
+    }
+    inspectSafeJsonValue(descriptor.value, active, inspected);
+  }
+  if (array && arrayIndexCount !== value.length) throw new Error();
+  active.delete(value);
+  inspected.add(value);
+}
+
+function isArrayIndexKey(key: string): boolean {
+  const index = Number(key);
+  return (
+    Number.isInteger(index) &&
+    index >= 0 &&
+    index < 4_294_967_295 &&
+    String(index) === key
+  );
 }
