@@ -146,41 +146,40 @@ export async function runBasicCountryActivationPreflightCli(
     return 2;
   }
 
-  let prismaClient: PrismaClient;
   try {
-    prismaClient = dependencies.createClient();
-  } catch {
-    dependencies.writeStderr(`${JSON.stringify(createLifecycleFailureSummary())}\n`);
-    return 1;
-  }
+    const prismaClient: PrismaClient = dependencies.createClient();
 
-  let result: BasicCountryActivationPreflightResult | null = null;
-  let preflightFailed = false;
-  let disconnectFailed = false;
-  try {
-    result = await dependencies.preflight(
-      TARGET_COUNTRY_CODE,
-      createPrismaBasicActivationCountPort(prismaClient),
-    );
-  } catch {
-    preflightFailed = true;
-  } finally {
+    let result: BasicCountryActivationPreflightResult | null = null;
+    let preflightFailed = false;
+    let disconnectFailed = false;
     try {
-      await prismaClient.$disconnect();
+      result = await dependencies.preflight(
+        TARGET_COUNTRY_CODE,
+        createPrismaBasicActivationCountPort(prismaClient),
+      );
     } catch {
-      disconnectFailed = true;
+      preflightFailed = true;
+    } finally {
+      try {
+        await prismaClient.$disconnect();
+      } catch {
+        disconnectFailed = true;
+      }
     }
-  }
 
-  if (preflightFailed || disconnectFailed || result === null) {
+    if (preflightFailed || disconnectFailed || result === null) {
+      dependencies.writeStderr(`${JSON.stringify(createLifecycleFailureSummary())}\n`);
+      return 1;
+    }
+
+    dependencies.writeStdout(
+      `${JSON.stringify(createIdBasicActivationOperatorSummary(result))}\n`,
+    );
+    return result.activation === "ready" && result.valid ? 0 : 1;
+  } catch {
     dependencies.writeStderr(`${JSON.stringify(createLifecycleFailureSummary())}\n`);
     return 1;
   }
-
-  dependencies.writeStdout(
-    `${JSON.stringify(createIdBasicActivationOperatorSummary(result))}\n`,
-  );
-  return result.activation === "ready" && result.valid ? 0 : 1;
 }
 
 const entrypoint = process.argv[1];
