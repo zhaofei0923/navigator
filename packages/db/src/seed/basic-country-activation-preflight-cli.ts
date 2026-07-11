@@ -26,6 +26,12 @@ interface BasicActivationWhere {
   readonly credibility?: { readonly not: typeof UNVERIFIED_CREDIBILITY };
 }
 
+export interface BasicCountryActivationPreflightCliDependencies {
+  readonly createClient: () => PrismaClient;
+  readonly writeStdout: (output: string) => void;
+  readonly writeStderr: (output: string) => void;
+}
+
 export function classifyBasicCountryActivationPreflightArgs(
   args: readonly string[],
 ): BasicCountryActivationCliMode {
@@ -111,32 +117,66 @@ export function createIdBasicActivationOperatorSummary(
   return result;
 }
 
-async function runBasicCountryActivationPreflightCli(
+function createLifecycleFailureSummary(): BasicCountryActivationPreflightResult {
+  return Object.freeze({
+    countryCode: TARGET_COUNTRY_CODE,
+    activation: "blocked",
+    blockerCode: "PREFLIGHT_QUERY_FAILED",
+    cleanupRequired: false,
+    valid: false,
+    errors: Object.freeze(["PREFLIGHT_LIFECYCLE_FAILED"]),
+    counts: null,
+  });
+}
+
+export async function runBasicCountryActivationPreflightCli(
   args: readonly string[],
+  dependencies: BasicCountryActivationPreflightCliDependencies,
 ): Promise<number> {
   const mode = classifyBasicCountryActivationPreflightArgs(args);
   if (mode === "help") {
-    process.stdout.write(`${USAGE}\n`);
+    dependencies.writeStdout(`${USAGE}\n`);
     return 0;
   }
   if (mode === "invalid") {
-    process.stderr.write(`${JSON.stringify({ error: "INVALID_ARGUMENTS", usage: USAGE })}\n`);
+    dependencies.writeStderr(
+      `${JSON.stringify({ error: "INVALID_ARGUMENTS", usage: USAGE })}\n`,
+    );
     return 2;
   }
 
-  const prismaClient = new PrismaClient();
+  let prismaClient: PrismaClient;
   try {
-    const result = await preflightBasicCountryActivation(
+    prismaClient = dependencies.createClient();
+  } catch {
+    dependencies.writeStderr(`${JSON.stringify(createLifecycleFailureSummary())}\n`);
+    return 1;
+  }
+
+  let result: BasicCountryActivationPreflightResult | null = null;
+  let disconnectFailed = false;
+  try {
+    result = await preflightBasicCountryActivation(
       TARGET_COUNTRY_CODE,
       createPrismaBasicActivationCountPort(prismaClient),
     );
-    process.stdout.write(
-      `${JSON.stringify(createIdBasicActivationOperatorSummary(result))}\n`,
-    );
-    return result.activation === "ready" && result.valid ? 0 : 1;
   } finally {
-    await prismaClient.$disconnect();
+    try {
+      await prismaClient.$disconnect();
+    } catch {
+      disconnectFailed = true;
+    }
   }
+
+  if (disconnectFailed || result === null) {
+    dependencies.writeStderr(`${JSON.stringify(createLifecycleFailureSummary())}\n`);
+    return 1;
+  }
+
+  dependencies.writeStdout(
+    `${JSON.stringify(createIdBasicActivationOperatorSummary(result))}\n`,
+  );
+  return result.activation === "ready" && result.valid ? 0 : 1;
 }
 
 const entrypoint = process.argv[1];
@@ -146,5 +186,10 @@ if (
 ) {
   process.exitCode = await runBasicCountryActivationPreflightCli(
     process.argv.slice(2),
+    {
+      createClient: () => new PrismaClient(),
+      writeStdout: (output) => process.stdout.write(output),
+      writeStderr: (output) => process.stderr.write(output),
+    },
   );
 }

@@ -97,6 +97,14 @@ export async function preflightBasicCountryActivation(
   try {
     for (const query of BASIC_ACTIVATION_QUERY_MATRIX) {
       const count = await port.count(query.model, query.scope, countryCode);
+      if (
+        typeof count !== "number" ||
+        !Number.isFinite(count) ||
+        !Number.isSafeInteger(count) ||
+        count < 0
+      ) {
+        return createFailedResult(countryCode, "COUNT_QUERY_FAILED");
+      }
       counts[queryKey(query)] = count;
     }
   } catch {
