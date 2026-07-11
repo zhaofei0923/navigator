@@ -1,4 +1,5 @@
 import type {
+  BasicCollectionAuditValidationResult,
   BasicCollectionBlockerCode,
   BasicExtractedFacts,
   BasicInjectionRisk,
@@ -6,6 +7,7 @@ import type {
   BasicSourceCheck,
   BasicSourceRegister,
 } from "./basic-collection-contracts.js";
+import type { BasicCollectionAuditArtifacts } from "./basic-offline-audit-artifacts.js";
 import type { BasicBridgeResult, BasicDraftModelPort } from "./basic-hermes-llama-contracts.js";
 import type { BasicSourceAdapterRunResult } from "./basic-source-adapter-contracts.js";
 
@@ -63,3 +65,42 @@ export interface BasicOfflineBlockedDryRunInput {
 }
 
 export type BasicOfflineDryRunInput = BasicOfflineNormalDryRunInput | BasicOfflineBlockedDryRunInput;
+
+export const BASIC_OFFLINE_STAGE_NAMES = Object.freeze([
+  "input",
+  "runner",
+  "preflight",
+  "draft-bridge",
+  "assemble",
+  "validate",
+  "artifacts",
+  "boundary",
+] as const);
+export type BasicOfflineStageName = (typeof BASIC_OFFLINE_STAGE_NAMES)[number];
+export type BasicOfflineStageOutcome = "passed" | "blocked" | "skipped";
+
+export interface BasicOfflineDryRunStage {
+  name: BasicOfflineStageName;
+  outcome: BasicOfflineStageOutcome;
+}
+
+export interface BasicOfflineBoundaryVerdict {
+  rawCache: "not-produced";
+  stagingWrite: "not-attempted";
+  manifest: "not-produced";
+  canonicalWrite: "not-attempted";
+  prismaWrite: "not-attempted";
+  coverageDerivation: "not-attempted";
+  publishAction: "not-attempted";
+  knowledgeChunkCount: 0;
+  aiUsableTrueCount: 0;
+  aiEligibleKnowledgeIds: readonly [];
+}
+
+export interface BasicOfflineDryRunResult {
+  scenario: BasicOfflineDryRunScenario;
+  stages: readonly BasicOfflineDryRunStage[];
+  validation: BasicCollectionAuditValidationResult;
+  artifacts: BasicCollectionAuditArtifacts | null;
+  boundaryVerdict: BasicOfflineBoundaryVerdict;
+}
