@@ -20,6 +20,7 @@ import {
   createBasicOfflineFailureResult,
   createBasicOfflineStageOutcomes,
 } from "./collection/basic-offline-dry-run-result.js";
+import { preflightBasicOfflineCollection } from "./collection/basic-offline-source-preflight.js";
 
 describe("Basic offline dry run", () => {
   test.each([
@@ -132,11 +133,23 @@ describe("Basic offline dry run", () => {
   });
 
   test.each([
-    ["scenario mismatch", "conflict", blockedInput("missing")],
-    ["extra blocker", "missing", materialWithExtraBlocker("missing")],
-    ["missing blocker", "missing", materialWithoutScenarioBlocker("missing")],
-  ] as const)("fail-closes blocked input on %s", async (_name, scenario, material) => {
-    const result = await runBasicOfflineDryRun({ scenario, material } as BasicOfflineDryRunInput);
+    ["missing expected blocker", materialFor("normal"), []],
+    ["wrong blocker mismatch", materialFor("conflict"), ["UNRESOLVED_CONFLICT"]],
+    ["extra blocker", materialWithExtraBlocker(), ["MISSING_REQUIRED_FACT", "UNTRUSTED_INPUT"]],
+  ] satisfies ReadonlyArray<readonly [
+    string,
+    BasicCollectionAuditAssemblyInput,
+    readonly BasicCollectionBlockerCode[],
+  ]>)("fail-closes blocked input on %s", async (_name, material, blockers) => {
+    const preflight = preflightBasicOfflineCollection({
+      sourceRegister: material.sourceRegister,
+      extractedFacts: material.extractedFacts,
+      sourceChecks: material.sourceChecks,
+      injectionRisks: material.injectionRisks,
+    });
+    expect(preflight).toMatchObject({ valid: true, blockers });
+
+    const result = await runBasicOfflineDryRun({ scenario: "missing", material });
 
     expect(result.validation).toMatchObject({ valid: false, readyForHumanReview: false });
     expect(result.validation.errors).toEqual(["P1-6D preflight failed"]);
@@ -571,40 +584,29 @@ function normalInput(
 function blockedInput(
   scenario: "missing" | "conflict" | "untrusted",
 ): { scenario: typeof scenario; material: BasicCollectionAuditAssemblyInput } {
-  const fixture = readBasicCollectionAuditFixture(scenario);
   return {
     scenario,
-    material: {
-      countryDirectory: fixture.countryDirectory,
-      runId: fixture.runId,
-      sourceRegister: fixture.sourceRegister,
-      extractedFacts: fixture.extractedFacts,
-      marketOverviewDraft: fixture.marketOverviewDraft,
-      sourceChecks: fixture.reviewReport.sourceChecks,
-      injectionRisks: fixture.reviewReport.injectionRisks,
-    },
+    material: materialFor(scenario),
   };
 }
 
-function materialWithExtraBlocker(
-  scenario: "missing" | "conflict" | "untrusted",
+function materialFor(
+  scenario: "normal" | "missing" | "conflict" | "untrusted",
 ): BasicCollectionAuditAssemblyInput {
-  return { ...blockedInput(scenario).material, sourceChecks: [] };
+  const fixture = readBasicCollectionAuditFixture(scenario);
+  return {
+    countryDirectory: fixture.countryDirectory,
+    runId: fixture.runId,
+    sourceRegister: fixture.sourceRegister,
+    extractedFacts: fixture.extractedFacts,
+    marketOverviewDraft: fixture.marketOverviewDraft,
+    sourceChecks: fixture.reviewReport.sourceChecks,
+    injectionRisks: fixture.reviewReport.injectionRisks,
+  };
 }
 
-function materialWithoutScenarioBlocker(
-  scenario: "missing" | "conflict" | "untrusted",
-): BasicCollectionAuditAssemblyInput {
-  const material = blockedInput(scenario).material;
-  for (const fact of material.extractedFacts.facts) {
-    if (fact.status === scenario) {
-      fact.status = "candidate";
-      if (fact.evidence[0] !== undefined) {
-        fact.evidence = [fact.evidence[0]];
-      }
-    }
-  }
-  return material;
+function materialWithExtraBlocker(): BasicCollectionAuditAssemblyInput {
+  return { ...materialFor("missing"), sourceChecks: [] };
 }
 
 function expectBlockedInputFailure(
