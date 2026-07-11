@@ -5,7 +5,6 @@ import { join } from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
 
 import { loadBasicCollectionAuditBundle } from "./collection/basic-collection-loader.js";
-import { validateBasicCollectionAuditBundle } from "./collection/basic-collection-validator.js";
 import { readBasicCollectionAuditFixture } from "./basic-collection-test-fixture.js";
 import { createBasicCollectionAuditArtifacts } from "./collection/basic-offline-audit-artifacts.js";
 
@@ -93,28 +92,36 @@ describe("Basic offline audit artifacts", () => {
     expect(readdirSync(repoRoot)).toEqual(before);
   });
 
-  test("returns fresh recursively frozen values independent of input and validation data", () => {
+  test("returns fresh recursively frozen values independent across calls and from input", () => {
     const input = readBasicCollectionAuditFixture("normal");
-    const validation = validateBasicCollectionAuditBundle(input);
-    if (!validation.valid) {
-      throw new Error("normal fixture unexpectedly failed validation");
-    }
+    const first = createBasicCollectionAuditArtifacts(input);
+    const second = createBasicCollectionAuditArtifacts(input);
 
-    const artifacts = createBasicCollectionAuditArtifacts(input);
-    expect(artifacts["source-register.json"]).not.toBe(validation.data.sourceRegister);
-    expect(artifacts["source-register.json"].sources).not.toBe(
-      validation.data.sourceRegister.sources,
+    expect(first).not.toBe(second);
+    expect(first["source-register.json"]).not.toBe(second["source-register.json"]);
+    expect(first["source-register.json"].sources).not.toBe(
+      second["source-register.json"].sources,
     );
-    expect(artifacts["extracted-facts.json"].facts[0]?.evidence).not.toBe(
-      validation.data.extractedFacts.facts[0]?.evidence,
+    expect(first["source-register.json"].sources[0]).not.toBe(
+      second["source-register.json"].sources[0],
     );
-    expect(Object.isFrozen(artifacts)).toBe(true);
-    expectRecursivelyFrozen(artifacts);
+    expect(first["source-register.json"]).not.toBe(input.sourceRegister);
+    expect(first["source-register.json"].sources).not.toBe(
+      input.sourceRegister.sources,
+    );
+    expect(first["source-register.json"].sources[0]).not.toBe(
+      input.sourceRegister.sources[0],
+    );
+    expect(Object.isFrozen(first)).toBe(true);
+    expectRecursivelyFrozen(first);
+    expectRecursivelyFrozen(second);
 
-    const originalSourceName = validation.data.sourceRegister.sources[0]!.sourceName;
+    const originalSourceName = input.sourceRegister.sources[0]!.sourceName;
     input.sourceRegister.sources[0]!.sourceName = "changed input";
-    validation.data.sourceRegister.sources[0]!.sourceName = "changed validation data";
-    expect(artifacts["source-register.json"].sources[0]!.sourceName).toBe(
+    expect(first["source-register.json"].sources[0]!.sourceName).toBe(
+      originalSourceName,
+    );
+    expect(second["source-register.json"].sources[0]!.sourceName).toBe(
       originalSourceName,
     );
   });
@@ -123,9 +130,13 @@ describe("Basic offline audit artifacts", () => {
     const artifacts = createBasicCollectionAuditArtifacts(
       readBasicCollectionAuditFixture("normal"),
     );
+    const nested = artifacts["source-register.json"].sources[0]!;
     const original = JSON.stringify(artifacts);
 
     expect(Reflect.set(artifacts, "alias", artifacts["source-register.json"])).toBe(false);
+    expect(() =>
+      Object.assign(artifacts, { alias: artifacts["source-register.json"] }),
+    ).toThrow(TypeError);
     expect(Reflect.deleteProperty(artifacts, "source-register.json")).toBe(false);
     expect(
       Reflect.defineProperty(artifacts, "manifest", {
@@ -134,7 +145,14 @@ describe("Basic offline audit artifacts", () => {
       }),
     ).toBe(false);
     expect(
-      Reflect.set(artifacts["source-register.json"].sources[0]!, "sourceName", "changed"),
+      Reflect.set(nested, "sourceName", "changed"),
+    ).toBe(false);
+    expect(Reflect.deleteProperty(nested, "sourceName")).toBe(false);
+    expect(
+      Reflect.defineProperty(nested, "sourceName", {
+        value: "changed",
+        enumerable: true,
+      }),
     ).toBe(false);
     expect(JSON.stringify(artifacts)).toBe(original);
   });
