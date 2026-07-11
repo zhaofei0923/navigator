@@ -134,6 +134,8 @@ export function preflightBasicOfflineCollection(
 
 Validate source/fact schemas and identities, required paths/indicator completeness, unique IDs/paths, evidence source/locator references and candidate normalized-value agreement. Derive P1-6A blocker semantics from source/fact states plus explicit checks/risks. Do not accept or synthesize a draft, passed source check, bridge or model.
 
+Locate the unique candidate fact whose `fieldPath` is `marketOverview.credibility`; when its agreed `normalizedValue` is exactly `"UNVERIFIED"`, add `UNTRUSTED_INPUT` regardless of safe source metadata, passed checks or empty injection risks. Keep existing duplicate path/ID, conflicting normalized evidence and conflict-evidence validation unchanged.
+
 - [ ] **Step 4: Verify preflight green and review**
 
 Run the Step 2 command. Review that malformed/proxy/cyclic inputs return `valid = false`, blocker ordering is stable, and every risky but structurally valid case returns the expected blocker without model-capable input.
@@ -284,6 +286,20 @@ test.each([
   expect(input.model.complete).not.toHaveBeenCalled();
   expect(result.stages).toContainEqual({ name: "preflight", outcome: "blocked" });
   expect(result.artifacts).toBeNull();
+});
+
+test("normal blocks candidate credibility UNVERIFIED despite trusted sources", async () => {
+  const input = normalInput({
+    runnerResult: runWithCandidateCredibility("UNVERIFIED", safeSourceMetadata()),
+    sourceChecks: passedSourceChecks(),
+    injectionRisks: [],
+  });
+  const result = await runBasicOfflineDryRun(input);
+  expect(input.bridge.bridge).not.toHaveBeenCalled();
+  expect(input.model.complete).not.toHaveBeenCalled();
+  expect(result.artifacts).toBeNull();
+  expect(result.stages).toContainEqual({ name: "preflight", outcome: "blocked" });
+  expect(result.validation.blockers).toEqual(["UNTRUSTED_INPUT"]);
 });
 ```
 

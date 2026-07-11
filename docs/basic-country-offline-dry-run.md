@@ -94,9 +94,9 @@ Preflight 对输入做防御性快照，并在不需要模型草稿的范围内�
 
 - 缺 required path 或 `status = missing` 产生 `MISSING_REQUIRED_FACT`；
 - 任一 `status = conflict` 产生 `UNRESOLVED_CONFLICT`，不选择 winner；
-- 任一 `status = untrusted`、`discoveryOnly`、`UNVERIFIED`、`restricted` / `unknown`、source prompt-injection risk、显式 `injectionRisks`、failed `sourceChecks`，或 evidence source 缺少显式 passed check，产生 `UNTRUSTED_INPUT`。
+- 任一 `status = untrusted`、source metadata 为 `discoveryOnly` / `UNVERIFIED` / `restricted` / `unknown`、source prompt-injection risk、显式 `injectionRisks`、failed `sourceChecks`，或 evidence source 缺少显式 passed check，产生 `UNTRUSTED_INPUT`；此外，preflight 必须定位唯一的 `fieldPath = "marketOverview.credibility"` candidate fact，并在其 evidence `normalizedValue` 严格等于字符串 `"UNVERIFIED"` 时独立产生 `UNTRUSTED_INPUT`。安全 source metadata、passed source checks 或空 injection risks 均不能覆盖该 blocker。
 
-Malformed shape/reference/identity 令 `valid = false`；结构有效但有风险令 `valid = true` 且返回稳定去重的 blockers。Preflight 绝不自动补 passed check，也不以未来 draft 作为来源安全判定的前提。Normal 只有在 `valid = true` 且 `blockers = []` 时才可进入 `draft-bridge`；bridge 仍负责自身既有的 source/fact grounding 防线，模型后的 assembler 与完整 bundle validator 负责 draft-to-fact 一致性和最终 readiness。
+Malformed shape/reference/identity 令 `valid = false`；结构有效但有风险令 `valid = true` 且返回稳定去重的 blockers。重复 field path、重复 fact ID、同一 candidate 内 normalized evidence 不一致，以及既有 conflict evidence 结构规则仍按现有验证语义 fail closed，本补充不改变这些规则。Preflight 绝不自动补 passed check，也不以未来 draft 作为来源安全判定的前提。Normal 只有在 `valid = true` 且 `blockers = []` 时才可进入 `draft-bridge`；bridge 仍负责自身既有的 source/fact grounding 防线，模型后的 assembler 与完整 bundle validator 负责 draft-to-fact 一致性和最终 readiness。
 
 ## 4. Assembler rules
 
