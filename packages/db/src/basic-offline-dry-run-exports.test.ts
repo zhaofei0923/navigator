@@ -1,5 +1,13 @@
 import { readFileSync } from "node:fs";
 
+import {
+  createSourceFile,
+  isExportDeclaration,
+  isNamedExports,
+  isStringLiteral,
+  ScriptKind,
+  ScriptTarget,
+} from "typescript";
 import { describe, expect, test } from "vitest";
 
 import * as database from "./index.js";
@@ -29,6 +37,8 @@ import type { BasicCollectionAuditBundle } from "./index.js";
 import type { BasicOfflinePreflightInput } from "./index.js";
 // @ts-expect-error BasicOfflinePreflightResult is package-private.
 import type { BasicOfflinePreflightResult } from "./index.js";
+// @ts-expect-error BasicOfflineSnapshotResult is package-private.
+import type { BasicOfflineSnapshotResult } from "./index.js";
 
 // @ts-expect-error preflightBasicOfflineCollection is package-private.
 type PreflightBasicOfflineCollectionLeak = typeof import("./index.js")["preflightBasicOfflineCollection"];
@@ -44,6 +54,10 @@ type RunBasicOfflineBlockedDryRunLeak = typeof import("./index.js")["runBasicOff
 type SnapshotBasicOfflineValueLeak = typeof import("./index.js")["snapshotBasicOfflineValue"];
 // @ts-expect-error deepFreezeBasicOfflineValue is package-private.
 type DeepFreezeBasicOfflineValueLeak = typeof import("./index.js")["deepFreezeBasicOfflineValue"];
+// @ts-expect-error deeplyEqualBasicOfflineValue is package-private.
+type DeeplyEqualBasicOfflineValueLeak = typeof import("./index.js")["deeplyEqualBasicOfflineValue"];
+// @ts-expect-error isRecord is package-private.
+type IsRecordLeak = typeof import("./index.js")["isRecord"];
 // @ts-expect-error BASIC_OFFLINE_STAGE_NAMES is package-private.
 type BasicOfflineStageNamesLeak = typeof import("./index.js")["BASIC_OFFLINE_STAGE_NAMES"];
 
@@ -66,10 +80,60 @@ type PublicOfflineTypeWitness = [
 
 void (undefined as unknown as PublicOfflineTypeWitness);
 
-const EXPECTED_BASIC_OFFLINE_RUNTIME_EXPORTS = [
-  'export { assembleBasicCollectionAuditBundle } from "./collection/basic-offline-audit-assembler.js";',
-  'export { createBasicCollectionAuditArtifacts } from "./collection/basic-offline-audit-artifacts.js";',
-  'export { runBasicOfflineDryRun } from "./collection/basic-offline-dry-run.js";',
+const EXPECTED_BASIC_OFFLINE_RUNTIME_EXPORTS: readonly BasicOfflineNamedExport[] = [
+  {
+    moduleSpecifier: "./collection/basic-offline-audit-artifacts.js",
+    exportedName: "createBasicCollectionAuditArtifacts",
+    localName: "createBasicCollectionAuditArtifacts",
+  },
+  {
+    moduleSpecifier: "./collection/basic-offline-audit-assembler.js",
+    exportedName: "assembleBasicCollectionAuditBundle",
+    localName: "assembleBasicCollectionAuditBundle",
+  },
+  {
+    moduleSpecifier: "./collection/basic-offline-dry-run.js",
+    exportedName: "runBasicOfflineDryRun",
+    localName: "runBasicOfflineDryRun",
+  },
+] as const;
+
+const DOCUMENTED_BASIC_OFFLINE_PUBLIC_TYPES = [
+  "BasicCollectionAuditArtifactName",
+  "BasicCollectionAuditArtifacts",
+  "BasicCollectionAuditAssemblyInput",
+  "BasicOfflineBoundaryVerdict",
+  "BasicOfflineBlockedDryRunInput",
+  "BasicOfflineDraftBridgePort",
+  "BasicOfflineDryRunInput",
+  "BasicOfflineDryRunResult",
+  "BasicOfflineDryRunScenario",
+  "BasicOfflineDryRunStage",
+  "BasicOfflineNormalDryRunInput",
+  "BasicOfflineRunnerPort",
+  "BasicOfflineStageName",
+  "BasicOfflineStageOutcome",
+] as const;
+
+const INTERNAL_BASIC_OFFLINE_RUNTIME_NAMES = [
+  "preflightBasicOfflineCollection",
+  "createBasicOfflineResult",
+  "createBasicOfflineFailureResult",
+  "createBasicOfflineStageOutcomes",
+  "runBasicOfflineBlockedDryRun",
+  "snapshotBasicOfflineValue",
+  "deepFreezeBasicOfflineValue",
+  "deeplyEqualBasicOfflineValue",
+  "isRecord",
+  "BASIC_OFFLINE_STAGE_NAMES",
+  "prepareSourceDirectory",
+  "publishCapture",
+  "publishNoClobber",
+  "readVerifiedCapture",
+  "rawCache",
+  "stagingWrite",
+  "canonicalWrite",
+  "publishAction",
 ] as const;
 
 describe("P1-6D public exports", () => {
@@ -78,36 +142,20 @@ describe("P1-6D public exports", () => {
     expect(database.createBasicCollectionAuditArtifacts).toBeTypeOf("function");
     expect(database.runBasicOfflineDryRun).toBeTypeOf("function");
 
-    for (const internalName of [
-      "preflightBasicOfflineCollection",
-      "createBasicOfflineResult",
-      "createBasicOfflineFailureResult",
-      "createBasicOfflineStageOutcomes",
-      "runBasicOfflineBlockedDryRun",
-      "snapshotBasicOfflineValue",
-      "deepFreezeBasicOfflineValue",
-      "BASIC_OFFLINE_STAGE_NAMES",
-      "prepareSourceDirectory",
-      "publishCapture",
-      "publishNoClobber",
-      "readVerifiedCapture",
-      "rawCache",
-      "stagingWrite",
-      "canonicalWrite",
-      "publishAction",
-    ]) {
+    for (const internalName of INTERNAL_BASIC_OFFLINE_RUNTIME_NAMES) {
       expect(database).not.toHaveProperty(internalName);
     }
   });
 
-  test("keeps index runtime exports explicit and free of Basic offline wildcards", () => {
+  test("keeps documented Basic offline exports named, explicit, and wildcard-free", () => {
     const indexSource = readFileSync(new URL("./index.ts", import.meta.url), "utf8");
-    const basicOfflineRuntimeExports = indexSource
-      .split("\n")
-      .filter((line) => line.startsWith("export ") && line.includes("./collection/basic-offline-"));
+    const exports = collectBasicOfflineExports(indexSource);
 
-    expect(basicOfflineRuntimeExports).toEqual(EXPECTED_BASIC_OFFLINE_RUNTIME_EXPORTS);
-    expect(indexSource).not.toMatch(/export \* from [^;]*basic-offline-/);
+    expect(exports.runtime).toEqual(EXPECTED_BASIC_OFFLINE_RUNTIME_EXPORTS);
+    expect(exports.types.map(({ exportedName }) => exportedName).sort()).toEqual(
+      [...DOCUMENTED_BASIC_OFFLINE_PUBLIC_TYPES].sort(),
+    );
+    expect(exports.wildcards).toEqual([]);
   });
 
   test("runs normal and blocked smoke cases through the public barrel", async () => {
@@ -173,4 +221,69 @@ function toAssemblyInput(bundle: BasicCollectionAuditBundle): BasicCollectionAud
     sourceChecks: bundle.reviewReport.sourceChecks,
     injectionRisks: bundle.reviewReport.injectionRisks,
   };
+}
+
+interface BasicOfflineNamedExport {
+  moduleSpecifier: string;
+  exportedName: string;
+  localName: string;
+}
+
+interface BasicOfflineExports {
+  runtime: BasicOfflineNamedExport[];
+  types: BasicOfflineNamedExport[];
+  wildcards: string[];
+}
+
+function collectBasicOfflineExports(source: string): BasicOfflineExports {
+  const sourceFile = createSourceFile(
+    "index.ts",
+    source,
+    ScriptTarget.Latest,
+    true,
+    ScriptKind.TS,
+  );
+  const result: BasicOfflineExports = { runtime: [], types: [], wildcards: [] };
+
+  for (const statement of sourceFile.statements) {
+    if (
+      !isExportDeclaration(statement) ||
+      statement.moduleSpecifier === undefined ||
+      !isStringLiteral(statement.moduleSpecifier) ||
+      !statement.moduleSpecifier.text.startsWith("./collection/basic-offline-")
+    ) {
+      continue;
+    }
+
+    const moduleSpecifier = statement.moduleSpecifier.text;
+    if (statement.exportClause === undefined || !isNamedExports(statement.exportClause)) {
+      result.wildcards.push(moduleSpecifier);
+      continue;
+    }
+
+    for (const element of statement.exportClause.elements) {
+      const target = statement.isTypeOnly || element.isTypeOnly
+        ? result.types
+        : result.runtime;
+      target.push({
+        moduleSpecifier,
+        exportedName: element.name.text,
+        localName: element.propertyName?.text ?? element.name.text,
+      });
+    }
+  }
+
+  result.runtime.sort(compareNamedExports);
+  result.types.sort(compareNamedExports);
+  result.wildcards.sort();
+  return result;
+}
+
+function compareNamedExports(
+  left: BasicOfflineNamedExport,
+  right: BasicOfflineNamedExport,
+): number {
+  return left.moduleSpecifier.localeCompare(right.moduleSpecifier) ||
+    left.exportedName.localeCompare(right.exportedName) ||
+    left.localName.localeCompare(right.localName);
 }
