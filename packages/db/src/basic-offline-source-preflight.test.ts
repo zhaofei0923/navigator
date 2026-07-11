@@ -131,6 +131,28 @@ describe("Basic offline source preflight", () => {
     });
   });
 
+  test("rejects a sparse array without executing an accessor side effect", () => {
+    const input = preflightInput();
+    let getterCalls = 0;
+    const sparseChecks = new Array<unknown>(2);
+    Object.defineProperty(sparseChecks, "1", {
+      enumerable: true,
+      get: () => {
+        getterCalls += 1;
+        return passedCheck("source-1");
+      },
+    });
+    input.sourceChecks = sparseChecks;
+
+    expect(0 in sparseChecks).toBe(false);
+    expect(preflightBasicOfflineCollection(input)).toEqual({
+      valid: false,
+      blockers: [],
+      errors: ["preflight input must be safely parseable"],
+    });
+    expect(getterCalls).toBe(0);
+  });
+
   test.each([
     ["duplicate source ID", (input: PreflightInput) => { sourceRegister(input).sources[1]!.sourceId = "source-1"; }],
     ["duplicate fact ID", (input: PreflightInput) => { extractedFacts(input).facts[1]!.factId = extractedFacts(input).facts[0]!.factId; }],
