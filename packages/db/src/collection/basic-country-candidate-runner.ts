@@ -165,7 +165,6 @@ function authorizedOpenedPlans(
   plans: readonly OpenedJsonSourcePlan[],
   discovery: BasicHermesDiscoveryBatch,
 ): boolean {
-  if (plans.length !== discovery.candidates.length) return false;
   const candidates = new Map(discovery.candidates.map((candidate) => [candidate.discoveryId, candidate]));
   if (candidates.size !== discovery.candidates.length) return false;
   const used = new Set<string>();
@@ -174,7 +173,7 @@ function authorizedOpenedPlans(
     if (candidate === undefined || candidate.url !== plan.policy.sourceUrl || used.has(plan.discoveryId)) return false;
     used.add(plan.discoveryId);
   }
-  return used.size === candidates.size;
+  return true;
 }
 
 async function captureOpened(

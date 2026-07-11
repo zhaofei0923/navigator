@@ -179,13 +179,6 @@ describe("Basic country candidate runner", () => {
       value.config.openedSources[0]!.policy.sourceUrl = url;
       observation(value.config, "marketOverview.sourceUrl").normalizedValue = url;
     }],
-    ["unused discovery candidate", (value: Awaited<ReturnType<typeof createCase>>) => {
-      value.discoveryResponse.candidates.push({
-        ...value.discoveryResponse.candidates[0]!,
-        discoveryId: "unused-source",
-        url: "https://data.example.test/unused.json?format=json",
-      });
-    }],
   ] as const)("authorizes every opened plan before capture: %s", async (_label, mutate) => {
     const value = await createCase();
     mutate(value);
@@ -197,6 +190,21 @@ describe("Basic country candidate runner", () => {
     const rawRoot = join(value.repositoryRoot, ".cache", "basic-country", COUNTRY, RUN_ID, "raw");
     const rawNames = await readdir(rawRoot).catch(() => []);
     expect(rawNames.some((name) => name.includes("hermes-json"))).toBe(false);
+  });
+
+  test("allows an unselected discovery candidate without fetching it", async () => {
+    const value = await createCase();
+    value.discoveryResponse.candidates.push({
+      ...value.discoveryResponse.candidates[0]!,
+      discoveryId: "unselected-source",
+      url: "https://data.example.test/unselected.html",
+    });
+
+    const result = await runBasicCountryCandidate(value.input, value.runtime);
+
+    expect(result).toMatchObject({ ok: true, code: "READY_FOR_HUMAN_REVIEW" });
+    expect(value.events).not.toContain("source:unselected-source");
+    expect(value.events.filter((event) => event.startsWith("source:"))).toHaveLength(5);
   });
 
   test("rejects duplicate opened discovery use before all effects", async () => {
@@ -501,6 +509,7 @@ describe("Basic country candidate runner", () => {
       readFile(new URL("./collection/basic-country-candidate-contracts.ts", import.meta.url), "utf8"),
       readFile(new URL("./collection/basic-country-candidate-runner.ts", import.meta.url), "utf8"),
       readFile(new URL("./collection/basic-country-candidate-cli.ts", import.meta.url), "utf8"),
+      readFile(new URL("./collection/basic-country-candidate-filesystem.ts", import.meta.url), "utf8"),
     ]);
     const production = sources.join("\n");
     expect(production).not.toMatch(/child_process|execFile|spawn|hermes\s+chat|Prisma|collection-manifest|canonicalWrite|basic-country-import|basic-country-publication|coverage|ai-advisor|publishBasic/i);
@@ -567,6 +576,31 @@ describe("Basic country candidate CLI", () => {
       { config: expect.any(Object), discoveryResponse: expect.any(Object) },
       expect.objectContaining({ repositoryRoot, outputRoot }),
     );
+    expect(dependencies.stdout).toEqual([`${JSON.stringify(readyResult())}\n`]);
+    expect(dependencies.stderr).toEqual([]);
+  });
+
+  test.runIf(process.platform === "linux")("accepts canonical native /tmp input and output paths", async () => {
+    const root = await runnerTempRoot();
+    const repositoryRoot = join(root, "repository");
+    const outputRoot = join(root, "output");
+    await mkdir(repositoryRoot);
+    const configPath = join(root, "candidate-config.json");
+    const discoveryPath = join(root, "hermes-discovery.raw.json");
+    await writeFile(configPath, JSON.stringify(createConfig()));
+    await writeFile(discoveryPath, JSON.stringify(createDiscovery()));
+    const dependencies = cliDependencies(repositoryRoot);
+
+    const exitCode = await runBasicCountryCandidateCli([
+      "--config", configPath,
+      "--discovery", discoveryPath,
+      "--output-root", outputRoot,
+    ], dependencies);
+
+    expect(exitCode).toBe(0);
+    expect(dependencies.readJson).toHaveBeenNthCalledWith(1, configPath);
+    expect(dependencies.readJson).toHaveBeenNthCalledWith(2, discoveryPath);
+    expect(dependencies.runCandidate).toHaveBeenCalledTimes(1);
     expect(dependencies.stdout).toEqual([`${JSON.stringify(readyResult())}\n`]);
     expect(dependencies.stderr).toEqual([]);
   });

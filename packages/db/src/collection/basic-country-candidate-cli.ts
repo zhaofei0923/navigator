@@ -122,12 +122,12 @@ function safeWrite(write: (output: string) => void, output: string): boolean {
 async function validateOutputRoot(outputRoot: string, repositoryRoot: string): Promise<boolean> {
   try {
     if (!cleanAbsolute(outputRoot) || !cleanAbsolute(repositoryRoot)) return false;
-    const temporary = await realpath(tmpdir());
+    const temporaryRoots = await trustedTemporaryRoots();
     const repository = await realpath(repositoryRoot);
     const ancestor = await nearestExistingAncestor(outputRoot);
-    if (ancestor === null || !(await pathHasNoSymlink(temporary, ancestor))) return false;
+    if (ancestor === null) return false;
     const ancestorReal = await realpath(ancestor);
-    if (!inside(temporary, ancestorReal) || inside(repository, resolve(outputRoot))) return false;
+    if (!(await belongsToTrustedTemporaryRoot(temporaryRoots, ancestor, ancestorReal)) || inside(repository, resolve(outputRoot))) return false;
     const details = await lstat(outputRoot).catch(() => null);
     if (details !== null && (!details.isDirectory() || details.isSymbolicLink())) return false;
     const staging = join(outputRoot, "data", "staging");
@@ -140,12 +140,36 @@ async function validateOutputRoot(outputRoot: string, repositoryRoot: string): P
 async function validInputFile(pathname: string): Promise<boolean> {
   try {
     if (!cleanAbsolute(pathname)) return false;
-    const temporary = await realpath(tmpdir());
+    const temporaryRoots = await trustedTemporaryRoots();
     const actual = await realpath(pathname);
-    if (!inside(temporary, actual) || actual !== pathname) return false;
+    if (actual !== pathname || !(await belongsToTrustedTemporaryRoot(temporaryRoots, pathname, actual))) return false;
     const details = await lstat(pathname);
     return details.isFile() && !details.isSymbolicLink() && details.size <= MAX_INPUT_BYTES;
   } catch { return false; }
+}
+
+async function trustedTemporaryRoots(): Promise<string[]> {
+  const configured = process.platform === "linux" ? [tmpdir(), "/tmp"] : [tmpdir()];
+  const roots: string[] = [];
+  for (const value of configured) {
+    try {
+      const root = await realpath(value);
+      const details = await lstat(root);
+      if (details.isDirectory() && !details.isSymbolicLink() && !roots.includes(root)) roots.push(root);
+    } catch { /* An invalid inherited temp root must not hide another trusted root. */ }
+  }
+  return roots;
+}
+
+async function belongsToTrustedTemporaryRoot(
+  roots: readonly string[],
+  pathname: string,
+  actual: string,
+): Promise<boolean> {
+  for (const root of roots) {
+    if (inside(root, actual) && await pathHasNoSymlink(root, pathname)) return true;
+  }
+  return false;
 }
 
 async function targetAvailable(target: string, outputRoot: string): Promise<boolean> {
