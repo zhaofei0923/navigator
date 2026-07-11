@@ -71,7 +71,8 @@
 
 - 数据库：用独立测试库（`.env.test` 的 `DATABASE_URL`）或事务回滚/内存替身，禁止连生产库。
 - LLM / embedding：mock `AI_PROVIDER` 调用，断言**过滤发生在检索层**而非依赖模型。
-- 测试 fixture 参考印尼样板（[indonesia-seed.md](./indonesia-seed.md)），但用最小化数据集，避免为单国写特例。
+- 测试 fixture 使用最小化的通用 Basic 国家数据集，避免为单国写特例。
+- `tests/basic-first-strategy.test.ts` 必须扫描所有 living docs，忽略 `docs/superpowers/**` 下的日期化历史记录，并强制执行当前国家覆盖策略及已删除旧 seed 契约的边界。
 
 ---
 

@@ -4,7 +4,7 @@
 
 ## 1. 范围与完成定义
 
-每个 Basic 国家使用与印尼（`ID`）相同的固定 10 模块模型，不得为任何国家增加特例文件、字段或页面。除既有 Complete 参考国家 `ID` 外，每个新选定的目标国家都必须完成其 `DATA-BASIC-<ISO2>` 任务卡并达到 `BASIC`，之后才可进入单独、经人工批准的 `STANDARD` 或 `COMPLETE` 升级任务；禁止新国家直接以 `STANDARD` 或 `COMPLETE` 进入产品。Basic 首次交付只建立该国的国家骨架和市场基础画像：
+每个 Basic 国家使用同一固定 10 模块模型，不得为任何国家增加特例文件、字段或页面。所有选定国家（包括印尼 `ID`）都必须完成其两位国家码的 `DATA-BASIC-<ISO2>` 任务卡并达到 `BASIC`；印尼任务卡为 `DATA-BASIC-ID`。当前没有国家被指定为 `STANDARD` 或 `COMPLETE`，之后才可进入单独、经人工批准的 `STANDARD` 或 `COMPLETE` 升级任务；禁止国家直接以 `STANDARD` 或 `COMPLETE` 进入产品。Basic 首次交付只建立该国的国家骨架和市场基础画像：
 
 - `country.json` 必须包含 ISO 3166-1 alpha-2 国家码、`{ zh, en }` 的国家名和摘要、地区、国旗展示字段、整体 `updatedAt`，以及全部 10 个模块的 `moduleCoverage`。
 - `country.json` 的 `coverageLevel` 必须由覆盖判定得出为**恰好** `BASIC`，不得人工覆盖。`market-overview` 为 `PARTIAL` 或 `COMPLETE`；其余九个模块必须均为 `BUILDING`、`dataCount = 0`，且没有任何 `published` 记录，并保留统一占位，不创建虚构的占位业务记录。满足 `STANDARD` 判定条件的交付必须拒绝；后续数据只能在单独、经人工批准的升级任务中提交。

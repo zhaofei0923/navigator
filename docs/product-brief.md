@@ -13,7 +13,7 @@
 
 - 国家维度统一，所有国家共用 10 个分析模块。
 - 数据深度按 Basic / Standard / Complete 覆盖等级渐进。
-- 印尼是首个 Complete 样板国家，用于验证模板、数据治理、AI 问答与报告转化。
+- 所有选定国家均先通过其两位国家码的 `DATA-BASIC-<ISO2>` 任务卡达到 Basic；印尼使用 `DATA-BASIC-ID`。当前没有国家被指定为 Standard 或 Complete，后续升级须单独人工批准。
 - Web 是主产品形态，小程序/H5 是轻入口与转化入口。
 
 ---

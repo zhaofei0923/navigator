@@ -32,7 +32,7 @@ graph LR
 | 阶段 | 目标 | 主要依据文档 | 关口 |
 |------|------|--------------|------|
 | P0 地基 | 可运行骨架 + 共享枚举/双语工具 + 环境/CI/文档守卫 | env-config、i18n、testing、data-schema、product-brief | — |
-| P1 数据层 | 数据模型落地 + 数据治理校验 + 印尼样板 + 覆盖判定 | data-schema、coverage-levels、data-governance、indonesia-seed、country-rollout | ⚠️ |
+| P1 数据层 | 数据模型落地 + 数据治理校验 + 通用 Basic 采集/发布路径 + 覆盖判定 | data-schema、coverage-levels、data-governance、basic-country-collection、country-rollout | ⚠️ |
 | P2 Web 展示 | 首页 / 国家 / AI 咨询 / 报告四板块 + i18n | product-brief、api-contract、coverage-levels、i18n | — |
 | P3 AI 顾问 | RAG 管道 + 问答接口（占位边界） | ai-advisor | ⚠️ |
 | P4 权限/会员/留资 | 门控 + 报告下载 + 留资 | auth-membership | ⚠️ |
@@ -77,19 +77,19 @@ graph LR
 - 验收：schema 与 data-schema 完全一致；迁移可执行；`shared-types` 与 schema 枚举一致；报告 `accessLevel`、`Lead.contact` 按 data-schema §6 加密存储、知识片段双语向量字段齐全；不得新增评分/国家计划持久化字段，若需新增字段必须先改 `data-schema.md`。
 - 人工确认：**是（修改统一数据模型，AGENTS.md §11）** —— PR 标注。
 
-#### P1-2 印尼样板 seed 与数据治理校验
-- 目标：`data/indonesia/` 按 [indonesia-seed.md](./indonesia-seed.md) 填充至 COMPLETE；实现 seed 导入与 [data-governance.md](./data-governance.md) 数据质量校验。
-- 验收：seed 校验通过（双语齐全、元字段齐全、来源/可信度合法、枚举合法、`countryCode=ID`）；缺元字段不得入库；`draft` / `pending` / `UNVERIFIED` 反例不进入 C 端展示、覆盖判定或 AI 检索；报告 `accessLevel` 合法；印尼判定为 COMPLETE。
-- 人工确认：否（不改结构；改结构须回 P1-1）。
+#### P1-2 印尼深度 seed 与数据治理校验（历史，已交付）
+- 历史目标：印尼深度 seed 与数据治理校验。
+- 状态：已由 `DATA-BASIC-ID` 取代；该迁移将印尼纳入所有国家通用的 Basic-first 路径。历史记录保留，不再作为当前数据建设或发布依据。
+- 当前权威：按 [basic-country-collection.md](./basic-country-collection.md) 的通用 Basic 采集、审计与发布路径执行。
 
 #### P1-3 覆盖等级判定逻辑
 - 目标：实现 [coverage-levels.md §3](./coverage-levels.md) 的模块级 + 国家级判定，计数口径按 C 端可展示数据（`published` 且 `credibility != UNVERIFIED`）。
-- 验收：阈值边界单测覆盖；`draft` / `pending` / `UNVERIFIED` 不计入覆盖判定计数；对象型模块按核心字段填充率判定；`ai-advisor` 按可用知识片段判定；印尼样板判定为 COMPLETE。
+- 验收：阈值边界单测覆盖；`draft` / `pending` / `UNVERIFIED` 不计入覆盖判定计数；对象型模块按核心字段填充率判定；`ai-advisor` 按可用知识片段判定；通用 Standard/Complete 阈值保留供未来单独升级任务使用。
 - 人工确认：否。
 
 #### P1-4 首批国家建设计划与复制模板
-- 目标：按 [country-rollout.md](./country-rollout.md)、[basic-country-collection.md](./basic-country-collection.md) 与 [indonesia-seed.md §5](./indonesia-seed.md) 整理国家建设计划、覆盖升级节奏与从印尼复制到新国家的 seed 模板规则，不落库。
-- 验收：Complete / Standard / Basic 候选与人工确认项清晰；不得把国家优先级、覆盖升级结论、评分结果写入持久化字段；后续新增国家 seed 必须独立任务卡、独立验收。
+- 目标：按 [country-rollout.md](./country-rollout.md) 与 [basic-country-collection.md](./basic-country-collection.md) 整理国家建设计划、覆盖升级节奏与通用 Basic 任务卡模板规则，不落库。
+- 验收：所有国家从 Basic 进入，未来 Complete / Standard 候选与人工确认项清晰；不得把国家优先级、覆盖升级结论、评分结果写入持久化字段；后续新增国家 seed 必须独立任务卡、独立验收。
 - 人工确认：否（仅文档候选；最终 30–50 国家清单、优先级与升级结论须人工确认）。
 
 #### P1-5 Basic 国家模板与通用校验器
@@ -122,6 +122,11 @@ graph LR
 - 验收：一国一任务卡、一分支、一审核周期，且仅合并一次到 `main`；合并后的 `main` 验证通过后，仅推送一次到 `origin/main`。数据先为 `draft`，仅在人工审核后发布；Basic 数据保持 `aiUsable = false` 且不产生知识片段；通过仓库校验和代表性 Web 检查，确认基础画像正常渲染、`BUILDING` 模块显示占位。
 - 人工确认：是（国家启动、发布、最终 30–50 国清单、国家顺序和覆盖升级均由人工决定）。
 
+#### DATA-BASIC-ID 印尼 Basic 原子迁移
+- 目标：将印尼纳入通用 Basic-first 路径，使用 `DATA-BASIC-ID` 原子替换历史深度样板，并保持固定数据模型、未来 Standard/Complete 规则和 AI 检索边界不变。
+- 验收：印尼通过通用 Basic 采集、审计和发布路径达到 `BASIC`；其余九个模块保持 `BUILDING`；当前没有国家被指定为 `STANDARD` 或 `COMPLETE`；静态仓库、导入计划与 Web 行为在同一次迁移中一致。
+- 人工确认：是（国家发布与原子迁移审核；不得执行外部数据库破坏性清理）。
+
 ### P2 — Web 展示
 
 #### P2-1 i18n 框架接入
@@ -136,7 +141,7 @@ graph LR
 
 #### P2-3 国家详情（十模块骨架）
 - 目标：`GET /countries/:code` + `/modules/:moduleKey`，详情页渲染十模块；`BUILDING` 显示占位不报错。
-- 验收：印尼十模块正常渲染；`BUILDING` 模块占位；`textMode` 与 `_i18nFallback` 正确；E2E 通过。
+- 验收：国家十模块正常渲染；`BUILDING` 模块占位；`textMode` 与 `_i18nFallback` 正确；E2E 通过。
 - 人工确认：否。
 
 #### P2-4 首页 / AI 咨询 / 报告入口
