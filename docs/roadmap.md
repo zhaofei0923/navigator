@@ -113,8 +113,8 @@ graph LR
 - 人工确认：否（若引入第三方依赖或触及既有 AGENTS.md 人工闸门，须单独人工确认）。
 
 #### P1-6D Offline end-to-end dry run and boundary verification
-- 目标：完成离线端到端 dry run，并验证采集、审计与发布边界不越界，包括 [basic-country-source-adapters.md](./basic-country-source-adapters.md) 定义的 raw capture 与 provenance boundary。
-- 验收：正常、缺失、冲突和不可信输入均通过预期路径；确认 `data/staging/`、`collection-manifest.json` 与其他 audit artifacts 不能进入 seed 记录、C 端响应、覆盖计数或 AI 检索；不得自动发布或自动选择冲突值。
+- 目标：按 [basic-country-offline-dry-run.md](./basic-country-offline-dry-run.md) 完成离线、无发布能力的 P1-6A/B/C orchestration 与 boundary verification；P1-6B 的 raw capture/provenance boundary 仍以 [basic-country-source-adapters.md](./basic-country-source-adapters.md) 为准。
+- 验收：仅 `normal` 可按顺序调用 injected P1-6B runner 与 injected P1-6C model bridge，并得到 `blockers = []`、`readyForHumanReview = true` 的四文件只读审计映射；`missing`、`conflict`、`untrusted` 在任何模型调用前 fail-closed，分别且仅有 `MISSING_REQUIRED_FACT`、`UNRESOLVED_CONFLICT`、`UNTRUSTED_INPUT`，仍能由 P1-6A 结构有效 fixture 或等价内存材料验证固定四文件包。冲突没有自动 winner，处置必须新 run，不改写旧包。生产 API 不写 raw cache、真实 staging、manifest、canonical 或 Prisma，且不返回 canonical/coverage/AI/publish action；边界矩阵以 sentinel 验证 raw cache、staging、manifest、audit artifacts 不进入 import plan、代表性 Web country service/API response 或 coverage 派生，并精确验证 `KnowledgeChunk = 0`、`aiUsable = true` 记录数为 0、`aiEligibleKnowledgeIds = []`，不得声称运行了当前不存在的 RAG。离线测试全部依赖注入，不得真实 fetch、Hermes、llama transport 或 child process。
 - 人工确认：否（若引入第三方依赖或触及既有 AGENTS.md 人工闸门，须单独人工确认）。
 
 #### DATA-BASIC-<ISO2> 单国 Basic 数据任务卡
