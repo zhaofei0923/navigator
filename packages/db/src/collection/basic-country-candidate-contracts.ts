@@ -1,8 +1,14 @@
 import { isAbsolute } from "node:path";
+import { isProxy } from "node:util/types";
 
-import { CREDIBILITIES, INDUSTRY_TAGS, TECH_TAGS } from "@navigator/shared-types/schema";
+import { CREDIBILITIES, INDUSTRY_TAGS, REGIONS, TECH_TAGS } from "@navigator/shared-types/schema";
 
-import { SAFE_COUNTRY_DIRECTORY, SAFE_RUN_ID } from "../seed/basic-country-validation-utils.js";
+import {
+  SAFE_COUNTRY_DIRECTORY,
+  SAFE_RUN_ID,
+  expectUtcRfc3339Timestamp,
+  isHttpUrl,
+} from "../seed/basic-country-validation-utils.js";
 import {
   BASIC_COLLECTION_REQUIRED_STATIC_FACT_PATHS,
   type BasicCollectionJsonValue,
@@ -72,6 +78,17 @@ export interface BasicCountryCandidateRuntime {
   outputRoot: string;
   sourceFetch: BasicSourceFetch;
   llamaFetch: BasicLlamaCppFetch;
+  filesystem: BasicCountryCandidateFilesystem;
+}
+
+export type BasicCandidateFilesystemOperation =
+  | `create-private-${"root" | "data" | "staging" | "country" | "target"}`
+  | `create-visible-${"data" | "staging" | "country" | "target"}`
+  | `write-${typeof BASIC_COUNTRY_CANDIDATE_ARTIFACTS[number]}`
+  | "validate-private" | "publish-target" | "validate-published"
+  | "cleanup-private" | "cleanup-visible";
+export interface BasicCountryCandidateFilesystem {
+  run(operation: BasicCandidateFilesystemOperation, action: () => Promise<void>): Promise<void>;
 }
 
 export type BasicCountryCandidateErrorCode = "INPUT_INVALID" | "DISCOVERY_REJECTED" | "SOURCE_CAPTURE_FAILED" | "EVIDENCE_REJECTED" | "PREFLIGHT_BLOCKED" | "DRAFT_FAILED" | "AUDIT_INVALID" | "OUTPUT_REJECTED";
@@ -91,14 +108,50 @@ export function parseBasicCountryCandidateInput(value: unknown): ParsedBasicCoun
   return config === null || !discovery.valid ? null : { config, discoveryResponse: discovery.data };
 }
 
-export function isBasicCountryCandidateRuntime(value: unknown): value is BasicCountryCandidateRuntime {
-  if (typeof value !== "object" || value === null) return false;
+export function snapshotBasicCountryCandidateRuntime(value: unknown): BasicCountryCandidateRuntime | null {
   try {
-    const runtime = value as Partial<BasicCountryCandidateRuntime>;
-    return typeof runtime.repositoryRoot === "string" && isAbsolute(runtime.repositoryRoot) && !runtime.repositoryRoot.includes("\0") &&
-      typeof runtime.outputRoot === "string" && isAbsolute(runtime.outputRoot) && !runtime.outputRoot.includes("\0") &&
-      typeof runtime.sourceFetch === "function" && typeof runtime.llamaFetch === "function";
-  } catch { return false; }
+    const runtime = dataProperties(value, ["repositoryRoot", "outputRoot", "sourceFetch", "llamaFetch", "filesystem"]);
+    if (runtime === null || !absolutePath(runtime.get("repositoryRoot")) || !absolutePath(runtime.get("outputRoot"))) return null;
+    const sourceFetch = functionValue<BasicSourceFetch>(runtime.get("sourceFetch"));
+    const llamaFetch = functionValue<BasicLlamaCppFetch>(runtime.get("llamaFetch"));
+    const filesystemValue = runtime.get("filesystem");
+    const filesystem = dataProperties(filesystemValue, ["run"]);
+    const run = functionValue<BasicCountryCandidateFilesystem["run"]>(filesystem?.get("run"));
+    if (sourceFetch === null || llamaFetch === null || filesystem === null || run === null) return null;
+    const capturedFilesystem = Object.freeze({
+      run: (operation: BasicCandidateFilesystemOperation, action: () => Promise<void>) =>
+        Reflect.apply(run, filesystemValue, [operation, action]) as Promise<void>,
+    });
+    return Object.freeze({
+      repositoryRoot: runtime.get("repositoryRoot") as string,
+      outputRoot: runtime.get("outputRoot") as string,
+      sourceFetch, llamaFetch, filesystem: capturedFilesystem,
+    });
+  } catch { return null; }
+}
+
+export function parseBasicCountryCandidateResult(
+  value: unknown,
+  identity: Readonly<{ countryCode: string; runId: string }>,
+): BasicCountryCandidateResult | null {
+  const snapshot = snapshotBasicOfflineValue(value);
+  if (!snapshot.valid) return null;
+  const result = exact(snapshot.data, ["ok", "code", "summary", "artifacts"]);
+  const summary = result === null ? null : exact(result.summary, ["countryCode", "runId", "sourceCount", "factCount", "readyForHumanReview"]);
+  if (result === null || summary === null || summary.countryCode !== identity.countryCode || summary.runId !== identity.runId) return null;
+  if (result.ok === true && result.code === "READY_FOR_HUMAN_REVIEW" &&
+    positiveCount(summary.sourceCount) && positiveCount(summary.factCount) && summary.readyForHumanReview === true && exactArtifacts(result.artifacts)) {
+    return { ok: true, code: "READY_FOR_HUMAN_REVIEW", summary: {
+      countryCode: identity.countryCode, runId: identity.runId, sourceCount: summary.sourceCount,
+      factCount: summary.factCount, readyForHumanReview: true,
+    }, artifacts: BASIC_COUNTRY_CANDIDATE_ARTIFACTS };
+  }
+  if (result.ok === false && includes(ERROR_CODES, result.code) && summary.sourceCount === 0 && summary.factCount === 0 &&
+    summary.readyForHumanReview === false && result.artifacts === null) {
+    return { ok: false, code: result.code, summary: { countryCode: identity.countryCode, runId: identity.runId,
+      sourceCount: 0, factCount: 0, readyForHumanReview: false }, artifacts: null };
+  }
+  return null;
 }
 
 function parseConfig(value: unknown): BasicCountryCandidateConfig | null {
@@ -116,7 +169,7 @@ function parseConfig(value: unknown): BasicCountryCandidateConfig | null {
   const sourceIds = new Set<string>();
   const paths = new Set<string>();
   for (const opened of openedValues) {
-    const parsed = parseOpened(opened);
+    const parsed = parseOpened(opened, item.countryCode as string);
     if (parsed === null || discoveryIds.has(parsed.discoveryId) || sourceIds.has(parsed.policy.sourceId)) return null;
     for (const observation of parsed.observations) {
       if (PROTECTED_PATHS.has(observation.fieldPath) || paths.has(observation.fieldPath)) return null;
@@ -126,7 +179,9 @@ function parseConfig(value: unknown): BasicCountryCandidateConfig | null {
   }
   const sourceChecks = checkValues.map(parseCheck);
   const injectionRisks = riskValues.map(parseRisk);
-  if (sourceChecks.some(isNull) || injectionRisks.some(isNull)) return null;
+  if (sourceChecks.some(isNull) || injectionRisks.some(isNull) ||
+    !unique((sourceChecks as BasicSourceCheck[]).map(({ sourceId }) => sourceId)) || !completeStaticSet(paths) || !validIndicatorSet(paths) ||
+    !validSourceUrlExplanation(openedSources)) return null;
   return { schemaVersion: BASIC_COUNTRY_CANDIDATE_SCHEMA_VERSION, countryCode: item.countryCode, countryDirectory: item.countryDirectory, runId: item.runId,
     discoveryRequest, openedSources, sourceChecks: sourceChecks as BasicSourceCheck[], injectionRisks: injectionRisks as BasicInjectionRisk[], llama };
 }
@@ -139,11 +194,11 @@ function parseDiscovery(value: unknown, countryCode: string, runId: string): Bas
   return { countryCode, runId, queries: queries as string[], maxResults: item.maxResults };
 }
 
-function parseOpened(value: unknown): OpenedJsonSourcePlan | null {
+function parseOpened(value: unknown, countryCode: string): OpenedJsonSourcePlan | null {
   const item = exact(value, OPENED_KEYS); if (item === null || !safeId(item.discoveryId)) return null;
   const policy = parsePolicy(item.policy); const values = array(item.observations, 200);
   if (policy === null || values === null || values.length === 0) return null;
-  const observations = values.map(parseObservation);
+  const observations = values.map((item) => parseObservation(item, countryCode));
   return observations.some(isNull) ? null : { discoveryId: item.discoveryId, policy, observations: observations as OpenedJsonSourcePlan["observations"] };
 }
 
@@ -158,10 +213,11 @@ function parsePolicy(value: unknown): BasicHermesSourcePolicy | null {
     accessStatus: "open", accessNotes: p.accessNotes, publishedAt: p.publishedAt, promptInjectionRisk: "none", approvedOrigins: origins as string[], allowedQueryParameters: query as string[] };
 }
 
-function parseObservation(value: unknown): OpenedJsonSourcePlan["observations"][number] | null {
+function parseObservation(value: unknown, countryCode: string): OpenedJsonSourcePlan["observations"][number] | null {
   const o = exact(value, OBSERVATION_KEYS);
   if (o === null || !text(o.fieldPath) || !(STATIC_PATHS.has(o.fieldPath) || INDICATOR_PATH.test(o.fieldPath)) || !pointer(o.locator) ||
-    !json(o.normalizedValue) || !nullableText(o.unit) || !(o.year === null || integer(o.year)) || !nullableText(o.uncertainty) || !validTags(o.fieldPath, o.normalizedValue)) return null;
+    !json(o.normalizedValue) || !nullableText(o.unit) || !(o.year === null || integer(o.year)) || !nullableText(o.uncertainty) ||
+    !validNormalizedValue(o.fieldPath, o.normalizedValue, countryCode)) return null;
   return { fieldPath: o.fieldPath, locator: o.locator as `json:${string}`, normalizedValue: o.normalizedValue as BasicCollectionJsonValue, unit: o.unit, year: o.year, uncertainty: o.uncertainty };
 }
 
@@ -175,7 +231,25 @@ function httpsUrl(value: unknown): value is string { try { if (!text(value) || v
 function origin(value: unknown): value is string { try { if (!text(value) || value !== value.trim()) return false; const url = new URL(value); const canonical = canonicalBasicHermesDiscoveryUrl(value); return canonical !== null && canonical !== "forbidden" && url.origin === value && url.username === "" && url.password === ""; } catch { return false; } }
 function allowedPolicyUrl(value: string, origins: readonly string[], allowed: readonly string[]): boolean { try { const url = new URL(value); if (!origins.includes(url.origin)) return false; const seen = new Set<string>(); for (const [name] of url.searchParams) { if (!allowed.includes(name) || seen.has(name)) return false; seen.add(name); } return true; } catch { return false; } }
 function nullableTimestamp(value: unknown): value is string | null { return value === null || (typeof value === "string" && !Number.isNaN(Date.parse(value)) && new Date(value).toISOString() === value); }
-function validTags(path: string, value: unknown): boolean { if (path === "marketOverview.industryTags") return Array.isArray(value) && value.every((v) => includes(INDUSTRY_TAGS, v)); if (path === "marketOverview.techTags") return Array.isArray(value) && value.every((v) => includes(TECH_TAGS, v)); return true; }
+function validNormalizedValue(path: string, value: unknown, countryCode: string): boolean {
+  if (["country.summary", "marketOverview.overview", "marketOverview.energyDemand", "marketOverview.renewableTarget"].includes(path) || path.endsWith(".label")) return localized(value);
+  if (path === "country.region") return includes(REGIONS, value);
+  if (path === "country.flagEmoji" || path === "marketOverview.source" || path.endsWith(".value") || path.endsWith(".unit")) return text(value);
+  if (path === "country.updatedAt" || path === "marketOverview.collectedAt" || path === "marketOverview.updatedAt") return timestamp(value);
+  if (path === "marketOverview.sourceUrl") return value === null || isHttpUrl(value);
+  if (path === "marketOverview.credibility") return includes(CREDIBILITIES, value) && value !== "UNVERIFIED";
+  if (path === "marketOverview.countryCode") return value === countryCode;
+  if (path === "marketOverview.industryTags") return canonicalTags(value, INDUSTRY_TAGS);
+  if (path === "marketOverview.techTags") return canonicalTags(value, TECH_TAGS);
+  if (path.endsWith(".year")) return typeof value === "number" && Number.isFinite(value);
+  return true;
+}
+function localized(value: unknown): boolean { const item = exact(value, ["zh", "en"]); return item !== null && typeof item.zh === "string" && typeof item.en === "string" && (item.zh.trim() !== "" || item.en.trim() !== ""); }
+function timestamp(value: unknown): boolean { const errors: string[] = []; expectUtcRfc3339Timestamp(value, "value", errors); return errors.length === 0; }
+function canonicalTags<T extends string>(value: unknown, allowed: readonly T[]): boolean { return Array.isArray(value) && value.every((item) => includes(allowed, item)) && unique(value as string[]) && value.every((item, index) => index === 0 || allowed.indexOf(value[index - 1] as T) < allowed.indexOf(item as T)); }
+function completeStaticSet(paths: ReadonlySet<string>): boolean { return Array.from(STATIC_PATHS).every((path) => PROTECTED_PATHS.has(path) || paths.has(path)); }
+function validIndicatorSet(paths: ReadonlySet<string>): boolean { const groups = new Map<number, Set<string>>(); for (const path of paths) { const match = INDICATOR_PATH.exec(path); if (match === null) continue; const index = Number(/\[(\d+)\]/.exec(path)?.[1]); const field = path.split(".").at(-1)!; const fields = groups.get(index) ?? new Set<string>(); fields.add(field); groups.set(index, fields); } if (groups.size === 0) return false; const max = Math.max(...groups.keys()); return groups.size === max + 1 && Array.from({ length: max + 1 }, (_, index) => groups.get(index)).every((fields) => fields !== undefined && ["label", "value", "unit", "year"].every((field) => fields.has(field))); }
+function validSourceUrlExplanation(opened: readonly OpenedJsonSourcePlan[]): boolean { const observations = opened.flatMap(({ observations }) => observations); const source = observations.find(({ fieldPath }) => fieldPath === "marketOverview.source")?.normalizedValue; const url = observations.find(({ fieldPath }) => fieldPath === "marketOverview.sourceUrl")?.normalizedValue; return url === null ? typeof source === "string" && source.includes("sourceUrl null") : typeof url === "string" && opened.some(({ policy }) => policy.sourceUrl === url); }
 function json(value: unknown): boolean { return snapshotBasicOfflineValue(value).valid; }
 function text(value: unknown): value is string { return typeof value === "string" && value.trim() !== ""; }
 function nullableText(value: unknown): value is string | null { return value === null || text(value); }
@@ -183,4 +257,11 @@ function integer(value: unknown): value is number { return typeof value === "num
 function iso2(value: unknown): value is string { return typeof value === "string" && /^[A-Z]{2}$/.test(value); }
 function safeId(value: unknown): value is string { return typeof value === "string" && SAFE_ID.test(value); }
 function includes<T>(values: readonly T[], value: unknown): value is T { return values.includes(value as T); }
+function unique(values: readonly string[]): boolean { return new Set(values).size === values.length; }
+function positiveCount(value: unknown): value is number { return typeof value === "number" && Number.isSafeInteger(value) && value > 0; }
+function exactArtifacts(value: unknown): boolean { return Array.isArray(value) && value.length === BASIC_COUNTRY_CANDIDATE_ARTIFACTS.length && value.every((item, index) => item === BASIC_COUNTRY_CANDIDATE_ARTIFACTS[index]); }
+function absolutePath(value: unknown): value is string { return typeof value === "string" && isAbsolute(value) && !value.includes("\0"); }
+function functionValue<T extends Function>(value: unknown): T | null { return typeof value === "function" && !isProxy(value) ? value as T : null; }
+function dataProperties(value: unknown, keys: readonly string[]): ReadonlyMap<string, unknown> | null { try { if (typeof value !== "object" || value === null || isProxy(value) || Array.isArray(value) || Object.getPrototypeOf(value) !== Object.prototype || Reflect.ownKeys(value).length !== keys.length || Reflect.ownKeys(value).some((key) => typeof key !== "string" || !keys.includes(key))) return null; const result = new Map<string, unknown>(); for (const key of keys) { const descriptor = Object.getOwnPropertyDescriptor(value, key); if (descriptor === undefined || !descriptor.enumerable || !Object.hasOwn(descriptor, "value")) return null; result.set(key, descriptor.value); } return result; } catch { return null; } }
+const ERROR_CODES = ["INPUT_INVALID", "DISCOVERY_REJECTED", "SOURCE_CAPTURE_FAILED", "EVIDENCE_REJECTED", "PREFLIGHT_BLOCKED", "DRAFT_FAILED", "AUDIT_INVALID", "OUTPUT_REJECTED"] as const;
 function isNull<T>(value: T | null): value is null { return value === null; }

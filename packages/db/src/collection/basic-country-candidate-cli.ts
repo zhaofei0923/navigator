@@ -5,9 +5,10 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 import {
   parseBasicCountryCandidateInput,
-  type BasicCountryCandidateResult,
+  parseBasicCountryCandidateResult,
   type BasicCountryCandidateRuntime,
 } from "./basic-country-candidate-contracts.js";
+import { BASIC_COUNTRY_CANDIDATE_FILESYSTEM } from "./basic-country-candidate-filesystem.js";
 import { runBasicCountryCandidate } from "./basic-country-candidate-runner.js";
 import type { BasicLlamaCppFetch } from "./basic-hermes-llama-contracts.js";
 import type { BasicSourceFetch } from "./basic-source-transport.js";
@@ -23,7 +24,7 @@ export type BasicCountryCandidateCliArgs =
 export interface BasicCountryCandidateCliDependencies {
   repositoryRoot: string;
   readJson(pathname: string): Promise<unknown>;
-  runCandidate(input: unknown, runtime: BasicCountryCandidateRuntime): Promise<BasicCountryCandidateResult>;
+  runCandidate(input: unknown, runtime: BasicCountryCandidateRuntime): Promise<unknown>;
   sourceFetch: BasicSourceFetch;
   llamaFetch: BasicLlamaCppFetch;
   writeStdout(output: string): void;
@@ -45,16 +46,16 @@ export async function runBasicCountryCandidateCli(
 ): Promise<number> {
   const parsedArgs = classifyBasicCountryCandidateArgs(args);
   if (parsedArgs.mode === "help") {
-    dependencies.writeStdout(`${USAGE}\n`);
+    safeWrite(dependencies.writeStdout, `${USAGE}\n`);
     return 0;
   }
   if (parsedArgs.mode === "invalid") {
-    dependencies.writeStderr("INPUT_INVALID\n");
+    safeWrite(dependencies.writeStderr, "INPUT_INVALID\n");
     return 2;
   }
 
   if (!(await validateOutputRoot(parsedArgs.outputRoot, dependencies.repositoryRoot))) {
-    dependencies.writeStderr("OUTPUT_REJECTED\n");
+    safeWrite(dependencies.writeStderr, "OUTPUT_REJECTED\n");
     return 1;
   }
 
@@ -65,41 +66,57 @@ export async function runBasicCountryCandidateCli(
     config = await dependencies.readJson(parsedArgs.configPath);
     discoveryResponse = await dependencies.readJson(parsedArgs.discoveryPath);
   } catch {
-    dependencies.writeStderr("INPUT_INVALID\n");
+    safeWrite(dependencies.writeStderr, "INPUT_INVALID\n");
     return 1;
   }
   const input = parseBasicCountryCandidateInput({ config, discoveryResponse });
   if (input === null) {
-    dependencies.writeStderr("INPUT_INVALID\n");
+    safeWrite(dependencies.writeStderr, "INPUT_INVALID\n");
     return 1;
   }
   const target = join(parsedArgs.outputRoot, "data", "staging", input.config.countryDirectory, input.config.runId);
   if (!(await targetAvailable(target, parsedArgs.outputRoot))) {
-    dependencies.writeStderr("OUTPUT_REJECTED\n");
+    safeWrite(dependencies.writeStderr, "OUTPUT_REJECTED\n");
     return 1;
   }
 
-  let result: BasicCountryCandidateResult;
+  let candidate: unknown;
   try {
-    result = await dependencies.runCandidate(
+    candidate = await dependencies.runCandidate(
       { config, discoveryResponse },
       {
         repositoryRoot: dependencies.repositoryRoot,
         outputRoot: parsedArgs.outputRoot,
         sourceFetch: dependencies.sourceFetch,
         llamaFetch: dependencies.llamaFetch,
+        filesystem: BASIC_COUNTRY_CANDIDATE_FILESYSTEM,
       },
     );
   } catch {
-    dependencies.writeStderr("AUDIT_INVALID\n");
+    safeWrite(dependencies.writeStderr, "AUDIT_INVALID\n");
     return 1;
   }
-  dependencies.writeStdout(`${JSON.stringify(result)}\n`);
+  const result = parseBasicCountryCandidateResult(candidate, input.config);
+  if (result === null) {
+    safeWrite(dependencies.writeStderr, "AUDIT_INVALID\n");
+    return 1;
+  }
+  let output: string;
+  try { output = `${JSON.stringify(result)}\n`; }
+  catch { safeWrite(dependencies.writeStderr, "AUDIT_INVALID\n"); return 1; }
+  if (!safeWrite(dependencies.writeStdout, output)) {
+    safeWrite(dependencies.writeStderr, "AUDIT_INVALID\n");
+    return 1;
+  }
   if (!result.ok) {
-    dependencies.writeStderr(`${result.code}\n`);
+    safeWrite(dependencies.writeStderr, `${result.code}\n`);
     return 1;
   }
   return 0;
+}
+
+function safeWrite(write: (output: string) => void, output: string): boolean {
+  try { write(output); return true; } catch { return false; }
 }
 
 async function validateOutputRoot(outputRoot: string, repositoryRoot: string): Promise<boolean> {
