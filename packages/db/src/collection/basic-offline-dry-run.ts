@@ -32,6 +32,10 @@ import {
   snapshotBasicOfflineValue,
 } from "./basic-offline-value.js";
 import type { BasicSourceAdapterRunResult } from "./basic-source-adapter-contracts.js";
+import {
+  SAFE_COUNTRY_DIRECTORY,
+  SAFE_RUN_ID,
+} from "../seed/basic-country-validation-utils.js";
 
 const NORMAL_INPUT_KEYS = [
   "scenario", "countryDirectory", "runId", "runner", "bridge", "model",
@@ -84,6 +88,12 @@ export async function runBasicOfflineDryRun(
 
   let preflight: ReturnType<typeof preflightBasicOfflineCollection>;
   try {
+    if (
+      parsed.runId !== run.sourceRegister.runId ||
+      parsed.runId !== run.extractedFacts.runId
+    ) {
+      return createBasicOfflineFailureResult(scenario, stages, "preflight");
+    }
     preflight = preflightBasicOfflineCollection({
       sourceRegister: run.sourceRegister,
       extractedFacts: run.extractedFacts,
@@ -183,7 +193,9 @@ function readNormalInput(value: unknown): NormalInputSnapshot | null {
   });
   if (!staticSnapshot.valid || !isRecord(staticSnapshot.data) ||
       typeof staticSnapshot.data.countryDirectory !== "string" ||
+      !SAFE_COUNTRY_DIRECTORY.test(staticSnapshot.data.countryDirectory) ||
       typeof staticSnapshot.data.runId !== "string" ||
+      !SAFE_RUN_ID.test(staticSnapshot.data.runId) ||
       !Array.isArray(staticSnapshot.data.sourceChecks) ||
       !Array.isArray(staticSnapshot.data.injectionRisks)) return null;
   return {

@@ -4,7 +4,6 @@ import {
   BASIC_COLLECTION_BLOCKER_CODES,
   type BasicCollectionAuditBundle,
   type BasicCollectionBlockerCode,
-  type BasicMarketOverviewDraft,
 } from "./basic-collection-contracts.js";
 import { createBasicCollectionAuditArtifacts } from "./basic-offline-audit-artifacts.js";
 import { assembleBasicCollectionAuditBundle } from "./basic-offline-audit-assembler.js";
@@ -32,7 +31,6 @@ const BLOCKED_MATERIAL_KEYS = [
   "sourceChecks",
   "injectionRisks",
 ] as const;
-const INDICATOR_PATH = /^marketOverview\.keyIndicators\[(0|[1-9]\d*)\]\.(label|value|unit|year)$/;
 
 export async function runBasicOfflineBlockedDryRun(
   value: unknown,
@@ -67,9 +65,6 @@ export async function runBasicOfflineBlockedDryRun(
 
   let bundle: BasicCollectionAuditBundle;
   try {
-    if (scenario === "conflict" && !conflictDraftValuesAreNull(safeMaterial)) {
-      throw new Error("conflict draft must remain null");
-    }
     bundle = assembleBasicCollectionAuditBundle(safeMaterial);
   } catch {
     return createBasicOfflineFailureResult(scenario, stages, "assemble");
@@ -150,39 +145,6 @@ function hasExactBlockers(
   expected: BasicCollectionBlockerCode,
 ): boolean {
   return blockers.length === 1 && blockers[0] === expected && BASIC_COLLECTION_BLOCKER_CODES.includes(expected);
-}
-
-function conflictDraftValuesAreNull(input: BasicCollectionAuditAssemblyInput): boolean {
-  return input.extractedFacts.facts
-    .filter(({ status }) => status === "conflict")
-    .every((fact) => {
-      if (!fact.fieldPath.startsWith("marketOverview.")) return true;
-      const value = draftValueAt(input.marketOverviewDraft, fact.fieldPath);
-      return value.found && value.value === null;
-    });
-}
-
-function draftValueAt(
-  draft: BasicMarketOverviewDraft,
-  fieldPath: string,
-): { found: true; value: unknown } | { found: false } {
-  const key = fieldPath.slice("marketOverview.".length);
-  if (key === "overview" || key === "population" || key === "gdp" || key === "gdpGrowth" ||
-      key === "energyDemand" || key === "renewableTarget" || key === "source" || key === "sourceUrl" ||
-      key === "collectedAt" || key === "updatedAt" || key === "credibility" || key === "countryCode" ||
-      key === "industryTags" || key === "techTags") {
-    return { found: true, value: draft[key] };
-  }
-  const match = INDICATOR_PATH.exec(fieldPath);
-  if (match === null) return { found: false };
-  const indicator = draft.keyIndicators[Number(match[1])];
-  if (indicator === undefined) return { found: false };
-  const indicatorKey = match[2];
-  if (indicatorKey === "label") return { found: true, value: indicator.label };
-  if (indicatorKey === "value") return { found: true, value: indicator.value };
-  if (indicatorKey === "unit") return { found: true, value: indicator.unit };
-  if (indicatorKey === "year") return { found: true, value: indicator.year };
-  return { found: false };
 }
 
 function inputFailure(scenario: BasicOfflineBlockedDryRunInput["scenario"]): BasicOfflineDryRunResult {

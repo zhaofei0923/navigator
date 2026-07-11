@@ -16,6 +16,8 @@ import type {
   BasicOfflineNormalDryRunInput,
 } from "./collection/basic-offline-dry-run-contracts.js";
 import { runBasicOfflineDryRun } from "./collection/basic-offline-dry-run.js";
+import { assembleBasicCollectionAuditBundle } from "./collection/basic-offline-audit-assembler.js";
+import { validateBasicCollectionAuditBundle } from "./collection/basic-collection-validator.js";
 import {
   createBasicOfflineFailureResult,
   createBasicOfflineStageOutcomes,
@@ -62,7 +64,7 @@ describe("Basic offline dry run", () => {
     expectRecursivelyFrozen(result);
   });
 
-  test("keeps conflict evidence unresolved and leaves its draft value null", async () => {
+  test("preserves the conflict fixture nullable population draft value", async () => {
     const input = blockedInput("conflict");
     const conflictInputFact = input.material.extractedFacts.facts.find(({ status }) => status === "conflict");
     if (conflictInputFact === undefined) throw new Error("conflict fixture fact is required");
@@ -76,6 +78,77 @@ describe("Basic offline dry run", () => {
       expect.objectContaining({ resolution: "unresolved" }),
     ]);
     expect(result.artifacts?.["market-overview.draft.json"].population).toBeNull();
+  });
+
+  test("accepts a non-nullable overview conflict without narrowing P1-A", async () => {
+    const material = materialFor("conflict");
+    const populationFact = factAtMaterial(material, "marketOverview.population");
+    const populationValue = material.marketOverviewDraft.population;
+    const secondaryEvidence = populationFact.evidence[1]!;
+    populationFact.status = "candidate";
+    populationFact.evidence = [{
+      ...populationFact.evidence[0]!,
+      rawValue: populationValue,
+      normalizedValue: populationValue,
+    }];
+
+    const overviewFact = factAtMaterial(material, "marketOverview.overview");
+    const conflictingOverview = { zh: "冲突概览", en: "Conflicting overview" };
+    overviewFact.status = "conflict";
+    overviewFact.evidence.push({
+      ...overviewFact.evidence[0]!,
+      sourceId: secondaryEvidence.sourceId,
+      locator: secondaryEvidence.locator,
+      rawValue: conflictingOverview,
+      normalizedValue: conflictingOverview,
+    });
+    const overviewDraftBefore = structuredClone(material.marketOverviewDraft.overview);
+    const conflictEvidenceBefore = structuredClone(overviewFact.evidence);
+
+    const preflight = preflightBasicOfflineCollection({
+      sourceRegister: material.sourceRegister,
+      extractedFacts: material.extractedFacts,
+      sourceChecks: material.sourceChecks,
+      injectionRisks: material.injectionRisks,
+    });
+    expect(preflight).toEqual({
+      valid: true,
+      blockers: ["UNRESOLVED_CONFLICT"],
+      errors: [],
+    });
+    const assembled = assembleBasicCollectionAuditBundle(material);
+    const validation = validateBasicCollectionAuditBundle(assembled);
+    expect(validation).toMatchObject({
+      valid: true,
+      readyForHumanReview: false,
+      blockers: ["UNRESOLVED_CONFLICT"],
+    });
+
+    const result = await runBasicOfflineDryRun({ scenario: "conflict", material });
+
+    expect(Object.keys(result.artifacts ?? {}).sort()).toEqual([
+      "extracted-facts.json",
+      "market-overview.draft.json",
+      "review-report.json",
+      "source-register.json",
+    ]);
+    expect(result.artifacts?.["market-overview.draft.json"].overview).toEqual(overviewDraftBefore);
+    const conflictFact = result.artifacts?.["extracted-facts.json"].facts.find(
+      ({ fieldPath }) => fieldPath === "marketOverview.overview",
+    );
+    expect(conflictFact).toMatchObject({
+      status: "conflict",
+      evidence: conflictEvidenceBefore,
+    });
+    const reviewConflict = result.artifacts?.["review-report.json"].conflicts[0];
+    expect(reviewConflict).toMatchObject({
+      fieldPath: "marketOverview.overview",
+      factIds: [overviewFact.factId],
+      resolution: "unresolved",
+    });
+    expect(Object.keys(reviewConflict ?? {}).sort()).toEqual([
+      "factIds", "fieldPath", "notes", "resolution",
+    ]);
   });
 
   test("detaches blocked output from later input and result mutations", async () => {
@@ -167,6 +240,79 @@ describe("Basic offline dry run", () => {
     expect(result.validation.errors).toEqual(["P1-6D assemble failed"]);
     expect(result.artifacts).toBeNull();
     expect(result.stages[4]).toEqual({ name: "assemble", outcome: "blocked" });
+  });
+
+  test.each([
+    ["countryDirectory", "../unsafe-country"],
+    ["runId", "unsafe/run"],
+  ] as const)("blocks unsafe normal %s before runner", async (key, value) => {
+    const fixture = createBasicCollectionAuditFixture();
+    let runnerCalls = 0;
+    let bridgeCalls = 0;
+    let modelCalls = 0;
+    const input = normalInput(fixture, {
+      runner: {
+        async run() {
+          runnerCalls += 1;
+          return runResult(fixture);
+        },
+      },
+      bridge: {
+        async bridge() {
+          bridgeCalls += 1;
+          return { ok: true, data: fixture.marketOverviewDraft };
+        },
+      },
+      model: { async complete() { modelCalls += 1; return {}; } },
+    });
+    input[key] = value;
+
+    const result = await runBasicOfflineDryRun(input);
+
+    expect(runnerCalls).toBe(0);
+    expect(bridgeCalls).toBe(0);
+    expect(modelCalls).toBe(0);
+    expect(result.stages[0]).toEqual({ name: "input", outcome: "blocked" });
+    expect(result.stages.slice(1, 7).every(({ outcome }) => outcome === "skipped")).toBe(true);
+    expect(result.validation.errors).toEqual(["P1-6D input failed"]);
+    expect(result.artifacts).toBeNull();
+  });
+
+  test("blocks a safe input runId mismatch after runner and before bridge", async () => {
+    const fixture = createBasicCollectionAuditFixture();
+    let runnerCalls = 0;
+    let bridgeCalls = 0;
+    let modelCalls = 0;
+    const input = normalInput(fixture, {
+      runId: "run-input-safe",
+      runner: {
+        async run() {
+          runnerCalls += 1;
+          return runResult(fixture);
+        },
+      },
+      bridge: {
+        async bridge() {
+          bridgeCalls += 1;
+          return { ok: true, data: fixture.marketOverviewDraft };
+        },
+      },
+      model: { async complete() { modelCalls += 1; return {}; } },
+    });
+
+    const result = await runBasicOfflineDryRun(input);
+
+    expect(runnerCalls).toBe(1);
+    expect(bridgeCalls).toBe(0);
+    expect(modelCalls).toBe(0);
+    expect(result.stages.slice(0, 3)).toEqual([
+      { name: "input", outcome: "passed" },
+      { name: "runner", outcome: "passed" },
+      { name: "preflight", outcome: "blocked" },
+    ]);
+    expect(result.stages.slice(3, 7).every(({ outcome }) => outcome === "skipped")).toBe(true);
+    expect(result.validation.errors).toEqual(["P1-6D preflight failed"]);
+    expect(result.artifacts).toBeNull();
   });
 
   test("normal runs runner before bridge and returns a ready four-file result", async () => {
@@ -561,6 +707,12 @@ function runResult(fixture: BasicCollectionAuditBundle): BasicSourceAdapterRunRe
 function factAt(fixture: BasicCollectionAuditBundle, fieldPath: string) {
   const fact = fixture.extractedFacts.facts.find((candidate) => candidate.fieldPath === fieldPath);
   if (fact === undefined) throw new Error(`fixture fact is required: ${fieldPath}`);
+  return fact;
+}
+
+function factAtMaterial(material: BasicCollectionAuditAssemblyInput, fieldPath: string) {
+  const fact = material.extractedFacts.facts.find((candidate) => candidate.fieldPath === fieldPath);
+  if (fact === undefined) throw new Error(`material fact is required: ${fieldPath}`);
   return fact;
 }
 
