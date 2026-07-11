@@ -86,7 +86,7 @@ export type BasicCandidateFilesystemOperation =
   | `create-visible-${"data" | "staging" | "country" | "target"}`
   | `write-${typeof BASIC_COUNTRY_CANDIDATE_ARTIFACTS[number]}`
   | "validate-private" | "publish-target" | "validate-published"
-  | "cleanup-private" | "cleanup-visible";
+  | "cleanup-private" | "cleanup-visible" | "cleanup-pinned-target";
 export interface BasicCountryCandidateFilesystem {
   run(operation: BasicCandidateFilesystemOperation, action: () => Promise<void>): Promise<void>;
 }

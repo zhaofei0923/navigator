@@ -1,6 +1,6 @@
-import { mkdtemp, mkdir, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, readdir, rename, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 import { afterEach, describe, expect, test, vi } from "vitest";
 
@@ -441,6 +441,43 @@ describe("Basic country candidate runner", () => {
 
     expect(result).toMatchObject({ ok: false, code: "OUTPUT_REJECTED", artifacts: null });
     await expect(readdir(value.artifactRoot)).rejects.toThrow();
+    expect(await packageTempEntries(value.outputRoot)).toEqual([]);
+  });
+
+  test("clears the pinned candidate target when the visible data tree is renamed away", async () => {
+    const value = await createCase();
+    const movedData = join(dirname(value.outputRoot), "moved-data");
+    const movedTarget = join(movedData, "staging", DIRECTORY, RUN_ID);
+    value.runtime.filesystem = filesystemPort(async (operation, action) => {
+      if (operation === "validate-published") {
+        await rename(join(value.outputRoot, "data"), movedData);
+        await mkdir(join(value.outputRoot, "data"), { mode: 0o700 });
+      }
+      await action();
+    });
+
+    const result = await runBasicCountryCandidate(value.input, value.runtime);
+
+    expect(result).toMatchObject({ ok: false, code: "OUTPUT_REJECTED", artifacts: null });
+    expect(await readdir(movedTarget)).toEqual([]);
+    await expect(readdir(value.artifactRoot)).rejects.toThrow();
+    expect(await packageTempEntries(value.outputRoot)).toEqual([]);
+  });
+
+  test("maps a pinned target cleanup failure to a redacted output failure", async () => {
+    const value = await createCase();
+    const operations: string[] = [];
+    value.runtime.filesystem = filesystemPort(async (operation, action) => {
+      operations.push(operation);
+      if (operation === "validate-private" || operation === "cleanup-pinned-target") throw new Error(SENTINEL);
+      await action();
+    });
+
+    const result = await runBasicCountryCandidate(value.input, value.runtime);
+
+    expect(result).toMatchObject({ ok: false, code: "OUTPUT_REJECTED", artifacts: null });
+    expect(JSON.stringify(result)).not.toContain(SENTINEL);
+    expect(operations).toContain("cleanup-pinned-target");
     expect(await packageTempEntries(value.outputRoot)).toEqual([]);
   });
 

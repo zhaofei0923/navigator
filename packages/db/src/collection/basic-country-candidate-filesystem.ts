@@ -38,6 +38,7 @@ export async function writeCandidatePackage(input: {
   let visibleData: PinnedDirectory | null = null;
   let visibleStaging: PinnedDirectory | null = null;
   let visibleCountry: PinnedDirectory | null = null;
+  let candidateTarget: PinnedDirectory | null = null;
   let targetVisible = false;
   let code: "AUDIT_INVALID" | "OUTPUT_REJECTED" = "OUTPUT_REJECTED";
   const privateName = `.candidate-${randomUUID()}`;
@@ -53,18 +54,18 @@ export async function writeCandidatePackage(input: {
     pins.push(privateStaging);
     const privateCountry = await createChild(privateStaging, input.countryDirectory, "create-private-country", input.filesystem, input.outputRoot, root);
     pins.push(privateCountry);
-    const privateTarget = await createChild(privateCountry, input.runId, "create-private-target", input.filesystem, input.outputRoot, root);
-    pins.push(privateTarget);
+    candidateTarget = await createChild(privateCountry, input.runId, "create-private-target", input.filesystem, input.outputRoot, root);
+    pins.push(candidateTarget);
     for (const name of BASIC_COUNTRY_CANDIDATE_ARTIFACTS) {
-      await checkedRun(input.filesystem, `write-${name}`, [root, privateRoot, privateData, privateStaging, privateCountry, privateTarget], async () => {
-        const file = await open(`${privateTarget.path}/${name}`, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
+      await checkedRun(input.filesystem, `write-${name}`, [root, privateRoot, privateData, privateStaging, privateCountry, candidateTarget], async () => {
+        const file = await open(`${candidateTarget!.path}/${name}`, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
         try { await file.writeFile(`${JSON.stringify(input.artifacts[name], null, 2)}\n`); await file.sync(); }
         finally { await file.close(); }
       }, input.outputRoot);
     }
     code = "AUDIT_INVALID";
-    await checkedRun(input.filesystem, "validate-private", [root, privateRoot, privateTarget], async () => {
-      await validateCompleteBundle(privateRoot!.path, input.countryDirectory, input.runId, privateTarget!.path);
+    await checkedRun(input.filesystem, "validate-private", [root, privateRoot, candidateTarget], async () => {
+      await validateCompleteBundle(privateRoot!.path, input.countryDirectory, input.runId, candidateTarget!.path);
     }, input.outputRoot);
     code = "OUTPUT_REJECTED";
     visibleData = await createChild(root, "data", "create-visible-data", input.filesystem, input.outputRoot);
@@ -84,7 +85,7 @@ export async function writeCandidatePackage(input: {
     await checkedRun(input.filesystem, "validate-published", [root, visibleData, visibleStaging, visibleCountry], async () => {
       await assertVisibleChain(input.outputRoot, [root!, visibleData!, visibleStaging!, visibleCountry!]);
       const visibleTarget = await pinDirectory(`${input.outputRoot}/data/staging/${input.countryDirectory}/${input.runId}`);
-      try { await assertSame(visibleTarget, privateTarget); await assertArtifactFiles(visibleTarget.path); }
+      try { await assertSame(visibleTarget, candidateTarget!); await assertArtifactFiles(visibleTarget.path); }
       finally { await visibleTarget.handle.close(); }
     }, input.outputRoot);
     await checkedRun(input.filesystem, "cleanup-private", [root, privateRoot], async () => {
@@ -94,7 +95,7 @@ export async function writeCandidatePackage(input: {
     await assertVisibleChain(input.outputRoot, [root, visibleData, visibleStaging, visibleCountry]);
     return { ok: true };
   } catch {
-    const cleaned = await rollback(input, root, privateName, visibleData, targetVisible);
+    const cleaned = await rollback(input, root, privateName, visibleData, targetVisible, candidateTarget);
     return { ok: false, code: cleaned ? code : "OUTPUT_REJECTED" };
   } finally {
     await Promise.allSettled(pins.map(({ handle }) => handle.close()));
@@ -201,9 +202,11 @@ async function rollback(
   privateName: string,
   visibleData: PinnedDirectory | null,
   targetVisible: boolean,
+  candidateTarget: PinnedDirectory | null,
 ): Promise<boolean> {
   if (root === null) return false;
   let clean = true;
+  if (candidateTarget !== null) clean = await cleanupPinnedTarget(input.filesystem, candidateTarget) && clean;
   if (visibleData !== null || targetVisible) clean = await cleanup(input.filesystem, "cleanup-visible", `${root.path}/data`) && clean;
   clean = await cleanup(input.filesystem, "cleanup-private", `${root.path}/${privateName}`) && clean;
   try {
@@ -211,6 +214,28 @@ async function rollback(
     if (names.some((name) => name === "data" || name.startsWith(".candidate-"))) clean = false;
   } catch { clean = false; }
   return clean;
+}
+
+async function cleanupPinnedTarget(
+  filesystem: BasicCountryCandidateFilesystem,
+  target: PinnedDirectory,
+): Promise<boolean> {
+  let operationSucceeded = true;
+  try {
+    await assertPins([target]);
+    await filesystem.run("cleanup-pinned-target", async () => { await clearDirectory(target.path); });
+  } catch {
+    operationSucceeded = false;
+    try { await clearDirectory(target.path); } catch { return false; }
+  }
+  try {
+    await assertPins([target]);
+    return operationSucceeded && (await readdir(target.path)).length === 0;
+  } catch { return false; }
+}
+
+async function clearDirectory(path: string): Promise<void> {
+  for (const name of await readdir(path)) await rm(`${path}/${name}`, { recursive: true, force: true });
 }
 
 async function cleanup(filesystem: BasicCountryCandidateFilesystem, operation: "cleanup-private" | "cleanup-visible", path: string): Promise<boolean> {
