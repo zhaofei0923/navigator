@@ -28,6 +28,7 @@ interface BasicActivationWhere {
 
 export interface BasicCountryActivationPreflightCliDependencies {
   readonly createClient: () => PrismaClient;
+  readonly preflight: typeof preflightBasicCountryActivation;
   readonly writeStdout: (output: string) => void;
   readonly writeStderr: (output: string) => void;
 }
@@ -154,12 +155,15 @@ export async function runBasicCountryActivationPreflightCli(
   }
 
   let result: BasicCountryActivationPreflightResult | null = null;
+  let preflightFailed = false;
   let disconnectFailed = false;
   try {
-    result = await preflightBasicCountryActivation(
+    result = await dependencies.preflight(
       TARGET_COUNTRY_CODE,
       createPrismaBasicActivationCountPort(prismaClient),
     );
+  } catch {
+    preflightFailed = true;
   } finally {
     try {
       await prismaClient.$disconnect();
@@ -168,7 +172,7 @@ export async function runBasicCountryActivationPreflightCli(
     }
   }
 
-  if (disconnectFailed || result === null) {
+  if (preflightFailed || disconnectFailed || result === null) {
     dependencies.writeStderr(`${JSON.stringify(createLifecycleFailureSummary())}\n`);
     return 1;
   }
@@ -188,6 +192,7 @@ if (
     process.argv.slice(2),
     {
       createClient: () => new PrismaClient(),
+      preflight: preflightBasicCountryActivation,
       writeStdout: (output) => process.stdout.write(output),
       writeStderr: (output) => process.stderr.write(output),
     },

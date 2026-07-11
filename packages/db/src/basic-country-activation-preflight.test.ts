@@ -312,10 +312,12 @@ describe("DATA-BASIC-ID preflight CLI boundary", () => {
     readonly constructorError?: unknown;
     readonly countError?: unknown;
     readonly disconnectError?: unknown;
+    readonly preflightError?: unknown;
     readonly count?: number;
   } = {}) {
     let constructorCalls = 0;
     let disconnectCalls = 0;
+    let preflightCalls = 0;
     const stdout: string[] = [];
     const stderr: string[] = [];
     const delegate = {
@@ -354,6 +356,13 @@ describe("DATA-BASIC-ID preflight CLI boundary", () => {
           }
           return client as never;
         },
+        async preflight(countryCode: string, port: BasicActivationCountPort) {
+          preflightCalls += 1;
+          if (options.preflightError !== undefined) {
+            throw options.preflightError;
+          }
+          return preflightBasicCountryActivation(countryCode, port);
+        },
         writeStdout(output: string) {
           stdout.push(output);
         },
@@ -361,7 +370,7 @@ describe("DATA-BASIC-ID preflight CLI boundary", () => {
           stderr.push(output);
         },
       },
-      counts: () => ({ constructorCalls, disconnectCalls }),
+      counts: () => ({ constructorCalls, disconnectCalls, preflightCalls }),
       stdout,
       stderr,
     };
@@ -384,6 +393,7 @@ describe("DATA-BASIC-ID preflight CLI boundary", () => {
       expect(harness.counts()).toEqual({
         constructorCalls: 0,
         disconnectCalls: 0,
+        preflightCalls: 0,
       });
       expect(harness.stdout).toHaveLength(stream === "stdout" ? 1 : 0);
       expect(harness.stderr).toHaveLength(stream === "stderr" ? 1 : 0);
@@ -427,6 +437,7 @@ describe("DATA-BASIC-ID preflight CLI boundary", () => {
       expect(harness.counts()).toEqual({
         constructorCalls: 1,
         disconnectCalls,
+        preflightCalls: disconnectCalls,
       });
       expect(harness.stdout.length + harness.stderr.length).toBe(1);
       const output = [...harness.stdout, ...harness.stderr][0]!;
@@ -444,6 +455,37 @@ describe("DATA-BASIC-ID preflight CLI boundary", () => {
       expect(output).not.toMatch(/secret|constructor|disconnect/i);
     },
   );
+
+  test("redacts an unexpected injected preflight rejection after disconnect", async () => {
+    const harness = createCliHarness({
+      preflightError: new Error("secret unexpected preflight failure"),
+    });
+
+    await expect(
+      runBasicCountryActivationPreflightCli(
+        ["--", "ID"],
+        harness.dependencies,
+      ),
+    ).resolves.toBe(1);
+
+    expect(harness.counts()).toEqual({
+      constructorCalls: 1,
+      disconnectCalls: 1,
+      preflightCalls: 1,
+    });
+    expect(harness.stdout).toEqual([]);
+    expect(harness.stderr).toHaveLength(1);
+    expect(JSON.parse(harness.stderr[0]!)).toEqual({
+      countryCode: "ID",
+      activation: "blocked",
+      blockerCode: "PREFLIGHT_QUERY_FAILED",
+      cleanupRequired: false,
+      valid: false,
+      errors: ["PREFLIGHT_LIFECYCLE_FAILED"],
+      counts: null,
+    });
+    expect(harness.stderr[0]).not.toMatch(/secret|unexpected|preflight failure/i);
+  });
 
   test.each([
     { count: 0, exitCode: 0, blockerCode: null },
@@ -463,6 +505,7 @@ describe("DATA-BASIC-ID preflight CLI boundary", () => {
       expect(harness.counts()).toEqual({
         constructorCalls: 1,
         disconnectCalls: 1,
+        preflightCalls: 1,
       });
       expect(harness.stdout).toHaveLength(1);
       expect(harness.stderr).toEqual([]);
@@ -541,34 +584,109 @@ describe("DATA-BASIC-ID preflight CLI boundary", () => {
       }
     | { readonly kind: "dynamic"; readonly path: string };
 
-  function analyzePrismaUsage(sourceText: string): {
+  interface PrismaUsageAnalysis {
     readonly rootedCalls: readonly string[];
     readonly violations: readonly string[];
     readonly unrelatedCalls: readonly string[];
-  } {
+  }
+
+  function analyzePrismaUsage(sourceText: string): PrismaUsageAnalysis {
+    const fileName = "/fixture.ts";
     const sourceFile = ts.createSourceFile(
-      "fixture.ts",
+      fileName,
       sourceText,
       ts.ScriptTarget.Latest,
       true,
       ts.ScriptKind.TS,
     );
-    const bindings = new Map<string, PrismaBinding>();
+    const compilerHost: ts.CompilerHost = {
+      fileExists: (candidate) => candidate === fileName,
+      getCanonicalFileName: (candidate) => candidate,
+      getCurrentDirectory: () => "/",
+      getDefaultLibFileName: () => "/lib.d.ts",
+      getNewLine: () => "\n",
+      getSourceFile: (candidate) =>
+        candidate === fileName ? sourceFile : undefined,
+      readFile: (candidate) => candidate === fileName ? sourceText : undefined,
+      useCaseSensitiveFileNames: () => true,
+      writeFile: () => undefined,
+    };
+    const program = ts.createProgram({
+      rootNames: [fileName],
+      options: {
+        module: ts.ModuleKind.ESNext,
+        noLib: true,
+        strict: true,
+        target: ts.ScriptTarget.Latest,
+      },
+      host: compilerHost,
+    });
+    const checker = program.getTypeChecker();
+    const bindings = new Map<ts.Symbol, Map<string, PrismaBinding>>();
     const assignmentNodes: Array<ts.VariableDeclaration | ts.BinaryExpression> = [];
     const violations = new Set<string>();
 
-    const isPrismaClientType = (type: ts.TypeNode | undefined): boolean =>
+    const isPrismaClientTypeNode = (type: ts.TypeNode | undefined): boolean =>
       type !== undefined &&
-      ts.isTypeReferenceNode(type) &&
-      ts.isIdentifier(type.typeName) &&
-      type.typeName.text === "PrismaClient";
+      (type.getText(sourceFile) === "PrismaClient" ||
+        type.getText(sourceFile).endsWith(".PrismaClient"));
+
+    const bindingKey = (binding: PrismaBinding): string => {
+      if (binding.kind === "member") {
+        return `${binding.kind}:${binding.owner}:${binding.member}:${binding.path}`;
+      }
+      if (binding.kind === "delegate") {
+        return `${binding.kind}:${binding.model}:${binding.path}`;
+      }
+      return `${binding.kind}:${binding.path}`;
+    };
+
+    const symbolAt = (node: ts.Node): ts.Symbol | null =>
+      checker.getSymbolAtLocation(node) ?? null;
+
+    const addBinding = (
+      symbol: ts.Symbol,
+      binding: PrismaBinding,
+    ): boolean => {
+      let values = bindings.get(symbol);
+      if (values === undefined) {
+        values = new Map();
+        bindings.set(symbol, values);
+      }
+      const key = bindingKey(binding);
+      if (values.has(key)) {
+        return false;
+      }
+      values.set(key, binding);
+      return true;
+    };
+
+    const unwrap = (expression: ts.Expression): ts.Expression => {
+      let current = expression;
+      while (
+        ts.isParenthesizedExpression(current) ||
+        ts.isAsExpression(current) ||
+        ts.isTypeAssertionExpression(current) ||
+        ts.isSatisfiesExpression(current) ||
+        ts.isNonNullExpression(current)
+      ) {
+        current = current.expression;
+      }
+      return current;
+    };
 
     const staticMember = (expression: ts.Expression): string | null => {
-      if (ts.isStringLiteral(expression) || ts.isNoSubstitutionTemplateLiteral(expression)) {
-        return expression.text;
+      const unwrapped = unwrap(expression);
+      if (
+        ts.isStringLiteral(unwrapped) ||
+        ts.isNoSubstitutionTemplateLiteral(unwrapped) ||
+        ts.isNumericLiteral(unwrapped)
+      ) {
+        return unwrapped.text;
       }
       return null;
     };
+
     const extend = (base: PrismaBinding, member: string | null): PrismaBinding => {
       if (member === null) {
         return { kind: "dynamic", path: `${base.path}[dynamic]` };
@@ -579,44 +697,172 @@ describe("DATA-BASIC-ID preflight CLI boundary", () => {
       }
       return { kind: "member", member, owner: base.kind, path };
     };
-    const resolveBinding = (expression: ts.Expression): PrismaBinding | null => {
-      if (ts.isIdentifier(expression)) {
-        return bindings.get(expression.text) ?? null;
+
+    const functionReturnsPrismaClient = (
+      declaration: ts.Declaration,
+    ): boolean => {
+      if (
+        (ts.isFunctionDeclaration(declaration) ||
+          ts.isFunctionExpression(declaration) ||
+          ts.isArrowFunction(declaration) ||
+          ts.isMethodDeclaration(declaration) ||
+          ts.isMethodSignature(declaration)) &&
+        isPrismaClientTypeNode(declaration.type)
+      ) {
+        return true;
+      }
+
+      if (
+        ts.isPropertySignature(declaration) &&
+        declaration.type !== undefined &&
+        ts.isFunctionTypeNode(declaration.type) &&
+        isPrismaClientTypeNode(declaration.type.type)
+      ) {
+        return true;
+      }
+
+      let body: ts.ConciseBody | undefined;
+      if (
+        ts.isFunctionDeclaration(declaration) ||
+        ts.isFunctionExpression(declaration) ||
+        ts.isArrowFunction(declaration) ||
+        ts.isMethodDeclaration(declaration)
+      ) {
+        body = declaration.body;
+      }
+      if (body === undefined) {
+        return false;
+      }
+
+      const isConstructedClient = (expression: ts.Expression): boolean => {
+        const candidate = unwrap(expression);
+        return (
+          ts.isNewExpression(candidate) &&
+          ts.isIdentifier(candidate.expression) &&
+          candidate.expression.text === "PrismaClient"
+        );
+      };
+      if (!ts.isBlock(body)) {
+        return isConstructedClient(body);
+      }
+
+      let returnsClient = false;
+      const inspectReturn = (node: ts.Node): void => {
+        if (
+          ts.isReturnStatement(node) &&
+          node.expression !== undefined &&
+          isConstructedClient(node.expression)
+        ) {
+          returnsClient = true;
+          return;
+        }
+        if (!ts.isFunctionLike(node) || node === declaration) {
+          ts.forEachChild(node, inspectReturn);
+        }
+      };
+      inspectReturn(body);
+      return returnsClient;
+    };
+
+    const callReturnsPrismaClient = (call: ts.CallExpression): boolean => {
+      const signature = checker.getResolvedSignature(call);
+      if (signature !== undefined) {
+        const returnType = checker.getReturnTypeOfSignature(signature);
+        const returnName = checker.typeToString(returnType);
+        if (
+          returnName === "PrismaClient" ||
+          returnName.endsWith(".PrismaClient")
+        ) {
+          return true;
+        }
+        if (
+          signature.declaration !== undefined &&
+          functionReturnsPrismaClient(signature.declaration)
+        ) {
+          return true;
+        }
+      }
+
+      const callee = unwrap(call.expression);
+      const symbol = symbolAt(
+        ts.isPropertyAccessExpression(callee) ? callee.name : callee,
+      );
+      if (symbol === null) {
+        return false;
+      }
+      return symbol.declarations?.some((declaration) => {
+        if (
+          ts.isVariableDeclaration(declaration) &&
+          declaration.initializer !== undefined &&
+          (ts.isArrowFunction(declaration.initializer) ||
+            ts.isFunctionExpression(declaration.initializer))
+        ) {
+          return functionReturnsPrismaClient(declaration.initializer);
+        }
+        return functionReturnsPrismaClient(declaration);
+      }) ?? false;
+    };
+
+    const uniqueBindings = (
+      values: readonly PrismaBinding[],
+    ): readonly PrismaBinding[] => [
+      ...new Map(values.map((value) => [bindingKey(value), value])).values(),
+    ];
+
+    const resolveBindings = (
+      expression: ts.Expression,
+    ): readonly PrismaBinding[] => {
+      const candidate = unwrap(expression);
+      if (ts.isIdentifier(candidate)) {
+        const symbol = symbolAt(candidate);
+        return symbol === null ? [] : [...(bindings.get(symbol)?.values() ?? [])];
       }
       if (
-        ts.isNewExpression(expression) &&
-        ts.isIdentifier(expression.expression) &&
-        expression.expression.text === "PrismaClient"
+        ts.isNewExpression(candidate) &&
+        ts.isIdentifier(candidate.expression) &&
+        candidate.expression.text === "PrismaClient"
       ) {
-        return { kind: "client", path: "PrismaClient" };
+        return [{ kind: "client", path: "PrismaClient" }];
       }
-      if (ts.isPropertyAccessExpression(expression)) {
-        const base = resolveBinding(expression.expression);
-        return base === null ? null : extend(base, expression.name.text);
+      if (ts.isCallExpression(candidate) && callReturnsPrismaClient(candidate)) {
+        return [{ kind: "client", path: "PrismaClient" }];
       }
-      if (ts.isElementAccessExpression(expression)) {
-        const base = resolveBinding(expression.expression);
-        return base === null
-          ? null
-          : extend(
-              base,
-              expression.argumentExpression === undefined
-                ? null
-                : staticMember(expression.argumentExpression),
-            );
+      if (ts.isPropertyAccessExpression(candidate)) {
+        return uniqueBindings(
+          resolveBindings(candidate.expression).map((base) =>
+            extend(base, candidate.name.text),
+          ),
+        );
       }
-      return null;
+      if (ts.isElementAccessExpression(candidate)) {
+        const member =
+          candidate.argumentExpression === undefined
+            ? null
+            : staticMember(candidate.argumentExpression);
+        return uniqueBindings(
+          resolveBindings(candidate.expression).map((base) =>
+            extend(base, member),
+          ),
+        );
+      }
+      return [];
     };
-    const bindName = (name: ts.BindingName, value: PrismaBinding): boolean => {
+
+    const bindName = (
+      name: ts.BindingName,
+      values: readonly PrismaBinding[],
+    ): boolean => {
       let changed = false;
       if (ts.isIdentifier(name)) {
-        if (bindings.get(name.text)?.path !== value.path) {
-          bindings.set(name.text, value);
-          changed = true;
+        const symbol = symbolAt(name);
+        if (symbol !== null) {
+          for (const value of values) {
+            changed = addBinding(symbol, value) || changed;
+          }
         }
         return changed;
       }
-      if (ts.isObjectBindingPattern(name) && value.kind === "client") {
+      if (ts.isObjectBindingPattern(name)) {
         for (const element of name.elements) {
           const propertyName = element.propertyName ?? element.name;
           const member = ts.isIdentifier(propertyName)
@@ -624,34 +870,67 @@ describe("DATA-BASIC-ID preflight CLI boundary", () => {
             : ts.isStringLiteral(propertyName)
               ? propertyName.text
               : null;
-          const child = extend(value, member);
-          if (child.kind === "dynamic") {
-            violations.add(child.path);
-          } else {
-            changed = bindName(element.name, child) || changed;
+          const children = values.map((value) => extend(value, member));
+          for (const child of children) {
+            if (child.kind === "dynamic") {
+              violations.add(child.path);
+            }
           }
+          changed = bindName(element.name, children) || changed;
         }
       }
       return changed;
     };
+
+    const bindAssignmentPattern = (
+      pattern: ts.ObjectLiteralExpression,
+      values: readonly PrismaBinding[],
+    ): boolean => {
+      let changed = false;
+      for (const property of pattern.properties) {
+        if (ts.isShorthandPropertyAssignment(property)) {
+          changed =
+            bindName(
+              property.name,
+              values.map((value) => extend(value, property.name.text)),
+            ) || changed;
+        } else if (
+          ts.isPropertyAssignment(property) &&
+          ts.isIdentifier(property.initializer)
+        ) {
+          const member = ts.isIdentifier(property.name)
+            ? property.name.text
+            : ts.isStringLiteral(property.name)
+              ? property.name.text
+              : null;
+          changed =
+            bindName(
+              property.initializer,
+              values.map((value) => extend(value, member)),
+            ) || changed;
+        }
+      }
+      return changed;
+    };
+
     const collect = (node: ts.Node): void => {
       if (ts.isVariableDeclaration(node)) {
         assignmentNodes.push(node);
-        if (ts.isIdentifier(node.name) && isPrismaClientType(node.type)) {
-          bindings.set(node.name.text, {
-            kind: "client",
-            path: node.name.text,
-          });
+        if (ts.isIdentifier(node.name) && isPrismaClientTypeNode(node.type)) {
+          const symbol = symbolAt(node.name);
+          if (symbol !== null) {
+            addBinding(symbol, { kind: "client", path: node.name.text });
+          }
         }
       } else if (
         ts.isParameter(node) &&
         ts.isIdentifier(node.name) &&
-        isPrismaClientType(node.type)
+        isPrismaClientTypeNode(node.type)
       ) {
-        bindings.set(node.name.text, {
-          kind: "client",
-          path: node.name.text,
-        });
+        const symbol = symbolAt(node.name);
+        if (symbol !== null) {
+          addBinding(symbol, { kind: "client", path: node.name.text });
+        }
       } else if (
         ts.isBinaryExpression(node) &&
         node.operatorToken.kind === ts.SyntaxKind.EqualsToken
@@ -667,69 +946,112 @@ describe("DATA-BASIC-ID preflight CLI boundary", () => {
       for (const node of assignmentNodes) {
         const initializer = ts.isVariableDeclaration(node) ? node.initializer : node.right;
         if (initializer === undefined) continue;
-        const value = resolveBinding(initializer);
-        if (value === null) continue;
+        const values = resolveBindings(initializer);
+        if (values.length === 0) continue;
         if (ts.isVariableDeclaration(node)) {
-          changed = bindName(node.name, value) || changed;
+          changed = bindName(node.name, values) || changed;
         } else if (ts.isIdentifier(node.left)) {
-          changed = bindName(node.left, value) || changed;
-        } else if (ts.isObjectLiteralExpression(node.left) && value.kind === "client") {
-            for (const property of node.left.properties) {
-              if (ts.isShorthandPropertyAssignment(property)) {
-                changed =
-                  bindName(property.name, extend(value, property.name.text)) || changed;
-              } else if (
-                ts.isPropertyAssignment(property) &&
-                ts.isIdentifier(property.initializer)
-              ) {
-                const member = ts.isIdentifier(property.name)
-                  ? property.name.text
-                  : ts.isStringLiteral(property.name)
-                    ? property.name.text
-                    : null;
-                changed = bindName(property.initializer, extend(value, member)) || changed;
-              }
-            }
+          changed = bindName(node.left, values) || changed;
+        } else if (ts.isObjectLiteralExpression(node.left)) {
+          changed = bindAssignmentPattern(node.left, values) || changed;
         }
       }
     }
 
     const rootedCalls: string[] = [];
     const unrelatedCalls: string[] = [];
+    const inspectCallBindings = (
+      values: readonly PrismaBinding[],
+      expression: ts.Expression,
+      suffix = "",
+    ): void => {
+      const callee = unwrap(expression);
+      const directStaticMember =
+        ts.isPropertyAccessExpression(callee) ||
+        (ts.isElementAccessExpression(callee) &&
+          callee.argumentExpression !== undefined &&
+          staticMember(callee.argumentExpression) !== null);
+      for (const binding of values) {
+        rootedCalls.push(binding.path);
+        const allowedDisconnect =
+          suffix === "" &&
+          directStaticMember &&
+          binding.kind === "member" &&
+          binding.member === "$disconnect" &&
+          binding.owner === "client";
+        const allowedCount =
+          suffix === "" &&
+          directStaticMember &&
+          binding.kind === "member" &&
+          binding.member === "count" &&
+          binding.owner === "delegate";
+        if (!allowedDisconnect && !allowedCount) {
+          violations.add(`${binding.path}${suffix}`);
+        }
+      }
+    };
+
+    const isAssignmentOperator = (kind: ts.SyntaxKind): boolean =>
+      kind >= ts.SyntaxKind.FirstAssignment &&
+      kind <= ts.SyntaxKind.LastAssignment;
+
     const inspect = (node: ts.Node): void => {
       if (ts.isCallExpression(node)) {
-        const binding = resolveBinding(node.expression);
-        if (binding === null) {
-          if (ts.isPropertyAccessExpression(node.expression)) {
-            unrelatedCalls.push(node.expression.getText(sourceFile));
+        const values = resolveBindings(node.expression);
+        if (values.length === 0) {
+          const callee = unwrap(node.expression);
+          if (
+            ts.isPropertyAccessExpression(callee) ||
+            ts.isElementAccessExpression(callee)
+          ) {
+            unrelatedCalls.push(callee.getText(sourceFile));
           }
         } else {
-          rootedCalls.push(binding.path);
-          const allowedDisconnect =
+          inspectCallBindings(values, node.expression);
+        }
+      }
+      if (ts.isTaggedTemplateExpression(node)) {
+        inspectCallBindings(resolveBindings(node.tag), node.tag, ":tagged");
+      }
+      if (
+        ts.isPropertyAccessExpression(node) ||
+        ts.isElementAccessExpression(node)
+      ) {
+        for (const binding of resolveBindings(node)) {
+          if (binding.kind === "dynamic") {
+            violations.add(binding.path);
+          } else if (
             binding.kind === "member" &&
-            binding.member === "$disconnect" &&
-            binding.owner === "client";
-          const allowedCount =
-            binding.kind === "member" &&
-            binding.member === "count" &&
-            binding.owner === "delegate";
-          if (!allowedDisconnect && !allowedCount) {
+            !(
+              (binding.owner === "delegate" && binding.member === "count") ||
+              (binding.owner === "client" && binding.member === "$disconnect")
+            )
+          ) {
             violations.add(binding.path);
           }
         }
       }
-      if (ts.isElementAccessExpression(node)) {
-        const binding = resolveBinding(node);
-        if (binding?.kind === "dynamic") {
-          violations.add(binding.path);
+      if (
+        ts.isBinaryExpression(node) &&
+        isAssignmentOperator(node.operatorToken.kind)
+      ) {
+        for (const binding of resolveBindings(node.left)) {
+          if (!ts.isIdentifier(node.left)) {
+            violations.add(`${binding.path}=write`);
+          }
         }
       }
       if (
-        ts.isBinaryExpression(node) &&
-        node.operatorToken.kind === ts.SyntaxKind.EqualsToken
+        (ts.isPrefixUnaryExpression(node) || ts.isPostfixUnaryExpression(node)) &&
+        (node.operator === ts.SyntaxKind.PlusPlusToken ||
+          node.operator === ts.SyntaxKind.MinusMinusToken)
       ) {
-        const binding = resolveBinding(node.left);
-        if (binding !== null && !ts.isIdentifier(node.left)) {
+        for (const binding of resolveBindings(node.operand)) {
+          violations.add(`${binding.path}=write`);
+        }
+      }
+      if (ts.isDeleteExpression(node)) {
+        for (const binding of resolveBindings(node.expression)) {
           violations.add(`${binding.path}=write`);
         }
       }
@@ -781,6 +1103,41 @@ describe("DATA-BASIC-ID preflight CLI boundary", () => {
     );
   });
 
+  test("distinguishes shadowed bindings from Prisma aliases", () => {
+    const analysis = analyzePrismaUsage(`
+      {
+        const alias = new PrismaClient();
+        alias.policy.count();
+        alias.$disconnect();
+      }
+      {
+        const alias = { findMany() {} };
+        alias.findMany();
+      }
+    `);
+
+    expect(analysis.violations).toEqual([]);
+    expect(analysis.rootedCalls.filter((call) => call.endsWith(".count"))).toHaveLength(1);
+    expect(analysis.unrelatedCalls).toContain("alias.findMany");
+  });
+
+  test("recognizes explicit and inferred factory-created Prisma roots", () => {
+    const analysis = analyzePrismaUsage(`
+      const explicitFactory = (): PrismaClient => new PrismaClient();
+      const inferredFactory = () => new PrismaClient();
+      const explicitClient = explicitFactory();
+      const inferredClient = inferredFactory();
+      explicitClient.policy.count();
+      inferredClient["risk"].count();
+      explicitClient.$disconnect();
+      inferredClient.$disconnect();
+    `);
+
+    expect(analysis.violations).toEqual([]);
+    expect(analysis.rootedCalls.filter((call) => call.endsWith(".count"))).toHaveLength(2);
+    expect(analysis.rootedCalls.filter((call) => call.endsWith(".$disconnect"))).toHaveLength(2);
+  });
+
   test.each([
     ["client alias find", "const db = new PrismaClient(); const alias = db; alias.policy.findMany();"],
     ["delegate alias write", "const db = new PrismaClient(); const delegate = db.policy; delegate.deleteMany();"],
@@ -793,6 +1150,20 @@ describe("DATA-BASIC-ID preflight CLI boundary", () => {
     ["direct raw execute", "const db = new PrismaClient(); db.$executeRawUnsafe();"],
     ["delegate bracket read", "const db = new PrismaClient(); db.policy[\"findFirst\"]();"],
     ["unknown delegate count", "const db = new PrismaClient(); db.unknown.count();"],
+    ["parenthesized call", "const db = new PrismaClient(); (db.policy).deleteMany();"],
+    ["asserted call", "const db = new PrismaClient(); (db.policy as unknown as { findMany(): void }).findMany();"],
+    ["type-asserted call", "const db = new PrismaClient(); (<unknown>db.policy as { aggregate(): void }).aggregate();"],
+    ["satisfies call", "const db = new PrismaClient(); (db.policy satisfies unknown).groupBy();"],
+    ["non-null call", "const db = new PrismaClient(); db.policy!.findFirst();"],
+    ["destructured method", "const db = new PrismaClient(); const { deleteMany } = db.policy; deleteMany();"],
+    ["destructured count method", "const db = new PrismaClient(); const { count } = db.policy; count();"],
+    ["aliased count method", "const db = new PrismaClient(); const count = db.policy.count; count();"],
+    ["destructured disconnect", "const db = new PrismaClient(); const { $disconnect } = db; $disconnect();"],
+    ["destructured member owner", "const db = new PrismaClient(); const { bind } = db.policy.findMany; bind();"],
+    ["tagged query raw", "const db = new PrismaClient(); db.$queryRaw`SELECT 1`;"],
+    ["tagged execute raw", "const db = new PrismaClient(); db[\"$executeRaw\"]`DELETE FROM x`;"],
+    ["forbidden method read", "const db = new PrismaClient(); const read = db.policy.findMany;"],
+    ["inferred factory forbidden call", "const createClient = () => new PrismaClient(); const db = createClient(); db.policy.findMany();"],
   ])("rejects Prisma-rooted mutation fixture: %s", (_label, source) => {
     expect(analyzePrismaUsage(source).violations).not.toEqual([]);
   });
