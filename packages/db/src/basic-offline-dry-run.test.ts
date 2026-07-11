@@ -1,6 +1,9 @@
 import { describe, expect, test } from "vitest";
 
-import { createBasicCollectionAuditFixture } from "./basic-collection-test-fixture.js";
+import {
+  createBasicCollectionAuditFixture,
+  readBasicCollectionAuditFixture,
+} from "./basic-collection-test-fixture.js";
 import type {
   BasicCollectionAuditBundle,
   BasicCollectionBlockerCode,
@@ -8,6 +11,8 @@ import type {
 } from "./collection/basic-collection-contracts.js";
 import type { BasicSourceAdapterRunResult } from "./collection/basic-source-adapter-contracts.js";
 import type {
+  BasicOfflineDryRunInput,
+  BasicCollectionAuditAssemblyInput,
   BasicOfflineNormalDryRunInput,
 } from "./collection/basic-offline-dry-run-contracts.js";
 import { runBasicOfflineDryRun } from "./collection/basic-offline-dry-run.js";
@@ -17,6 +22,140 @@ import {
 } from "./collection/basic-offline-dry-run-result.js";
 
 describe("Basic offline dry run", () => {
+  test.each([
+    ["missing", "MISSING_REQUIRED_FACT"],
+    ["conflict", "UNRESOLVED_CONFLICT"],
+    ["untrusted", "UNTRUSTED_INPUT"],
+  ] as const)("runs the blocked %s path without model-capable stages", async (scenario, blocker) => {
+    const result = await runBasicOfflineDryRun(blockedInput(scenario));
+
+    expect(result.stages).toEqual([
+      { name: "input", outcome: "passed" },
+      { name: "runner", outcome: "skipped" },
+      { name: "preflight", outcome: "blocked" },
+      { name: "draft-bridge", outcome: "skipped" },
+      { name: "assemble", outcome: "passed" },
+      { name: "validate", outcome: "passed" },
+      { name: "artifacts", outcome: "passed" },
+      { name: "boundary", outcome: "passed" },
+    ]);
+    expect(result.validation).toMatchObject({
+      valid: true,
+      readyForHumanReview: false,
+      blockers: [blocker],
+    });
+    expect(Object.keys(result.artifacts ?? {}).sort()).toEqual([
+      "extracted-facts.json",
+      "market-overview.draft.json",
+      "review-report.json",
+      "source-register.json",
+    ]);
+    expect(Object.keys(result)).toEqual([
+      "scenario",
+      "stages",
+      "validation",
+      "artifacts",
+      "boundaryVerdict",
+    ]);
+    expect(JSON.stringify(result)).not.toMatch(/"(runner|bridge|model|material|publish|canonical)"\s*:/);
+    expectRecursivelyFrozen(result);
+  });
+
+  test("keeps conflict evidence unresolved and leaves its draft value null", async () => {
+    const input = blockedInput("conflict");
+    const conflictInputFact = input.material.extractedFacts.facts.find(({ status }) => status === "conflict");
+    if (conflictInputFact === undefined) throw new Error("conflict fixture fact is required");
+    const evidenceBefore = structuredClone(conflictInputFact.evidence);
+
+    const result = await runBasicOfflineDryRun(input);
+    const conflictFact = result.artifacts?.["extracted-facts.json"].facts.find(({ status }) => status === "conflict");
+
+    expect(conflictFact?.evidence).toEqual(evidenceBefore);
+    expect(result.artifacts?.["review-report.json"].conflicts).toEqual([
+      expect.objectContaining({ resolution: "unresolved" }),
+    ]);
+    expect(result.artifacts?.["market-overview.draft.json"].population).toBeNull();
+  });
+
+  test("detaches blocked output from later input and result mutations", async () => {
+    const input = blockedInput("missing");
+    const result = await runBasicOfflineDryRun(input);
+    const original = JSON.stringify(result);
+
+    input.material.sourceRegister.sources[0]!.sourceName = "mutated input";
+    input.material.extractedFacts.facts[0]!.status = "untrusted";
+
+    expect(JSON.stringify(result)).toBe(original);
+    expect(Reflect.set(result, "material", input.material)).toBe(false);
+    expect(Reflect.set(result.artifacts!, "extra", {})).toBe(false);
+    expect(Reflect.set(result.artifacts!["source-register.json"].sources[0]!, "sourceName", "mutated result")).toBe(false);
+    expect(JSON.stringify(result)).toBe(original);
+  });
+
+  test.each(["runner", "bridge", "model"] as const)(
+    "rejects a blocked input with an extra %s own key before reading it",
+    async (key) => {
+      const probe = { reads: 0 };
+      const malformed = blockedInput("missing");
+      Object.defineProperty(malformed, key, {
+        enumerable: true,
+        get() {
+          probe.reads += 1;
+          return {};
+        },
+      });
+
+      const result = await runBasicOfflineDryRun(malformed as unknown as BasicOfflineDryRunInput);
+
+      expect(probe.reads).toBe(0);
+      expectBlockedInputFailure(result);
+    },
+  );
+
+  test.each([
+    ["accessor", () => {
+      const malformed = blockedInput("missing");
+      Object.defineProperty(malformed, "material", {
+        enumerable: true,
+        get() { throw new Error("material must not be read"); },
+      });
+      return malformed;
+    }],
+    ["missing material", () => ({ scenario: "missing" })],
+    ["inherited material", () => Object.assign(Object.create({ material: blockedInput("missing").material }), { scenario: "missing" })],
+    ["symbol key", () => Object.assign(blockedInput("missing"), { [Symbol("hidden")]: true })],
+    ["proxy", () => new Proxy(blockedInput("missing"), {})],
+  ] as const)("rejects blocked top-level %s shape", async (_name, createInput) => {
+    const result = await runBasicOfflineDryRun(createInput() as unknown as BasicOfflineDryRunInput);
+
+    expectBlockedInputFailure(result);
+  });
+
+  test.each([
+    ["scenario mismatch", "conflict", blockedInput("missing")],
+    ["extra blocker", "missing", materialWithExtraBlocker("missing")],
+    ["missing blocker", "missing", materialWithoutScenarioBlocker("missing")],
+  ] as const)("fail-closes blocked input on %s", async (_name, scenario, material) => {
+    const result = await runBasicOfflineDryRun({ scenario, material } as BasicOfflineDryRunInput);
+
+    expect(result.validation).toMatchObject({ valid: false, readyForHumanReview: false });
+    expect(result.validation.errors).toEqual(["P1-6D preflight failed"]);
+    expect(result.artifacts).toBeNull();
+    expect(result.stages.slice(3, 7).every(({ outcome }) => outcome === "skipped")).toBe(true);
+    expect(JSON.stringify(result)).not.toContain("secret");
+  });
+
+  test("does not repair invalid blocked material and returns a fixed assembler error", async () => {
+    const material = blockedInput("missing").material;
+    material.marketOverviewDraft.countryCode = "YY";
+
+    const result = await runBasicOfflineDryRun({ scenario: "missing", material });
+
+    expect(result.validation.errors).toEqual(["P1-6D assemble failed"]);
+    expect(result.artifacts).toBeNull();
+    expect(result.stages[4]).toEqual({ name: "assemble", outcome: "blocked" });
+  });
+
   test("normal runs runner before bridge and returns a ready four-file result", async () => {
     const fixture = createBasicCollectionAuditFixture();
     const calls: string[] = [];
@@ -429,6 +568,62 @@ function normalInput(
   };
 }
 
+function blockedInput(
+  scenario: "missing" | "conflict" | "untrusted",
+): { scenario: typeof scenario; material: BasicCollectionAuditAssemblyInput } {
+  const fixture = readBasicCollectionAuditFixture(scenario);
+  return {
+    scenario,
+    material: {
+      countryDirectory: fixture.countryDirectory,
+      runId: fixture.runId,
+      sourceRegister: fixture.sourceRegister,
+      extractedFacts: fixture.extractedFacts,
+      marketOverviewDraft: fixture.marketOverviewDraft,
+      sourceChecks: fixture.reviewReport.sourceChecks,
+      injectionRisks: fixture.reviewReport.injectionRisks,
+    },
+  };
+}
+
+function materialWithExtraBlocker(
+  scenario: "missing" | "conflict" | "untrusted",
+): BasicCollectionAuditAssemblyInput {
+  return { ...blockedInput(scenario).material, sourceChecks: [] };
+}
+
+function materialWithoutScenarioBlocker(
+  scenario: "missing" | "conflict" | "untrusted",
+): BasicCollectionAuditAssemblyInput {
+  const material = blockedInput(scenario).material;
+  for (const fact of material.extractedFacts.facts) {
+    if (fact.status === scenario) {
+      fact.status = "candidate";
+      if (fact.evidence[0] !== undefined) {
+        fact.evidence = [fact.evidence[0]];
+      }
+    }
+  }
+  return material;
+}
+
+function expectBlockedInputFailure(
+  result: Awaited<ReturnType<typeof runBasicOfflineDryRun>>,
+): void {
+  expect(result.stages).toEqual([
+    { name: "input", outcome: "blocked" },
+    { name: "runner", outcome: "skipped" },
+    { name: "preflight", outcome: "skipped" },
+    { name: "draft-bridge", outcome: "skipped" },
+    { name: "assemble", outcome: "skipped" },
+    { name: "validate", outcome: "skipped" },
+    { name: "artifacts", outcome: "skipped" },
+    { name: "boundary", outcome: "passed" },
+  ]);
+  expect(result.validation.errors).toEqual(["P1-6D input failed"]);
+  expect(result.artifacts).toBeNull();
+}
+
 function expectRecursivelyFrozen(value: unknown): void {
   if (value === null || typeof value !== "object") return;
   expect(Object.isFrozen(value)).toBe(true);
@@ -436,6 +631,21 @@ function expectRecursivelyFrozen(value: unknown): void {
 }
 
 const FAILURE_SECRET = "provider=https://secret.example/raw-cache/path";
+
+const compileTimeBlockedMaterial = blockedInput("missing").material;
+const compileTimeFakeRunner = {} as BasicOfflineNormalDryRunInput["runner"];
+const compileTimeFakeBridge = {} as BasicOfflineNormalDryRunInput["bridge"];
+const compileTimeFakeModel = {} as BasicOfflineNormalDryRunInput["model"];
+// @ts-expect-error blocked scenarios cannot carry a runner
+const invalidBlockedRunner: BasicOfflineDryRunInput = { scenario: "missing", material: compileTimeBlockedMaterial, runner: compileTimeFakeRunner };
+// @ts-expect-error blocked scenarios cannot carry a bridge
+const invalidBlockedBridge: BasicOfflineDryRunInput = { scenario: "missing", material: compileTimeBlockedMaterial, bridge: compileTimeFakeBridge };
+// @ts-expect-error blocked scenarios cannot carry a model
+const invalidBlockedModel: BasicOfflineDryRunInput = { scenario: "missing", material: compileTimeBlockedMaterial, model: compileTimeFakeModel };
+void invalidBlockedRunner;
+void invalidBlockedBridge;
+void invalidBlockedModel;
+
 type RunnerFactory = (
   fixture: BasicCollectionAuditBundle,
   probe: FailureProbe,

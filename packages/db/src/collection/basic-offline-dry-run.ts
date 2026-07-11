@@ -24,6 +24,7 @@ import {
   createBasicOfflineStageOutcomes,
 } from "./basic-offline-dry-run-result.js";
 import { preflightBasicOfflineCollection } from "./basic-offline-source-preflight.js";
+import { runBasicOfflineBlockedDryRun } from "./basic-offline-blocked-dry-run.js";
 import { parseBasicMarketOverviewDraft } from "./basic-market-overview-draft-parser.js";
 import {
   deepFreezeBasicOfflineValue,
@@ -57,6 +58,7 @@ export async function runBasicOfflineDryRun(
   input: BasicOfflineDryRunInput,
 ): Promise<BasicOfflineDryRunResult> {
   const scenario = readScenario(input);
+  if (scenario !== "normal") return runBasicOfflineBlockedDryRun(input, scenario);
   const parsed = readNormalInput(input);
   if (parsed === null) {
     const stages = createBasicOfflineStageOutcomes();
