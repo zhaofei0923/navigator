@@ -23,10 +23,19 @@ export async function resolve(specifier, context, nextResolve) {
     if (!parentPath.startsWith(repositoryPrefix)) throw error;
 
     const candidate = new URL(`${specifier.slice(0, -3)}.ts`, context.parentURL);
-    const candidatePath = await realpath(fileURLToPath(candidate));
+    let candidatePath;
+    try {
+      candidatePath = await realpath(fileURLToPath(candidate));
+    } catch {
+      throw error;
+    }
     if (!candidatePath.startsWith(repositoryPrefix)) throw error;
 
-    await access(candidatePath);
+    try {
+      await access(candidatePath);
+    } catch {
+      throw error;
+    }
     return { shortCircuit: true, url: pathToFileURL(candidatePath).href };
   }
 }

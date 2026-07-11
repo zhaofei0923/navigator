@@ -62,4 +62,21 @@ describe("repository TypeScript source loader", () => {
       await rm(outsideDirectory, { recursive: true, force: true });
     }
   });
+
+  test("preserves the original error when the in-repository TypeScript counterpart is missing", async () => {
+    const parentURL = pathToFileURL(fileURLToPath(import.meta.url)).href;
+    const resolutionError = Object.assign(new Error("module not found"), {
+      code: "ERR_MODULE_NOT_FOUND",
+    });
+
+    await expect(
+      resolve(
+        "./does-not-exist.js",
+        { parentURL },
+        async () => {
+          throw resolutionError;
+        },
+      ),
+    ).rejects.toBe(resolutionError);
+  });
 });
