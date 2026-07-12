@@ -180,6 +180,101 @@ describe("Basic reviewed v2 materialization", () => {
     });
   });
 
+  test("rejects a branded result whose capture differs only by response final URL", async () => {
+    const preliminaryFixture = await documentFixture();
+    const redirectedFixture = await documentFixture(
+      "reviewed fixture",
+      false,
+      false,
+      "https://documents.example/redirected/official.html",
+    );
+
+    expectInvalid({
+      preliminary: preliminaryFixture.preliminary,
+      structuredReview: null,
+      documentResult: redirectedFixture.result,
+      editorial: documentEditorial(preliminaryFixture),
+    });
+  });
+
+  test("accepts reordered captures for two manual sources and rejects duplicate capture IDs", async () => {
+    const fixture = await documentFixture("reviewed fixture", false, false, null, true);
+    const forward = materializeBasicReviewedRunV2({
+      preliminary: fixture.preliminary,
+      structuredReview: null,
+      documentResult: fixture.result,
+      editorial: documentEditorial(fixture),
+    });
+    const reversedPreliminary = {
+      ...fixture.preliminary,
+      documentCaptures: [...fixture.preliminary.documentCaptures].reverse(),
+    };
+    const reversed = materializeBasicReviewedRunV2({
+      preliminary: reversedPreliminary,
+      structuredReview: null,
+      documentResult: fixture.result,
+      editorial: documentEditorial(fixture),
+    });
+
+    expect(reversed).toEqual(forward);
+    expect(forward.materialization.sourceRegister.sources.map(({ sourceId }) => sourceId))
+      .toEqual(["official-html", "official-pdf"]);
+    expectInvalid({
+      preliminary: {
+        ...fixture.preliminary,
+        documentCaptures: [
+          fixture.preliminary.documentCaptures[0]!,
+          fixture.preliminary.documentCaptures[0]!,
+        ],
+      },
+      structuredReview: null,
+      documentResult: fixture.result,
+      editorial: documentEditorial(fixture),
+    });
+  });
+
+  test.each([
+    ["catalog source name", { sourceName: "Renamed official publication" }],
+    ["catalog source family", { sourceFamily: "regulator" }],
+    ["catalog credibility", { credibility: "VERIFIED" as const }],
+    ["manifest request URL", { filename: "alternate.html" }],
+    ["manifest retrieval timestamp", { retrievedAt: "2026-07-13T01:00:01.000Z" }],
+  ])("rejects a real branded result with %s drift", async (_label, overrides) => {
+    const preliminaryFixture = await documentFixture();
+    const driftedFixture = await documentFixture(
+      "reviewed fixture", false, false, null, false, overrides,
+    );
+
+    expectInvalid({
+      preliminary: preliminaryFixture.preliminary,
+      structuredReview: null,
+      documentResult: driftedFixture.result,
+      editorial: documentEditorial(preliminaryFixture),
+    });
+  });
+
+  test("preserves same-method conflicts from two manual sources", async () => {
+    const fixture = await documentFixture("reviewed fixture", false, true, null, true);
+
+    const result = materializeBasicReviewedRunV2({
+      preliminary: fixture.preliminary,
+      structuredReview: null,
+      documentResult: fixture.result,
+      editorial: documentEditorial(fixture),
+    });
+    const population = result.materialization.extractedFacts.facts.find(
+      ({ fieldPath }) => fieldPath === "marketOverview.population",
+    );
+
+    expect(population).toMatchObject({
+      fieldPath: "marketOverview.population",
+      extractionMethod: "manual",
+      status: "conflict",
+    });
+    expect(population?.evidence.map(({ sourceId }) => sourceId))
+      .toEqual(["official-html", "official-pdf"]);
+  });
+
   test("rejects deterministic/manual coexistence and protected editorial replacement", async () => {
     const fixture = await documentFixture("reviewed fixture", false, true);
     const deterministic = structuredPreliminary("marketOverview.population", 100, {
@@ -413,19 +508,30 @@ interface DocumentFixture {
   readonly result: BasicDocumentMaterializationResult;
 }
 
+interface DocumentFixtureOverrides {
+  readonly sourceName?: string;
+  readonly sourceFamily?: string;
+  readonly credibility?: "OFFICIAL" | "VERIFIED";
+  readonly filename?: string;
+  readonly retrievedAt?: string;
+}
+
 async function documentFixture(
   bodyText = "reviewed fixture",
   withRisk = false,
   withPopulation = false,
+  finalUrl: string | null = null,
+  withSecondSource = false,
+  overrides: DocumentFixtureOverrides = {},
 ): Promise<DocumentFixture> {
   const catalog = parseBasicSourceCatalog({
     schemaVersion: "basic-source-catalog/v1",
     catalogVersion: CATALOG_VERSION,
     sources: [{
       sourceId: "official-html",
-      sourceName: "Official HTML publication",
-      sourceFamily: "government",
-      credibility: "OFFICIAL",
+      sourceName: overrides.sourceName ?? "Official HTML publication",
+      sourceFamily: overrides.sourceFamily ?? "government",
+      credibility: overrides.credibility ?? "OFFICIAL",
       format: "html",
       countryScope: [COUNTRY_CODE],
       requestTemplate: {
@@ -433,7 +539,7 @@ async function documentFixture(
         pathSegments: [
           { kind: "literal", value: "sources" },
           { kind: "placeholder", value: "countryCode" },
-          { kind: "literal", value: "official.html" },
+          { kind: "literal", value: overrides.filename ?? "official.html" },
         ],
         query: [],
       },
@@ -451,25 +557,58 @@ async function documentFixture(
       fieldPaths: withPopulation
         ? ["country.summary", "marketOverview.population"]
         : ["country.summary"],
-    }],
+    }, ...(withSecondSource ? [{
+      sourceId: "official-pdf",
+      sourceName: "Official PDF publication",
+      sourceFamily: "energy-authority",
+      credibility: "VERIFIED",
+      format: "pdf",
+      countryScope: [COUNTRY_CODE],
+      requestTemplate: {
+        origin: "https://documents.example",
+        pathSegments: [
+          { kind: "literal" as const, value: "sources" },
+          { kind: "placeholder" as const, value: "countryCode" },
+          { kind: "literal" as const, value: "official.pdf" },
+        ],
+        query: [],
+      },
+      accept: "application/pdf",
+      approvedOrigins: ["https://documents.example"],
+      allowedQueryParameters: [],
+      accessMode: "open",
+      licenseName: "Official public information",
+      licenseUrl: "https://documents.example/license",
+      attribution: "Official authority",
+      refreshCadence: "event-driven",
+      adapterId: "basic-manual-document-capture",
+      adapterVersion: "1.0.0",
+      adapterKind: "manual-document" as const,
+      fieldPaths: ["marketOverview.population"],
+    }] : [])],
     countryMappings: [],
   });
   const plan = createBasicSourceExecutionPlan({
     catalog,
     countryCode: COUNTRY_CODE,
-    sourceIds: ["official-html"],
+    sourceIds: withSecondSource
+      ? ["official-html", "official-pdf"]
+      : ["official-html"],
   });
   const root = mkdtempSync(join(tmpdir(), "navigator-v2-materialization-"));
   roots.add(root);
   const transport: BasicSourceTransportV2 = {
     async execute(request) {
-      const body = new TextEncoder().encode(`<html>${bodyText}</html>`);
+      const pdf = request.accept === "application/pdf";
+      const body = new TextEncoder().encode(
+        pdf ? `%PDF-1.7\n${bodyText}` : `<html>${bodyText}</html>`,
+      );
       return {
         status: 200,
-        finalUrl: request.url,
-        redirectChain: [],
-        contentType: "text/html",
-        retrievedAt: "2026-07-13T01:00:00.000Z",
+        finalUrl: finalUrl ?? request.url,
+        redirectChain: finalUrl === null ? [] : [finalUrl],
+        contentType: request.accept,
+        retrievedAt: overrides.retrievedAt ?? "2026-07-13T01:00:00.000Z",
         body: bytes(body),
       };
     },
@@ -481,14 +620,14 @@ async function documentFixture(
     plan,
     transport,
   });
-  const capture = preliminary.documentCaptures[0]!;
-  const documentPlan = parseBasicDocumentObservationPlan({
+  const documentPlans = preliminary.documentCaptures.map((capture) =>
+    parseBasicDocumentObservationPlan({
     schemaVersion: "basic-document-observation-plan/v1",
     runId: RUN_ID,
     countryCode: COUNTRY_CODE,
     catalogVersion: plan.catalogVersion,
     catalogSha256: plan.catalogSha256,
-    sourceId: "official-html",
+    sourceId: capture.catalogSource.sourceId,
     capture: {
       adapterId: capture.manifest.adapterId,
       adapterVersion: capture.manifest.adapterVersion,
@@ -498,7 +637,7 @@ async function documentFixture(
       byteLength: capture.manifest.response.byteLength,
       contentSha256: capture.manifest.response.contentSha256,
     },
-    observations: [
+    observations: capture.catalogSource.sourceId === "official-html" ? [
       {
         usage: "editorial-evidence",
         fieldPath: "country.summary",
@@ -515,33 +654,51 @@ async function documentFixture(
         year: 2025,
         uncertainty: null,
       }] : []),
-    ],
-  });
+    ] : [{
+      usage: "source-fact" as const,
+      fieldPath: "marketOverview.population",
+      locator: "pdf:page=2#population",
+      rawValue: "101",
+      normalizedValue: 101,
+      unit: "people",
+      year: 2025,
+      uncertainty: null,
+    }],
+  }));
   const review = parseBasicManualSourceReview({
     schemaVersion: "basic-manual-source-review/v1",
     runId: RUN_ID,
     countryCode: COUNTRY_CODE,
     catalogVersion: plan.catalogVersion,
     catalogSha256: plan.catalogSha256,
-    sources: [{
-      sourceId: "official-html",
-      publishedAt: "2026-07-01T00:00:00.000Z",
+    sources: preliminary.documentCaptures.map(({ catalogSource }) => ({
+      sourceId: catalogSource.sourceId,
+      publishedAt: catalogSource.format === "html"
+        ? "2026-07-01T00:00:00.000Z"
+        : null,
       accessNotes: null,
-      promptInjectionRisk: withRisk ? "suspected" : "none",
-      sourceCheck: { status: "passed", notes: null },
-      injectionRisks: withRisk ? [{
+      promptInjectionRisk: withRisk && catalogSource.format === "html"
+        ? "suspected"
+        : "none",
+      sourceCheck: {
+        status: "passed" as const,
+        notes: catalogSource.format === "html" ? null : "Publication date is not stated",
+      },
+      injectionRisks: withRisk && catalogSource.format === "html" ? [{
         locator: "html:section=overview",
-        severity: "suspected",
+        severity: "suspected" as const,
         details: "Instruction-like content was reviewed",
       }] : [],
-    }],
+    })),
   }, {
     runId: RUN_ID,
     countryCode: COUNTRY_CODE,
     catalogVersion: plan.catalogVersion,
     catalogSha256: plan.catalogSha256,
     deterministicSourceIds: [],
-    manualSourceIds: ["official-html"],
+    manualSourceIds: preliminary.documentCaptures
+      .map(({ catalogSource }) => catalogSource.sourceId)
+      .sort((left, right) => left.localeCompare(right)),
   });
   return {
     plan,
@@ -550,7 +707,7 @@ async function documentFixture(
       plan,
       captures: preliminary.documentCaptures,
       review,
-      documentPlans: [documentPlan],
+      documentPlans,
     }),
   };
 }

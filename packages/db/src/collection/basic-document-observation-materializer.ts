@@ -68,6 +68,13 @@ export interface BasicDocumentMaterializationProvenanceV2 {
   readonly catalogVersion: string;
   readonly catalogSha256: string;
   readonly manualSourceIds: readonly string[];
+  readonly captureBindings: readonly Readonly<{
+    sourceId: string;
+    requestUrl: string;
+    finalUrl: string;
+    retrievedAt: string;
+    contentSha256: string;
+  }>[];
 }
 
 export interface BasicDocumentMaterializationInput {
@@ -156,6 +163,17 @@ export function materializeBasicDocumentEvidence(
       catalogVersion: trustedPlan.plan.catalogVersion,
       catalogSha256: trustedPlan.plan.catalogSha256,
       manualSourceIds: trustedPlan.manualEntries.map(({ source }) => source.sourceId),
+      captureBindings: trustedPlan.manualEntries.map(({ source }) => {
+        const capture = captureBySource.get(source.sourceId);
+        if (capture === undefined) invalid();
+        return {
+          sourceId: source.sourceId,
+          requestUrl: capture.manifest.request.url,
+          finalUrl: capture.manifest.response.finalUrl,
+          retrievedAt: capture.manifest.response.retrievedAt,
+          contentSha256: capture.manifest.response.contentSha256,
+        };
+      }),
     }));
     return result;
   } catch {

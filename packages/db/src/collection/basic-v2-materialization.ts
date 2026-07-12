@@ -67,6 +67,9 @@ const EVIDENCE_KEYS = [
 ] as const;
 const STRUCTURED_EVIDENCE_KEYS = ["sourceId", "fieldPath", "locator", "rawValue"] as const;
 const RECEIPT_KEYS = ["sourceId", "contentSha256", "byteLength", "reused"] as const;
+const CAPTURE_BINDING_KEYS = [
+  "sourceId", "requestUrl", "finalUrl", "retrievedAt", "contentSha256",
+] as const;
 const MAX_SOURCES = 64;
 const MAX_FACTS = 256;
 const MAX_EVIDENCE = 2_048;
@@ -224,22 +227,47 @@ function bindDocumentResult(
   const provenance = snapshotBasicDocumentMaterializationProvenanceV2(value);
   if (provenance === null || !sameIdentity(provenance, preliminary.sourceRegister)) invalid();
   const captureById = new Map<string, BasicPreliminarySourceRunV2["documentCaptures"][number]>();
+  const captureIds: string[] = [];
   for (const capture of captures) {
     const captured = snapshotBasicDocumentCaptureProvenanceV2(capture);
     if (
       captured === null || !sameIdentity(captured, preliminary.sourceRegister) ||
       captured.catalogSource !== capture.catalogSource ||
       captured.manifest !== capture.manifest ||
-      captured.sourceId !== capture.catalogSource.sourceId ||
-      captureById.has(captured.sourceId)
+      captured.sourceId !== capture.catalogSource.sourceId
     ) invalid();
+    captureIds.push(captured.sourceId);
     captureById.set(captured.sourceId, capture);
   }
-  const manualIds = [...captureById.keys()].sort(compareText);
-  if (!sameStrings(manualIds, provenance.manualSourceIds)) invalid();
+  const manualIds = uniqueSortedIds(captureIds);
+  const provenanceIds = uniqueSortedIds(snapshotTextArray(
+    provenance.manualSourceIds,
+    MAX_SOURCES,
+  ));
+  const provenanceBindings = snapshotCaptureBindings(provenance.captureBindings);
+  const bindingIds = uniqueSortedIds(provenanceBindings.map(({ sourceId }) => sourceId));
   const result = value as BasicDocumentMaterializationResult;
-  const resultIds = result.sources.map(({ sourceId }) => sourceId);
-  if (!sameStrings(resultIds, manualIds)) invalid();
+  const resultIds = uniqueSortedIds(snapshotResultSourceIds(result.sources));
+  if (
+    !sameStrings(manualIds, provenanceIds) ||
+    !sameStrings(manualIds, bindingIds) ||
+    !sameStrings(manualIds, resultIds)
+  ) invalid();
+  const bindingById = new Map(
+    provenanceBindings.map((binding) => [binding.sourceId, binding]),
+  );
+  for (const sourceId of manualIds) {
+    const capture = captureById.get(sourceId);
+    const binding = bindingById.get(sourceId);
+    if (capture === undefined || binding === undefined) invalid();
+    const manifest = capture.manifest;
+    if (
+      binding.requestUrl !== manifest.request.url ||
+      binding.finalUrl !== manifest.response.finalUrl ||
+      binding.retrievedAt !== manifest.response.retrievedAt ||
+      binding.contentSha256 !== manifest.response.contentSha256
+    ) invalid();
+  }
   for (const source of result.sources) {
     const capture = captureById.get(source.sourceId);
     if (capture === undefined) invalid();
@@ -636,6 +664,74 @@ function denseReferences(value: unknown, maximum: number): readonly BasicPrelimi
   return Object.freeze(result);
 }
 
+function snapshotTextArray(value: unknown, maximum: number): readonly string[] {
+  return denseValues(value, maximum).map((item) => {
+    if (typeof item !== "string" || item.length === 0) invalid();
+    return item;
+  });
+}
+
+function snapshotCaptureBindings(value: unknown): readonly Readonly<{
+  sourceId: string;
+  requestUrl: string;
+  finalUrl: string;
+  retrievedAt: string;
+  contentSha256: string;
+}>[] {
+  return denseValues(value, MAX_SOURCES).map((item) => {
+    const properties = exactProperties(item, CAPTURE_BINDING_KEYS);
+    const sourceId = properties.get("sourceId");
+    const requestUrl = properties.get("requestUrl");
+    const finalUrl = properties.get("finalUrl");
+    const retrievedAt = properties.get("retrievedAt");
+    const contentSha256 = properties.get("contentSha256");
+    if (
+      typeof sourceId !== "string" || sourceId.length === 0 ||
+      typeof requestUrl !== "string" || requestUrl.length === 0 ||
+      typeof finalUrl !== "string" || finalUrl.length === 0 ||
+      typeof retrievedAt !== "string" || retrievedAt.length === 0 ||
+      typeof contentSha256 !== "string" || contentSha256.length === 0
+    ) invalid();
+    return Object.freeze({ sourceId, requestUrl, finalUrl, retrievedAt, contentSha256 });
+  });
+}
+
+function snapshotResultSourceIds(value: unknown): readonly string[] {
+  return denseValues(value, MAX_SOURCES).map((item) => {
+    if (typeof item !== "object" || item === null || isProxy(item)) invalid();
+    const descriptor = Object.getOwnPropertyDescriptor(item, "sourceId");
+    if (
+      descriptor === undefined || !descriptor.enumerable ||
+      !Object.hasOwn(descriptor, "value") ||
+      typeof descriptor.value !== "string" || descriptor.value.length === 0
+    ) invalid();
+    return descriptor.value;
+  });
+}
+
+function denseValues(value: unknown, maximum: number): readonly unknown[] {
+  if (!Array.isArray(value) || isProxy(value) || Object.getPrototypeOf(value) !== Array.prototype) {
+    invalid();
+  }
+  const length = Object.getOwnPropertyDescriptor(value, "length");
+  if (
+    length === undefined || !Object.hasOwn(length, "value") ||
+    typeof length.value !== "number" || !Number.isSafeInteger(length.value) ||
+    length.value < 0 || length.value > maximum ||
+    Reflect.ownKeys(value).length !== length.value + 1
+  ) invalid();
+  const result: unknown[] = [];
+  for (let index = 0; index < length.value; index += 1) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+    if (
+      descriptor === undefined || !descriptor.enumerable ||
+      !Object.hasOwn(descriptor, "value")
+    ) invalid();
+    result.push(descriptor.value);
+  }
+  return Object.freeze(result);
+}
+
 function jsonValue(value: unknown): BasicCollectionJsonValue {
   const snapshot = snapshotBasicOfflineValue(value);
   if (!snapshot.valid) invalid();
@@ -686,6 +782,11 @@ function requireSortedUnique(values: readonly string[]): void {
 
 function requireUnique(values: readonly string[]): void {
   if (new Set(values).size !== values.length) invalid();
+}
+
+function uniqueSortedIds(values: readonly string[]): readonly string[] {
+  requireUnique(values);
+  return Object.freeze([...values].sort(compareText));
 }
 
 function sameStrings(left: readonly string[], right: readonly string[]): boolean {

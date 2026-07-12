@@ -560,9 +560,18 @@ describe("Basic document evidence materializer", () => {
       catalogVersion: fixture.plan.catalogVersion,
       catalogSha256: fixture.plan.catalogSha256,
       manualSourceIds: ["official-html", "official-pdf"],
+      captureBindings: fixture.captures.map(({ manifest }) => ({
+        sourceId: manifest.sourceId,
+        requestUrl: manifest.request.url,
+        finalUrl: manifest.response.finalUrl,
+        retrievedAt: manifest.response.retrievedAt,
+        contentSha256: manifest.response.contentSha256,
+      })),
     });
     expect(Object.isFrozen(provenance)).toBe(true);
     expect(Object.isFrozen(provenance?.manualSourceIds)).toBe(true);
+    expect(Object.isFrozen(provenance?.captureBindings)).toBe(true);
+    expect(provenance?.captureBindings.every(Object.isFrozen)).toBe(true);
     expect(snapshotBasicDocumentMaterializationProvenanceV2(handmade)).toBeNull();
     expect(snapshotBasicDocumentMaterializationProvenanceV2({ ...result })).toBeNull();
     expect(snapshotBasicDocumentMaterializationProvenanceV2(
