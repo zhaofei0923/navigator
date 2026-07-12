@@ -117,6 +117,12 @@ graph LR
 - 验收：仅 `normal` 可调用 injected P1-6B runner；runner 返回后先以 source/fact 快照与显式 `sourceChecks`/`injectionRisks` 完成不依赖 draft 的 preflight，任何 failed check、injection risk、missing/conflict/untrusted 或不可信来源均须在 injected P1-6C bridge/model 前停止。成功结果须为 `blockers = []`、`readyForHumanReview = true` 的固定四文件递归冻结映射。`missing`、`conflict`、`untrusted` union 不含 runner/bridge/model，runtime 拒绝这些额外 own keys，两个 model-capable stages 均为 `skipped`，并分别且仅有 `MISSING_REQUIRED_FACT`、`UNRESOLVED_CONFLICT`、`UNTRUSTED_INPUT`；冲突处置必须新 run。DB 与 Web 各自在本包测试边界内证明 import/coverage/AI eligibility 和 country service/route 隔离，DB 测试不得导入 Web，也不得发明 sentinel seam。`boundaryVerdict` 的 `KnowledgeChunk = 0`、`aiUsable = true` 记录数 0、`aiEligibleKnowledgeIds = []` 仅为 fixed negative-only attestation，不是 artifact/AI payload，不得声称运行当前不存在的 RAG。生产 API 不 I/O、不返回 canonical/Prisma/coverage/AI/publish payload；测试不得真实 fetch、Hermes、llama transport 或 child process。
 - 人工确认：否（若引入第三方依赖或触及既有 AGENTS.md 人工闸门，须单独人工确认）。
 
+#### DATA-BASIC-CATALOG-1 Versioned source catalog（已完成）
+- 目标：按 [basic-source-catalog.md](./basic-source-catalog.md) 与已批准的 [Basic 来源边界设计](./superpowers/specs/2026-07-12-basic-source-boundary-design.md) 建立 exact、version-controlled source catalog、country identifier mapping、结构化 GET materializer 和静态 adapter registry；首版只绑定四个既有 World Bank open JSON adapters。
+- 验收：catalog parser 从 `unknown` 重建、递归冻结并生成 canonical `catalogSha256`；unsafe shape、资源超限、mapping/source/field drift、manual executor identity drift 与 optional-credentialed selection 全部 fail closed；四个 World Bank 请求和离线 fixture observations 与既有 v1 行为一致；不修改 v1 request/capture/audit、公开 exports、Prisma、canonical data 或 AI 边界，测试不发起网络请求。
+- 测试：catalog/parser/materializer/registry focused tests、World Bank fixture 回归、P1-6B runner 回归，以及仓库 `lint` / `typecheck` / `test` / forced Turbo gates。
+- 人工确认：否（来源边界设计已由项目所有者批准；本卡不新增依赖，不修改统一数据模型、AI Prompt/检索边界、权限或计费）。
+
 #### DATA-BASIC-<ISO2> 单国 Basic 数据任务卡
 - 目标：每张任务卡只采集一个 ISO 3166-1 alpha-2 国家，使用固定 10 模块模型完成 Basic 国家骨架和市场基础画像。
 - 验收：一国一任务卡、一分支、一审核周期，且仅合并一次到 `main`；合并后的 `main` 验证通过后，仅推送一次到 `origin/main`。数据先为 `draft`，仅在人工审核后发布；Basic 数据保持 `aiUsable = false` 且不产生知识片段；通过仓库校验和代表性 Web 检查，确认基础画像正常渲染、`BUILDING` 模块显示占位。
