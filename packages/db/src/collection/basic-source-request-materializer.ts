@@ -43,6 +43,7 @@ const SOURCE_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const SHA256 = /^[0-9a-f]{64}$/;
 const PRE_ENCODED = /%[0-9A-Fa-f]{2}/;
 const MAX_ACTIVE_SOURCES = 64;
+const MAX_URL_BYTES = 8_192;
 
 export function createBasicSourceExecutionPlan(input: {
   readonly catalog: BasicSourceCatalogSnapshot;
@@ -112,6 +113,7 @@ function materializeRequest(
     );
   }
   const canonicalUrl = url.toString();
+  if (Buffer.byteLength(canonicalUrl, "utf8") > MAX_URL_BYTES) planInvalid();
   const reparsed = new URL(canonicalUrl);
   const queryNames = Array.from(reparsed.searchParams.keys());
   if (

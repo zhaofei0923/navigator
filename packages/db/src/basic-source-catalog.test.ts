@@ -361,6 +361,12 @@ describe("Basic source catalog parser", () => {
 });
 
 describe("Basic source request materializer", () => {
+  const finalUrlCases = [
+    ["path literal", pathLiteralCatalogForToken],
+    ["query literal", queryLiteralCatalogForToken],
+    ["percent-expanded sourceCountryId mapping", mappedCountryIdCatalogForToken],
+  ] as const;
+
   test("materializes countryCode in a path and preserves exact query order", () => {
     const catalog = parseBasicSourceCatalog(validCatalog());
 
@@ -455,6 +461,23 @@ describe("Basic source request materializer", () => {
       allowedQueryParameters: ["$filter"],
     });
   });
+
+  test.each(finalUrlCases)(
+    "accepts an 8,192-byte final URL and rejects 8,193 bytes for a %s",
+    (_label, createCatalog) => {
+      const { plan, token } = findExactPlannedUrl(createCatalog, 8_192);
+      expect(Buffer.byteLength(plan.sources[0]!.request.url, "utf8")).toBe(
+        8_192,
+      );
+      const catalog = parseBasicSourceCatalog(createCatalog(`${token}x`));
+
+      expect(() => createBasicSourceExecutionPlan({
+        catalog,
+        countryCode: "VN",
+        sourceIds: ["world-bank-country"],
+      })).toThrow("source catalog execution plan is invalid");
+    },
+  );
 
   test.each([
     ["a lowercase country code", { countryCode: "vn", sourceIds: ["world-bank-country"] }],
@@ -802,6 +825,83 @@ function mappedCatalog(mappingOverrides: MutableRecord = {}) {
     ...mappingOverrides,
   } as { countryCode: string; sourceId: string; sourceCountryId: string }];
   return value;
+}
+
+function pathLiteralCatalogForToken(token: string) {
+  const catalog = validCatalog();
+  const source = catalog.sources[0]!;
+  source.requestTemplate = {
+    origin: source.requestTemplate.origin,
+    pathSegments: [{ kind: "literal", value: token }],
+    query: [],
+  };
+  source.allowedQueryParameters = [];
+  return catalog;
+}
+
+function queryLiteralCatalogForToken(token: string) {
+  const catalog = validCatalog();
+  const source = catalog.sources[0]!;
+  source.requestTemplate = {
+    origin: source.requestTemplate.origin,
+    pathSegments: [{ kind: "literal", value: "v2" }],
+    query: [{ name: "q", value: { kind: "literal", value: token } }],
+  };
+  source.allowedQueryParameters = ["q"];
+  return catalog;
+}
+
+function mappedCountryIdCatalogForToken(token: string) {
+  const catalog = mappedCatalog();
+  const source = catalog.sources[0]!;
+  source.requestTemplate = {
+    origin: source.requestTemplate.origin,
+    pathSegments: [{ kind: "placeholder", value: "sourceCountryId" }],
+    query: [],
+  };
+  source.allowedQueryParameters = [];
+  catalog.countryMappings[0]!.sourceCountryId = `/${token}`;
+  return catalog;
+}
+
+function findExactPlannedUrl(
+  createCatalog: (token: string) => ReturnType<typeof validCatalog>,
+  targetByteLength: number,
+) {
+  let lower = 1;
+  let upper = targetByteLength;
+  while (lower <= upper) {
+    const tokenLength = Math.floor((lower + upper) / 2);
+    const token = "x".repeat(tokenLength);
+    const catalog = parseBasicSourceCatalog(createCatalog(token));
+    let plan: ReturnType<typeof createBasicSourceExecutionPlan>;
+    try {
+      plan = createBasicSourceExecutionPlan({
+        catalog,
+        countryCode: "VN",
+        sourceIds: ["world-bank-country"],
+      });
+    } catch (error) {
+      if (
+        !(error instanceof Error) ||
+        error.message !== "source catalog execution plan is invalid"
+      ) throw error;
+      upper = tokenLength - 1;
+      continue;
+    }
+    const actualByteLength = Buffer.byteLength(
+      plan.sources[0]!.request.url,
+      "utf8",
+    );
+    if (actualByteLength < targetByteLength) {
+      lower = tokenLength + 1;
+    } else if (actualByteLength > targetByteLength) {
+      upper = tokenLength - 1;
+    } else {
+      return { plan, token };
+    }
+  }
+  throw new Error("unable to build exact materialized URL fixture");
 }
 
 function catalogWithSources(count: number) {
