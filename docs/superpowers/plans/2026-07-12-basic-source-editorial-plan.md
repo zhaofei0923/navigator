@@ -4,13 +4,13 @@
 
 **Goal:** Convert exact, evidence-bound bilingual operator input into final v2 candidate facts, perform the one approved country-name enrichment, derive system metadata deterministically, and produce a complete materialization result without a model or draft assembler.
 
-**Architecture:** An exact editorial parser enforces path ownership and bounded evidence. The materializer resolves every evidence tuple against either deterministic preliminary observations or reviewed document editorial evidence. A merge phase rejects deterministic/manual ownership collisions except the explicit `country.name` replacement. A derived phase computes flag, representative source, timestamps, credibility, and country code from active evidence, then updates source locators and emits one frozen final source-register/facts/receipts result plus review inputs for the next task.
+**Architecture:** An exact editorial parser enforces path ownership and bounded evidence. Owner-specific wrappers share one fact tuple engine while preserving the existing source-path guard, and a module-private `WeakMap` proves that document evidence came from the reviewed Documents materializer. The reviewed merge builds the complete deterministic/manual source union, resolves bilingual evidence, rejects ownership collisions except the explicit `country.name` replacement, and then derives system metadata into one frozen source-register/facts/receipts result for the next task.
 
 **Tech Stack:** TypeScript strict mode, existing shared i18n/schema enums, audit/v2/document contracts, Node.js crypto, Vitest, pnpm workspace. No new dependencies.
 
 ## Global Constraints
 
-- Read `AGENTS.md`, the approved source-boundary design, and completed Catalog/Formats/Documents docs before editing.
+- Read `AGENTS.md`, the approved source-boundary design, the approved [Editorial interface amendment](../specs/2026-07-12-basic-editorial-interface-amendment-design.md), and completed Catalog/Formats/Documents docs before editing.
 - Work only on `feat/DATA-BASIC-EDITORIAL-1` from latest pushed `main` after Documents is merged.
 - Use TDD and confirm RED before each production slice.
 - The operator may provide only approved editorial paths. Protected values, source metadata, normalized numeric facts, review status, and AI usability are never operator-owned.
@@ -18,7 +18,7 @@
 - Keep APIs package-private and leave `packages/db/src/index.ts` unchanged.
 - Do not modify v1 contracts/behavior or existing source adapters.
 - Do not write canonical/staging/database data and do not add dependencies.
-- Preserve reviewed text and scalar/array raw values verbatim after exact reconstruction; do not trim/rewrap content except when validating that it is nonblank. Reconstruct generic finite-JSON object keys in lexical order so input insertion order cannot change artifact bytes.
+- Preserve reviewed text and scalar/array raw values verbatim after exact reconstruction; do not trim/rewrap content except when validating that it is nonblank. Snapshot generic finite JSON within the approved limits, compare object keys lexically, and require insertion-order permutations to produce byte-identical in-memory output. This card does not introduce the later candidate artifact writer.
 - Errors are stable and redacted; never echo evidence text, URL values, tokens, cookies, or external errors.
 
 ---
@@ -41,6 +41,8 @@
 ### Modify
 
 - `packages/db/src/collection/basic-collection-v2-contracts.ts` - add final materialization/result composition types only.
+- `packages/db/src/collection/basic-v2-fact-materializer.ts` and `packages/db/src/basic-v2-fact-materializer.test.ts` - add an editorial-only wrapper over the shared private tuple engine without widening the existing source wrapper.
+- `packages/db/src/collection/basic-document-observation-materializer.ts` and `packages/db/src/basic-document-observation.test.ts` - brand successful document results with exact run/catalog/manual-source provenance.
 - `docs/basic-country-document-evidence.md`, `docs/basic-country-audit-contract.md`, `docs/basic-country-collection.md`, and `docs/roadmap.md`.
 
 ### Must Remain Unchanged
@@ -122,7 +124,7 @@ pnpm --filter @navigator/db exec vitest run src/basic-editorial-input-parser.tes
 
 - [ ] **Step 3: Implement exact reconstruction**
 
-Import `REGIONS`, `INDUSTRY_TAGS`, and `TECH_TAGS` from the existing shared schema source rather than duplicating values. Use one stable `basic editorial input is invalid` error and reconstruct all JSON keys in schema order.
+Import `REGIONS`, `INDUSTRY_TAGS`, and `TECH_TAGS` from the existing shared schema source rather than duplicating values. Use `classifyBasicV2FieldPath()` as the ownership source of truth, then apply path-specific shape validation; do not copy a second editorial allowlist. Use one stable `basic editorial input is invalid` error and reconstruct all JSON keys in schema order.
 
 - [ ] **Step 4: Confirm GREEN and commit**
 
@@ -134,7 +136,129 @@ git commit -m "feat: validate Basic editorial input"
 
 ---
 
-### Task 2: Evidence Resolution and Editorial Facts
+### Task 2: Owner-Specific Editorial Fact Materialization
+
+**Files:**
+- Modify: `packages/db/src/collection/basic-v2-fact-materializer.ts`
+- Modify: `packages/db/src/basic-v2-fact-materializer.test.ts`
+
+**Interfaces:**
+
+```ts
+export function materializeBasicEditorialObservationsV2(
+  observations: readonly BasicSourcedObservationV2[],
+): readonly BasicExtractedFactV2[];
+```
+
+- [ ] **Step 1: Write failing owner-boundary tests**
+
+Import the missing function and prove that an ordinary editorial observation
+such as `country.summary` materializes as one `candidate` fact with
+`extractionMethod = "manual"`. Cover narrative, region, tag arrays, and exact
+indicator-label paths. Assert that source-backed, `country.name`, derived,
+unknown, malformed indicator, and mixed-owner batches fail with the stable
+redacted v2 fact-materialization error. Keep the existing test that
+`materializeBasicSourceFactsV2()` rejects ordinary editorial paths.
+
+Use semantically equal `rawValue` / `normalizedValue` objects containing
+integer-style keys `"2"` and `"10"` in different insertion orders and assert
+identical fact IDs, evidence order, and `JSON.stringify()` output. Preserve
+the existing conflict, finite-JSON, resource-limit, and input-immutability
+coverage.
+
+- [ ] **Step 2: Confirm RED**
+
+```bash
+pnpm --filter @navigator/db exec vitest run src/basic-v2-fact-materializer.test.ts
+```
+
+Expected failure: the editorial-only function is not exported or defined.
+
+- [ ] **Step 3: Refactor one private fact engine**
+
+Keep tuple grouping, canonical finite-JSON comparison, fact ID generation,
+evidence sorting, uncertainty rules, resource limits, deep freezing, and the
+stable error boundary in one private implementation. The existing
+`materializeBasicSourceFactsV2(observations, extractionMethod)` wrapper must
+continue to admit only `source-backed` and `hybrid-name` owners. The new
+wrapper fixes `extractionMethod = "manual"` and admits only `editorial` owners
+from `classifyBasicV2FieldPath()`; it must not accept a caller-provided owner
+set or extraction method.
+
+- [ ] **Step 4: Confirm GREEN and commit**
+
+```bash
+pnpm --filter @navigator/db exec vitest run src/basic-v2-fact-materializer.test.ts src/basic-document-observation.test.ts src/basic-source-plan-runner-v2.test.ts
+git add packages/db/src/collection/basic-v2-fact-materializer.ts packages/db/src/basic-v2-fact-materializer.test.ts
+git commit -m "feat: materialize Basic editorial observations"
+```
+
+---
+
+### Task 3: Trusted Document Materialization Result
+
+**Files:**
+- Modify: `packages/db/src/collection/basic-document-observation-materializer.ts`
+- Modify: `packages/db/src/basic-document-observation.test.ts`
+
+**Interfaces:**
+
+```ts
+export interface BasicDocumentMaterializationProvenanceV2 {
+  readonly runId: string;
+  readonly countryCode: string;
+  readonly catalogVersion: string;
+  readonly catalogSha256: string;
+  readonly manualSourceIds: readonly string[];
+}
+
+export function snapshotBasicDocumentMaterializationProvenanceV2(
+  value: unknown,
+): BasicDocumentMaterializationProvenanceV2 | null;
+```
+
+- [ ] **Step 1: Write failing provenance tests**
+
+Use the existing real plan-runner/fake-transport/raw-v2-cache fixture to obtain
+a successful document materialization result. Assert that the missing snapshot
+function returns exact run, country, catalog version, catalog digest, and a
+unique source-ID-sorted manual source list for that exact result object. Assert
+`null` for handmade, spread, JSON-cloned, proxied, and unrelated objects.
+
+Produce separately branded results for a different run, country, and catalog
+identity so later Editorial tests can prove cross-identity rejection. Retain
+all existing capture-provenance, review, locator, and redacted-error tests.
+
+- [ ] **Step 2: Confirm RED**
+
+```bash
+pnpm --filter @navigator/db exec vitest run src/basic-document-observation.test.ts
+```
+
+Expected failure: the result-provenance snapshot is not exported or defined.
+
+- [ ] **Step 3: Brand only successful reviewed results**
+
+Create one module-private `WeakMap<object,
+BasicDocumentMaterializationProvenanceV2>`. Register a recursively frozen
+provenance object only after `materializeReviewedSources()` succeeds, using the
+already validated plan/capture/review identity and sorted manual source IDs.
+The snapshot performs no parsing or fallback and returns `null` unless its key
+is the exact result object. Do not add `usage` to
+`BasicEditorialEvidenceObservation` and do not change document result data
+shape.
+
+- [ ] **Step 4: Confirm GREEN and commit**
+
+```bash
+pnpm --filter @navigator/db exec vitest run src/basic-document-observation.test.ts src/basic-source-plan-runner-v2.test.ts
+git add packages/db/src/collection/basic-document-observation-materializer.ts packages/db/src/basic-document-observation.test.ts
+git commit -m "feat: bind Basic document results"
+```
+
+---
+
+### Task 4: Evidence Resolution and Editorial Facts
 
 **Files:**
 - Create: `packages/db/src/collection/basic-editorial-materializer.ts`
@@ -154,20 +278,48 @@ export interface BasicEditorialMaterializationResult {
 
 export function materializeBasicEditorialFacts(input: {
   readonly editorial: BasicCountryEditorialInput;
-  readonly preliminarySources: BasicSourceRegisterV2;
+  readonly reviewedSources: BasicSourceRegisterV2;
   readonly preliminaryFacts: BasicExtractedFactsV2;
   readonly structuredEditorialEvidence:
     readonly BasicStructuredEditorialEvidenceObservation[];
-  readonly documentEditorialEvidence: readonly BasicEditorialEvidenceObservation[];
-  readonly passedSourceIds: readonly string[];
+  readonly documentResult: BasicDocumentMaterializationResult | null;
+  readonly sourceChecks: readonly BasicSourceCheck[];
+  readonly injectionRisks: readonly BasicInjectionRisk[];
 }): BasicEditorialMaterializationResult;
 ```
 
 - [ ] **Step 1: Add failing evidence-binding tests**
 
-For every item, require each evidence tuple to exactly match sourceId, item fieldPath, locator, and rawValue in one eligible `structuredEditorialEvidence` or reviewed document editorial observation. Structured evidence never comes from a final deterministic fact and deliberately has no inherited unit/year because editorial evidence fixes both to null. Document evidence must have `usage=editorial-evidence`. Every referenced source must be open, not UNVERIFIED, passed, and bound to the same run/catalog identity. `country.name` is the sole exception: it resolves its original English/raw evidence from the dedicated preliminary fact during the enrichment step rather than from either editorial-evidence list.
+For every item, require each evidence tuple to exactly match sourceId, item
+fieldPath, locator, and canonical rawValue in one eligible
+`structuredEditorialEvidence` or in `editorialEvidence` owned by the exact
+branded `documentResult`. Never accept an independent document evidence array.
+Structured evidence never comes from a final deterministic fact and
+deliberately has no inherited unit/year because editorial evidence fixes both
+to null.
 
-Test structured and document evidence independently and together, multi-source narrative support, stable evidence ordering, one manual fact per path, deep-equal normalized value in every fact evidence, and uncertainty preservation. Reject missing/orphan/duplicate evidence, a preliminary source-backed fact used as ordinary editorial evidence, wrong path/raw value, failed source, injection-risk source, inactive source, primary source not actually referenced, and any deterministic final fact masquerading as editorial evidence.
+Require editorial, reviewed source register, preliminary facts, and document
+provenance to share exact run/country/catalog identity. `sourceChecks` must
+contain exactly one unique check for every reviewed source with no foreign
+source; every referenced source must have a passed check and no failed check,
+no injection-risk entry, `promptInjectionRisk = "none"`, open access, and
+credibility other than `UNVERIFIED`. Reject missing/duplicate/foreign checks,
+unknown risk sources, and any document result whose branded manual source set
+does not equal the manual portion of reviewed sources.
+
+`country.name` is the sole exception to ordinary evidence lookup: require one
+unique deterministic preliminary candidate, then match the operator evidence
+to its sourceId/locator/rawValue. Its English normalized text must equal the
+source English value exactly; preserve it and require a nonblank Chinese text.
+
+Test structured-only, document-only, and mixed evidence; multi-source narrative
+support; stable evidence ordering; one manual fact per editorial path; the
+manual `country.name` fact; deep-equal normalized value in every fact evidence;
+and uncertainty preservation. Reject missing/orphan/duplicate evidence, a
+preliminary source-backed fact used as ordinary editorial evidence, wrong
+path/raw value, cross-run/country/catalog branded document results, inactive or
+unreviewed sources, primary source not actually referenced, and deterministic
+final facts masquerading as editorial evidence.
 
 - [ ] **Step 2: Confirm RED**
 
@@ -175,19 +327,25 @@ Run `src/basic-editorial-materializer.test.ts`; expect missing implementation.
 
 - [ ] **Step 3: Implement exact resolution**
 
-Build keyed lookup tables from frozen inputs and never scan external content. Facts use `extractionMethod: "manual"`; fact ID and tuple semantics come from `materializeBasicSourceFactsV2`. Return only consumed identifiers, not raw text, in the auxiliary list.
+Reparse the exact editorial input, reconstruct and freeze all other inputs, and
+build bounded keyed lookups without scanning external content. Ordinary facts
+come from `materializeBasicEditorialObservationsV2()`; `country.name` uses the
+existing source wrapper with `extractionMethod = "manual"` after the controlled
+English-preserving enrichment check. Return only consumed identifiers, never
+raw text, in the auxiliary list. Use one stable
+`basic editorial materialization is invalid` error.
 
 - [ ] **Step 4: Confirm GREEN and commit**
 
 ```bash
-pnpm --filter @navigator/db exec vitest run src/basic-editorial-materializer.test.ts src/basic-v2-fact-materializer.test.ts
+pnpm --filter @navigator/db exec vitest run src/basic-editorial-materializer.test.ts src/basic-v2-fact-materializer.test.ts src/basic-document-observation.test.ts
 git add packages/db/src/collection/basic-editorial-materializer.ts packages/db/src/basic-editorial-materializer.test.ts
 git commit -m "feat: bind Basic editorial evidence"
 ```
 
 ---
 
-### Task 3: Controlled `country.name` Enrichment and Ownership Merge
+### Task 5: Reviewed Source Union and Ownership Merge
 
 **Files:**
 - Create: `packages/db/src/collection/basic-v2-materialization.ts`
@@ -212,7 +370,6 @@ export interface BasicReviewedMaterializationV2 {
 export function materializeBasicReviewedRunV2(input: {
   readonly preliminary: BasicPreliminarySourceRunV2;
   readonly structuredReview: BasicStructuredSourceReview | null;
-  readonly manualReview: BasicManualSourceReview | null;
   readonly documentResult: BasicDocumentMaterializationResult | null;
   readonly editorial: BasicCountryEditorialInput;
 }): BasicReviewedMaterializationV2;
@@ -220,11 +377,36 @@ export function materializeBasicReviewedRunV2(input: {
 
 - [ ] **Step 1: Write failing merge/enrichment tests**
 
-Assert identity equality across every input; exact source-check coverage; structured/manual disjointness; source union and receipt coverage; and stable source/fact order. `structuredReview` is null exactly when the plan had no deterministic source; `manualReview` and `documentResult` are both null exactly when it had no manual-document source. Reject every partial or contradictory null combination.
+Assert exact identity equality across preliminary facts/register, editorial,
+structured review, and branded document provenance. `structuredReview` is null
+exactly when the preliminary run has no deterministic source. `documentResult`
+is null exactly when `preliminary.documentCaptures` is empty; otherwise its
+branded manual source set must equal the capture source set. Reject every
+partial, duplicate, overlapping, foreign, or contradictory source combination.
+For every manual source, require the document result record to match the
+corresponding preliminary capture manifest and catalog source on source ID,
+content hash, retrieval time, final/source URL, source name, access mode,
+credibility, and source family; a separately branded result with the same IDs
+but different captured bytes must fail closed.
 
-For `country.name`, require exactly one deterministic preliminary candidate with localized normalized value whose English text exactly equals its raw source English value. Editorial name must preserve that exact English and add a nonblank Chinese value. Replace the preliminary fact with exactly one manual final fact that preserves original sourceId/locator/rawValue; never emit both.
+Build `reviewedSources` as the unique source-ID-sorted union of preliminary
+deterministic records and trusted document records. Require exact receipt
+coverage for that union. Reparse the structured review against deterministic
+IDs and use document-result checks/risks for manual IDs. Aggregate exactly one
+source check per reviewed source and preserve every injection risk without
+downgrading or filtering it before editorial validation.
 
-For all other paths, reject deterministic+manual coexistence even when normalized tuples match. Merge same-method observations through existing tuple semantics; preserve conflicts rather than choosing a winner. Reject missing editorial evidence, duplicate final paths, unsupported ownership, and any editorial attempt to replace a protected path.
+Call `materializeBasicEditorialFacts()` with the reviewed source union, complete
+checks/risks, preliminary facts and structured evidence, and the exact branded
+document result. Replace the preliminary `country.name` fact with the one
+manual enriched name fact returned by Editorial; never emit both.
+
+For all other paths, reject deterministic/manual coexistence even when
+normalized tuples match. Merge same-method observations through existing tuple
+semantics and preserve conflicts rather than selecting a winner. Reject missing
+required editorial paths, duplicate final paths, unsupported ownership,
+operator-supplied derived facts, and any editorial attempt to replace a
+protected source-backed path.
 
 - [ ] **Step 2: Confirm RED**
 
@@ -232,7 +414,15 @@ Run `src/basic-v2-materialization.test.ts`; expect missing implementation.
 
 - [ ] **Step 3: Implement source/fact terminal merge**
 
-Combine preliminary deterministic sources/facts and reviewed document sources/facts, pass `preliminary.structuredEditorialEvidence` into editorial resolution, then apply editorial facts and the name replacement. Merge source locators from accepted facts/evidence, unique-sort them, and preserve all owner fields. Carry path-free receipts exactly once per active source. Aggregate source checks/risks from structured and manual reviews without changing their content.
+Snapshot exact inputs before use. Combine preliminary and trusted document
+sources/facts, construct complete review arrays, and invoke Editorial once.
+Bind each manual result record back to its preliminary capture and catalog
+source before constructing the reviewed union.
+Merge source locators from accepted source/document/editorial evidence,
+unique-sort them, and preserve every source owner field. Carry path-free
+receipts exactly once per active source. Return recursively frozen v2
+register/facts/receipts plus unchanged checks/risks under one stable
+`basic reviewed materialization is invalid` error.
 
 - [ ] **Step 4: Confirm GREEN and commit**
 
@@ -244,7 +434,7 @@ git commit -m "feat: merge reviewed Basic facts"
 
 ---
 
-### Task 4: Deterministic Derived Facts
+### Task 6: Deterministic Derived Facts
 
 **Files:**
 - Create: `packages/db/src/collection/basic-derived-fact-materializer.ts`
@@ -293,7 +483,7 @@ git commit -m "feat: derive Basic audit metadata"
 
 ---
 
-### Task 5: Documentation, Determinism Gates, Review, and Integration
+### Task 7: Documentation, Determinism Gates, Review, and Integration
 
 **Files:**
 - Create: `docs/basic-country-editorial-input.md`
@@ -301,6 +491,9 @@ git commit -m "feat: derive Basic audit metadata"
 - Modify: `docs/basic-country-audit-contract.md`
 - Modify: `docs/basic-country-collection.md`
 - Modify: `docs/roadmap.md`
+- Modify: `packages/db/src/basic-editorial-materializer.test.ts`
+- Modify: `packages/db/src/basic-v2-materialization.test.ts`
+- Modify: `packages/db/src/basic-derived-fact-materializer.test.ts`
 
 - [ ] **Step 1: Document operator and system ownership**
 
@@ -308,7 +501,14 @@ Document exact schema, allowlist, path-specific shapes, evidence matching, prima
 
 - [ ] **Step 2: Add determinism/security regressions**
 
-In the materialization test, permute semantically equivalent object-key insertion order while retaining contract-required sorted arrays and assert byte-identical `JSON.stringify` output. Install throwing sentinels for global fetch, env access proxy where injectable, model/Hermes/search/socket/child process ports, and assert none are accessed. Assert inputs are unchanged; separately assert unsorted arrays fail closed.
+In the materialization tests, permute semantically equivalent object-key
+insertion order, including integer-style keys, while retaining
+contract-required sorted arrays and assert byte-identical `JSON.stringify`
+output. Install throwing sentinels for global fetch, env access where safely
+injectable, and every model/Hermes/search/socket/child-process port; assert none
+are accessed. Assert inputs are unchanged and recursively frozen outputs are
+fresh. Separately assert unsorted arrays, plain cloned document results, and
+reviewed-source/provenance drift fail closed.
 
 - [ ] **Step 3: Run scans and branch gates**
 
@@ -327,7 +527,7 @@ No E2E is required.
 - [ ] **Step 4: Commit docs, independently review, merge, and push**
 
 ```bash
-git add docs/basic-country-editorial-input.md docs/basic-country-document-evidence.md docs/basic-country-audit-contract.md docs/basic-country-collection.md docs/roadmap.md
+git add docs/basic-country-editorial-input.md docs/basic-country-document-evidence.md docs/basic-country-audit-contract.md docs/basic-country-collection.md docs/roadmap.md packages/db/src/basic-editorial-materializer.test.ts packages/db/src/basic-v2-materialization.test.ts packages/db/src/basic-derived-fact-materializer.test.ts
 git commit -m "docs: define Basic editorial materialization"
 ```
 

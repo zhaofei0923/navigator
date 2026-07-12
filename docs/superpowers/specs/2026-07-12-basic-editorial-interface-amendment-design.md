@@ -1,6 +1,6 @@
 # Basic Editorial Interface Amendment Design
 
-**Status:** Project-owner approved design direction; written-spec review pending.
+**Status:** Approved by the project owner on 2026-07-13.
 
 **Task card:** `DATA-BASIC-EDITORIAL-1`
 
