@@ -198,6 +198,54 @@ describe("Basic editorial evidence materializer", () => {
     }));
   });
 
+  test("rejects a manual source-backed preliminary fact that carries an extra source", () => {
+    const preliminary = materializeBasicSourceFactsV2([{
+      sourceId: "preliminary-source",
+      fieldPath: "marketOverview.population",
+      locator: "json:/population",
+      rawValue: 100,
+      normalizedValue: 100,
+      unit: "people",
+      year: 2025,
+      uncertainty: null,
+    }], "manual");
+
+    expectInvalid(structuredSuccessInput({
+      preliminaryFacts: facts(preliminary),
+      reviewedSources: register([
+        sourceRecord("preliminary-source"),
+        sourceRecord("structured-source"),
+      ]),
+      sourceChecks: [check("preliminary-source"), check("structured-source")],
+    }));
+  });
+
+  test.each([
+    ["editorial", "country.summary"],
+    ["derived", "marketOverview.countryCode"],
+    ["unknown", "unknown.path"],
+  ])("rejects a deterministic %s-path preliminary fact that carries an extra source", (_owner, fieldPath) => {
+    const [preliminary] = materializeBasicSourceFactsV2([{
+      sourceId: "preliminary-source",
+      fieldPath: "marketOverview.population",
+      locator: "json:/population",
+      rawValue: 100,
+      normalizedValue: 100,
+      unit: "people",
+      year: 2025,
+      uncertainty: null,
+    }], "deterministic");
+
+    expectInvalid(structuredSuccessInput({
+      preliminaryFacts: facts([{ ...preliminary!, fieldPath }]),
+      reviewedSources: register([
+        sourceRecord("preliminary-source"),
+        sourceRecord("structured-source"),
+      ]),
+      sourceChecks: [check("preliminary-source"), check("structured-source")],
+    }));
+  });
+
   test("rejects deterministic evidence that overlaps a branded manual source", async () => {
     const document = await documentFixture();
     const deterministic = materializeBasicSourceFactsV2([{

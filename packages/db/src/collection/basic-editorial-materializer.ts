@@ -11,6 +11,7 @@ import type {
 } from "./basic-collection-contracts.js";
 import {
   BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION,
+  classifyBasicV2FieldPath,
   type BasicExtractedFactV2,
   type BasicExtractedFactsV2,
   type BasicSourceRegisterV2,
@@ -108,6 +109,7 @@ export function materializeBasicEditorialFacts(
     const editorial = parseBasicCountryEditorialInput(input.get("editorial"));
     const reviewedSources = snapshotRegister(input.get("reviewedSources"));
     const preliminaryFacts = snapshotFacts(input.get("preliminaryFacts"));
+    requireDeterministicPreliminaryFacts(preliminaryFacts);
     requireIdentity(editorial, reviewedSources, preliminaryFacts);
 
     const sourceById = new Map(reviewedSources.sources.map((source) => [source.sourceId, source]));
@@ -303,6 +305,16 @@ function requireExactReviewedSourceUnion(
     .sort(compareText);
   const reviewedSourceIds = reviewedSources.sources.map(({ sourceId }) => sourceId);
   if (!sameStrings(reviewedSourceIds, expectedSourceIds)) invalid();
+}
+
+function requireDeterministicPreliminaryFacts(preliminaryFacts: BasicExtractedFactsV2): void {
+  for (const fact of preliminaryFacts.facts) {
+    const owner = classifyBasicV2FieldPath(fact.fieldPath);
+    if (
+      fact.extractionMethod !== "deterministic" ||
+      owner !== "source-backed" && owner !== "hybrid-name"
+    ) invalid();
+  }
 }
 
 function requireIdentity(
