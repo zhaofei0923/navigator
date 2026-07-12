@@ -1,6 +1,8 @@
 import type {
   BasicCollectionJsonValue,
   BasicFactStatus,
+  BasicInjectionRisk,
+  BasicSourceCheck,
   BasicSourceRecord,
 } from "./basic-collection-contracts.js";
 import type { BasicDeterministicObservation } from "./basic-source-adapter-contracts.js";
@@ -79,6 +81,18 @@ export interface BasicPreliminarySourceRunV2 {
     readonly BasicStructuredEditorialEvidenceObservation[];
   readonly documentCaptures: readonly BasicDocumentCaptureV2[];
   readonly receipts: readonly BasicRawCaptureReceiptV2[];
+}
+
+export interface BasicDeterministicMaterializationResultV2 {
+  readonly sourceRegister: BasicSourceRegisterV2;
+  readonly extractedFacts: BasicExtractedFactsV2;
+  readonly receipts: readonly BasicRawCaptureReceiptV2[];
+}
+
+export interface BasicReviewedMaterializationV2 {
+  readonly materialization: BasicDeterministicMaterializationResultV2;
+  readonly sourceChecks: readonly BasicSourceCheck[];
+  readonly injectionRisks: readonly BasicInjectionRisk[];
 }
 
 export type BasicV2FieldOwner =
