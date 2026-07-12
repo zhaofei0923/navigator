@@ -48,7 +48,13 @@ afterEach(() => {
 describe("Basic editorial evidence materializer", () => {
   test("binds structured-only evidence with normalized values and uncertainty", () => {
     const source = sourceRecord("structured-source");
-    const rawValue = { "10": "ten", "2": "two", section: "overview" };
+    const rawValue = {
+      zeta: "last",
+      alpha: "first",
+      section: "overview",
+      "10": "ten",
+      "2": "two",
+    };
     const editorial = editorialInput([
       item("country.summary", { zh: "越南市场", en: "Vietnam market" }, [
         evidence(source.sourceId, "json:/summary", rawValue),
@@ -62,7 +68,13 @@ describe("Basic editorial evidence materializer", () => {
         source.sourceId,
         "country.summary",
         "json:/summary",
-        { "2": "two", "10": "ten", section: "overview" },
+        {
+          "2": "two",
+          "10": "ten",
+          alpha: "first",
+          zeta: "last",
+          section: "overview",
+        },
       )],
     }));
 
@@ -76,7 +88,13 @@ describe("Basic editorial evidence materializer", () => {
     expect(result.facts[0]?.evidence[0]).toEqual({
       sourceId: source.sourceId,
       locator: "json:/summary",
-      rawValue: { "2": "two", "10": "ten", section: "overview" },
+      rawValue: {
+        "2": "two",
+        "10": "ten",
+        alpha: "first",
+        zeta: "last",
+        section: "overview",
+      },
       normalizedValue: { zh: "越南市场", en: "Vietnam market" },
       unit: null,
       year: null,
@@ -90,7 +108,11 @@ describe("Basic editorial evidence materializer", () => {
       editorial: editorialInput([
         item("country.summary", { zh: "越南市场", en: "Vietnam market" }, [
           evidence(source.sourceId, "json:/summary", {
-            "2": "two", "10": "ten", section: "overview",
+            "2": "two",
+            "10": "ten",
+            alpha: "first",
+            zeta: "last",
+            section: "overview",
           }),
         ], "Operator synthesis"),
       ]),
@@ -99,7 +121,13 @@ describe("Basic editorial evidence materializer", () => {
         source.sourceId,
         "country.summary",
         "json:/summary",
-        { "10": "ten", "2": "two", section: "overview" },
+        {
+          zeta: "last",
+          alpha: "first",
+          section: "overview",
+          "10": "ten",
+          "2": "two",
+        },
       )],
     }));
 
@@ -107,6 +135,15 @@ describe("Basic editorial evidence materializer", () => {
     expect(result.facts[0]?.evidence[0]?.rawValue).toEqual({
       "2": "two",
       "10": "ten",
+      alpha: "first",
+      zeta: "last",
+      section: "overview",
+    });
+    expect(reversed.facts[0]?.evidence[0]?.rawValue).toEqual({
+      "2": "two",
+      "10": "ten",
+      alpha: "first",
+      zeta: "last",
       section: "overview",
     });
     expect(reversed).not.toBe(result);

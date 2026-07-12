@@ -59,9 +59,9 @@ afterEach(() => {
 });
 
 describe("Basic reviewed v2 materialization", () => {
-  test("materializes a structured-only run and replaces country.name exactly once", () => {
+  test("materializes a structured-only run without runtime access and replaces country.name exactly once", () => {
     const preliminary = structuredPreliminary();
-    const result = materializeBasicReviewedRunV2({
+    const result = withForbiddenRuntimeSentinels(() => materializeBasicReviewedRunV2({
       preliminary,
       structuredReview: structuredReview(preliminary),
       documentResult: null,
@@ -73,7 +73,7 @@ describe("Basic reviewed v2 materialization", () => {
         )],
         uncertainty: null,
       }]),
-    });
+    }));
 
     expect(result.materialization.sourceRegister.sources[0]?.evidenceLocators).toEqual([
       "capture:/retrievedAt",
@@ -887,6 +887,48 @@ async function* bytes(value: Uint8Array): AsyncIterable<Uint8Array> {
 
 function expectInvalid(value: unknown): void {
   expect(() => materializeBasicReviewedRunV2(value as ReviewedInput)).toThrow(ERROR);
+}
+
+function withForbiddenRuntimeSentinels<T>(callback: () => T): T {
+  const names = ["fetch", "model", "Hermes", "llama", "SearXNG", "search", "socket", "child_process"];
+  const globalDescriptors = names.map((name) => [
+    name,
+    Object.getOwnPropertyDescriptor(globalThis, name),
+  ] as const);
+  const environmentDescriptor = Object.getOwnPropertyDescriptor(process, "env");
+  const accesses: string[] = [];
+  const denied = (name: string): never => {
+    accesses.push(name);
+    throw new Error(`forbidden runtime access: ${name}`);
+  };
+
+  try {
+    for (const [name, descriptor] of globalDescriptors) {
+      if (descriptor?.configurable === false) continue;
+      Object.defineProperty(globalThis, name, {
+        configurable: true,
+        get: () => denied(name),
+      });
+    }
+    if (environmentDescriptor?.configurable !== false) {
+      Object.defineProperty(process, "env", {
+        configurable: true,
+        get: () => denied("process.env"),
+      });
+    }
+    return callback();
+  } finally {
+    for (const [name, descriptor] of globalDescriptors) {
+      if (descriptor?.configurable === false) continue;
+      if (descriptor === undefined) Reflect.deleteProperty(globalThis, name);
+      else Object.defineProperty(globalThis, name, descriptor);
+    }
+    if (environmentDescriptor?.configurable !== false) {
+      if (environmentDescriptor === undefined) Reflect.deleteProperty(process, "env");
+      else Object.defineProperty(process, "env", environmentDescriptor);
+    }
+    expect(accesses).toEqual([]);
+  }
 }
 
 function expectDeeplyFrozen(value: unknown): void {

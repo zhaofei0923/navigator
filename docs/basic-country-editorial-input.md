@@ -142,11 +142,23 @@ normalized value equals the derived aggregate; inactive primary sources,
 ambiguous country codes, absent active sources, or incomparable timestamps
 block materialization.
 
-`materializeBasicReviewedRunV2()` returns a recursively frozen fresh result:
-the reviewed v2 source register, final extracted facts, path-free receipts,
-complete source checks, and complete injection risks. It performs no network,
-model, Hermes, llama, search, socket, child-process, environment, database,
-canonical-write, draft-assembly, or publication action.
+`materializeBasicReviewedRunV2()` returns a recursively frozen fresh result
+with this exact shape:
+
+```text
+{
+  materialization: { sourceRegister, extractedFacts, receipts },
+  sourceChecks,
+  injectionRisks,
+}
+```
+
+Derived facts are already included in `materialization.extractedFacts`, and
+their derived source locators are already included in
+`materialization.sourceRegister`; consumers must not expect a separate derived
+result. It performs no network, model, Hermes, llama, search, socket,
+child-process, environment, database, canonical-write, draft-assembly, or
+publication action.
 
 The result is not a candidate audit package. `DATA-BASIC-DETERMINISTIC-1`
 remains responsible for model-free trust/completeness preflight, draft
