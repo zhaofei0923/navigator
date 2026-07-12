@@ -370,6 +370,68 @@ describe("catalog-driven Basic source plan runner v2", () => {
     expect(cacheEntryCount(root)).toBe(0);
   });
 
+  test("rejects a coherent copied plan entry before cache or network", async () => {
+    const forgedPlan = structuredClone(
+      manualDocumentPlan("html"),
+    ) as BasicSourceExecutionPlan;
+    const transport = documentTransport(forgedPlan, "body");
+    const root = repoRoot();
+
+    await expect(run(forgedPlan, transport, root)).rejects.toThrow(ERROR);
+    expect(transport.execute).not.toHaveBeenCalled();
+    expect(cacheEntryCount(root)).toBe(0);
+  });
+
+  test("rejects entries with mixed materialization provenance", async () => {
+    const firstPlan = committedWorldBankPlan([
+      "world-bank-country",
+      "world-bank-gdp",
+    ]);
+    const secondPlan = committedWorldBankPlan(["world-bank-gdp"]);
+    const mixedPlan: BasicSourceExecutionPlan = {
+      ...firstPlan,
+      sources: [firstPlan.sources[0]!, secondPlan.sources[0]!],
+    };
+    const transport = fixtureTransport(mixedPlan);
+    const root = repoRoot();
+
+    await expect(run(mixedPlan, transport, root)).rejects.toThrow(ERROR);
+    expect(transport.execute).not.toHaveBeenCalled();
+    expect(cacheEntryCount(root)).toBe(0);
+  });
+
+  test("rejects real catalog mapping drift before cache or network", async () => {
+    const originalPlan = mappedManualDocumentPlan("VNM");
+    const driftedCatalogPlan = mappedManualDocumentPlan("VN-external");
+    const driftedIdentityPlan: BasicSourceExecutionPlan = {
+      catalogVersion: driftedCatalogPlan.catalogVersion,
+      catalogSha256: driftedCatalogPlan.catalogSha256,
+      countryCode: originalPlan.countryCode,
+      sources: originalPlan.sources,
+    };
+    const transport = documentTransport(driftedIdentityPlan, "body");
+    const root = repoRoot();
+
+    await expect(run(driftedIdentityPlan, transport, root)).rejects.toThrow(ERROR);
+    expect(transport.execute).not.toHaveBeenCalled();
+    expect(cacheEntryCount(root)).toBe(0);
+  });
+
+  test("rejects a forged external mapping ID before cache or network", async () => {
+    const forgedPlan = mutablePlan(mappedManualDocumentPlan("VNM"));
+    forgedPlan.sources[0]!.request.url =
+      "https://documents.example/sources/wrong-external-id/policy.html";
+    const transport = documentTransport(
+      forgedPlan as unknown as BasicSourceExecutionPlan,
+      "body",
+    );
+    const root = repoRoot();
+
+    await expect(run(forgedPlan, transport, root)).rejects.toThrow(ERROR);
+    expect(transport.execute).not.toHaveBeenCalled();
+    expect(cacheEntryCount(root)).toBe(0);
+  });
+
   test("rejects more than 64 entries and duplicate non-plan entries before side effects", async () => {
     const base = mutablePlan(committedWorldBankPlan(["world-bank-country"]));
     base.sources = Array.from({ length: 65 }, (_, index) => ({
@@ -432,6 +494,43 @@ describe("catalog-driven Basic source plan runner v2", () => {
     expect(cacheEntryCount(root)).toBe(0);
   });
 
+  test("rejects a proxied plan array without executing its traps", async () => {
+    const plan = committedWorldBankPlan(["world-bank-country"]);
+    const trap = vi.fn(() => {
+      throw new Error("SECRET_PLAN_ARRAY_TRAP");
+    });
+    const proxiedSources = new Proxy(Array.from(plan.sources), {
+      getOwnPropertyDescriptor: trap,
+      getPrototypeOf: trap,
+      ownKeys: trap,
+    });
+    const transport = fixtureTransport(plan);
+    const root = repoRoot();
+
+    await expect(run({ ...plan, sources: proxiedSources }, transport, root))
+      .rejects.toThrow(ERROR);
+    expect(trap).not.toHaveBeenCalled();
+    expect(transport.execute).not.toHaveBeenCalled();
+    expect(cacheEntryCount(root)).toBe(0);
+  });
+
+  test("rejects a Proxy transport prototype before descriptor or prototype traps", async () => {
+    const plan = committedWorldBankPlan(["world-bank-country"]);
+    const trap = vi.fn(() => {
+      throw new Error("SECRET_TRANSPORT_PROTOTYPE_TRAP");
+    });
+    const proxyPrototype = new Proxy({}, {
+      getOwnPropertyDescriptor: trap,
+      getPrototypeOf: trap,
+    });
+    const transport = Object.create(proxyPrototype) as BasicSourceTransportV2;
+    const root = repoRoot();
+
+    await expect(run(plan, transport, root)).rejects.toThrow(ERROR);
+    expect(trap).not.toHaveBeenCalled();
+    expect(cacheEntryCount(root)).toBe(0);
+  });
+
   test("refuses a cached capture from another catalog digest", async () => {
     const plan = committedWorldBankPlan(["world-bank-country"]);
     const root = repoRoot();
@@ -461,6 +560,52 @@ describe("catalog-driven Basic source plan runner v2", () => {
     await run(plan, fixtureTransport(plan));
 
     for (const sentinel of calls.values()) expect(sentinel).not.toHaveBeenCalled();
+  });
+
+  test("statically forbids network, process, model, Hermes, and search imports or dependencies", () => {
+    const productionSource = readFileSync(fileURLToPath(new URL(
+      "./collection/basic-source-plan-runner-v2.ts",
+      import.meta.url,
+    )), "utf8");
+    const packageJson = JSON.parse(readFileSync(fileURLToPath(new URL(
+      "../package.json",
+      import.meta.url,
+    )), "utf8")) as Record<string, unknown>;
+    const dependencyNames = [
+      "dependencies",
+      "devDependencies",
+      "optionalDependencies",
+      "peerDependencies",
+    ].flatMap((key) => {
+      const value = packageJson[key];
+      return isRecord(value) ? Object.keys(value) : [];
+    });
+    const forbiddenNodeModule =
+      /^(?:node:)?(?:child_process|dgram|http|https|net|tls)(?:$|\/)/;
+    const forbiddenCapability = /hermes|searx(?:ng)?|llama|model|search/i;
+    const forbidden = (specifier: string) =>
+      forbiddenNodeModule.test(specifier) || forbiddenCapability.test(specifier);
+    const productionSpecifiers = staticModuleSpecifiers(productionSource);
+
+    expect(productionSpecifiers).toEqual(expect.arrayContaining([
+      "node:fs/promises",
+      "node:path",
+      "node:util/types",
+      "./basic-source-request-materializer.js",
+    ]));
+    expect(staticModuleSpecifiers(`
+      import "node:http";
+      export { connect } from "node:net";
+      const model = import("@local/llama-model");
+      const search = require("searxng-search");
+    `).filter(forbidden)).toEqual([
+      "node:net",
+      "node:http",
+      "@local/llama-model",
+      "searxng-search",
+    ]);
+    expect(productionSpecifiers.filter(forbidden)).toEqual([]);
+    expect(dependencyNames.filter(forbidden)).toEqual([]);
   });
 });
 
@@ -553,6 +698,53 @@ function manualDocumentPlan(format: "html" | "pdf") {
     catalog,
     countryCode: "VN",
     sourceIds: [sourceId],
+  });
+}
+
+function mappedManualDocumentPlan(sourceCountryId: string) {
+  const value = {
+    schemaVersion: "basic-source-catalog/v1",
+    catalogVersion: "2026-07-12.documents-1",
+    sources: [{
+      sourceId: "official-html",
+      sourceName: "Official HTML",
+      sourceFamily: "government",
+      credibility: "OFFICIAL",
+      format: "html",
+      countryScope: ["VN"],
+      requestTemplate: {
+        origin: "https://documents.example",
+        pathSegments: [
+          { kind: "literal", value: "sources" },
+          { kind: "placeholder", value: "sourceCountryId" },
+          { kind: "literal", value: "policy.html" },
+        ],
+        query: [],
+      },
+      accept: "text/html",
+      approvedOrigins: ["https://documents.example"],
+      allowedQueryParameters: [],
+      accessMode: "open",
+      licenseName: "Official public information",
+      licenseUrl: "https://documents.example/license",
+      attribution: "Official authority",
+      refreshCadence: "event-driven",
+      adapterId: "basic-manual-document-capture",
+      adapterVersion: "1.0.0",
+      adapterKind: "manual-document",
+      fieldPaths: ["country.summary"],
+    }],
+    countryMappings: [{
+      countryCode: "VN",
+      sourceId: "official-html",
+      sourceCountryId,
+    }],
+  };
+  const catalog = parseBasicSourceCatalog(value);
+  return createBasicSourceExecutionPlan({
+    catalog,
+    countryCode: "VN",
+    sourceIds: ["official-html"],
   });
 }
 
@@ -698,4 +890,20 @@ async function rejection(value: Promise<unknown>): Promise<Error> {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function staticModuleSpecifiers(source: string): readonly string[] {
+  const specifiers: string[] = [];
+  const patterns = [
+    /\b(?:import|export)\s+(?:type\s+)?[\s\S]*?\s+from\s+["']([^"']+)["']/g,
+    /\bimport\s*["']([^"']+)["']/g,
+    /\bimport\s*\(\s*["']([^"']+)["']\s*\)/g,
+    /\brequire\s*\(\s*["']([^"']+)["']\s*\)/g,
+  ];
+  for (const pattern of patterns) {
+    for (const match of source.matchAll(pattern)) {
+      if (match[1] !== undefined) specifiers.push(match[1]);
+    }
+  }
+  return specifiers;
 }

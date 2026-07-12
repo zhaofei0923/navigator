@@ -30,13 +30,14 @@ import { resolveBasicSourceAdapter } from "./basic-source-adapter-registry.js";
 import {
   BASIC_MANUAL_DOCUMENT_ADAPTER_ID,
   BASIC_MANUAL_DOCUMENT_ADAPTER_VERSION,
-  BASIC_SOURCE_CATALOG_SCHEMA_VERSION,
-  parseBasicSourceCatalog,
   type BasicSourceCatalogSource,
 } from "./basic-source-catalog.js";
 import {
+  isBasicSourceExecutionPlanEntryTrusted,
+  snapshotBasicSourceExecutionPlanEntryProvenance,
   type BasicSourceExecutionPlan,
   type BasicSourceExecutionPlanEntry,
+  type BasicSourceExecutionPlanEntryProvenance,
 } from "./basic-source-request-materializer.js";
 import {
   parseBasicRawCaptureManifestV2,
@@ -68,7 +69,6 @@ type BoundEntry = Readonly<{
 const ERROR_MESSAGE = "basic source plan run is invalid";
 const INPUT_KEYS = ["repoRoot", "countryCode", "runId", "plan", "transport"] as const;
 const PLAN_KEYS = ["catalogVersion", "catalogSha256", "countryCode", "sources"] as const;
-const ENTRY_KEYS = ["source", "request"] as const;
 const OUTPUT_KEYS = ["publishedAt", "promptInjectionRisk", "accessNotes", "observations"] as const;
 const OBSERVATION_KEYS = [
   "fieldPath",
@@ -121,68 +121,88 @@ function snapshotRunnerInput(value: unknown): BasicSourcePlanRunnerInputV2 {
 }
 
 function snapshotPlan(value: unknown, countryCode: string): BasicSourceExecutionPlan {
-  const snapshot = snapshotBasicOfflineValue(value);
-  if (!snapshot.valid) invalid();
-  const plan = exactRecord(snapshot.data, PLAN_KEYS);
+  const plan = exactDataProperties(value, PLAN_KEYS);
+  if (plan === null) invalid();
+  const catalogVersion = plan.get("catalogVersion");
+  const catalogSha256 = plan.get("catalogSha256");
+  const plannedCountryCode = plan.get("countryCode");
   if (
-    typeof plan.catalogVersion !== "string" ||
-    !SAFE_VERSION.test(plan.catalogVersion) ||
-    typeof plan.catalogSha256 !== "string" ||
-    !SHA256.test(plan.catalogSha256) ||
-    plan.countryCode !== countryCode ||
-    !Array.isArray(plan.sources) ||
-    plan.sources.length === 0 ||
-    plan.sources.length > MAX_ACTIVE_SOURCES
+    typeof catalogVersion !== "string" ||
+    !SAFE_VERSION.test(catalogVersion) ||
+    typeof catalogSha256 !== "string" ||
+    !SHA256.test(catalogSha256) ||
+    plannedCountryCode !== countryCode
   ) invalid();
-
-  const entries = plan.sources.map((value) => exactRecord(value, ENTRY_KEYS));
-  const sources = entries.map(({ source }) => {
-    if (!isRecord(source) || typeof source.sourceId !== "string") invalid();
-    return source;
-  }).sort((left, right) => compareText(
-    left.sourceId as string,
-    right.sourceId as string,
-  ));
-  const parsedCatalog = parseBasicSourceCatalog({
-    schemaVersion: BASIC_SOURCE_CATALOG_SCHEMA_VERSION,
-    catalogVersion: plan.catalogVersion,
-    sources,
-    countryMappings: [],
-  }).catalog;
-  const sourceIds = parsedCatalog.sources.map(({ sourceId }) => sourceId);
-  if (new Set(sourceIds).size !== sourceIds.length) invalid();
-  const requests = new Map<string, BasicSourceRequestV2>();
-  for (const value of entries) {
-    if (!isRecord(value.source) || typeof value.source.sourceId !== "string") invalid();
-    if (requests.has(value.source.sourceId)) invalid();
-    requests.set(
-      value.source.sourceId,
-      snapshotBasicSourceRequestV2(value.request),
-    );
-  }
-
-  const rebuiltEntries = parsedCatalog.sources.map((source) => {
-    const request = requests.get(source.sourceId);
-    if (
-      request === undefined ||
-      source.accessMode !== "open" ||
-      source.accept !== request.accept ||
-      !sameStrings(source.approvedOrigins, request.allowedOrigins) ||
-      !sameStrings(
-        source.allowedQueryParameters,
-        request.allowedQueryParameters,
-      ) ||
-      !matchesRequestTemplate(source, request, countryCode) ||
-      (source.countryScope !== "all" && !source.countryScope.includes(countryCode))
-    ) invalid();
-    return { source, request };
-  });
-  return deepFreezeBasicOfflineValue({
-    catalogVersion: plan.catalogVersion,
-    catalogSha256: plan.catalogSha256,
+  const entries = trustedPlanEntries(plan.get("sources"), {
+    catalogVersion,
+    catalogSha256,
     countryCode,
-    sources: rebuiltEntries,
   });
+  const sourceIds = new Set<string>();
+  const rebuiltEntries = entries.map((entry) => {
+    if (sourceIds.has(entry.source.sourceId)) invalid();
+    sourceIds.add(entry.source.sourceId);
+    return Object.freeze({
+      source: entry.source,
+      request: snapshotBasicSourceRequestV2(entry.request),
+    });
+  }).sort((left, right) => compareText(
+    left.source.sourceId,
+    right.source.sourceId,
+  ));
+  return Object.freeze({
+    catalogVersion,
+    catalogSha256,
+    countryCode,
+    sources: Object.freeze(rebuiltEntries),
+  });
+}
+
+function trustedPlanEntries(
+  value: unknown,
+  identity: BasicSourceExecutionPlanEntryProvenance,
+): readonly BasicSourceExecutionPlanEntry[] {
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    isProxy(value) ||
+    !Array.isArray(value) ||
+    Object.getPrototypeOf(value) !== Array.prototype
+  ) invalid();
+  const length = Object.getOwnPropertyDescriptor(value, "length");
+  if (
+    length === undefined ||
+    !Object.hasOwn(length, "value") ||
+    typeof length.value !== "number" ||
+    !Number.isSafeInteger(length.value) ||
+    length.value === 0 ||
+    length.value > MAX_ACTIVE_SOURCES ||
+    Reflect.ownKeys(value).length !== length.value + 1
+  ) invalid();
+  const entries: BasicSourceExecutionPlanEntry[] = [];
+  let sharedProvenance: BasicSourceExecutionPlanEntryProvenance | null = null;
+  for (let index = 0; index < length.value; index += 1) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+    if (
+      descriptor === undefined ||
+      !descriptor.enumerable ||
+      !Object.hasOwn(descriptor, "value") ||
+      !isBasicSourceExecutionPlanEntryTrusted(descriptor.value)
+    ) invalid();
+    const provenance = snapshotBasicSourceExecutionPlanEntryProvenance(
+      descriptor.value,
+    );
+    if (
+      provenance === null ||
+      provenance.catalogVersion !== identity.catalogVersion ||
+      provenance.catalogSha256 !== identity.catalogSha256 ||
+      provenance.countryCode !== identity.countryCode ||
+      (sharedProvenance !== null && provenance !== sharedProvenance)
+    ) invalid();
+    sharedProvenance = provenance;
+    entries.push(descriptor.value);
+  }
+  return entries;
 }
 
 function bindEntries(
@@ -449,87 +469,6 @@ function snapshotTransport(value: unknown): BasicSourceTransportV2 | null {
   }
 }
 
-function matchesRequestTemplate(
-  source: BasicSourceCatalogSource,
-  request: BasicSourceRequestV2,
-  countryCode: string,
-): boolean {
-  try {
-    const url = new URL(request.url);
-    if (url.origin !== source.requestTemplate.origin) return false;
-    const encodedSegments = url.pathname.split("/").slice(1);
-    if (encodedSegments.length !== source.requestTemplate.pathSegments.length) {
-      return false;
-    }
-    let sourceCountryId: string | null = null;
-    for (let index = 0; index < encodedSegments.length; index += 1) {
-      const token = source.requestTemplate.pathSegments[index]!;
-      const value = decodeURIComponent(encodedSegments[index]!);
-      sourceCountryId = matchToken(
-        token,
-        value,
-        countryCode,
-        sourceCountryId,
-      );
-    }
-    const query = Array.from(url.searchParams.entries());
-    if (query.length !== source.requestTemplate.query.length) return false;
-    for (let index = 0; index < query.length; index += 1) {
-      const [name, value] = query[index]!;
-      const planned = source.requestTemplate.query[index]!;
-      if (name !== planned.name) return false;
-      sourceCountryId = matchToken(
-        planned.value,
-        value,
-        countryCode,
-        sourceCountryId,
-      );
-    }
-    const rebuilt = new URL(source.requestTemplate.origin);
-    rebuilt.pathname = `/${source.requestTemplate.pathSegments.map((token) =>
-      encodeURIComponent(tokenValue(token, countryCode, sourceCountryId))).join("/")}`;
-    for (const entry of source.requestTemplate.query) {
-      rebuilt.searchParams.append(
-        entry.name,
-        tokenValue(entry.value, countryCode, sourceCountryId),
-      );
-    }
-    return rebuilt.toString() === request.url;
-  } catch {
-    return false;
-  }
-}
-
-function matchToken(
-  token: BasicSourceCatalogSource["requestTemplate"]["pathSegments"][number],
-  actual: string,
-  countryCode: string,
-  sourceCountryId: string | null,
-): string | null {
-  if (token.kind === "literal") {
-    if (actual !== token.value) invalid();
-    return sourceCountryId;
-  }
-  if (token.value === "countryCode") {
-    if (actual !== countryCode) invalid();
-    return sourceCountryId;
-  }
-  if (actual.trim() === "" || actual.trim() !== actual) invalid();
-  if (sourceCountryId !== null && sourceCountryId !== actual) invalid();
-  return actual;
-}
-
-function tokenValue(
-  token: BasicSourceCatalogSource["requestTemplate"]["pathSegments"][number],
-  countryCode: string,
-  sourceCountryId: string | null,
-): string {
-  if (token.kind === "literal") return token.value;
-  if (token.value === "countryCode") return countryCode;
-  if (sourceCountryId === null) invalid();
-  return sourceCountryId;
-}
-
 function validateJsonBounds(value: BasicCollectionJsonValue): void {
   if (typeof value === "string") {
     if (Buffer.byteLength(value, "utf8") > MAX_STRING_BYTES) invalid();
@@ -554,7 +493,12 @@ function readDataMethod(
   let owner: object | null = value;
   const visited = new Set<object>();
   for (let depth = 0; owner !== null && depth < MAX_TRANSPORT_PROTOTYPE_DEPTH; depth += 1) {
-    if (owner === Object.prototype || owner === Function.prototype || visited.has(owner)) {
+    if (
+      isProxy(owner) ||
+      owner === Object.prototype ||
+      owner === Function.prototype ||
+      visited.has(owner)
+    ) {
       return null;
     }
     visited.add(owner);
