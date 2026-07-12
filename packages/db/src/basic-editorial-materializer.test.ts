@@ -169,6 +169,63 @@ describe("Basic editorial evidence materializer", () => {
     expect(JSON.stringify(first)).toBe(JSON.stringify(second));
   });
 
+  test("rejects a reviewed source register missing a deterministic evidence source", () => {
+    const deterministic = materializeBasicSourceFactsV2([{
+      sourceId: "deterministic-source",
+      fieldPath: "marketOverview.population",
+      locator: "json:/population",
+      rawValue: 100,
+      normalizedValue: 100,
+      unit: "people",
+      year: 2025,
+      uncertainty: null,
+    }], "deterministic");
+
+    expectInvalid(structuredSuccessInput({
+      preliminaryFacts: facts(deterministic),
+    }));
+  });
+
+  test("rejects a reviewed source register with an extra source", () => {
+    const extra = sourceRecord("extra-source");
+
+    expectInvalid(structuredSuccessInput({
+      reviewedSources: register([
+        extra,
+        sourceRecord("structured-source"),
+      ]),
+      sourceChecks: [check("extra-source"), check("structured-source")],
+    }));
+  });
+
+  test("rejects deterministic evidence that overlaps a branded manual source", async () => {
+    const document = await documentFixture();
+    const deterministic = materializeBasicSourceFactsV2([{
+      sourceId: "official-html",
+      fieldPath: "marketOverview.population",
+      locator: "html:section=overview",
+      rawValue: 100,
+      normalizedValue: 100,
+      unit: "people",
+      year: 2025,
+      uncertainty: null,
+    }], "deterministic");
+    const editorial = editorialInput([
+      item("country.summary", { zh: "摘要", en: "Summary" }, [
+        evidence("official-html", "html:section=overview", "Reviewed country summary"),
+      ]),
+    ], "official-html", document.identity);
+
+    expectInvalid(input({
+      editorial,
+      reviewedSources: register(document.result.sources, document.identity),
+      preliminaryFacts: facts(deterministic, document.identity),
+      structuredEditorialEvidence: [],
+      documentResult: document.result,
+      sourceChecks: document.result.sourceChecks,
+    }));
+  });
+
   test("replaces the unique deterministic country name with controlled bilingual enrichment", () => {
     const source = sourceRecord("structured-source");
     const rawValue = { officialName: "Viet Nam" };
@@ -247,6 +304,94 @@ describe("Basic editorial evidence materializer", () => {
   });
 
   test.each([
+    ["unsafe kebab source ID", (source: BasicSourceRecord) => {
+      setSourceField(source, "sourceId", "Unsafe_Source");
+    }],
+    ["blank source name", (source: BasicSourceRecord) => {
+      setSourceField(source, "sourceName", " ");
+    }],
+    ["overlong source name", (source: BasicSourceRecord) => {
+      setSourceField(source, "sourceName", "n".repeat(513));
+    }],
+    ["non-HTTPS source URL", (source: BasicSourceRecord) => {
+      setSourceField(source, "sourceUrl", "http://sources.example/structured-source");
+    }],
+    ["credential-bearing source URL", (source: BasicSourceRecord) => {
+      setSourceField(source, "sourceUrl", "https://user:secret@sources.example/structured-source");
+    }],
+    ["fragment-bearing source URL", (source: BasicSourceRecord) => {
+      setSourceField(source, "sourceUrl", "https://sources.example/structured-source#fragment");
+    }],
+    ["invalid source URL", (source: BasicSourceRecord) => {
+      setSourceField(source, "sourceUrl", "https://");
+    }],
+    ["non-UTC retrieval timestamp", (source: BasicSourceRecord) => {
+      setSourceField(source, "retrievedAt", "2026-07-13T00:00:00+00:00");
+    }],
+    ["invalid publication timestamp", (source: BasicSourceRecord) => {
+      setSourceField(source, "publishedAt", "2026-02-30T00:00:00.000Z");
+    }],
+    ["non-lowercase content hash", (source: BasicSourceRecord) => {
+      setSourceField(source, "contentSha256", CONTENT_SHA256.toUpperCase());
+    }],
+    ["empty evidence locator list", (source: BasicSourceRecord) => {
+      setSourceField(source, "evidenceLocators", []);
+    }],
+    ["sparse evidence locator list", (source: BasicSourceRecord) => {
+      setSourceField(source, "evidenceLocators", new Array<string>(1));
+    }],
+    ["unsorted evidence locators", (source: BasicSourceRecord) => {
+      setSourceField(source, "evidenceLocators", ["json:/z", "json:/a"]);
+    }],
+    ["duplicate evidence locators", (source: BasicSourceRecord) => {
+      setSourceField(source, "evidenceLocators", ["json:/summary", "json:/summary"]);
+    }],
+    ["blank evidence locator", (source: BasicSourceRecord) => {
+      setSourceField(source, "evidenceLocators", [" "]);
+    }],
+    ["overlong evidence locator", (source: BasicSourceRecord) => {
+      setSourceField(source, "evidenceLocators", ["l".repeat(513)]);
+    }],
+    ["unknown source family", (source: BasicSourceRecord) => {
+      setSourceField(source, "sourceFamily", "unknown-family");
+    }],
+    ["unknown access status", (source: BasicSourceRecord) => {
+      setSourceField(source, "accessStatus", "unknown-status");
+    }],
+    ["blank access notes", (source: BasicSourceRecord) => {
+      setSourceField(source, "accessNotes", " ");
+    }],
+    ["unknown credibility", (source: BasicSourceRecord) => {
+      setSourceField(source, "credibility", "unknown-credibility");
+    }],
+    ["non-boolean discovery flag", (source: BasicSourceRecord) => {
+      setSourceField(source, "discoveryOnly", "false");
+    }],
+    ["unknown prompt-injection risk", (source: BasicSourceRecord) => {
+      setSourceField(source, "promptInjectionRisk", "unknown-risk");
+    }],
+  ])("rejects a reviewed source with %s", (_label, mutate) => {
+    const source = sourceRecord("structured-source");
+    mutate(source);
+    expectInvalid(structuredSuccessInput({ reviewedSources: register([source]) }));
+  });
+
+  test("rejects accessor-backed reviewed sources without executing the accessor", () => {
+    const probe = { executions: 0 };
+    const source = sourceRecord("structured-source");
+    Object.defineProperty(source, "sourceUrl", {
+      enumerable: true,
+      get() {
+        probe.executions += 1;
+        return "https://sources.example/structured-source";
+      },
+    });
+
+    expectInvalid(structuredSuccessInput({ reviewedSources: register([source]) }));
+    expect(probe.executions).toBe(0);
+  });
+
+  test.each([
     ["editorial run", { runId: "other-run" }],
     ["editorial country", { countryCode: "ID" }],
     ["editorial catalog version", { catalogVersion: "other-version" }],
@@ -301,15 +446,16 @@ describe("Basic editorial evidence materializer", () => {
   });
 
   test("rejects deterministic final facts masquerading as editorial evidence", () => {
+    const forgedEvidence = {
+      ...structuredEvidence(
+        "structured-source", "country.summary", "json:/summary", "Summary raw",
+      ),
+      normalizedValue: { zh: "伪造", en: "Forged" },
+      unit: null,
+      year: null,
+    };
     expectInvalid(structuredSuccessInput({
-      structuredEditorialEvidence: [{
-        ...structuredEvidence(
-          "structured-source", "country.summary", "json:/summary", "Summary raw",
-        ),
-        normalizedValue: { zh: "伪造", en: "Forged" },
-        unit: null,
-        year: null,
-      } as unknown as BasicStructuredEditorialEvidenceObservation],
+      structuredEditorialEvidence: [forgedEvidence],
     }));
   });
 
@@ -380,7 +526,7 @@ describe("Basic editorial evidence materializer", () => {
     });
   });
 
-  test("rejects cross-run, country, catalog, and manual-source document provenance", async () => {
+  test("rejects cross-run, country, catalog version, and manual-source document provenance", async () => {
     const base = await documentFixture();
     const variants = [
       await documentFixture({ runId: "other-run" }),
@@ -399,6 +545,7 @@ describe("Basic editorial evidence materializer", () => {
         editorial,
         reviewedSources,
         documentResult: variant.result,
+        structuredEditorialEvidence: [],
         sourceChecks: base.result.sourceChecks,
       }));
     }
@@ -409,6 +556,29 @@ describe("Basic editorial evidence materializer", () => {
         { ...base.result.sources[0]!, sourceName: "Drifted manual owner" },
       ], base.identity),
       documentResult: base.result,
+      structuredEditorialEvidence: [],
+      sourceChecks: base.result.sourceChecks,
+    }));
+  });
+
+  test("rejects a real branded document result with a mismatched catalog digest", async () => {
+    const base = await documentFixture();
+    const mismatched = await documentFixture({}, {
+      sourceName: "Different catalog source identity",
+    });
+    const editorial = editorialInput([
+      item("country.summary", { zh: "摘要", en: "Summary" }, [
+        evidence("official-html", "html:section=overview", "Reviewed country summary"),
+      ]),
+    ], "official-html", base.identity);
+
+    expect(base.identity.catalogVersion).toBe(mismatched.identity.catalogVersion);
+    expect(base.identity.catalogSha256).not.toBe(mismatched.identity.catalogSha256);
+    expectInvalid(input({
+      editorial,
+      reviewedSources: register(base.result.sources, base.identity),
+      documentResult: mismatched.result,
+      structuredEditorialEvidence: [],
       sourceChecks: base.result.sourceChecks,
     }));
   });
@@ -588,6 +758,15 @@ function expectInvalid(value: ReturnType<typeof input>): void {
   expect(() => materializeBasicEditorialFacts(value)).toThrow(ERROR);
 }
 
+function setSourceField(source: BasicSourceRecord, key: string, value: unknown): void {
+  Object.defineProperty(source, key, {
+    configurable: true,
+    enumerable: true,
+    value,
+    writable: true,
+  });
+}
+
 function compareSource(left: BasicSourceRecord, right: BasicSourceRecord): number {
   return left.sourceId.localeCompare(right.sourceId);
 }
@@ -596,14 +775,17 @@ function compareCheck(left: BasicSourceCheck, right: BasicSourceCheck): number {
   return left.sourceId.localeCompare(right.sourceId);
 }
 
-async function documentFixture(overrides: Partial<Identity> = {}) {
+async function documentFixture(
+  overrides: Partial<Identity> = {},
+  catalogOverrides: Readonly<{ sourceName?: string }> = {},
+) {
   const expected = identity(overrides);
   const catalog = parseBasicSourceCatalog({
     schemaVersion: "basic-source-catalog/v1",
     catalogVersion: expected.catalogVersion,
     sources: [{
       sourceId: "official-html",
-      sourceName: "Official HTML publication",
+      sourceName: catalogOverrides.sourceName ?? "Official HTML publication",
       sourceFamily: "government",
       credibility: "OFFICIAL",
       format: "html",

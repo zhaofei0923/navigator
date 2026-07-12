@@ -1,6 +1,7 @@
 import { isProxy } from "node:util/types";
 
 import { CREDIBILITIES } from "@navigator/shared-types/schema";
+import { expectUtcRfc3339Timestamp } from "../seed/basic-country-validation-utils.js";
 
 import type {
   BasicCollectionJsonValue,
@@ -48,6 +49,11 @@ interface MaterializationInput {
   readonly injectionRisks: readonly BasicInjectionRisk[];
 }
 
+interface ValidatedDocumentResult {
+  readonly manualSourceIds: readonly string[];
+  readonly editorialEvidence: readonly BasicStructuredEditorialEvidenceObservation[];
+}
+
 const ERROR = "basic editorial materialization is invalid";
 const INPUT_KEYS = [
   "editorial",
@@ -82,11 +88,17 @@ const MAX_EVIDENCE = 2_048;
 const MAX_JSON_DEPTH = 64;
 const MAX_JSON_ARRAY = 2_048;
 const MAX_STRING_BYTES = 65_536;
+const MAX_SOURCE_NAME_BYTES = 512;
+const MAX_EVIDENCE_LOCATOR_BYTES = 512;
+const SAFE_SOURCE_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const SHA256 = /^[a-f0-9]{64}$/;
 const SOURCE_FAMILIES = [
   "international-organization", "official-statistics", "government",
   "energy-authority", "regulator", "grid-operator", "industry-association",
   "verified-research",
 ] as const;
+const ACCESS_STATUSES = ["open", "restricted", "unknown"] as const;
+const PROMPT_INJECTION_RISKS = ["none", "suspected", "confirmed"] as const;
 
 export function materializeBasicEditorialFacts(
   value: MaterializationInput,
@@ -106,19 +118,27 @@ export function materializeBasicEditorialFacts(
     const structuredEvidence = snapshotStructuredEvidence(
       input.get("structuredEditorialEvidence"),
     );
-    const documentResult = input.get("documentResult");
-    const documentEvidence = documentResult === null
-      ? []
+    const documentResult = input.get("documentResult") === null
+      ? null
       : validateDocumentResult(
-        documentResult,
+        input.get("documentResult"),
         editorial,
         sourceById,
         sourceChecks,
         injectionRisks,
       );
+    requireExactReviewedSourceUnion(
+      reviewedSources,
+      preliminaryFacts,
+      structuredEvidence,
+      documentResult?.manualSourceIds ?? [],
+    );
 
     const evidenceByKey = new Map<string, BasicStructuredEditorialEvidenceObservation>();
-    for (const observation of [...structuredEvidence, ...documentEvidence]) {
+    for (const observation of [
+      ...structuredEvidence,
+      ...(documentResult?.editorialEvidence ?? []),
+    ]) {
       const key = evidenceKey(observation);
       if (evidenceByKey.has(key)) invalid();
       evidenceByKey.set(key, observation);
@@ -225,7 +245,8 @@ function validateDocumentResult(
   sourceById: ReadonlyMap<string, BasicSourceRecord>,
   sourceChecks: readonly BasicSourceCheck[],
   injectionRisks: readonly BasicInjectionRisk[],
-): readonly BasicStructuredEditorialEvidenceObservation[] {
+): ValidatedDocumentResult {
+  if (!isBrandedDocumentResult(value)) invalid();
   const provenance = snapshotBasicDocumentMaterializationProvenanceV2(value);
   if (
     provenance === null ||
@@ -234,8 +255,10 @@ function validateDocumentResult(
     provenance.catalogVersion !== identity.catalogVersion ||
     provenance.catalogSha256 !== identity.catalogSha256
   ) invalid();
-  const result = value as BasicDocumentMaterializationResult;
+  requireSortedUnique(provenance.manualSourceIds, (sourceId) => sourceId);
+  const result = value;
   const manualIds = result.sources.map(({ sourceId }) => sourceId);
+  requireSortedUnique(manualIds, (sourceId) => sourceId);
   if (!sameStrings(manualIds, provenance.manualSourceIds)) invalid();
   for (const source of result.sources) {
     const reviewed = sourceById.get(source.sourceId);
@@ -248,7 +271,38 @@ function validateDocumentResult(
     !sameSourceChecks(externalChecks, result.sourceChecks) ||
     !sameInjectionRisks(externalRisks, result.injectionRisks)
   ) invalid();
-  return snapshotStructuredEvidence(result.editorialEvidence);
+  return {
+    manualSourceIds: provenance.manualSourceIds,
+    editorialEvidence: snapshotStructuredEvidence(result.editorialEvidence),
+  };
+}
+
+function isBrandedDocumentResult(value: unknown): value is BasicDocumentMaterializationResult {
+  return snapshotBasicDocumentMaterializationProvenanceV2(value) !== null;
+}
+
+function requireExactReviewedSourceUnion(
+  reviewedSources: BasicSourceRegisterV2,
+  preliminaryFacts: BasicExtractedFactsV2,
+  structuredEvidence: readonly BasicStructuredEditorialEvidenceObservation[],
+  manualSourceIds: readonly string[],
+): void {
+  const deterministicSourceIds = new Set<string>();
+  for (const fact of preliminaryFacts.facts) {
+    for (const evidence of fact.evidence) deterministicSourceIds.add(evidence.sourceId);
+  }
+  for (const evidence of structuredEvidence) deterministicSourceIds.add(evidence.sourceId);
+
+  const manualSourceIdSet = new Set(manualSourceIds);
+  if (manualSourceIdSet.size !== manualSourceIds.length) invalid();
+  for (const sourceId of deterministicSourceIds) {
+    if (manualSourceIdSet.has(sourceId)) invalid();
+  }
+
+  const expectedSourceIds = [...deterministicSourceIds, ...manualSourceIdSet]
+    .sort(compareText);
+  const reviewedSourceIds = reviewedSources.sources.map(({ sourceId }) => sourceId);
+  if (!sameStrings(reviewedSourceIds, expectedSourceIds)) invalid();
 }
 
 function requireIdentity(
@@ -300,31 +354,32 @@ function snapshotRegister(value: unknown): BasicSourceRegisterV2 {
 
 function snapshotSource(value: BasicCollectionJsonValue): BasicSourceRecord {
   const source = exactRecord(value, SOURCE_KEYS);
-  const evidenceLocators = jsonArray(source.evidenceLocators, MAX_EVIDENCE).map(nonBlankText);
+  const sourceId = safeSourceId(source.sourceId);
+  const sourceName = nonBlankText(source.sourceName, MAX_SOURCE_NAME_BYTES);
+  const sourceUrl = httpsSourceUrl(source.sourceUrl);
+  const retrievedAt = utcRfc3339Timestamp(source.retrievedAt);
+  const publishedAt = source.publishedAt === null
+    ? null
+    : utcRfc3339Timestamp(source.publishedAt);
+  const contentSha256 = sha256(source.contentSha256);
+  const evidenceLocators = jsonArray(source.evidenceLocators, MAX_EVIDENCE)
+    .map((locator) => nonBlankText(locator, MAX_EVIDENCE_LOCATOR_BYTES));
+  if (evidenceLocators.length === 0) invalid();
   requireSortedUnique(evidenceLocators, (entry) => entry);
-  if (
-    !isText(source.sourceId) || !isText(source.sourceName) || !isText(source.sourceUrl) ||
-    !isText(source.retrievedAt) || !(source.publishedAt === null || isText(source.publishedAt)) ||
-    !isText(source.contentSha256) || !includes(SOURCE_FAMILIES, source.sourceFamily) ||
-    !includes(["open", "restricted", "unknown"] as const, source.accessStatus) ||
-    !(source.accessNotes === null || isText(source.accessNotes)) ||
-    !includes(CREDIBILITIES, source.credibility) || typeof source.discoveryOnly !== "boolean" ||
-    !includes(["none", "suspected", "confirmed"] as const, source.promptInjectionRisk)
-  ) invalid();
   return {
-    sourceId: source.sourceId,
-    sourceName: source.sourceName,
-    sourceUrl: source.sourceUrl,
-    retrievedAt: source.retrievedAt,
-    publishedAt: source.publishedAt,
-    contentSha256: source.contentSha256,
+    sourceId,
+    sourceName,
+    sourceUrl,
+    retrievedAt,
+    publishedAt,
+    contentSha256,
     evidenceLocators,
-    sourceFamily: source.sourceFamily,
-    accessStatus: source.accessStatus,
-    accessNotes: source.accessNotes,
-    credibility: source.credibility,
-    discoveryOnly: source.discoveryOnly,
-    promptInjectionRisk: source.promptInjectionRisk,
+    sourceFamily: enumValue(SOURCE_FAMILIES, source.sourceFamily),
+    accessStatus: enumValue(ACCESS_STATUSES, source.accessStatus),
+    accessNotes: optionalNonBlankText(source.accessNotes),
+    credibility: enumValue(CREDIBILITIES, source.credibility),
+    discoveryOnly: booleanValue(source.discoveryOnly),
+    promptInjectionRisk: enumValue(PROMPT_INJECTION_RISKS, source.promptInjectionRisk),
   };
 }
 
@@ -471,9 +526,10 @@ function snapshotJsonAt(value: unknown, depth: number, ancestors: Set<object>): 
     }
     if (Object.getPrototypeOf(value) !== Object.prototype) invalid();
     const keys = Reflect.ownKeys(value);
-    if (keys.some((key) => typeof key !== "string")) invalid();
+    const stringKeys = keys.filter((key): key is string => typeof key === "string");
+    if (stringKeys.length !== keys.length) invalid();
     const result: Record<string, BasicCollectionJsonValue> = {};
-    for (const key of (keys as string[]).sort(compareText)) {
+    for (const key of stringKeys.sort(compareText)) {
       const descriptor = Object.getOwnPropertyDescriptor(value, key);
       if (descriptor === undefined || !descriptor.enumerable || !Object.hasOwn(descriptor, "value")) invalid();
       result[key] = snapshotJsonAt(descriptor.value, depth + 1, ancestors);
@@ -602,12 +658,66 @@ function sameInjectionRisks(
   });
 }
 
+function enumValue<const Values extends readonly string[]>(
+  values: Values,
+  value: BasicCollectionJsonValue,
+): Values[number] {
+  if (!includes(values, value)) invalid();
+  return value;
+}
+
+function safeSourceId(value: BasicCollectionJsonValue): string {
+  const sourceId = nonBlankText(value);
+  if (!SAFE_SOURCE_ID.test(sourceId)) invalid();
+  return sourceId;
+}
+
+function httpsSourceUrl(value: BasicCollectionJsonValue): string {
+  const sourceUrl = nonBlankText(value);
+  if (sourceUrl !== sourceUrl.trim()) invalid();
+  try {
+    const parsed = new URL(sourceUrl);
+    if (
+      parsed.protocol !== "https:" ||
+      parsed.username !== "" ||
+      parsed.password !== "" ||
+      parsed.hash !== ""
+    ) invalid();
+    return sourceUrl;
+  } catch {
+    invalid();
+  }
+}
+
+function utcRfc3339Timestamp(value: BasicCollectionJsonValue): string {
+  const timestamp = nonBlankText(value);
+  const errors: string[] = [];
+  expectUtcRfc3339Timestamp(timestamp, "timestamp", errors);
+  if (errors.length !== 0) invalid();
+  return timestamp;
+}
+
+function sha256(value: BasicCollectionJsonValue): string {
+  const digest = nonBlankText(value);
+  if (!SHA256.test(digest)) invalid();
+  return digest;
+}
+
+function optionalNonBlankText(value: BasicCollectionJsonValue): string | null {
+  return value === null ? null : nonBlankText(value);
+}
+
+function booleanValue(value: BasicCollectionJsonValue): boolean {
+  if (typeof value !== "boolean") invalid();
+  return value;
+}
+
 function includes<const Values extends readonly string[]>(values: Values, value: unknown): value is Values[number] {
   return typeof value === "string" && values.includes(value);
 }
 
-function nonBlankText(value: BasicCollectionJsonValue): string {
-  if (!isText(value) || value.trim() === "") invalid();
+function nonBlankText(value: BasicCollectionJsonValue, maximum = MAX_STRING_BYTES): string {
+  if (!isText(value) || value.trim() === "" || Buffer.byteLength(value, "utf8") > maximum) invalid();
   return value;
 }
 
