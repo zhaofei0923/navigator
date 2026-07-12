@@ -8,6 +8,10 @@ import type {
   BasicSourceRecord,
 } from "./basic-collection-contracts.js";
 import {
+  snapshotBasicBoundedJsonValue,
+  type BasicBoundedArrayLimit,
+} from "./basic-bounded-json.js";
+import {
   BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION,
   classifyBasicV2FieldPath,
   type BasicExtractedFactV2,
@@ -16,7 +20,6 @@ import {
 } from "./basic-collection-v2-contracts.js";
 import {
   deepFreezeBasicOfflineValue,
-  snapshotBasicOfflineValue,
 } from "./basic-offline-value.js";
 
 const ERROR = "basic derived fact materialization is invalid";
@@ -64,7 +67,10 @@ export function materializeBasicDerivedFacts(input: Input): Readonly<{
   facts: readonly BasicExtractedFactV2[];
 }> {
   try {
-    const snapshot = jsonRecord(input, INPUT_KEYS);
+    const snapshot = jsonRecord(input, INPUT_KEYS, (path) =>
+      path.length === 2 && path[0] === "sourceRegister" && path[1] === "sources"
+        ? MAX_SOURCES
+        : undefined);
     const countryCode = iso2(snapshot.countryCode);
     const primarySourceId = text(snapshot.primarySourceId);
     const sourceRegister = snapshotRegister(snapshot.sourceRegister);
@@ -350,8 +356,9 @@ function factId(fieldPath: string): string {
 function jsonRecord<const Keys extends readonly string[]>(
   value: unknown,
   keys: Keys,
+  arrayLimit?: BasicBoundedArrayLimit,
 ): Record<Keys[number], BasicCollectionJsonValue> {
-  const snapshot = snapshotBasicOfflineValue(value);
+  const snapshot = snapshotBasicBoundedJsonValue(value, arrayLimit);
   if (!snapshot.valid) invalid();
   return exactRecord(snapshot.data, keys);
 }

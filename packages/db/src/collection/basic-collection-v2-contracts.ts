@@ -107,7 +107,7 @@ const SOURCE_BACKED_PATHS = new Set<string>([
   "marketOverview.gdp",
   "marketOverview.gdpGrowth",
 ]);
-const EDITORIAL_PATHS = new Set<string>([
+export const BASIC_V2_REQUIRED_EDITORIAL_PATHS = Object.freeze([
   "country.summary",
   "country.region",
   "marketOverview.overview",
@@ -115,7 +115,8 @@ const EDITORIAL_PATHS = new Set<string>([
   "marketOverview.renewableTarget",
   "marketOverview.industryTags",
   "marketOverview.techTags",
-]);
+] as const);
+const EDITORIAL_PATHS = new Set<string>(BASIC_V2_REQUIRED_EDITORIAL_PATHS);
 const DERIVED_PATHS = new Set<string>([
   "country.flagEmoji",
   "country.updatedAt",

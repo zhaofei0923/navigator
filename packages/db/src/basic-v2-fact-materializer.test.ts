@@ -294,6 +294,49 @@ describe("Basic audit v2 fact materializer", () => {
     });
   });
 
+  test("rejects oversized and accessor-backed editorial observation arrays before reading entries", () => {
+    const probe = { executions: 0 };
+    const oversized = Array.from({ length: MAX_JSON_ARRAY_LENGTH + 1 }, () =>
+      observation({ fieldPath: "country.summary" }));
+    Object.defineProperty(oversized, "0", {
+      enumerable: true,
+      get() {
+        probe.executions += 1;
+        return observation({ fieldPath: "country.summary" });
+      },
+    });
+    const accessorBacked = [observation({ fieldPath: "country.summary" })];
+    Object.defineProperty(accessorBacked, "0", {
+      enumerable: true,
+      get() {
+        probe.executions += 1;
+        return observation({ fieldPath: "country.summary" });
+      },
+    });
+
+    for (const observations of [oversized, accessorBacked]) {
+      const error = captureMaterializationError(() =>
+        materializeBasicEditorialObservationsV2(observations));
+      expect(error?.message).toBe("source fact materialization is invalid");
+    }
+    expect(probe.executions).toBe(0);
+  });
+
+  test("rejects oversized nested editorial strings with a redacted error", () => {
+    const sentinel = `SECRET-editorial-${"x".repeat(MAX_JSON_STRING_BYTES)}`;
+    const error = captureMaterializationError(() =>
+      materializeBasicEditorialObservationsV2([
+        observation({
+          fieldPath: "country.summary",
+          rawValue: { nested: sentinel },
+          normalizedValue: { zh: "摘要", en: "Summary" },
+        }),
+      ]));
+
+    expect(error?.message).toBe("source fact materialization is invalid");
+    expect(error?.message).not.toContain("SECRET-editorial-");
+  });
+
   test("materializes regional editorial observations as manual candidate facts", () => {
     const [fact] = materializeBasicEditorialObservationsV2([
       observation({

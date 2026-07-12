@@ -41,6 +41,15 @@ const CATALOG_SHA256 =
   "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789";
 const DETERMINISTIC_SHA256 =
   "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+const REQUIRED_EDITORIAL_PATHS = [
+  "country.region",
+  "country.summary",
+  "marketOverview.energyDemand",
+  "marketOverview.industryTags",
+  "marketOverview.overview",
+  "marketOverview.renewableTarget",
+  "marketOverview.techTags",
+] as const;
 const DERIVED_PATHS = [
   "country.flagEmoji",
   "country.updatedAt",
@@ -77,6 +86,13 @@ describe("Basic reviewed v2 materialization", () => {
 
     expect(result.materialization.sourceRegister.sources[0]?.evidenceLocators).toEqual([
       "capture:/retrievedAt",
+      "html:section=energy-demand",
+      "html:section=industry-tags",
+      "html:section=overview",
+      "html:section=region",
+      "html:section=renewable-target",
+      "html:section=summary",
+      "html:section=tech-tags",
       "json:/country/id",
       "json:/country/name",
       "metadata:/credibility",
@@ -84,7 +100,7 @@ describe("Basic reviewed v2 materialization", () => {
       "metadata:/sourceName",
       "metadata:/sourceUrl",
     ]);
-    expect(result.materialization.extractedFacts.facts).toHaveLength(10);
+    expect(result.materialization.extractedFacts.facts).toHaveLength(17);
     expect(result.materialization.extractedFacts.facts.find(
       ({ fieldPath }) => fieldPath === "country.name",
     )).toMatchObject({
@@ -103,6 +119,120 @@ describe("Basic reviewed v2 materialization", () => {
     expectDeeplyFrozen(result);
   });
 
+  test("rejects empty editorial items and every missing required static editorial path", () => {
+    const preliminary = structuredPreliminary();
+
+    expectInvalid({
+      preliminary: { ...preliminary, structuredEditorialEvidence: [] },
+      structuredReview: structuredReview(preliminary),
+      documentResult: null,
+      editorial: editorial(preliminary, [], false),
+    });
+    const complete = editorial(preliminary, []);
+    for (const fieldPath of REQUIRED_EDITORIAL_PATHS) {
+      const incompletePreliminary = {
+        ...preliminary,
+        structuredEditorialEvidence: preliminary.structuredEditorialEvidence.filter(
+          (evidence) => evidence.fieldPath !== fieldPath,
+        ),
+      };
+      expectInvalid({
+        preliminary: incompletePreliminary,
+        structuredReview: structuredReview(incompletePreliminary),
+        documentResult: null,
+        editorial: {
+          ...complete,
+          items: complete.items.filter((item) => item.fieldPath !== fieldPath),
+        },
+      });
+    }
+  });
+
+  test("rejects an existing key indicator without its editorial label", () => {
+    const preliminary = structuredPreliminary(
+      "marketOverview.keyIndicators[0].value",
+      100,
+    );
+
+    expectInvalid({
+      preliminary,
+      structuredReview: structuredReview(preliminary),
+      documentResult: null,
+      editorial: editorial(preliminary, []),
+    });
+  });
+
+  test("accepts an existing key indicator when its exact editorial label is present", () => {
+    const preliminary = structuredPreliminary(
+      "marketOverview.keyIndicators[0].value",
+      100,
+    );
+    const sourceId = preliminary.sourceRegister.sources[0]!.sourceId;
+    const locator = "html:indicator=0-label";
+    const labelEvidence = {
+      sourceId,
+      fieldPath: "marketOverview.keyIndicators[0].label",
+      locator,
+      rawValue: "Installed capacity",
+    };
+    const withLabel = {
+      ...preliminary,
+      sourceRegister: {
+        ...preliminary.sourceRegister,
+        sources: preliminary.sourceRegister.sources.map((source) => ({
+          ...source,
+          evidenceLocators: [...source.evidenceLocators, locator].sort(),
+        })),
+      },
+      structuredEditorialEvidence: [
+        ...preliminary.structuredEditorialEvidence,
+        labelEvidence,
+      ].sort((left, right) => [left.sourceId, left.fieldPath, left.locator]
+        .join("\0").localeCompare([right.sourceId, right.fieldPath, right.locator].join("\0"))),
+    };
+
+    const result = materializeBasicReviewedRunV2({
+      preliminary: withLabel,
+      structuredReview: structuredReview(withLabel),
+      documentResult: null,
+      editorial: editorial(withLabel, [{
+        fieldPath: labelEvidence.fieldPath,
+        normalizedValue: { zh: "装机容量", en: "Installed capacity" },
+        evidence: [editorialEvidence(sourceId, locator, labelEvidence.rawValue)],
+        uncertainty: null,
+      }]),
+    });
+
+    expect(result.materialization.extractedFacts.facts.some(
+      ({ fieldPath }) => fieldPath === labelEvidence.fieldPath,
+    )).toBe(true);
+  });
+
+  test("rejects oversized reviewed source arrays before reading entries", () => {
+    const preliminary = structuredPreliminary();
+    const probe = { executions: 0 };
+    const sources = Array.from({ length: 65 }, (_, index) =>
+      sourceRecord(`source-${String(index).padStart(2, "0")}`));
+    Object.defineProperty(sources, "0", {
+      enumerable: true,
+      get() {
+        probe.executions += 1;
+        return sourceRecord("source-00");
+      },
+    });
+
+    expectInvalid({
+      preliminary: {
+        ...preliminary,
+        sourceRegister: { ...preliminary.sourceRegister, sources },
+      },
+      structuredReview: structuredReview(preliminary),
+      documentResult: null,
+      editorial: editorial(preliminary, []),
+    });
+    expect(probe.executions).toBe(0);
+  });
+
   test("materializes a document-only reviewed source and merges editorial locators", async () => {
     const fixture = await documentFixture();
     const result = materializeBasicReviewedRunV2({
@@ -115,7 +245,13 @@ describe("Basic reviewed v2 materialization", () => {
     expect(result.materialization.sourceRegister.sources[0]?.evidenceLocators).toEqual([
       "capture:/retrievedAt",
       "html:meta=country-code",
+      "html:section=energy-demand",
+      "html:section=industry-tags",
       "html:section=overview",
+      "html:section=region",
+      "html:section=renewable-target",
+      "html:section=summary",
+      "html:section=tech-tags",
       "metadata:/credibility",
       "metadata:/publishedAt",
       "metadata:/sourceName",
@@ -164,13 +300,19 @@ describe("Basic reviewed v2 materialization", () => {
         "country.code",
         "country.flagEmoji",
         "country.name",
+        "country.region",
         "country.summary",
         "country.updatedAt",
         "marketOverview.collectedAt",
         "marketOverview.countryCode",
         "marketOverview.credibility",
+        "marketOverview.energyDemand",
+        "marketOverview.industryTags",
+        "marketOverview.overview",
+        "marketOverview.renewableTarget",
         "marketOverview.source",
         "marketOverview.sourceUrl",
+        "marketOverview.techTags",
         "marketOverview.updatedAt",
       ]);
   });
@@ -503,7 +645,12 @@ function structuredPreliminary(
 ): BasicPreliminarySourceRunV2 {
   const locator = fieldPath === "country.name" ? "json:/country/name" : "json:/population";
   const rawValue = fieldPath === "country.name" ? "Indonesia" : "100";
-  const locators = [...new Set(["json:/country/id", locator])].sort();
+  const requiredEvidence = requiredEditorialEvidence(sourceId);
+  const locators = [...new Set([
+    "json:/country/id",
+    locator,
+    ...requiredEvidence.map((item) => item.locator),
+  ])].sort();
   const sources = [sourceRecord(sourceId, locators)];
   const observations = [{
     sourceId,
@@ -536,7 +683,7 @@ function structuredPreliminary(
       countryCode: identity.countryCode,
       facts: materializeBasicSourceFactsV2(observations, "deterministic"),
     },
-    structuredEditorialEvidence: [],
+    structuredEditorialEvidence: requiredEvidence,
     documentCaptures: [],
     receipts: [{
       sourceId,
@@ -572,7 +719,9 @@ function withStructuredSource(
     ...preliminary,
     sourceRegister: structured.sourceRegister,
     extractedFacts: structured.extractedFacts,
-    structuredEditorialEvidence: structured.structuredEditorialEvidence,
+    structuredEditorialEvidence: preliminary.documentCaptures.length === 0
+      ? structured.structuredEditorialEvidence
+      : [],
     documentCaptures: preliminary.documentCaptures,
     receipts: [...preliminary.receipts, ...structured.receipts]
       .sort((left, right) => left.sourceId.localeCompare(right.sourceId)),
@@ -605,19 +754,35 @@ function structuredReview(preliminary: BasicPreliminarySourceRunV2): BasicStruct
 function editorial(
   preliminary: BasicPreliminarySourceRunV2,
   items: BasicCountryEditorialInput["items"],
+  complete = true,
+  primarySourceId?: string,
 ): BasicCountryEditorialInput {
+  const requiredSourceId = items.find(({ fieldPath }) => fieldPath !== "country.name")
+    ?.evidence[0]?.sourceId;
+  const sourceId = primarySourceId ?? requiredSourceId ?? items[0]?.evidence[0]?.sourceId ??
+    preliminary.sourceRegister.sources[0]?.sourceId;
+  if (sourceId === undefined) throw new Error("test fixture requires a source");
+  const byPath = new Map(
+    (complete ? requiredEditorialItems(sourceId) : []).map((item) => [item.fieldPath, item]),
+  );
+  for (const value of items) byPath.set(value.fieldPath, value);
   return {
     schemaVersion: "basic-country-editorial-input/v1",
     runId: preliminary.sourceRegister.runId,
     countryCode: preliminary.sourceRegister.countryCode,
     catalogVersion: preliminary.sourceRegister.catalogVersion,
     catalogSha256: preliminary.sourceRegister.catalogSha256,
-    primarySourceId: items[0]!.evidence[0]!.sourceId,
-    items: [...items].sort((left, right) => left.fieldPath.localeCompare(right.fieldPath)),
+    primarySourceId: sourceId,
+    items: [...byPath.values()].sort((left, right) =>
+      left.fieldPath.localeCompare(right.fieldPath)),
   };
 }
 
-function editorialEvidence(sourceId: string, locator: string, rawValue: string) {
+function editorialEvidence(
+  sourceId: string,
+  locator: string,
+  rawValue: BasicCountryEditorialInput["items"][number]["evidence"][number]["rawValue"],
+) {
   return { sourceId, locator, rawValue, unit: null, year: null } as const;
 }
 
@@ -626,7 +791,7 @@ function documentSummaryItem(): BasicCountryEditorialInput["items"][number] {
     fieldPath: "country.summary",
     normalizedValue: { zh: "审阅后的国家摘要", en: "Reviewed country summary" },
     evidence: [editorialEvidence(
-      "official-html", "html:section=overview", "Reviewed country summary",
+      "official-html", "html:section=summary", "Reviewed country summary",
     )],
     uncertainty: null,
   };
@@ -686,9 +851,11 @@ async function documentFixture(
       adapterId: "basic-manual-document-capture",
       adapterVersion: "1.0.0",
       adapterKind: "manual-document",
-      fieldPaths: withPopulation
-        ? [...(withCountryCode ? ["country.code"] : []), "country.summary", "marketOverview.population"]
-        : [...(withCountryCode ? ["country.code"] : []), "country.summary"],
+      fieldPaths: [
+        ...(withCountryCode ? ["country.code"] : []),
+        ...REQUIRED_EDITORIAL_PATHS,
+        ...(withPopulation ? ["marketOverview.population"] : []),
+      ].sort(),
     }, ...(withSecondSource ? [{
       sourceId: "official-pdf",
       sourceName: "Official PDF publication",
@@ -769,7 +936,7 @@ async function documentFixture(
       byteLength: capture.manifest.response.byteLength,
       contentSha256: capture.manifest.response.contentSha256,
     },
-    observations: capture.catalogSource.sourceId === "official-html" ? [
+    observations: capture.catalogSource.sourceId === "official-html" ? ([
       ...(withCountryCode ? [{
         usage: "source-fact" as const,
         fieldPath: "country.code",
@@ -780,12 +947,7 @@ async function documentFixture(
         year: null,
         uncertainty: null,
       }] : []),
-      {
-        usage: "editorial-evidence",
-        fieldPath: "country.summary",
-        locator: "html:section=overview",
-        rawValue: "Reviewed country summary",
-      },
+      ...requiredDocumentEditorialObservations(),
       ...(withPopulation ? [{
         usage: "source-fact" as const,
         fieldPath: "marketOverview.population",
@@ -796,7 +958,8 @@ async function documentFixture(
         year: 2025,
         uncertainty: null,
       }] : []),
-    ] : [{
+    ]).sort((left, right) =>
+      `${left.fieldPath}\0${left.locator}`.localeCompare(`${right.fieldPath}\0${right.locator}`)) : [{
       usage: "source-fact" as const,
       fieldPath: "marketOverview.population",
       locator: "pdf:page=2#population",
@@ -856,6 +1019,94 @@ async function documentFixture(
 
 function documentEditorial(fixture: DocumentFixture): BasicCountryEditorialInput {
   return editorial(fixture.preliminary, [documentSummaryItem()]);
+}
+
+function requiredEditorialDefinitions(): readonly Readonly<{
+  fieldPath: typeof REQUIRED_EDITORIAL_PATHS[number];
+  locator: string;
+  rawValue: BasicCountryEditorialInput["items"][number]["normalizedValue"];
+  normalizedValue: BasicCountryEditorialInput["items"][number]["normalizedValue"];
+}>[] {
+  return [
+    {
+      fieldPath: "country.region",
+      locator: "html:section=region",
+      rawValue: "Southeast Asia",
+      normalizedValue: "southeast-asia",
+    },
+    {
+      fieldPath: "country.summary",
+      locator: "html:section=summary",
+      rawValue: "Reviewed country summary",
+      normalizedValue: { zh: "审阅后的国家摘要", en: "Reviewed country summary" },
+    },
+    {
+      fieldPath: "marketOverview.energyDemand",
+      locator: "html:section=energy-demand",
+      rawValue: "Demand is growing",
+      normalizedValue: { zh: "能源需求增长", en: "Energy demand is growing" },
+    },
+    {
+      fieldPath: "marketOverview.industryTags",
+      locator: "html:section=industry-tags",
+      rawValue: "solar,storage",
+      normalizedValue: ["solar", "storage"],
+    },
+    {
+      fieldPath: "marketOverview.overview",
+      locator: "html:section=overview",
+      rawValue: "Market overview",
+      normalizedValue: { zh: "市场概览", en: "Market overview" },
+    },
+    {
+      fieldPath: "marketOverview.renewableTarget",
+      locator: "html:section=renewable-target",
+      rawValue: "Renewable target",
+      normalizedValue: { zh: "可再生能源目标", en: "Renewable target" },
+    },
+    {
+      fieldPath: "marketOverview.techTags",
+      locator: "html:section=tech-tags",
+      rawValue: "pv-module,inverter",
+      normalizedValue: ["inverter", "pv-module"],
+    },
+  ];
+}
+
+function requiredEditorialItems(
+  sourceId: string,
+): BasicCountryEditorialInput["items"] {
+  return requiredEditorialDefinitions().map((definition) => ({
+    fieldPath: definition.fieldPath,
+    normalizedValue: definition.normalizedValue,
+    evidence: [editorialEvidence(
+      sourceId,
+      definition.locator,
+      definition.rawValue,
+    )],
+    uncertainty: null,
+  }));
+}
+
+function requiredEditorialEvidence(
+  sourceId: string,
+): BasicPreliminarySourceRunV2["structuredEditorialEvidence"] {
+  return requiredEditorialDefinitions().map((definition) => ({
+    sourceId,
+    fieldPath: definition.fieldPath,
+    locator: definition.locator,
+    rawValue: definition.rawValue,
+  })).sort((left, right) => [left.sourceId, left.fieldPath, left.locator]
+    .join("\0").localeCompare([right.sourceId, right.fieldPath, right.locator].join("\0")));
+}
+
+function requiredDocumentEditorialObservations() {
+  return requiredEditorialDefinitions().map((definition) => ({
+    usage: "editorial-evidence" as const,
+    fieldPath: definition.fieldPath,
+    locator: definition.locator,
+    rawValue: definition.rawValue,
+  }));
 }
 
 async function mixedInput(): Promise<ReviewedInput> {

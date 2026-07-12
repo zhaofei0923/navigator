@@ -298,6 +298,52 @@ describe("Basic derived fact materialization", () => {
     expect(error?.message).not.toContain(secret);
     expectInvalid(new Proxy(completeInput(), {}) as DerivedInput);
   });
+
+  test("rejects generic arrays and strings beyond the bounded JSON limits", () => {
+    const oversizedArray = completeInput();
+    const countryName = oversizedArray.candidateFacts[1]!;
+    expectInvalid({
+      ...oversizedArray,
+      candidateFacts: [oversizedArray.candidateFacts[0]!, {
+        ...countryName,
+        evidence: [{
+          ...countryName.evidence[0]!,
+          rawValue: Array.from({ length: 257 }, () => null),
+        }],
+      }],
+    });
+
+    const oversizedString = completeInput();
+    const sentinel = `DERIVED_SECRET-${"x".repeat(65_536)}`;
+    const error = captureError(() => materializeBasicDerivedFacts({
+      ...oversizedString,
+      sourceRegister: {
+        ...oversizedString.sourceRegister,
+        sources: [{
+          ...oversizedString.sourceRegister.sources[0]!,
+          sourceName: sentinel,
+        }, oversizedString.sourceRegister.sources[1]!],
+      },
+    }));
+    expect(error?.message).toBe(ERROR);
+    expect(error?.message).not.toContain("DERIVED_SECRET-");
+  });
+
+  test("rejects oversized candidate arrays before reading entries", () => {
+    const input = completeInput();
+    const probe = { executions: 0 };
+    const candidateFacts = Array.from({ length: 257 }, () => input.candidateFacts[0]!);
+    Object.defineProperty(candidateFacts, "0", {
+      enumerable: true,
+      get() {
+        probe.executions += 1;
+        return input.candidateFacts[0]!;
+      },
+    });
+
+    expectInvalid({ ...input, candidateFacts });
+    expect(probe.executions).toBe(0);
+  });
 });
 
 type DerivedInput = Parameters<typeof materializeBasicDerivedFacts>[0];

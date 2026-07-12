@@ -8,6 +8,7 @@ import type {
 } from "./basic-collection-contracts.js";
 import {
   BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION,
+  BASIC_V2_REQUIRED_EDITORIAL_PATHS,
   classifyBasicV2FieldPath,
   type BasicExtractedFactV2,
   type BasicExtractedFactsV2,
@@ -17,6 +18,10 @@ import {
   type BasicSourceRegisterV2,
   type BasicStructuredEditorialEvidenceObservation,
 } from "./basic-collection-v2-contracts.js";
+import {
+  snapshotBasicBoundedJsonValue,
+  type BasicBoundedArrayLimit,
+} from "./basic-bounded-json.js";
 import {
   snapshotBasicDocumentMaterializationProvenanceV2,
   type BasicDocumentMaterializationResult,
@@ -29,7 +34,6 @@ import { parseBasicCountryEditorialInput } from "./basic-editorial-input-parser.
 import {
   deepFreezeBasicOfflineValue,
   deeplyEqualBasicOfflineValue,
-  snapshotBasicOfflineValue,
 } from "./basic-offline-value.js";
 import {
   snapshotBasicDocumentCaptureProvenanceV2,
@@ -74,6 +78,10 @@ const CAPTURE_BINDING_KEYS = [
 const MAX_SOURCES = 64;
 const MAX_FACTS = 256;
 const MAX_EVIDENCE = 2_048;
+const MAX_JSON_ARRAY = 256;
+const MAX_JSON_STRING_BYTES = 65_536;
+const INDICATOR_COMPONENT_PATH =
+  /^marketOverview\.keyIndicators\[(?:0|[1-9]\d*)\]\.(label|value|unit|year)$/;
 
 type Input = Readonly<{
   preliminary: BasicPreliminarySourceRunV2;
@@ -133,6 +141,7 @@ export function materializeBasicReviewedRunV2(
       documentResult?.facts ?? [],
       editorialResult.facts,
     );
+    requireEditorialCompleteness(mergedFacts);
     const derived = materializeBasicDerivedFacts({
       countryCode: reviewedSources.countryCode,
       primarySourceId: editorial.primarySourceId,
@@ -159,6 +168,25 @@ export function materializeBasicReviewedRunV2(
     });
   } catch {
     throw new Error(ERROR);
+  }
+}
+
+function requireEditorialCompleteness(
+  facts: readonly BasicExtractedFactV2[],
+): void {
+  const paths = new Set(facts.map(({ fieldPath }) => fieldPath));
+  for (const fieldPath of BASIC_V2_REQUIRED_EDITORIAL_PATHS) {
+    if (!paths.has(fieldPath)) invalid();
+  }
+
+  const indicatorPrefixes = new Set<string>();
+  for (const fieldPath of paths) {
+    if (INDICATOR_COMPONENT_PATH.test(fieldPath)) {
+      indicatorPrefixes.add(fieldPath.slice(0, fieldPath.lastIndexOf(".")));
+    }
+  }
+  for (const prefix of indicatorPrefixes) {
+    if (!paths.has(`${prefix}.label`)) invalid();
   }
 }
 
@@ -493,7 +521,9 @@ function requireValidFact(fact: BasicExtractedFactV2): void {
 function snapshotRegister(value: unknown): BasicSourceRegisterV2 {
   const record = jsonRecord(value, [
     "schemaVersion", "runId", "countryCode", "catalogVersion", "catalogSha256", "sources",
-  ] as const);
+  ] as const, (path) => path.length === 1 && path[0] === "sources"
+    ? MAX_SOURCES
+    : undefined);
   if (
     record.schemaVersion !== BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION ||
     !isText(record.runId) || !isText(record.countryCode) ||
@@ -608,7 +638,9 @@ function snapshotStructuredEvidence(
 }
 
 function snapshotReceipts(value: unknown): readonly BasicRawCaptureReceiptV2[] {
-  return jsonArray(jsonValue(value), MAX_SOURCES).map((entry) => {
+  return jsonArray(jsonValue(value, (path) => path.length === 0
+    ? MAX_SOURCES
+    : undefined), MAX_SOURCES).map((entry) => {
     const record = exactJsonRecord(entry, RECEIPT_KEYS);
     if (
       !isText(record.sourceId) || !isText(record.contentSha256) ||
@@ -662,7 +694,8 @@ function denseReferences(value: unknown, maximum: number): readonly BasicPrelimi
   const length = Object.getOwnPropertyDescriptor(value, "length");
   if (
     length === undefined || !Object.hasOwn(length, "value") ||
-    typeof length.value !== "number" || length.value > maximum ||
+    typeof length.value !== "number" || !Number.isSafeInteger(length.value) ||
+    length.value < 0 || length.value > Math.min(maximum, MAX_JSON_ARRAY) ||
     Reflect.ownKeys(value).length !== length.value + 1
   ) invalid();
   const result: BasicPreliminarySourceRunV2["documentCaptures"][number][] = [];
@@ -676,7 +709,10 @@ function denseReferences(value: unknown, maximum: number): readonly BasicPrelimi
 
 function snapshotTextArray(value: unknown, maximum: number): readonly string[] {
   return denseValues(value, maximum).map((item) => {
-    if (typeof item !== "string" || item.length === 0) invalid();
+    if (
+      typeof item !== "string" || item.length === 0 ||
+      Buffer.byteLength(item, "utf8") > MAX_JSON_STRING_BYTES
+    ) invalid();
     return item;
   });
 }
@@ -696,11 +732,8 @@ function snapshotCaptureBindings(value: unknown): readonly Readonly<{
     const retrievedAt = properties.get("retrievedAt");
     const contentSha256 = properties.get("contentSha256");
     if (
-      typeof sourceId !== "string" || sourceId.length === 0 ||
-      typeof requestUrl !== "string" || requestUrl.length === 0 ||
-      typeof finalUrl !== "string" || finalUrl.length === 0 ||
-      typeof retrievedAt !== "string" || retrievedAt.length === 0 ||
-      typeof contentSha256 !== "string" || contentSha256.length === 0
+      !boundedText(sourceId) || !boundedText(requestUrl) || !boundedText(finalUrl) ||
+      !boundedText(retrievedAt) || !boundedText(contentSha256)
     ) invalid();
     return Object.freeze({ sourceId, requestUrl, finalUrl, retrievedAt, contentSha256 });
   });
@@ -713,7 +746,7 @@ function snapshotResultSourceIds(value: unknown): readonly string[] {
     if (
       descriptor === undefined || !descriptor.enumerable ||
       !Object.hasOwn(descriptor, "value") ||
-      typeof descriptor.value !== "string" || descriptor.value.length === 0
+      !boundedText(descriptor.value)
     ) invalid();
     return descriptor.value;
   });
@@ -727,7 +760,7 @@ function denseValues(value: unknown, maximum: number): readonly unknown[] {
   if (
     length === undefined || !Object.hasOwn(length, "value") ||
     typeof length.value !== "number" || !Number.isSafeInteger(length.value) ||
-    length.value < 0 || length.value > maximum ||
+    length.value < 0 || length.value > Math.min(maximum, MAX_JSON_ARRAY) ||
     Reflect.ownKeys(value).length !== length.value + 1
   ) invalid();
   const result: unknown[] = [];
@@ -742,8 +775,11 @@ function denseValues(value: unknown, maximum: number): readonly unknown[] {
   return Object.freeze(result);
 }
 
-function jsonValue(value: unknown): BasicCollectionJsonValue {
-  const snapshot = snapshotBasicOfflineValue(value);
+function jsonValue(
+  value: unknown,
+  arrayLimit?: BasicBoundedArrayLimit,
+): BasicCollectionJsonValue {
+  const snapshot = snapshotBasicBoundedJsonValue(value, arrayLimit);
   if (!snapshot.valid) invalid();
   return snapshot.data;
 }
@@ -751,8 +787,9 @@ function jsonValue(value: unknown): BasicCollectionJsonValue {
 function jsonRecord<const Keys extends readonly string[]>(
   value: unknown,
   keys: Keys,
+  arrayLimit?: BasicBoundedArrayLimit,
 ): Record<Keys[number], BasicCollectionJsonValue> {
-  return exactJsonRecord(jsonValue(value), keys);
+  return exactJsonRecord(jsonValue(value, arrayLimit), keys);
 }
 
 function exactJsonRecord<const Keys extends readonly string[]>(
@@ -777,6 +814,11 @@ function textValue(value: BasicCollectionJsonValue): string {
 
 function isText(value: BasicCollectionJsonValue): value is string {
   return typeof value === "string" && value.length > 0;
+}
+
+function boundedText(value: unknown): value is string {
+  return typeof value === "string" && value.length > 0 &&
+    Buffer.byteLength(value, "utf8") <= MAX_JSON_STRING_BYTES;
 }
 
 function requireDisjoint(left: readonly string[], right: readonly string[]): void {

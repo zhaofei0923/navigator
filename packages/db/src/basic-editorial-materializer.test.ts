@@ -582,6 +582,34 @@ describe("Basic editorial evidence materializer", () => {
     }));
   });
 
+  test("accepts an eligible primary source referenced only by a deterministic candidate fact", () => {
+    const editorialSource = sourceRecord("structured-source");
+    const deterministicSource = sourceRecord("deterministic-source", {
+      evidenceLocators: ["json:/country/id"],
+    });
+    const countryCode = materializeBasicSourceFactsV2([{
+      sourceId: deterministicSource.sourceId,
+      fieldPath: "country.code",
+      locator: "json:/country/id",
+      rawValue: "VN",
+      normalizedValue: "VN",
+      unit: null,
+      year: null,
+      uncertainty: null,
+    }], "deterministic")[0]!;
+
+    const result = materializeBasicEditorialFacts(structuredSuccessInput({
+      editorial: editorialInput(undefined, deterministicSource.sourceId),
+      reviewedSources: register([deterministicSource, editorialSource].sort(compareSource)),
+      preliminaryFacts: facts([countryCode]),
+      sourceChecks: [check(deterministicSource.sourceId), check(editorialSource.sourceId)]
+        .sort(compareCheck),
+    }));
+
+    expect(result.facts).toHaveLength(1);
+    expect(result.facts[0]?.fieldPath).toBe("country.summary");
+  });
+
   test("rejects wrong, duplicate, and non-deterministic preliminary country names", () => {
     const source = sourceRecord("structured-source");
     const base = {
@@ -721,6 +749,34 @@ describe("Basic editorial evidence materializer", () => {
     });
 
     expectInvalid(structuredSuccessInput({ sourceChecks }));
+    expect(probe.executions).toBe(0);
+  });
+
+  test("rejects source locator arrays beyond the generic JSON bound", () => {
+    const locators = [
+      ...Array.from({ length: 256 }, (_, index) => `json:/extra/${String(index).padStart(3, "0")}`),
+      "json:/summary",
+    ].sort();
+    const source = sourceRecord("structured-source", { evidenceLocators: locators });
+
+    expectInvalid(structuredSuccessInput({
+      reviewedSources: register([source]),
+    }));
+  });
+
+  test("rejects oversized reviewed source arrays before reading entries", () => {
+    const probe = { executions: 0 };
+    const sources = Array.from({ length: 65 }, (_, index) =>
+      sourceRecord(`source-${String(index).padStart(2, "0")}`));
+    Object.defineProperty(sources, "0", {
+      enumerable: true,
+      get() {
+        probe.executions += 1;
+        return sourceRecord("source-00");
+      },
+    });
+
+    expectInvalid(structuredSuccessInput({ reviewedSources: register(sources) }));
     expect(probe.executions).toBe(0);
   });
 });

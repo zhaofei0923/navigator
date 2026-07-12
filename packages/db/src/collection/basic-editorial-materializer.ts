@@ -10,6 +10,10 @@ import type {
   BasicSourceRecord,
 } from "./basic-collection-contracts.js";
 import {
+  snapshotBasicBoundedJsonValue,
+  type BasicBoundedArrayLimit,
+} from "./basic-bounded-json.js";
+import {
   BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION,
   classifyBasicV2FieldPath,
   type BasicExtractedFactV2,
@@ -52,6 +56,7 @@ interface MaterializationInput {
 
 interface ValidatedDocumentResult {
   readonly manualSourceIds: readonly string[];
+  readonly facts: readonly BasicExtractedFactV2[];
   readonly editorialEvidence: readonly BasicStructuredEditorialEvidenceObservation[];
 }
 
@@ -86,8 +91,6 @@ const RISK_KEYS = ["sourceId", "locator", "severity", "details"] as const;
 const MAX_SOURCES = 64;
 const MAX_FACTS = 512;
 const MAX_EVIDENCE = 2_048;
-const MAX_JSON_DEPTH = 64;
-const MAX_JSON_ARRAY = 2_048;
 const MAX_STRING_BYTES = 65_536;
 const MAX_SOURCE_NAME_BYTES = 512;
 const MAX_EVIDENCE_LOCATOR_BYTES = 512;
@@ -149,11 +152,10 @@ export function materializeBasicEditorialFacts(
     const ordinary: BasicSourcedObservationV2[] = [];
     const nameFacts: BasicExtractedFactV2[] = [];
     const consumedKeys = new Set<string>();
-    const referencedSourceIds = new Set<string>();
     for (const item of editorial.items) {
       if (item.fieldPath === "country.name") {
         nameFacts.push(materializeName(item, preliminaryFacts, sourceById, checkById,
-          riskySourceIds, referencedSourceIds));
+          riskySourceIds));
         continue;
       }
       for (const evidence of item.evidence) {
@@ -161,7 +163,6 @@ export function materializeBasicEditorialFacts(
         if (!evidenceByKey.has(key) || consumedKeys.has(key)) invalid();
         requireConsumable(evidence.sourceId, sourceById, checkById, riskySourceIds);
         consumedKeys.add(key);
-        referencedSourceIds.add(evidence.sourceId);
         ordinary.push({
           sourceId: evidence.sourceId,
           fieldPath: item.fieldPath,
@@ -175,14 +176,23 @@ export function materializeBasicEditorialFacts(
       }
     }
     if (consumedKeys.size !== evidenceByKey.size) invalid();
-    if (!referencedSourceIds.has(editorial.primarySourceId)) invalid();
-    requireConsumable(editorial.primarySourceId, sourceById, checkById, riskySourceIds);
 
     const facts = [
       ...materializeBasicEditorialObservationsV2(ordinary),
       ...nameFacts,
     ].sort((left, right) => compareText(left.fieldPath, right.fieldPath));
     if (facts.length !== editorial.items.length) invalid();
+    const activeSourceIds = new Set<string>();
+    for (const fact of [
+      ...preliminaryFacts.facts,
+      ...(documentResult?.facts ?? []),
+      ...facts,
+    ]) {
+      if (fact.status !== "candidate") continue;
+      for (const evidence of fact.evidence) activeSourceIds.add(evidence.sourceId);
+    }
+    if (!activeSourceIds.has(editorial.primarySourceId)) invalid();
+    requireConsumable(editorial.primarySourceId, sourceById, checkById, riskySourceIds);
     const consumedEvidence = facts.flatMap((fact) => fact.evidence.map((evidence) => ({
       sourceId: evidence.sourceId,
       fieldPath: fact.fieldPath,
@@ -200,7 +210,6 @@ function materializeName(
   sourceById: ReadonlyMap<string, BasicSourceRecord>,
   checkById: ReadonlyMap<string, BasicSourceCheck>,
   riskySourceIds: ReadonlySet<string>,
-  referencedSourceIds: Set<string>,
 ): BasicExtractedFactV2 {
   const candidates = preliminaryFacts.facts.filter(({ fieldPath }) => fieldPath === "country.name");
   if (
@@ -224,7 +233,6 @@ function materializeName(
     const sourceName = localizedText(sourceEvidence.normalizedValue);
     if (normalized.en !== sourceName.en) invalid();
     requireConsumable(evidence.sourceId, sourceById, checkById, riskySourceIds);
-    referencedSourceIds.add(evidence.sourceId);
     observations.push({
       sourceId: evidence.sourceId,
       fieldPath: "country.name",
@@ -275,6 +283,7 @@ function validateDocumentResult(
   ) invalid();
   return {
     manualSourceIds: provenance.manualSourceIds,
+    facts: result.facts,
     editorialEvidence: snapshotStructuredEvidence(result.editorialEvidence),
   };
 }
@@ -346,7 +355,8 @@ function requireConsumable(
 }
 
 function snapshotRegister(value: unknown): BasicSourceRegisterV2 {
-  const record = exactRecord(snapshotJson(value), REGISTER_KEYS);
+  const record = exactRecord(snapshotJson(value, (path) =>
+    path.length === 1 && path[0] === "sources" ? MAX_SOURCES : undefined), REGISTER_KEYS);
   const sources = jsonArray(record.sources, MAX_SOURCES).map(snapshotSource);
   requireSortedUnique(sources, ({ sourceId }) => sourceId);
   if (
@@ -468,7 +478,8 @@ function snapshotChecks(
   value: unknown,
   sourceById: ReadonlyMap<string, BasicSourceRecord>,
 ): readonly BasicSourceCheck[] {
-  const checks = jsonArray(snapshotJson(value), MAX_SOURCES).map((entry) => {
+  const checks = jsonArray(snapshotJson(value, (path) =>
+    path.length === 0 ? MAX_SOURCES : undefined), MAX_SOURCES).map((entry) => {
     const check = exactRecord(entry, CHECK_KEYS);
     if (
       !isText(check.sourceId) || !includes(["passed", "failed"] as const, check.status) ||
@@ -505,51 +516,13 @@ function snapshotRisks(
   return deepFreezeBasicOfflineValue(risks);
 }
 
-function snapshotJson(value: unknown): BasicCollectionJsonValue {
-  return snapshotJsonAt(value, 0, new Set<object>());
-}
-
-function snapshotJsonAt(value: unknown, depth: number, ancestors: Set<object>): BasicCollectionJsonValue {
-  if (value === null || typeof value === "boolean") return value;
-  if (typeof value === "number") {
-    if (!Number.isFinite(value)) invalid();
-    return value;
-  }
-  if (typeof value === "string") {
-    if (Buffer.byteLength(value, "utf8") > MAX_STRING_BYTES) invalid();
-    return value;
-  }
-  if (
-    typeof value !== "object" || depth >= MAX_JSON_DEPTH || isProxy(value) ||
-    ancestors.has(value)
-  ) invalid();
-  ancestors.add(value);
-  try {
-    if (Array.isArray(value)) {
-      if (Object.getPrototypeOf(value) !== Array.prototype || value.length > MAX_JSON_ARRAY ||
-        Reflect.ownKeys(value).length !== value.length + 1) invalid();
-      const result: BasicCollectionJsonValue[] = [];
-      for (let index = 0; index < value.length; index += 1) {
-        const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
-        if (descriptor === undefined || !descriptor.enumerable || !Object.hasOwn(descriptor, "value")) invalid();
-        result.push(snapshotJsonAt(descriptor.value, depth + 1, ancestors));
-      }
-      return result;
-    }
-    if (Object.getPrototypeOf(value) !== Object.prototype) invalid();
-    const keys = Reflect.ownKeys(value);
-    const stringKeys = keys.filter((key): key is string => typeof key === "string");
-    if (stringKeys.length !== keys.length) invalid();
-    const result: Record<string, BasicCollectionJsonValue> = {};
-    for (const key of stringKeys.sort(compareText)) {
-      const descriptor = Object.getOwnPropertyDescriptor(value, key);
-      if (descriptor === undefined || !descriptor.enumerable || !Object.hasOwn(descriptor, "value")) invalid();
-      result[key] = snapshotJsonAt(descriptor.value, depth + 1, ancestors);
-    }
-    return result;
-  } finally {
-    ancestors.delete(value);
-  }
+function snapshotJson(
+  value: unknown,
+  arrayLimit?: BasicBoundedArrayLimit,
+): BasicCollectionJsonValue {
+  const snapshot = snapshotBasicBoundedJsonValue(value, arrayLimit);
+  if (!snapshot.valid) invalid();
+  return snapshot.data;
 }
 
 function exactProperties(value: unknown, keys: readonly string[]): ReadonlyMap<string, unknown> {
