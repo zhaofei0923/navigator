@@ -1,6 +1,6 @@
 # basic-source-catalog.md — Basic 来源目录合同
 
-> 本文件是 `DATA-BASIC-CATALOG-1` 的规范性合同。总体边界以 [Basic 国家确定性采集与来源边界设计](./superpowers/specs/2026-07-12-basic-source-boundary-design.md) 为准；本任务只建立目录、请求计划与既有 World Bank adapter 绑定，不执行 v2 capture，不写入 canonical、staging、Prisma 或 AI 索引。
+> 本文件是 `DATA-BASIC-CATALOG-1` 的规范性合同。总体边界以 [Basic 国家确定性采集与来源边界设计](./superpowers/specs/2026-07-12-basic-source-boundary-design.md) 为准；本任务只建立目录、请求计划与既有 World Bank adapter 绑定。后续已完成的 v2 transport、capture 与 CSV 边界以 [basic-source-formats.md](./basic-source-formats.md) 为准；二者都不写入 canonical、staging、Prisma 或 AI 索引。
 
 ## 1. 职责与文件
 
@@ -183,7 +183,7 @@ source catalog adapter binding is invalid
 
 这些错误不得包含 secrets、URL/query value、raw payload、外部异常或 filesystem path。
 
-## 9. v1 不变边界
+## 9. v1 不变与 Formats Handoff
 
 `DATA-BASIC-CATALOG-1` 不修改以下既有行为：
 
@@ -192,4 +192,4 @@ source catalog adapter binding is invalid
 - `runBasicDeterministicSourceAdapters()` 与四个 World Bank adapter；
 - P1-6C llama bridge、P1-6D offline dry run 与 `packages/db/src/index.ts` exports。
 
-Catalog 目前只生成计划和执行绑定，不调用网络、不创建 cache 或 audit artifacts。多 MIME raw-capture/v2、CSV、document evidence、editorial input 和 model-free candidate runner 分属后续独立任务卡。
+Catalog 模块自身只生成计划和执行绑定，不调用网络、不创建 cache 或 audit artifacts。`DATA-BASIC-FORMATS-1` 已增加独立、package-private 的四 MIME transport、catalog-bound `basic-country-raw-capture/v2`、`raw-v2` cache 和 strict CSV parser/locator；它们消费 reviewed execution-plan request，但尚未接入 source runner，也未修改本节 v1 边界。HTML/PDF 目前只捕获原始 bytes 与 hash；document evidence、editorial input 和 model-free candidate runner 仍分属后续独立任务卡。

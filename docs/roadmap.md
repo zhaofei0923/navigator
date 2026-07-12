@@ -123,6 +123,12 @@ graph LR
 - 测试：catalog/parser/materializer/registry focused tests、World Bank fixture 回归、P1-6B runner 回归，以及仓库 `lint` / `typecheck` / `test` / forced Turbo gates。
 - 人工确认：否（来源边界设计已由项目所有者批准；本卡不新增依赖，不修改统一数据模型、AI Prompt/检索边界、权限或计费）。
 
+#### DATA-BASIC-FORMATS-1 Multi-format transport and raw capture v2（已完成）
+- 目标：按 [basic-source-formats.md](./basic-source-formats.md) 和已批准的 [Basic 来源边界设计](./superpowers/specs/2026-07-12-basic-source-boundary-design.md) 增加 package-private 的 exact v2 contracts、JSON/CSV/HTML/PDF transport、catalog-bound immutable `raw-v2` capture/cache，以及 strict CSV parser/locator。
+- 验收：`basic-country-raw-capture/v2` manifest 精确绑定 catalog version/digest 并保持 request list 顺序；四 MIME matrix、HTTPS/origin/query/redirect、10 MiB、hash、atomic publication、tamper/symlink/concurrency 和 v1/v2 namespace 隔离全部 fail closed；CSV fatal UTF-8、单 BOM、RFC 4180 quoting、row/column/header/cell/record limits 与 RFC 6901 locator 有 exact boundary tests；HTML/PDF 只 capture bytes/hash，不解析事实。
+- 测试：v1/v2 metadata、transport、capture 与 CSV focused tests，以及仓库 `lint` / `typecheck` / `test` / forced Turbo gates；测试不发起真实来源网络请求。
+- 人工确认：否（唯一新依赖 `csv-parse@7.0.1` 已由项目所有者批准；本卡不修改统一数据模型、AI Prompt/检索边界、权限、计费、canonical data 或 package root exports）。
+
 #### DATA-BASIC-<ISO2> 单国 Basic 数据任务卡
 - 目标：每张任务卡只采集一个 ISO 3166-1 alpha-2 国家，使用固定 10 模块模型完成 Basic 国家骨架和市场基础画像。
 - 验收：一国一任务卡、一分支、一审核周期，且仅合并一次到 `main`；合并后的 `main` 验证通过后，仅推送一次到 `origin/main`。数据先为 `draft`，仅在人工审核后发布；Basic 数据保持 `aiUsable = false` 且不产生知识片段；通过仓库校验和代表性 Web 检查，确认基础画像正常渲染、`BUILDING` 模块显示占位。
