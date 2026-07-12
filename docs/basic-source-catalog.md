@@ -65,7 +65,7 @@ fieldPaths
 | `refreshCadence` | `monthly` / `quarterly` / `annual` / `event-driven` / `manual` |
 | `adapterKind` | `deterministic` / `manual-document` |
 
-`sourceId` 与 `adapterId` 使用小写连字符安全 ID；`catalogVersion` 与 `adapterVersion` 使用安全版本 token。`licenseName`、`attribution` 和 `licenseUrl` 必须非空，`licenseUrl` 必须为无 credentials、无 fragment 的 HTTPS URL。
+`sourceId` 与 `adapterId` 使用小写连字符安全 ID；`catalogVersion` 与 `adapterVersion` 使用安全版本 token。`licenseName`、`attribution` 和 `licenseUrl` 必须非空，`licenseUrl` 必须为无 credentials、无 fragment、未经 URL parser 静默改写的 canonical HTTPS URL。
 
 `sources[]` 按 `sourceId` 严格字典序排列。`fieldPaths[]` 非空、唯一、有序，只能使用现有 audit allowlist 的 exact path；关键指标必须登记明确数字 index，例如 `marketOverview.keyIndicators[0].value`，不允许 wildcard。
 
@@ -104,7 +104,7 @@ query[] = { name, value }
 
 Placeholder 不能进入 scheme、authority、query name 或 literal 子串。Literal 与 source mapping 值不得预编码 `%HH`；path component 不能是会被 URL parser 规范化的 `.` 或 `..`。Materializer 验证大写 ISO2 后，以 `URL`、逐 path component 的 percent encoding 和 `URLSearchParams` 构造 URL；外部 ID 中的 `/` 只能成为 `%2F`，不能改变 path 层级。构造后再次验证 HTTPS、credentials、fragment、approved origin、query name 顺序与 cardinality。
 
-Query name 必须唯一且为非空 literal。`allowedQueryParameters[]` 必须逐项、按顺序等于 template query names；query 顺序是已审核请求的一部分，不自动排序。
+Query name 必须唯一且为非空 literal；允许由 `URLSearchParams` 安全编码的 `$filter` 等结构化名称，但不允许 placeholder、预编码 `%HH`、控制字符或首尾空白。`allowedQueryParameters[]` 必须逐项、按顺序等于 template query names；query 顺序是已审核请求的一部分，不自动排序。
 
 单次计划的 `sourceIds[]` 必须非空、唯一、按字典序排列，最多 64 项。只允许选择 `accessMode = open` 且覆盖目标国家的 source；`optional-credentialed` 只能登记，不能进入 execution plan。
 
@@ -172,7 +172,7 @@ sourceCountryId
 | URL | 8,192 UTF-8 bytes |
 | 单国 active sources | 64 |
 
-所有超限均 fail closed，不截断。稳定错误边界为：
+所有字符串还必须是可确定编码为 UTF-8 的良构 Unicode。所有超限均 fail closed，不截断。稳定错误边界为：
 
 ```text
 basic source catalog is invalid

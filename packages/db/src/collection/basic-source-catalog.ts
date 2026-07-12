@@ -154,7 +154,7 @@ const ADAPTER_KINDS = ["deterministic", "manual-document"] as const;
 const SAFE_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const SAFE_VERSION = /^[a-z0-9]+(?:[._-][a-z0-9]+)*$/;
 const ISO2 = /^[A-Z]{2}$/;
-const QUERY_NAME = /^[A-Za-z0-9._~-]+$/;
+const CONTROL_CHARACTER = /[\u0000-\u001F\u007F]/;
 const PRE_ENCODED = /%[0-9A-Fa-f]{2}/;
 const INDICATOR_FIELD_PATH =
   /^marketOverview\.keyIndicators\[(0|[1-9]\d*)\]\.(label|value|unit|year)$/;
@@ -415,6 +415,7 @@ function stringArray(value: unknown, allowEmpty: boolean): readonly string[] {
 function text(value: unknown): string {
   if (
     typeof value !== "string" ||
+    !isWellFormedUnicode(value) ||
     Buffer.byteLength(value, "utf8") > MAX_STRING_BYTES
   ) invalid();
   return value;
@@ -451,8 +452,14 @@ function countryCode(value: unknown): string {
 }
 
 function queryName(value: unknown): string {
-  const result = text(value);
-  if (!QUERY_NAME.test(result)) invalid();
+  const result = nonBlankText(value);
+  if (
+    result.trim() !== result ||
+    result.includes("{") ||
+    result.includes("}") ||
+    PRE_ENCODED.test(result) ||
+    CONTROL_CHARACTER.test(result)
+  ) invalid();
   return result;
 }
 
@@ -479,7 +486,8 @@ function httpsUrl(value: unknown): string {
     parsed.protocol !== "https:" ||
     parsed.username !== "" ||
     parsed.password !== "" ||
-    parsed.hash !== ""
+    parsed.hash !== "" ||
+    parsed.toString() !== result
   ) invalid();
   return result;
 }
@@ -524,6 +532,21 @@ function requireUnique(values: readonly string[]): void {
 
 function sameStrings(left: readonly string[], right: readonly string[]): boolean {
   return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+
+function isWellFormedUnicode(value: string): boolean {
+  for (let index = 0; index < value.length; index += 1) {
+    const codeUnit = value.charCodeAt(index);
+    if (codeUnit >= 0xD800 && codeUnit <= 0xDBFF) {
+      if (index + 1 >= value.length) return false;
+      const next = value.charCodeAt(index + 1);
+      if (next < 0xDC00 || next > 0xDFFF) return false;
+      index += 1;
+    } else if (codeUnit >= 0xDC00 && codeUnit <= 0xDFFF) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function identity(value: string): string {

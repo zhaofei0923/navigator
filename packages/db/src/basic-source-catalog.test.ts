@@ -119,6 +119,10 @@ describe("Basic source catalog parser", () => {
       () => changedSource(validCatalog(), (source) => { source.sourceId = "../source"; }),
     ],
     [
+      "an unpaired Unicode surrogate",
+      () => changedSource(validCatalog(), (source) => { source.sourceName = "\ud800"; }),
+    ],
+    [
       "an invalid source family",
       () => changedSource(validCatalog(), (source) => { source.sourceFamily = "media"; }),
     ],
@@ -156,6 +160,12 @@ describe("Basic source catalog parser", () => {
       "a whitespace-padded license URL",
       () => changedSource(validCatalog(), (source) => {
         source.licenseUrl = " https://example.com/license ";
+      }),
+    ],
+    [
+      "a non-canonical license URL",
+      () => changedSource(validCatalog(), (source) => {
+        source.licenseUrl = "https://exam\tple.com/license";
       }),
     ],
     [
@@ -285,6 +295,42 @@ describe("Basic source catalog parser", () => {
     );
   });
 
+  test.each([
+    ["source extra key", () => changedSource(validCatalog(), (source) => { source.extra = true; })],
+    ["source missing key", () => changedSource(validCatalog(), (source) => { delete (source as MutableRecord).attribution; })],
+    ["request template extra key", () => changedSource(validCatalog(), (source) => { Object.assign(source.requestTemplate, { extra: true }); })],
+    ["request template missing key", () => changedSource(validCatalog(), (source) => { delete (source.requestTemplate as MutableRecord).query; })],
+    ["token extra key", () => changedSource(validCatalog(), (source) => { Object.assign(source.requestTemplate.pathSegments[0]!, { extra: true }); })],
+    ["token missing key", () => changedSource(validCatalog(), (source) => { delete (source.requestTemplate.pathSegments[0] as MutableRecord).value; })],
+    ["query extra key", () => changedSource(validCatalog(), (source) => { Object.assign(source.requestTemplate.query[0]!, { extra: true }); })],
+    ["query missing key", () => changedSource(validCatalog(), (source) => { delete (source.requestTemplate.query[0] as unknown as MutableRecord).value; })],
+    ["mapping extra key", () => { const value = mappedCatalog(); Object.assign(value.countryMappings[0]!, { extra: true }); return value; }],
+    ["mapping missing key", () => { const value = mappedCatalog(); delete (value.countryMappings[0] as unknown as MutableRecord).sourceCountryId; return value; }],
+    ["nested accessor", () => changedSource(validCatalog(), (source) => { Object.defineProperty(source, "sourceName", { enumerable: true, get: () => "World Bank" }); })],
+    ["nested symbol key", () => changedSource(validCatalog(), (source) => { Object.assign(source, { [Symbol("hidden")]: true }); })],
+  ])("rejects a %s", (_label, createValue) => {
+    expect(() => parseBasicSourceCatalog(createValue())).toThrow(
+      "basic source catalog is invalid",
+    );
+  });
+
+  test("rejects unsorted and duplicate country mappings", () => {
+    const unsorted = mappedCatalog();
+    unsorted.countryMappings = [
+      { countryCode: "VN", sourceId: "world-bank-country", sourceCountryId: "VNM" },
+      { countryCode: "ID", sourceId: "world-bank-country", sourceCountryId: "IDN" },
+    ];
+    expect(() => parseBasicSourceCatalog(unsorted)).toThrow(
+      "basic source catalog is invalid",
+    );
+
+    const duplicate = mappedCatalog();
+    duplicate.countryMappings.push(structuredClone(duplicate.countryMappings[0]!));
+    expect(() => parseBasicSourceCatalog(duplicate)).toThrow(
+      "basic source catalog is invalid",
+    );
+  });
+
   test("accepts an exact indexed indicator field path", () => {
     const value = validCatalog();
     value.sources[0]!.fieldPaths = [
@@ -390,6 +436,26 @@ describe("Basic source request materializer", () => {
     );
   });
 
+  test("supports non-alphanumeric literal query names through URLSearchParams", () => {
+    const value = validCatalog();
+    value.sources[0]!.requestTemplate.query = [{
+      name: "$filter",
+      value: { kind: "literal", value: "active" },
+    }];
+    value.sources[0]!.allowedQueryParameters = ["$filter"];
+
+    const plan = createBasicSourceExecutionPlan({
+      catalog: parseBasicSourceCatalog(value),
+      countryCode: "VN",
+      sourceIds: ["world-bank-country"],
+    });
+
+    expect(plan.sources[0]?.request).toMatchObject({
+      url: "https://api.worldbank.org/v2/country/VN?%24filter=active",
+      allowedQueryParameters: ["$filter"],
+    });
+  });
+
   test.each([
     ["a lowercase country code", { countryCode: "vn", sourceIds: ["world-bank-country"] }],
     ["an unknown source", { countryCode: "VN", sourceIds: ["unknown-source"] }],
@@ -434,6 +500,15 @@ describe("Basic source request materializer", () => {
       catalog: parseBasicSourceCatalog(value),
       countryCode: "VN",
       sourceIds: ["world-bank-country"],
+    })).toThrow("source catalog execution plan is invalid");
+  });
+
+  test("rejects more than 64 active sources", () => {
+    const value = catalogWithSources(65);
+    expect(() => createBasicSourceExecutionPlan({
+      catalog: parseBasicSourceCatalog(value),
+      countryCode: "VN",
+      sourceIds: value.sources.map(({ sourceId }) => sourceId),
     })).toThrow("source catalog execution plan is invalid");
   });
 
@@ -581,6 +656,9 @@ describe("committed Basic source catalog", () => {
     ] as const;
 
     expect(catalog.catalog.countryMappings).toEqual([]);
+    expect(catalog.catalogSha256).toBe(
+      "f5ee573b689c281eb5ca83adb83056d0d70e4f03888a9a465c3efeabcfe7ed40",
+    );
     expect(catalog.catalog.sources.map(({ sourceId }) => sourceId)).toEqual(
       sourceIds,
     );
