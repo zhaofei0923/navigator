@@ -219,10 +219,13 @@ function parseSource(value: unknown): BasicSourceCatalogSource {
   const countryScope = parseCountryScope(record.countryScope);
   const requestTemplate = parseRequestTemplate(record.requestTemplate);
   const accept = enumValue(record.accept, ACCEPTS);
-  const approvedOrigins = stringArray(record.approvedOrigins).map(exactOrigin);
-  const allowedQueryParameters = stringArray(record.allowedQueryParameters).map(
-    queryName,
+  const approvedOrigins = stringArray(record.approvedOrigins, false).map(
+    exactOrigin,
   );
+  const allowedQueryParameters = stringArray(
+    record.allowedQueryParameters,
+    true,
+  ).map(queryName);
   const accessMode = enumValue(record.accessMode, ACCESS_MODES);
   const licenseName = nonBlankText(record.licenseName);
   const licenseUrl = httpsUrl(record.licenseUrl);
@@ -405,8 +408,8 @@ function array(
   return value;
 }
 
-function stringArray(value: unknown): readonly string[] {
-  return array(value, MAX_ARRAY_ITEMS, false).map(text);
+function stringArray(value: unknown, allowEmpty: boolean): readonly string[] {
+  return array(value, MAX_ARRAY_ITEMS, allowEmpty).map(text);
 }
 
 function text(value: unknown): string {

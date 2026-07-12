@@ -6,6 +6,7 @@ import {
   canonicalizeBasicSourceCatalog,
   parseBasicSourceCatalog,
 } from "./collection/basic-source-catalog.js";
+import { createBasicSourceExecutionPlan } from "./collection/basic-source-request-materializer.js";
 
 type MutableRecord = Record<string, unknown>;
 
@@ -300,6 +301,176 @@ describe("Basic source catalog parser", () => {
   });
 });
 
+describe("Basic source request materializer", () => {
+  test("materializes countryCode in a path and preserves exact query order", () => {
+    const catalog = parseBasicSourceCatalog(validCatalog());
+
+    const plan = createBasicSourceExecutionPlan({
+      catalog,
+      countryCode: "VN",
+      sourceIds: ["world-bank-country"],
+    });
+
+    expect(plan).toEqual({
+      catalogVersion: "2026-07-12.1",
+      catalogSha256: catalog.catalogSha256,
+      countryCode: "VN",
+      sources: [{
+        source: catalog.catalog.sources[0],
+        request: {
+          method: "GET",
+          url: "https://api.worldbank.org/v2/country/VN?format=json",
+          accept: "application/json",
+          allowedOrigins: ["https://api.worldbank.org"],
+          allowedQueryParameters: ["format"],
+        },
+      }],
+    });
+    expect(Object.isFrozen(plan)).toBe(true);
+    expect(Object.isFrozen(plan.sources)).toBe(true);
+    expect(Object.isFrozen(plan.sources[0]?.request)).toBe(true);
+  });
+
+  test("materializes a literal-only URL", () => {
+    const value = validCatalog();
+    value.sources[0]!.requestTemplate = {
+      origin: "https://api.worldbank.org",
+      pathSegments: [
+        { kind: "literal", value: "v2" },
+        { kind: "literal", value: "fixed" },
+      ],
+      query: [],
+    };
+    value.sources[0]!.allowedQueryParameters = [];
+
+    const plan = createBasicSourceExecutionPlan({
+      catalog: parseBasicSourceCatalog(value),
+      countryCode: "VN",
+      sourceIds: ["world-bank-country"],
+    });
+
+    expect(plan.sources[0]?.request.url).toBe(
+      "https://api.worldbank.org/v2/fixed",
+    );
+  });
+
+  test("encodes sourceCountryId as one path component and one query value", () => {
+    const value = mappedCatalog();
+    value.countryMappings[0]!.sourceCountryId = "Viet Nam/2026";
+    value.sources[0]!.requestTemplate.query = [
+      { name: "format", value: { kind: "literal", value: "json" } },
+      {
+        name: "external",
+        value: { kind: "placeholder", value: "sourceCountryId" },
+      },
+    ];
+    value.sources[0]!.allowedQueryParameters = ["format", "external"];
+
+    const plan = createBasicSourceExecutionPlan({
+      catalog: parseBasicSourceCatalog(value),
+      countryCode: "VN",
+      sourceIds: ["world-bank-country"],
+    });
+
+    expect(plan.sources[0]?.request.url).toBe(
+      "https://api.worldbank.org/v2/country/Viet%20Nam%2F2026?format=json&external=Viet+Nam%2F2026",
+    );
+  });
+
+  test.each([
+    ["a lowercase country code", { countryCode: "vn", sourceIds: ["world-bank-country"] }],
+    ["an unknown source", { countryCode: "VN", sourceIds: ["unknown-source"] }],
+    ["no selected sources", { countryCode: "VN", sourceIds: [] }],
+    ["unsorted source ids", { countryCode: "VN", sourceIds: ["world-bank-population", "world-bank-country"] }],
+    ["duplicate source ids", { countryCode: "VN", sourceIds: ["world-bank-country", "world-bank-country"] }],
+  ])("rejects %s", (_label, selection) => {
+    const value = selection.sourceIds.includes("world-bank-population")
+      ? twoSourceCatalog()
+      : validCatalog();
+    expect(() => createBasicSourceExecutionPlan({
+      catalog: parseBasicSourceCatalog(value),
+      countryCode: selection.countryCode,
+      sourceIds: selection.sourceIds,
+    })).toThrow("source catalog execution plan is invalid");
+  });
+
+  test("rejects a missing sourceCountryId mapping", () => {
+    const value = mappedCatalog();
+    value.countryMappings = [];
+    expect(() => createBasicSourceExecutionPlan({
+      catalog: parseBasicSourceCatalog(value),
+      countryCode: "VN",
+      sourceIds: ["world-bank-country"],
+    })).toThrow("source catalog mapping is invalid");
+  });
+
+  test("rejects a country outside source scope", () => {
+    const value = validCatalog();
+    value.sources[0]!.countryScope = ["ID"];
+    expect(() => createBasicSourceExecutionPlan({
+      catalog: parseBasicSourceCatalog(value),
+      countryCode: "VN",
+      sourceIds: ["world-bank-country"],
+    })).toThrow("source catalog execution plan is invalid");
+  });
+
+  test("rejects optional-credentialed sources", () => {
+    const value = validCatalog();
+    value.sources[0]!.accessMode = "optional-credentialed";
+    expect(() => createBasicSourceExecutionPlan({
+      catalog: parseBasicSourceCatalog(value),
+      countryCode: "VN",
+      sourceIds: ["world-bank-country"],
+    })).toThrow("source catalog execution plan is invalid");
+  });
+
+  test.each([
+    ["a placeholder in an origin", (source: ReturnType<typeof validSource>) => {
+      source.requestTemplate.origin = "https://{countryCode}.example.com";
+      source.approvedOrigins = [source.requestTemplate.origin];
+    }],
+    ["a placeholder in a query name", (source: ReturnType<typeof validSource>) => {
+      source.requestTemplate.query[0]!.name = "{countryCode}";
+      source.allowedQueryParameters = ["{countryCode}"];
+    }],
+    ["a placeholder substring", (source: ReturnType<typeof validSource>) => {
+      source.requestTemplate.pathSegments[1] = {
+        kind: "literal",
+        value: "country-{countryCode}",
+      };
+    }],
+    ["URL credentials", (source: ReturnType<typeof validSource>) => {
+      source.requestTemplate.origin = "https://user:pass@api.worldbank.org";
+      source.approvedOrigins = [source.requestTemplate.origin];
+    }],
+    ["a URL fragment", (source: ReturnType<typeof validSource>) => {
+      source.requestTemplate.origin = "https://api.worldbank.org#fragment";
+      source.approvedOrigins = [source.requestTemplate.origin];
+    }],
+    ["a pre-encoded component", (source: ReturnType<typeof validSource>) => {
+      source.requestTemplate.pathSegments[1] = {
+        kind: "literal",
+        value: "country%2Fadmin",
+      };
+    }],
+  ])("rejects %s before planning", (_label, mutate) => {
+    const value = validCatalog();
+    mutate(value.sources[0]!);
+    expect(() => parseBasicSourceCatalog(value)).toThrow(
+      "basic source catalog is invalid",
+    );
+  });
+
+  test("rejects a forged catalog digest", () => {
+    const catalog = parseBasicSourceCatalog(validCatalog());
+    expect(() => createBasicSourceExecutionPlan({
+      catalog: { ...catalog, catalogSha256: "0".repeat(64) },
+      countryCode: "VN",
+      sourceIds: ["world-bank-country"],
+    })).toThrow("source catalog execution plan is invalid");
+  });
+});
+
 function validCatalog() {
   return {
     schemaVersion: "basic-source-catalog/v1",
@@ -481,6 +652,16 @@ function catalogWithNestedSourceName(depth: number) {
     current.nested = child;
     current = child;
   }
+  return value;
+}
+
+function twoSourceCatalog() {
+  const value = validCatalog();
+  const population = validSource();
+  population.sourceId = "world-bank-population";
+  population.adapterId = "world-bank-population";
+  population.fieldPaths = ["marketOverview.population"];
+  value.sources.push(population);
   return value;
 }
 
