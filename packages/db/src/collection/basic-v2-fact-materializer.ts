@@ -9,6 +9,7 @@ import type {
   BasicExtractionMethodV2,
   BasicFactEvidenceV2,
   BasicSourcedObservationV2,
+  BasicV2FieldOwner,
 } from "./basic-collection-v2-contracts.js";
 import { classifyBasicV2FieldPath } from "./basic-collection-v2-contracts.js";
 
@@ -39,14 +40,33 @@ export function materializeBasicSourceFactsV2(
     ) {
       invalid();
     }
+    return materializeFacts(
+      observations,
+      extractionMethod,
+      ["source-backed", "hybrid-name"],
+    );
+  } catch {
+    invalid();
+  }
+}
 
+export function materializeBasicEditorialObservationsV2(
+  observations: readonly BasicSourcedObservationV2[],
+): readonly BasicExtractedFactV2[] {
+  return materializeFacts(observations, "manual", ["editorial"]);
+}
+
+function materializeFacts(
+  observations: readonly BasicSourcedObservationV2[],
+  extractionMethod: BasicExtractionMethodV2,
+  allowedOwners: readonly BasicV2FieldOwner[],
+): readonly BasicExtractedFactV2[] {
+  try {
     const grouped = new Map<string, BasicSourcedObservationV2[]>();
     for (const value of observations) {
       const observation = snapshotObservation(value);
       const fieldOwner = classifyBasicV2FieldPath(observation.fieldPath);
-      if (fieldOwner !== "source-backed" && fieldOwner !== "hybrid-name") {
-        invalid();
-      }
+      if (fieldOwner === null || !allowedOwners.includes(fieldOwner)) invalid();
       const group = grouped.get(observation.fieldPath) ?? [];
       group.push(observation);
       grouped.set(observation.fieldPath, group);
