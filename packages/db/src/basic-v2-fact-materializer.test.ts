@@ -125,6 +125,102 @@ describe("Basic audit v2 fact materializer", () => {
     },
   );
 
+  test.each(METHODS)(
+    "only materializes source-backed and preliminary hybrid-name fields for %s observations",
+    (extractionMethod) => {
+      expect(materializeBasicSourceFactsV2([
+        observation({ fieldPath: "country.name" }),
+      ], extractionMethod)).toHaveLength(1);
+
+      for (const fieldPath of [
+        "country.summary",
+        "marketOverview.source",
+        "marketOverview.unknown",
+      ]) {
+        expect(() => materializeBasicSourceFactsV2([
+          observation({ fieldPath }),
+        ], extractionMethod)).toThrow("source fact materialization is invalid");
+      }
+    },
+  );
+
+  test.each(METHODS)(
+    "reconstructs recursively frozen canonical JSON evidence for %s observations",
+    (extractionMethod) => {
+      const [fact] = materializeBasicSourceFactsV2([
+        observation({
+          rawValue: { z: [{ b: 2, a: 1 }], a: true },
+          normalizedValue: { z: [{ b: 2, a: 1 }], a: true },
+        }),
+      ], extractionMethod);
+
+      const rawValue = fact?.evidence[0]?.rawValue;
+      expect(rawValue).toEqual({ a: true, z: [{ a: 1, b: 2 }] });
+      expect(Object.keys(rawValue as object)).toEqual(["a", "z"]);
+      expect(Object.keys((rawValue as { z: object[] }).z[0]!)).toEqual(["a", "b"]);
+      expect(Object.isFrozen(rawValue as object)).toBe(true);
+      expect(Object.isFrozen((rawValue as { z: object[] }).z)).toBe(true);
+      expect(Object.isFrozen((rawValue as { z: object[] }).z[0]!)).toBe(true);
+    },
+  );
+
+  test.each(METHODS)(
+    "rejects non-JSON and descriptor-unsafe evidence values for %s observations",
+    (extractionMethod) => {
+      const sparse = [1, , 3];
+      const accessor: Record<string, unknown> = {};
+      Object.defineProperty(accessor, "secret", {
+        enumerable: true,
+        get: () => "SECRET-accessor-9dd2",
+      });
+      const cyclic: { self?: unknown } = {};
+      cyclic.self = cyclic;
+
+      for (const rawValue of [
+        sparse,
+        new Date(),
+        Symbol("secret-symbol-ec31"),
+        accessor,
+        new Proxy({ value: 1 }, {}),
+        cyclic,
+        { value: Number.POSITIVE_INFINITY },
+      ]) {
+        expect(() => materializeBasicSourceFactsV2([
+          observation({ rawValue: rawValue as never }),
+        ], extractionMethod)).toThrow("source fact materialization is invalid");
+      }
+    },
+  );
+
+  test.each(METHODS)(
+    "snapshots each observation before reading it and never leaks hostile errors for %s observations",
+    (extractionMethod) => {
+      const secret = "SECRET-observation-516f";
+      const accessor = observation();
+      Object.defineProperty(accessor, "sourceId", {
+        enumerable: true,
+        get: () => {
+          throw new Error(secret);
+        },
+      });
+
+      const proxy = new Proxy(observation(), {
+        getOwnPropertyDescriptor: () => {
+          throw new Error(secret);
+        },
+      });
+
+      for (const value of [accessor, proxy]) {
+        const error = captureMaterializationError(() => materializeBasicSourceFactsV2(
+          [value as BasicSourcedObservationV2],
+          extractionMethod,
+        ));
+        expect(error?.message).toBe("source fact materialization is invalid");
+        expect(error?.message).not.toContain(secret);
+      }
+    },
+  );
+
   test("rejects unsupported extraction methods, including hermes", () => {
     expect(() => materializeBasicSourceFactsV2([
       observation(),
@@ -182,4 +278,13 @@ function observation(
     uncertainty: null,
     ...overrides,
   };
+}
+
+function captureMaterializationError(action: () => void): Error | null {
+  try {
+    action();
+    return null;
+  } catch (error) {
+    return error instanceof Error ? error : null;
+  }
 }

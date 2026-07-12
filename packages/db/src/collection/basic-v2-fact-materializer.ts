@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { isProxy } from "node:util/types";
 
 import type {
   BasicCollectionJsonValue,
@@ -9,37 +10,57 @@ import type {
   BasicFactEvidenceV2,
   BasicSourcedObservationV2,
 } from "./basic-collection-v2-contracts.js";
+import { classifyBasicV2FieldPath } from "./basic-collection-v2-contracts.js";
 
 export type { BasicSourcedObservationV2 } from "./basic-collection-v2-contracts.js";
+
+const OBSERVATION_KEYS = [
+  "sourceId",
+  "fieldPath",
+  "locator",
+  "rawValue",
+  "normalizedValue",
+  "unit",
+  "year",
+  "uncertainty",
+] as const;
 
 export function materializeBasicSourceFactsV2(
   observations: readonly BasicSourcedObservationV2[],
   extractionMethod: BasicExtractionMethodV2,
 ): readonly BasicExtractedFactV2[] {
-  if (
-    extractionMethod !== "deterministic" &&
-    extractionMethod !== "manual"
-  ) {
+  try {
+    if (
+      extractionMethod !== "deterministic" &&
+      extractionMethod !== "manual"
+    ) {
+      invalid();
+    }
+
+    const grouped = new Map<string, BasicSourcedObservationV2[]>();
+    for (const value of observations) {
+      const observation = snapshotObservation(value);
+      const fieldOwner = classifyBasicV2FieldPath(observation.fieldPath);
+      if (fieldOwner !== "source-backed" && fieldOwner !== "hybrid-name") {
+        invalid();
+      }
+      const group = grouped.get(observation.fieldPath) ?? [];
+      group.push(observation);
+      grouped.set(observation.fieldPath, group);
+    }
+
+    return Object.freeze(
+      Array.from(grouped.keys())
+        .sort(compareText)
+        .map((fieldPath) => materializeField(
+          fieldPath,
+          grouped.get(fieldPath) ?? [],
+          extractionMethod,
+        )),
+    );
+  } catch {
     invalid();
   }
-
-  const grouped = new Map<string, BasicSourcedObservationV2[]>();
-  for (const observation of observations) {
-    validateObservation(observation);
-    const group = grouped.get(observation.fieldPath) ?? [];
-    group.push(observation);
-    grouped.set(observation.fieldPath, group);
-  }
-
-  return Object.freeze(
-    Array.from(grouped.keys())
-      .sort(compareText)
-      .map((fieldPath) => materializeField(
-        fieldPath,
-        grouped.get(fieldPath) ?? [],
-        extractionMethod,
-      )),
-  );
 }
 
 function materializeField(
@@ -79,28 +100,81 @@ function toEvidence(item: BasicSourcedObservationV2): BasicFactEvidenceV2 {
   return Object.freeze({
     sourceId: item.sourceId,
     locator: item.locator,
-    rawValue: snapshotJson(item.rawValue),
-    normalizedValue: snapshotJson(item.normalizedValue),
+    rawValue: item.rawValue,
+    normalizedValue: item.normalizedValue,
     unit: item.unit,
     year: item.year,
   });
 }
 
-function validateObservation(value: BasicSourcedObservationV2): void {
+function snapshotObservation(value: unknown): BasicSourcedObservationV2 {
+  const observation = snapshotExactDataRecord(value, OBSERVATION_KEYS);
+  const sourceId = observation.sourceId;
+  const fieldPath = observation.fieldPath;
+  const locator = observation.locator;
+  const unit = observation.unit;
+  const year = observation.year;
+  const uncertainty = observation.uncertainty;
   if (
-    typeof value !== "object" ||
-    value === null ||
-    typeof value.sourceId !== "string" ||
-    typeof value.fieldPath !== "string" ||
-    typeof value.locator !== "string" ||
-    !(value.unit === null || typeof value.unit === "string") ||
-    !(value.year === null || Number.isFinite(value.year)) ||
-    !(value.uncertainty === null || typeof value.uncertainty === "string")
+    typeof sourceId !== "string" ||
+    typeof fieldPath !== "string" ||
+    typeof locator !== "string" ||
+    !(unit === null || typeof unit === "string") ||
+    !(year === null || typeof year === "number" && Number.isFinite(year)) ||
+    !(uncertainty === null || typeof uncertainty === "string")
   ) {
     invalid();
   }
-  snapshotJson(value.rawValue);
-  snapshotJson(value.normalizedValue);
+  return Object.freeze({
+    sourceId,
+    fieldPath,
+    locator,
+    rawValue: snapshotJson(observation.rawValue),
+    normalizedValue: snapshotJson(observation.normalizedValue),
+    unit,
+    year,
+    uncertainty,
+  });
+}
+
+function snapshotExactDataRecord(
+  value: unknown,
+  keys: readonly string[],
+): Readonly<Record<string, unknown>> {
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    isProxy(value) ||
+    Array.isArray(value) ||
+    Object.getPrototypeOf(value) !== Object.prototype
+  ) {
+    invalid();
+  }
+  const ownKeys = Reflect.ownKeys(value);
+  if (
+    ownKeys.length !== keys.length ||
+    ownKeys.some((key) => typeof key !== "string" || !keys.includes(key))
+  ) {
+    invalid();
+  }
+  const snapshot: Record<string, unknown> = {};
+  for (const key of keys) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (
+      descriptor === undefined ||
+      !descriptor.enumerable ||
+      !Object.hasOwn(descriptor, "value")
+    ) {
+      invalid();
+    }
+    Object.defineProperty(snapshot, key, {
+      value: descriptor.value,
+      enumerable: true,
+      writable: false,
+      configurable: false,
+    });
+  }
+  return Object.freeze(snapshot);
 }
 
 function tupleKey(item: BasicSourcedObservationV2): string {
@@ -123,12 +197,12 @@ function canonicalJson(value: BasicCollectionJsonValue): string {
     .join(",")}}`;
 }
 
-function snapshotJson(value: BasicCollectionJsonValue): BasicCollectionJsonValue {
+function snapshotJson(value: unknown): BasicCollectionJsonValue {
   return snapshotJsonValue(value, new Set<object>());
 }
 
 function snapshotJsonValue(
-  value: BasicCollectionJsonValue,
+  value: unknown,
   ancestors: Set<object>,
 ): BasicCollectionJsonValue {
   if (value === null || typeof value === "string" || typeof value === "boolean") {
@@ -138,15 +212,82 @@ function snapshotJsonValue(
     if (!Number.isFinite(value)) invalid();
     return value;
   }
-  if (ancestors.has(value)) invalid();
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    isProxy(value) ||
+    ancestors.has(value)
+  ) {
+    invalid();
+  }
   ancestors.add(value);
-  const snapshot = Array.isArray(value)
-    ? Object.freeze(value.map((item) => snapshotJsonValue(item, ancestors)))
-    : Object.freeze(Object.fromEntries(
-      Object.keys(value).map((key) => [key, snapshotJsonValue(value[key]!, ancestors)]),
-    ));
-  ancestors.delete(value);
-  return snapshot as unknown as BasicCollectionJsonValue;
+  try {
+    return Array.isArray(value)
+      ? snapshotJsonArray(value, ancestors)
+      : snapshotJsonObject(value, ancestors);
+  } finally {
+    ancestors.delete(value);
+  }
+}
+
+function snapshotJsonArray(
+  value: object,
+  ancestors: Set<object>,
+): BasicCollectionJsonValue {
+  if (Object.getPrototypeOf(value) !== Array.prototype) invalid();
+  const lengthDescriptor = Object.getOwnPropertyDescriptor(value, "length");
+  if (
+    lengthDescriptor === undefined ||
+    lengthDescriptor.enumerable ||
+    !Object.hasOwn(lengthDescriptor, "value") ||
+    typeof lengthDescriptor.value !== "number" ||
+    !Number.isSafeInteger(lengthDescriptor.value) ||
+    lengthDescriptor.value < 0 ||
+    Reflect.ownKeys(value).length !== lengthDescriptor.value + 1
+  ) {
+    invalid();
+  }
+  const snapshot: BasicCollectionJsonValue[] = [];
+  for (let index = 0; index < lengthDescriptor.value; index += 1) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+    if (
+      descriptor === undefined ||
+      !descriptor.enumerable ||
+      !Object.hasOwn(descriptor, "value")
+    ) {
+      invalid();
+    }
+    snapshot.push(snapshotJsonValue(descriptor.value, ancestors));
+  }
+  return Object.freeze(snapshot) as unknown as BasicCollectionJsonValue;
+}
+
+function snapshotJsonObject(
+  value: object,
+  ancestors: Set<object>,
+): BasicCollectionJsonValue {
+  if (Object.getPrototypeOf(value) !== Object.prototype) invalid();
+  const keys = Reflect.ownKeys(value);
+  if (keys.some((key) => typeof key !== "string")) invalid();
+  const textKeys = keys as string[];
+  const snapshot: Record<string, BasicCollectionJsonValue> = {};
+  for (const key of textKeys.sort(compareText)) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (
+      descriptor === undefined ||
+      !descriptor.enumerable ||
+      !Object.hasOwn(descriptor, "value")
+    ) {
+      invalid();
+    }
+    Object.defineProperty(snapshot, key, {
+      value: snapshotJsonValue(descriptor.value, ancestors),
+      enumerable: true,
+      writable: false,
+      configurable: false,
+    });
+  }
+  return Object.freeze(snapshot);
 }
 
 function compareEvidence(left: BasicFactEvidenceV2, right: BasicFactEvidenceV2): number {
