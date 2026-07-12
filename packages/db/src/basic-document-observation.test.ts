@@ -3,6 +3,28 @@ import { describe, expect, test } from "vitest";
 import {
   parseBasicDocumentObservationPlan,
 } from "./collection/basic-document-observation-parser.js";
+import {
+  materializeBasicDocumentEvidence,
+} from "./collection/basic-document-observation-materializer.js";
+import type {
+  BasicDocumentObservationPlan,
+} from "./collection/basic-document-observation-contracts.js";
+import type {
+  BasicDocumentCaptureV2,
+} from "./collection/basic-collection-v2-contracts.js";
+import {
+  parseBasicSourceCatalog,
+} from "./collection/basic-source-catalog.js";
+import {
+  parseBasicManualSourceReview,
+} from "./collection/basic-source-review-parser.js";
+import type {
+  BasicManualSourceReview,
+} from "./collection/basic-source-review-contracts.js";
+import {
+  createBasicSourceExecutionPlan,
+  type BasicSourceExecutionPlan,
+} from "./collection/basic-source-request-materializer.js";
 
 const CATALOG_SHA256 =
   "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789";
@@ -10,6 +32,9 @@ const CONTENT_SHA256 =
   "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 const ERROR = "document observation plan is invalid";
 const REQUEST_URL_PREFIX = "https://documents.example/";
+const SECOND_CONTENT_SHA256 =
+  "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210";
+const MATERIALIZATION_ERROR = "basic document evidence materialization is invalid";
 
 type MutableRecord = Record<string | symbol, unknown>;
 
@@ -390,3 +415,801 @@ describe("Basic document observation plan parser", () => {
     }
   });
 });
+
+interface MaterializationFixture {
+  readonly plan: BasicSourceExecutionPlan;
+  readonly captures: readonly BasicDocumentCaptureV2[];
+  readonly review: BasicManualSourceReview;
+  readonly documentPlans: readonly BasicDocumentObservationPlan[];
+}
+
+describe("Basic document evidence materializer", () => {
+  test("materializes exact catalog/capture/review owners and reviewed document observations", () => {
+    const fixture = materializationFixture();
+    const capturesBefore = structuredClone(fixture.captures);
+    const reviewBefore = structuredClone(fixture.review);
+    const documentPlansBefore = structuredClone(fixture.documentPlans);
+
+    const result = materializeBasicDocumentEvidence(fixture);
+
+    expect(result.sources).toEqual([
+      {
+        sourceId: "official-html",
+        sourceName: "Official HTML publication",
+        sourceUrl: "https://documents.example/sources/VN/official.html",
+        retrievedAt: "2026-07-12T04:00:00.000Z",
+        publishedAt: "2026-07-01T00:00:00.000Z",
+        contentSha256: CONTENT_SHA256,
+        evidenceLocators: [
+          "html:section=overview",
+          "html:section=population-table;row=2025",
+        ],
+        sourceFamily: "government",
+        accessStatus: "open",
+        accessNotes: "Public HTML publication",
+        credibility: "OFFICIAL",
+        discoveryOnly: false,
+        promptInjectionRisk: "none",
+      },
+      {
+        sourceId: "official-pdf",
+        sourceName: "Official PDF publication",
+        sourceUrl: "https://documents.example/sources/VN/official.pdf",
+        retrievedAt: "2026-07-12T05:00:00.000Z",
+        publishedAt: null,
+        contentSha256: SECOND_CONTENT_SHA256,
+        evidenceLocators: [
+          "pdf:page=2#gdp-table",
+          "pdf:page=3#renewable-target",
+        ],
+        sourceFamily: "energy-authority",
+        accessStatus: "open",
+        accessNotes: null,
+        credibility: "VERIFIED",
+        discoveryOnly: false,
+        promptInjectionRisk: "none",
+      },
+    ]);
+    expect(result.facts.map(({ fieldPath, extractionMethod, status }) => ({
+      fieldPath,
+      extractionMethod,
+      status,
+    }))).toEqual([
+      {
+        fieldPath: "marketOverview.gdp",
+        extractionMethod: "manual",
+        status: "candidate",
+      },
+      {
+        fieldPath: "marketOverview.population",
+        extractionMethod: "manual",
+        status: "candidate",
+      },
+    ]);
+    expect(result.editorialEvidence).toEqual([
+      {
+        sourceId: "official-html",
+        fieldPath: "country.summary",
+        locator: "html:section=overview",
+        rawValue: "Reviewed country summary",
+      },
+      {
+        sourceId: "official-pdf",
+        fieldPath: "marketOverview.renewableTarget",
+        locator: "pdf:page=3#renewable-target",
+        rawValue: "Reviewed renewable target",
+      },
+    ]);
+    expect(result.sourceChecks).toEqual([
+      { sourceId: "official-html", status: "passed", notes: null },
+      {
+        sourceId: "official-pdf",
+        status: "passed",
+        notes: "Publication date is not stated",
+      },
+    ]);
+    expect(result.injectionRisks).toEqual([]);
+    expectDeeplyFrozen(result);
+    expect(fixture.captures).toEqual(capturesBefore);
+    expect(fixture.review).toEqual(reviewBefore);
+    expect(fixture.documentPlans).toEqual(documentPlansBefore);
+  });
+
+  test("is order-independent and emits stable source, fact, and evidence ordering", () => {
+    const fixture = materializationFixture();
+
+    const forward = materializeBasicDocumentEvidence(fixture);
+    const reversed = materializeBasicDocumentEvidence({
+      ...fixture,
+      captures: Array.from(fixture.captures).reverse(),
+      documentPlans: Array.from(fixture.documentPlans).reverse(),
+    });
+
+    expect(reversed).toEqual(forward);
+  });
+
+  test("preserves failed checks, UNVERIFIED credibility, and reviewed prompt risks for preflight", () => {
+    const fixture = materializationFixture("UNVERIFIED");
+    const review = reviewedManualSources(fixture.plan, {
+      "official-html": {
+        sourceCheck: { status: "failed", notes: "Hash reviewed but access check failed" },
+      },
+      "official-pdf": {
+        promptInjectionRisk: "confirmed",
+        injectionRisks: [
+          {
+            locator: "pdf:page=2#gdp-table",
+            severity: "suspected",
+            details: "Suspicious instruction-like text",
+          },
+          {
+            locator: "pdf:page=3#renewable-target",
+            severity: "confirmed",
+            details: "Confirmed instruction-like text",
+          },
+        ],
+      },
+    });
+
+    const result = materializeBasicDocumentEvidence({ ...fixture, review });
+
+    expect(result.sources[0]).toMatchObject({
+      sourceId: "official-html",
+      credibility: "UNVERIFIED",
+    });
+    expect(result.sources[1]).toMatchObject({
+      sourceId: "official-pdf",
+      promptInjectionRisk: "confirmed",
+    });
+    expect(result.sourceChecks[0]).toEqual({
+      sourceId: "official-html",
+      status: "failed",
+      notes: "Hash reviewed but access check failed",
+    });
+    expect(result.injectionRisks).toEqual([
+      {
+        sourceId: "official-pdf",
+        locator: "pdf:page=2#gdp-table",
+        severity: "suspected",
+        details: "Suspicious instruction-like text",
+      },
+      {
+        sourceId: "official-pdf",
+        locator: "pdf:page=3#renewable-target",
+        severity: "confirmed",
+        details: "Confirmed instruction-like text",
+      },
+    ]);
+    expect(result.facts).toHaveLength(2);
+    expect(result.editorialEvidence).toHaveLength(2);
+    expectDeeplyFrozen(result);
+  });
+
+  test("rejects a forged or mixed-provenance execution plan", () => {
+    const fixture = materializationFixture();
+    const other = materializationFixture();
+    const forged = structuredClone(fixture.plan);
+    const mixed = {
+      ...fixture.plan,
+      sources: [
+        fixture.plan.sources[0]!,
+        other.plan.sources[1]!,
+        fixture.plan.sources[2]!,
+      ],
+    };
+
+    expectMaterializationInvalid({ ...fixture, plan: forged });
+    expectMaterializationInvalid({ ...fixture, plan: mixed });
+  });
+
+  test.each([
+    ["missing capture", (fixture: MaterializationFixture) => ({
+      ...fixture,
+      captures: fixture.captures.slice(1),
+    })],
+    ["duplicate capture", (fixture: MaterializationFixture) => ({
+      ...fixture,
+      captures: [...fixture.captures, fixture.captures[0]],
+    })],
+    ["structured capture overlap", (fixture: MaterializationFixture) => ({
+      ...fixture,
+      captures: [...fixture.captures, structuredCapture(fixture.plan)],
+    })],
+    ["missing document plan", (fixture: MaterializationFixture) => ({
+      ...fixture,
+      documentPlans: fixture.documentPlans.slice(1),
+    })],
+    ["duplicate document plan", (fixture: MaterializationFixture) => ({
+      ...fixture,
+      documentPlans: [...fixture.documentPlans, fixture.documentPlans[0]],
+    })],
+    ["structured document-plan overlap", (fixture: MaterializationFixture) => ({
+      ...fixture,
+      documentPlans: [...fixture.documentPlans, {
+        ...fixture.documentPlans[0],
+        sourceId: "structured-data",
+      }],
+    })],
+  ])("rejects %s", (_label, mutate) => {
+    const fixture = materializationFixture();
+    expectMaterializationInvalid(mutate(fixture));
+  });
+
+  test.each([
+    ["missing review", (value: Record<string, unknown>) => {
+      const sources = (value.sources as unknown[]).slice(1);
+      return { ...value, sources };
+    }],
+    ["duplicate review", (value: Record<string, unknown>) => {
+      const sources = value.sources as unknown[];
+      return { ...value, sources: [...sources, sources[0]] };
+    }],
+    ["review run", (value: Record<string, unknown>) => ({
+      ...value,
+      runId: "other-run-20260712",
+    })],
+    ["review country", (value: Record<string, unknown>) => ({
+      ...value,
+      countryCode: "ID",
+    })],
+    ["review catalog version", (value: Record<string, unknown>) => ({
+      ...value,
+      catalogVersion: "2026.07.12.other",
+    })],
+    ["review catalog digest", (value: Record<string, unknown>) => ({
+      ...value,
+      catalogSha256: SECOND_CONTENT_SHA256,
+    })],
+  ])("rejects %s mismatch", (_label, mutate) => {
+    const fixture = materializationFixture();
+    const invalidReview = mutate(structuredClone(fixture.review) as unknown as Record<string, unknown>);
+    expectMaterializationInvalid({ ...fixture, review: invalidReview });
+  });
+
+  test.each([
+    ["capture run", (captureValue: Record<string, unknown>) => ({
+      ...captureValue,
+      runId: "other-run-20260712",
+    })],
+    ["capture country", (captureValue: Record<string, unknown>) => ({
+      ...captureValue,
+      countryCode: "ID",
+    })],
+    ["capture catalog version", (captureValue: Record<string, unknown>) => ({
+      ...captureValue,
+      catalogVersion: "2026.07.12.other",
+    })],
+    ["capture catalog digest", (captureValue: Record<string, unknown>) => ({
+      ...captureValue,
+      catalogSha256: SECOND_CONTENT_SHA256,
+    })],
+  ])("rejects %s mismatch", (_label, mutateManifest) => {
+    const fixture = materializationFixture();
+    const captures = replaceFirstCaptureManifest(fixture, mutateManifest);
+    expectMaterializationInvalid({ ...fixture, captures });
+  });
+
+  test.each([
+    ["adapter ID", { adapterId: "other-manual-adapter" }],
+    ["adapter version", { adapterVersion: "2.0.0" }],
+    ["request URL", { requestUrl: "https://documents.example/sources/VN/other.html" }],
+    ["retrieval timestamp", { retrievedAt: "2026-07-12T04:00:01.000Z" }],
+    ["byte length", { byteLength: 1_025 }],
+    ["content hash", { contentSha256: SECOND_CONTENT_SHA256 }],
+  ])("rejects document-plan %s drift", (_label, captureOverrides) => {
+    const fixture = materializationFixture();
+    const documentPlans = replaceFirstDocumentPlan(fixture, {
+      capture: {
+        ...fixture.documentPlans[0]!.capture,
+        ...captureOverrides,
+      },
+    });
+    expectMaterializationInvalid({ ...fixture, documentPlans });
+  });
+
+  test.each([
+    ["adapter ID", (manifest: Record<string, unknown>) => ({
+      ...manifest,
+      adapterId: "other-manual-adapter",
+    })],
+    ["adapter version", (manifest: Record<string, unknown>) => ({
+      ...manifest,
+      adapterVersion: "2.0.0",
+    })],
+    ["request URL", (manifest: Record<string, unknown>) => ({
+      ...manifest,
+      request: {
+        ...(manifest.request as object),
+        url: "https://documents.example/sources/VN/other.html",
+      },
+    })],
+    ["MIME", (manifest: Record<string, unknown>) => ({
+      ...manifest,
+      response: {
+        ...(manifest.response as object),
+        contentType: "application/pdf",
+      },
+    })],
+    ["HTTP status", (manifest: Record<string, unknown>) => ({
+      ...manifest,
+      response: { ...(manifest.response as object), status: 404 },
+    })],
+    ["final URL policy", (manifest: Record<string, unknown>) => ({
+      ...manifest,
+      response: {
+        ...(manifest.response as object),
+        finalUrl: "https://unapproved.example/redirected.html",
+      },
+    })],
+    ["retrieval timestamp", (manifest: Record<string, unknown>) => ({
+      ...manifest,
+      response: {
+        ...(manifest.response as object),
+        retrievedAt: "2026-07-12T04:00:01.000Z",
+      },
+    })],
+    ["byte length", (manifest: Record<string, unknown>) => ({
+      ...manifest,
+      response: { ...(manifest.response as object), byteLength: 1_025 },
+    })],
+    ["content hash", (manifest: Record<string, unknown>) => ({
+      ...manifest,
+      response: {
+        ...(manifest.response as object),
+        contentSha256: SECOND_CONTENT_SHA256,
+      },
+    })],
+  ])("rejects raw-capture %s drift", (_label, mutateManifest) => {
+    const fixture = materializationFixture();
+    const captures = replaceFirstCaptureManifest(fixture, mutateManifest);
+    expectMaterializationInvalid({ ...fixture, captures });
+  });
+
+  test("rejects catalog owner drift and a forged non-open execution", () => {
+    const fixture = materializationFixture();
+    const captures = [{
+      ...fixture.captures[0],
+      catalogSource: {
+        ...fixture.captures[0]!.catalogSource,
+        sourceName: "Conflicting source owner",
+      },
+    }, ...fixture.captures.slice(1)];
+    const forgedPlan = structuredClone(fixture.plan);
+    (forgedPlan.sources[0]!.source as { accessMode: string }).accessMode =
+      "optional-credentialed";
+
+    expectMaterializationInvalid({ ...fixture, captures });
+    expectMaterializationInvalid({ ...fixture, plan: forgedPlan });
+  });
+
+  test("rejects unaccepted risk locators and unsupported severity binding", () => {
+    const fixture = materializationFixture();
+    const unknownLocatorReview = reviewedManualSourcesValue(fixture.plan, {
+      "official-html": {
+        promptInjectionRisk: "suspected",
+        injectionRisks: [{
+          locator: "html:section=not-reviewed",
+          severity: "suspected",
+          details: "Not part of the reviewed plan",
+        }],
+      },
+    });
+    const wrongSeverityReview = reviewedManualSourcesValue(fixture.plan, {
+      "official-html": {
+        promptInjectionRisk: "suspected",
+        injectionRisks: [{
+          locator: "html:section=overview",
+          severity: "confirmed",
+          details: "Severity does not support the source conclusion",
+        }],
+      },
+    });
+
+    expectMaterializationInvalid({ ...fixture, review: unknownLocatorReview });
+    expectMaterializationInvalid({ ...fixture, review: wrongSeverityReview });
+  });
+
+  test("rejects catalog-unaccepted paths, owner bypasses, and mixed MIME locators", () => {
+    const fixture = materializationFixture();
+    const unacceptedPath = replaceFirstDocumentPlan(fixture, {
+      observations: [
+        fixture.documentPlans[0]!.observations[0],
+        {
+          ...fixture.documentPlans[0]!.observations[1],
+          fieldPath: "marketOverview.gdp",
+        },
+      ],
+    });
+    const sourceFactEditorialPath = replaceFirstDocumentPlan(fixture, {
+      observations: [
+        fixture.documentPlans[0]!.observations[0],
+        {
+          ...fixture.documentPlans[0]!.observations[1],
+          fieldPath: "marketOverview.overview",
+        },
+      ],
+    });
+    const editorialSourcePath = replaceFirstDocumentPlan(fixture, {
+      observations: [
+        {
+          ...fixture.documentPlans[0]!.observations[0],
+          fieldPath: "marketOverview.population",
+        },
+        fixture.documentPlans[0]!.observations[1],
+      ],
+    });
+    const mixedMime = replaceFirstDocumentPlan(fixture, {
+      capture: {
+        ...fixture.documentPlans[0]!.capture,
+        contentType: "application/pdf",
+      },
+    });
+
+    expectMaterializationInvalid({ ...fixture, documentPlans: unacceptedPath });
+    expectMaterializationInvalid({ ...fixture, documentPlans: sourceFactEditorialPath });
+    expectMaterializationInvalid({ ...fixture, documentPlans: editorialSourcePath });
+    expectMaterializationInvalid({ ...fixture, documentPlans: mixedMime });
+  });
+
+  test("rejects exact-input accessors without executing them", () => {
+    const fixture = materializationFixture();
+    const probe = { executions: 0 };
+    const input = { ...fixture } as MutableRecord;
+    Object.defineProperty(input, "captures", {
+      enumerable: true,
+      get() {
+        probe.executions += 1;
+        return fixture.captures;
+      },
+    });
+
+    expectMaterializationInvalid(input);
+    expect(probe.executions).toBe(0);
+  });
+
+  test("returns one stable redacted error without leaking rejected material", () => {
+    const fixture = materializationFixture();
+    const sentinel = "DOCUMENT_MATERIALIZATION_SECRET_MUST_NOT_LEAK";
+    const documentPlans = replaceFirstDocumentPlan(fixture, {
+      capture: {
+        ...fixture.documentPlans[0]!.capture,
+        requestUrl: `https://documents.example/${sentinel}`,
+      },
+    });
+
+    try {
+      materializeBasicDocumentEvidence({ ...fixture, documentPlans });
+    } catch (error) {
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).toBe(MATERIALIZATION_ERROR);
+      expect((error as Error).message).not.toContain(sentinel);
+    }
+  });
+});
+
+function materializationFixture(
+  htmlCredibility: "OFFICIAL" | "UNVERIFIED" = "OFFICIAL",
+): MaterializationFixture {
+  const planValue = createBasicSourceExecutionPlan({
+    catalog: parseBasicSourceCatalog(materializationCatalog(htmlCredibility)),
+    countryCode: "VN",
+    sourceIds: ["official-html", "official-pdf", "structured-data"],
+  });
+  const captures = planValue.sources
+    .filter(({ source }) => source.adapterKind === "manual-document")
+    .map((entry, index) => documentCapture(entry, index, planValue));
+  const fixtureBase = {
+    plan: planValue,
+    captures,
+    documentPlans: captures.map(documentObservationPlan),
+  };
+  return {
+    ...fixtureBase,
+    review: reviewedManualSources(planValue),
+  };
+}
+
+function materializationCatalog(htmlCredibility: "OFFICIAL" | "UNVERIFIED") {
+  return {
+    schemaVersion: "basic-source-catalog/v1",
+    catalogVersion: "2026.07.12.documents-1",
+    sources: [
+      materializationCatalogSource({
+        sourceId: "official-html",
+        sourceName: "Official HTML publication",
+        sourceFamily: "government",
+        credibility: htmlCredibility,
+        format: "html",
+        accept: "text/html",
+        filename: "official.html",
+        fieldPaths: ["country.summary", "marketOverview.population"],
+      }),
+      materializationCatalogSource({
+        sourceId: "official-pdf",
+        sourceName: "Official PDF publication",
+        sourceFamily: "energy-authority",
+        credibility: "VERIFIED",
+        format: "pdf",
+        accept: "application/pdf",
+        filename: "official.pdf",
+        fieldPaths: ["marketOverview.gdp", "marketOverview.renewableTarget"],
+      }),
+      materializationCatalogSource({
+        sourceId: "structured-data",
+        sourceName: "Structured official data",
+        sourceFamily: "official-statistics",
+        credibility: "OFFICIAL",
+        format: "json",
+        accept: "application/json",
+        filename: "structured.json",
+        fieldPaths: ["country.code"],
+        adapterId: "fixture-structured-adapter",
+        adapterKind: "deterministic",
+      }),
+    ],
+    countryMappings: [],
+  };
+}
+
+function materializationCatalogSource(value: {
+  readonly sourceId: string;
+  readonly sourceName: string;
+  readonly sourceFamily: string;
+  readonly credibility: string;
+  readonly format: string;
+  readonly accept: string;
+  readonly filename: string;
+  readonly fieldPaths: readonly string[];
+  readonly adapterId?: string;
+  readonly adapterKind?: string;
+}) {
+  return {
+    sourceId: value.sourceId,
+    sourceName: value.sourceName,
+    sourceFamily: value.sourceFamily,
+    credibility: value.credibility,
+    format: value.format,
+    countryScope: ["VN"],
+    requestTemplate: {
+      origin: "https://documents.example",
+      pathSegments: [
+        { kind: "literal", value: "sources" },
+        { kind: "placeholder", value: "countryCode" },
+        { kind: "literal", value: value.filename },
+      ],
+      query: [],
+    },
+    accept: value.accept,
+    approvedOrigins: ["https://documents.example"],
+    allowedQueryParameters: [],
+    accessMode: "open",
+    licenseName: "Official public information",
+    licenseUrl: "https://documents.example/license",
+    attribution: "Official authority",
+    refreshCadence: "event-driven",
+    adapterId: value.adapterId ?? "basic-manual-document-capture",
+    adapterVersion: "1.0.0",
+    adapterKind: value.adapterKind ?? "manual-document",
+    fieldPaths: Array.from(value.fieldPaths),
+  };
+}
+
+function documentCapture(
+  entry: BasicSourceExecutionPlan["sources"][number],
+  index: number,
+  planValue: BasicSourceExecutionPlan,
+): BasicDocumentCaptureV2 {
+  const isHtml = entry.source.format === "html";
+  return {
+    catalogSource: entry.source,
+    manifest: {
+      schemaVersion: "basic-country-raw-capture/v2",
+      countryCode: "VN",
+      runId: "run-20260712",
+      catalogVersion: planValue.catalogVersion,
+      catalogSha256: planValue.catalogSha256,
+      adapterId: entry.source.adapterId,
+      adapterVersion: entry.source.adapterVersion,
+      sourceId: entry.source.sourceId,
+      request: entry.request,
+      response: {
+        status: 200,
+        finalUrl: entry.request.url,
+        redirectChain: [],
+        contentType: entry.source.accept,
+        retrievedAt: isHtml
+          ? "2026-07-12T04:00:00.000Z"
+          : "2026-07-12T05:00:00.000Z",
+        byteLength: (index + 1) * 1_024,
+        contentSha256: isHtml ? CONTENT_SHA256 : SECOND_CONTENT_SHA256,
+      },
+    },
+  };
+}
+
+function documentObservationPlan(
+  captureValue: BasicDocumentCaptureV2,
+): BasicDocumentObservationPlan {
+  const { catalogSource, manifest } = captureValue;
+  const isHtml = catalogSource.format === "html";
+  return parseBasicDocumentObservationPlan({
+    schemaVersion: "basic-document-observation-plan/v1",
+    runId: manifest.runId,
+    countryCode: manifest.countryCode,
+    catalogVersion: manifest.catalogVersion,
+    catalogSha256: manifest.catalogSha256,
+    sourceId: catalogSource.sourceId,
+    capture: {
+      adapterId: manifest.adapterId,
+      adapterVersion: manifest.adapterVersion,
+      requestUrl: manifest.request.url,
+      retrievedAt: manifest.response.retrievedAt,
+      contentType: manifest.response.contentType,
+      byteLength: manifest.response.byteLength,
+      contentSha256: manifest.response.contentSha256,
+    },
+    observations: isHtml
+      ? [
+        {
+          usage: "editorial-evidence",
+          fieldPath: "country.summary",
+          locator: "html:section=overview",
+          rawValue: "Reviewed country summary",
+        },
+        {
+          usage: "source-fact",
+          fieldPath: "marketOverview.population",
+          locator: "html:section=population-table;row=2025",
+          rawValue: "101598527",
+          normalizedValue: 101_598_527,
+          unit: "people",
+          year: 2025,
+          uncertainty: null,
+        },
+      ]
+      : [
+        {
+          usage: "source-fact",
+          fieldPath: "marketOverview.gdp",
+          locator: "pdf:page=2#gdp-table",
+          rawValue: "476300000000",
+          normalizedValue: 476_300_000_000,
+          unit: "USD",
+          year: 2025,
+          uncertainty: null,
+        },
+        {
+          usage: "editorial-evidence",
+          fieldPath: "marketOverview.renewableTarget",
+          locator: "pdf:page=3#renewable-target",
+          rawValue: "Reviewed renewable target",
+        },
+      ],
+  });
+}
+
+type ManualReviewOverride = Readonly<{
+  sourceCheck?: Readonly<{ status: "passed" | "failed"; notes: string | null }>;
+  promptInjectionRisk?: "none" | "suspected" | "confirmed";
+  injectionRisks?: readonly Readonly<{
+    locator: string;
+    severity: "suspected" | "confirmed";
+    details: string;
+  }>[];
+}>;
+
+function reviewedManualSources(
+  planValue: BasicSourceExecutionPlan,
+  overrides: Readonly<Record<string, ManualReviewOverride>> = {},
+): BasicManualSourceReview {
+  return parseBasicManualSourceReview(
+    reviewedManualSourcesValue(planValue, overrides),
+    reviewExpectation(planValue),
+  );
+}
+
+function reviewedManualSourcesValue(
+  planValue: BasicSourceExecutionPlan,
+  overrides: Readonly<Record<string, ManualReviewOverride>> = {},
+): Record<string, unknown> {
+  const sources = planValue.sources
+    .filter(({ source }) => source.adapterKind === "manual-document")
+    .map(({ source }) => {
+      const override = overrides[source.sourceId] ?? {};
+      const pdf = source.format === "pdf";
+      return {
+        sourceId: source.sourceId,
+        publishedAt: pdf ? null : "2026-07-01T00:00:00.000Z",
+        accessNotes: pdf ? null : "Public HTML publication",
+        promptInjectionRisk: override.promptInjectionRisk ?? "none",
+        sourceCheck: override.sourceCheck ?? (pdf
+          ? { status: "passed", notes: "Publication date is not stated" }
+          : { status: "passed", notes: null }),
+        injectionRisks: override.injectionRisks ?? [],
+      };
+    });
+  return {
+    schemaVersion: "basic-manual-source-review/v1",
+    runId: "run-20260712",
+    countryCode: planValue.countryCode,
+    catalogVersion: planValue.catalogVersion,
+    catalogSha256: planValue.catalogSha256,
+    sources,
+  };
+}
+
+function reviewExpectation(planValue: BasicSourceExecutionPlan) {
+  return {
+    runId: "run-20260712",
+    countryCode: planValue.countryCode,
+    catalogVersion: planValue.catalogVersion,
+    catalogSha256: planValue.catalogSha256,
+    deterministicSourceIds: planValue.sources
+      .filter(({ source }) => source.adapterKind === "deterministic")
+      .map(({ source }) => source.sourceId),
+    manualSourceIds: planValue.sources
+      .filter(({ source }) => source.adapterKind === "manual-document")
+      .map(({ source }) => source.sourceId),
+  };
+}
+
+function replaceFirstCaptureManifest(
+  fixture: MaterializationFixture,
+  mutate: (manifest: Record<string, unknown>) => Record<string, unknown>,
+): readonly BasicDocumentCaptureV2[] {
+  const first = fixture.captures[0]!;
+  return [{
+    catalogSource: first.catalogSource,
+    manifest: mutate(structuredClone(first.manifest) as unknown as Record<string, unknown>),
+  } as unknown as BasicDocumentCaptureV2, ...fixture.captures.slice(1)];
+}
+
+function replaceFirstDocumentPlan(
+  fixture: MaterializationFixture,
+  overrides: Record<string, unknown>,
+): readonly BasicDocumentObservationPlan[] {
+  return [{
+    ...fixture.documentPlans[0],
+    ...overrides,
+  } as unknown as BasicDocumentObservationPlan, ...fixture.documentPlans.slice(1)];
+}
+
+function structuredCapture(planValue: BasicSourceExecutionPlan): BasicDocumentCaptureV2 {
+  const entry = planValue.sources.find(({ source }) => source.sourceId === "structured-data");
+  if (entry === undefined) throw new Error("structured fixture missing");
+  return {
+    catalogSource: entry.source,
+    manifest: {
+      schemaVersion: "basic-country-raw-capture/v2",
+      countryCode: planValue.countryCode,
+      runId: "run-20260712",
+      catalogVersion: planValue.catalogVersion,
+      catalogSha256: planValue.catalogSha256,
+      adapterId: entry.source.adapterId,
+      adapterVersion: entry.source.adapterVersion,
+      sourceId: entry.source.sourceId,
+      request: entry.request,
+      response: {
+        status: 200,
+        finalUrl: entry.request.url,
+        redirectChain: [],
+        contentType: "application/json",
+        retrievedAt: "2026-07-12T03:00:00.000Z",
+        byteLength: 128,
+        contentSha256: CONTENT_SHA256,
+      },
+    },
+  };
+}
+
+function expectMaterializationInvalid(value: unknown): void {
+  expect(() => materializeBasicDocumentEvidence(
+    value as Parameters<typeof materializeBasicDocumentEvidence>[0],
+  )).toThrow(MATERIALIZATION_ERROR);
+}
+
+function expectDeeplyFrozen(value: unknown): void {
+  if (value === null || typeof value !== "object") return;
+  expect(Object.isFrozen(value)).toBe(true);
+  for (const child of Object.values(value)) expectDeeplyFrozen(child);
+}
