@@ -126,4 +126,4 @@ Header token 先将 `~` 转义为 `~0`，再将 `/` 转义为 `~1`。返回的 `
 
 Transport/capture/CSV 失败只返回稳定边界错误，不回显 URL/query value、header、response body、CSV header/cell、token、cookie、filesystem path 或外部异常。外部 bytes 始终是不可信数据，不能修改 catalog、request policy 或 field mapping。
 
-以下 v1 行为保持原样：`BasicSourceRequest`、`BasicSourceTransport`、`captureBasicRawSource()`、`basic-country-raw-capture/v1`、v1 `raw/` cache namespace、P1-6C/P1-6D compatibility path 和 package root exports。v1 继续只允许 `application/json`，并在 TypeScript/runtime 测试中拒绝 CSV、HTML 和 PDF request。
+以下 v1 行为保持原样：`BasicSourceRequest` 的既有 TypeScript shape、`BasicSourceTransport`、`captureBasicRawSource()`、`basic-country-raw-capture/v1`、v1 `raw/` cache namespace、P1-6C/P1-6D compatibility path 和 package root exports。v1 runtime 继续只允许 `application/json`，回归测试明确拒绝 CSV、HTML 和 PDF request；本任务不收窄或扩宽既有 v1 TypeScript 类型。

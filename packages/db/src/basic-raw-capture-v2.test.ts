@@ -667,6 +667,28 @@ describe("Basic immutable raw capture v2", () => {
     expect(calls).toBe(0);
   });
 
+  test("redacts unexpected filesystem failures", async () => {
+    const root = repoRoot();
+    const longRunId = `r${"a".repeat(299)}`;
+    let calls = 0;
+
+    const error = await rejection(captureBasicRawSourceV2(
+      { ...captureInput(root), runId: longRunId },
+      {
+        async execute() {
+          calls += 1;
+          return captureResponse(new Uint8Array(), "text/csv");
+        },
+      },
+    ));
+
+    expect(error.message).toBe("raw capture operation failed");
+    expect(error.message).not.toContain(longRunId);
+    expect(error.message).not.toContain(root);
+    expect(error.stack ?? "").not.toContain(longRunId);
+    expect(calls).toBe(0);
+  });
+
   test("concurrent equal content converges on one immutable capture", async () => {
     const root = repoRoot();
     const body = new TextEncoder().encode("same");

@@ -86,6 +86,7 @@ describe("Basic strict CSV parser", () => {
     ["short row", "a,b\n1\n"],
     ["long row", "a,b\n1,2,3\n"],
     ["empty physical line", "a\n\nb\n"],
+    ["empty CRLF physical line", "a\r\n\r\nb\r\n"],
     ["comment line", "a\n# comment\n"],
     ["malformed quote", "a,b\n\"unterminated,2\n"],
     ["relaxed quote", "a,b\ninvalid\"quote,2\n"],
@@ -239,6 +240,24 @@ describe("Basic CSV locator", () => {
     const cell = locateBasicCsvCell(table, 0, "a");
 
     expect(Object.isFrozen(cell)).toBe(true);
+  });
+
+  test("rejects malformed Unicode in a forged frozen table", () => {
+    const malformedHeader = Object.freeze({
+      headers: Object.freeze(["\uD800"]),
+      rows: Object.freeze([Object.freeze(["1"])]),
+    });
+    const malformedCell = Object.freeze({
+      headers: Object.freeze(["a"]),
+      rows: Object.freeze([Object.freeze(["\uDFFF"])]),
+    });
+
+    expect(() => locateBasicCsvCell(malformedHeader, 0, "\uD800")).toThrow(
+      LOCATOR_ERROR,
+    );
+    expect(() => locateBasicCsvCell(malformedCell, 0, "a")).toThrow(
+      LOCATOR_ERROR,
+    );
   });
 });
 

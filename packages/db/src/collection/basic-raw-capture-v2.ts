@@ -43,8 +43,39 @@ type VerifiedCaptureV2 = {
   manifest: BasicRawCaptureManifestV2;
   body: Uint8Array;
 };
+const STABLE_CAPTURE_ERRORS = new Set([
+  "raw capture input is invalid",
+  "raw capture path is not allowed",
+  "raw capture request is invalid",
+  "raw capture is incomplete",
+  "raw capture manifest is invalid",
+  "raw capture manifest metadata is invalid",
+  "raw capture payload is invalid",
+  "raw capture transport failed",
+  "raw capture response is invalid",
+  "raw capture publication failed",
+  "raw capture already exists with different content",
+  "source response body is invalid",
+  "source response body exceeds the capture limit",
+  "source response body read failed",
+]);
 
 export async function captureBasicRawSourceV2(
+  value: BasicRawCaptureInputV2,
+  transport: BasicSourceTransportV2,
+): Promise<BasicRawCaptureResultV2> {
+  try {
+    return await captureBasicRawSourceV2Internal(value, transport);
+  } catch (error) {
+    const message = error instanceof Error &&
+      STABLE_CAPTURE_ERRORS.has(error.message)
+      ? error.message
+      : "raw capture operation failed";
+    throw new Error(message);
+  }
+}
+
+async function captureBasicRawSourceV2Internal(
   value: BasicRawCaptureInputV2,
   transport: BasicSourceTransportV2,
 ): Promise<BasicRawCaptureResultV2> {

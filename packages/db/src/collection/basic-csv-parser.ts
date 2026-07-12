@@ -247,7 +247,10 @@ function validateLexicalBoundaries(value: string): void {
     }
     if (inQuotes) continue;
     if (lineStart && character === "#") invalidInput();
-    if (character === "\r" && value[index + 1] !== "\n") invalidInput();
+    if (character === "\r") {
+      if (value[index + 1] !== "\n") invalidInput();
+      continue;
+    }
     if (character === "\n") {
       if (lineStart) invalidInput();
       validateRecordBytes(value.slice(recordStart, index + 1));
@@ -269,6 +272,7 @@ function validateRecordBytes(value: string): void {
 function validateHeader(value: unknown): asserts value is string {
   if (
     typeof value !== "string" ||
+    !isWellFormedUnicode(value) ||
     value === "" ||
     value.trim() !== value ||
     Buffer.byteLength(value, "utf8") > MAX_HEADER_BYTES
@@ -278,8 +282,24 @@ function validateHeader(value: unknown): asserts value is string {
 function validateCell(value: unknown): asserts value is string {
   if (
     typeof value !== "string" ||
+    !isWellFormedUnicode(value) ||
     Buffer.byteLength(value, "utf8") > MAX_CELL_BYTES
   ) invalidInput();
+}
+
+function isWellFormedUnicode(value: string): boolean {
+  for (let index = 0; index < value.length; index += 1) {
+    const codeUnit = value.charCodeAt(index);
+    if (codeUnit >= 0xD800 && codeUnit <= 0xDBFF) {
+      if (index + 1 >= value.length) return false;
+      const next = value.charCodeAt(index + 1);
+      if (next < 0xDC00 || next > 0xDFFF) return false;
+      index += 1;
+    } else if (codeUnit >= 0xDC00 && codeUnit <= 0xDFFF) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function invalidInput(): never {
