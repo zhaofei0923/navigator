@@ -86,7 +86,7 @@ catalog data, never executor code.
 | `sourceUrl`, `retrievedAt`, `contentSha256` | verified v2 manifest; URL is the materialized request URL |
 | `publishedAt`, `accessNotes`, `promptInjectionRisk` for JSON/CSV | reviewed deterministic adapter output |
 | `publishedAt`, `accessNotes`, `promptInjectionRisk` for HTML/PDF | manual source review |
-| `evidenceLocators` | accepted plan observations, deduplicated and sorted |
+| `evidenceLocators` | JSON/CSV: accepted deterministic adapter observations; HTML/PDF: accepted document-plan observations; future derived locators are added only by Deterministic |
 | `accessStatus` | catalog access mode; materialized v2 sources are only `open` |
 | `discoveryOnly` | fixed `false` for v2 materialized sources |
 | source checks and injection risks | structured/manual review, later carried into the review report |
@@ -160,13 +160,14 @@ verified v2 manifest. The materializer also rechecks the v2 response policy:
 approved HTTPS final URL, redirect, MIME, and capture identity remain bound.
 One missing, duplicate, orphan, or mixed-format plan/capture fails closed.
 
-`source-fact` may name only a source-backed or hybrid-name path and has the
-full tuple fields. It becomes a `manual` preliminary fact. `editorial-evidence`
+`source-fact` may name only a source-backed path and has the full tuple fields.
+It becomes a `manual` preliminary fact. `country.name` remains hybrid-name for
+later Editorial controlled enrichment. `editorial-evidence`
 may name only an editorial path and has no normalized value, unit, year, or
 uncertainty; it remains a frozen intermediate for Editorial. Derived paths are
 not accepted from either variant. Each observation must be in the source's
-catalog `fieldPaths`, be finite JSON, be uniquely identified, and retain its
-reviewed order.
+catalog `fieldPaths`, be finite JSON, be uniquely identified by `fieldPath` +
+NUL + `locator`, and be in strict ascending order by that identity.
 
 Locators are manually reviewed positions, never inferred from URLs or raw
 bytes:
@@ -176,9 +177,10 @@ HTML: html:<nonblank reviewed location>
 PDF:  pdf:page=<positive integer>#<nonblank anchor>
 ```
 
-HTML accepts only the HTML form and PDF only the PDF form. Whitespace-only or
-control-only anchors, page zero, URLs/search snippets, capture metadata, and
-cross-format locators are invalid. Every declared manual risk locator must be
+HTML accepts only the HTML form and PDF only the PDF form. The HTML location
+and PDF anchor must be non-empty, unchanged after `trim()`, and contain no C0
+control character or DEL. Page zero, URLs/search snippets, capture metadata,
+and cross-format locators are invalid. Every declared manual risk locator must be
 one of that source plan's accepted locators.
 
 ## 6. Facts, Conflicts, And Risk Retention
