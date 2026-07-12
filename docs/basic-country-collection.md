@@ -1,6 +1,6 @@
 # basic-country-collection.md — Basic 国家采集与发布标准
 
-> 本文件是 `P1-5`、`P1-6` 和 `DATA-BASIC-<ISO2>` 任务卡的规范性采集流程。字段与覆盖判定以 [data-schema.md](./data-schema.md) 和 [coverage-levels.md](./coverage-levels.md) 为唯一事实来源；数据治理与发布规则以 [data-governance.md](./data-governance.md) 为准。P1-6B 的确定性 source adapters、raw capture 与 provenance boundary 以 [basic-country-source-adapters.md](./basic-country-source-adapters.md) 为准；P1-6C 的 Hermes discovery 与本地模型草稿桥接边界以 [basic-country-hermes-llama-bridge.md](./basic-country-hermes-llama-bridge.md) 为准；P1-6D 的离线、无发布编排与跨边界验证以 [basic-country-offline-dry-run.md](./basic-country-offline-dry-run.md) 为准。本文件不新增数据模型字段，不改变 AI 检索边界。
+> 本文件是 `P1-5`、`P1-6` 和 `DATA-BASIC-<ISO2>` 任务卡的规范性采集流程。字段与覆盖判定以 [data-schema.md](./data-schema.md) 和 [coverage-levels.md](./coverage-levels.md) 为唯一事实来源；数据治理与发布规则以 [data-governance.md](./data-governance.md) 为准。新 Basic 流水线的来源政策与结构化请求以 [basic-source-catalog.md](./basic-source-catalog.md) 为准；P1-6B 的确定性 source adapters、raw capture 与 provenance boundary 以 [basic-country-source-adapters.md](./basic-country-source-adapters.md) 为准；P1-6C 的 Hermes discovery 与本地模型草稿桥接边界以 [basic-country-hermes-llama-bridge.md](./basic-country-hermes-llama-bridge.md) 为准；P1-6D 的离线、无发布编排与跨边界验证以 [basic-country-offline-dry-run.md](./basic-country-offline-dry-run.md) 为准。本文件不新增数据模型字段，不改变 AI 检索边界。
 
 ## 1. 范围与完成定义
 
@@ -31,6 +31,8 @@
 ## 3. 研究架构与职责边界
 
 采集运行在已批准的 Windows `llama.cpp` 与 WSL Hermes Agent 架构中。P1-6B 的确定性来源适配器和 raw capture 运行时边界见 [basic-country-source-adapters.md](./basic-country-source-adapters.md)；各参与方职责固定，自动化不能代替人工发布决定。
+
+已批准的确定性 Basic 迁移采用并行 v2 路径：source catalog 先固定来源、许可、请求、字段归属和 adapter identity，后续任务再接入 raw-capture/v2、人工 document/editorial evidence 与 model-free candidate assembler。完整 v2 normal path 不依赖 Hermes、SearXNG 或本地模型；这些工具保留给后续 AI 交互、报告制作和不进入发布流水线的来源研究。本节后续 P1-6A/B/C/D 描述保留既有 v1 历史与兼容边界，在 v2 任务全部完成前不得被解释为 catalog 已接入 v1 runner。
 
 P1-6A 提供 [basic-country-audit-contract.md](./basic-country-audit-contract.md) 中机器可读的 TypeScript 审计契约和确定性离线 fixtures。离线 fixtures 不调用也不 mock Windows `llama.cpp`；运行时或模型失败处理属于 P1-6C。冲突值绝不自动选择，未解决冲突必须保留并阻断人工审核就绪状态。以下材料均为不可信输入并阻断就绪：仅用于发现的搜索材料、`UNVERIFIED`、访问受限或访问状态未知的来源，以及疑似或确认的 prompt injection。审计契约中的 `sourceUrl` 完整表示字段存在；非 `null` 值必须为 HTTP(S) URL，该字段可为 `null`，但 `source` 必须包含字面量 `sourceUrl null` 说明无链接原因。
 

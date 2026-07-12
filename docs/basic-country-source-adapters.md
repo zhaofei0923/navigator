@@ -1,6 +1,6 @@
 # basic-country-source-adapters.md — P1-6B 确定性来源适配器与原始采集边界
 
-> 本文件是 P1-6B 的规范性运行时与来源溯源边界。它实现 [basic-country-collection.md](./basic-country-collection.md) 的原始采集与证据登记约定，使用 [basic-country-audit-contract.md](./basic-country-audit-contract.md) 的既有字段和路径，不新增 canonical 数据模型字段、审核状态或 AI 检索范围。
+> 本文件是 P1-6B 的规范性运行时与来源溯源边界。它实现 [basic-country-collection.md](./basic-country-collection.md) 的原始采集与证据登记约定，使用 [basic-country-audit-contract.md](./basic-country-audit-contract.md) 的既有字段和路径，不新增 canonical 数据模型字段、审核状态或 AI 检索范围。新 Basic 流水线的来源政策、结构化请求与 adapter binding 以 [basic-source-catalog.md](./basic-source-catalog.md) 为准。
 
 ## 1. 范围与职责
 
@@ -13,6 +13,8 @@ P1-6B 为国家中立的、可复现的确定性来源适配器运行时。它�
 适配器只负责来源知识：请求 URL、接受的媒体类型、来源身份和确定性解析。共享 runner 负责跨来源不变量：HTTPS 与 origin 策略、请求参数白名单、重定向、字节上限、SHA-256、缓存不可变性、路径安全、来源登记、事实分组和冲突保留。
 
 P1-6B 不生成双语市场草稿，不写入 canonical seed，不发布数据，不创建知识片段，也不调用 Hermes、SearXNG 或 Windows `llama.cpp`。Hermes discovery、浏览器编排、本地模型草稿桥接和运行时/模型失败处理属于 P1-6C；离线端到端 dry run 与完整 pipeline boundary verification 属于 P1-6D。
+
+`DATA-BASIC-CATALOG-1` 起，version-controlled catalog 是后续 model-free Basic 流水线的 source policy 与 request control plane，既有 adapter implementation 仍是 response validation 和 extraction code 的权威。Catalog binding 在未来 v2 cache/network 前检查元数据与请求漂移；本任务没有把 catalog 接入本文件所述 v1 runner，也没有修改下述 v1 capture path、contract、fixtures 或行为。
 
 ## 2. 固定运行时常量与路径
 
