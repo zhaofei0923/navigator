@@ -192,6 +192,33 @@ describe("Basic country editorial input parser", () => {
     );
   });
 
+  test("produces byte-identical output for integer-style raw-object insertion-order changes", () => {
+    const firstRawValue: Record<string, unknown> = {};
+    firstRawValue["2"] = "two";
+    firstRawValue["10"] = "ten";
+    const secondRawValue: Record<string, unknown> = {};
+    secondRawValue["10"] = "ten";
+    secondRawValue["2"] = "two";
+    const first = singleItemInput(
+      "country.summary",
+      localized("Summary", "摘要"),
+      { evidence: [evidence({ rawValue: firstRawValue })] },
+    );
+    const second = singleItemInput(
+      "country.summary",
+      localized("Summary", "摘要"),
+      { evidence: [evidence({ rawValue: secondRawValue })] },
+    );
+
+    const firstResult = parseBasicCountryEditorialInput(first);
+    const secondResult = parseBasicCountryEditorialInput(second);
+    const expectedRawValue = { "2": "two", "10": "ten" };
+
+    expect(JSON.stringify(firstResult)).toBe(JSON.stringify(secondResult));
+    expect(firstResult.items[0]!.evidence[0]!.rawValue).toEqual(expectedRawValue);
+    expect(secondResult.items[0]!.evidence[0]!.rawValue).toEqual(expectedRawValue);
+  });
+
   test.each([
     ["an extra top-level key", () => ({ ...validInput(), extra: true })],
     ["a missing top-level key", () => {
@@ -433,6 +460,8 @@ describe("Basic country editorial input parser", () => {
     ["marketOverview.collectedAt"],
     ["marketOverview.updatedAt"],
     ["marketOverview.credibility"],
+    ["marketOverview.reviewStatus"],
+    ["marketOverview.aiUsable"],
     ["marketOverview.countryCode"],
     ["marketOverview.keyIndicators[0].value"],
     ["marketOverview.keyIndicators[0].unit"],
