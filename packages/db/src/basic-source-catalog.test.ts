@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
 import { describe, expect, test } from "vitest";
 
 import {
@@ -532,6 +535,33 @@ describe("Basic source adapter registry", () => {
   });
 });
 
+describe("committed Basic source catalog", () => {
+  test("registers exactly the four existing World Bank sources", () => {
+    const catalog = readCommittedCatalog();
+    const sourceIds = [
+      "world-bank-country",
+      "world-bank-gdp",
+      "world-bank-gdp-growth",
+      "world-bank-population",
+    ] as const;
+
+    expect(catalog.catalog.countryMappings).toEqual([]);
+    expect(catalog.catalog.sources.map(({ sourceId }) => sourceId)).toEqual(
+      sourceIds,
+    );
+
+    const plan = createBasicSourceExecutionPlan({
+      catalog,
+      countryCode: "VN",
+      sourceIds,
+    });
+    for (const entry of plan.sources) {
+      const adapter = resolveBasicSourceAdapter(entry, "VN");
+      expect(entry.request).toEqual(adapter.request("VN"));
+    }
+  });
+});
+
 function validCatalog() {
   return {
     schemaVersion: "basic-source-catalog/v1",
@@ -805,4 +835,12 @@ function countryCodes(count: number): string[] {
 function countryCode(index: number): string {
   const normalized = index % (26 * 26);
   return `${String.fromCharCode(65 + Math.floor(normalized / 26))}${String.fromCharCode(65 + normalized % 26)}`;
+}
+
+function readCommittedCatalog() {
+  const pathname = fileURLToPath(
+    new URL("../catalog/basic-source-catalog.json", import.meta.url),
+  );
+  const value: unknown = JSON.parse(readFileSync(pathname, "utf8"));
+  return parseBasicSourceCatalog(value);
 }

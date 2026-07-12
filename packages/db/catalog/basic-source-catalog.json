@@ -1,0 +1,185 @@
+{
+  "schemaVersion": "basic-source-catalog/v1",
+  "catalogVersion": "2026-07-12.1",
+  "sources": [
+    {
+      "sourceId": "world-bank-country",
+      "sourceName": "World Bank",
+      "sourceFamily": "international-organization",
+      "credibility": "OFFICIAL",
+      "format": "json",
+      "countryScope": "all",
+      "requestTemplate": {
+        "origin": "https://api.worldbank.org",
+        "pathSegments": [
+          { "kind": "literal", "value": "v2" },
+          { "kind": "literal", "value": "country" },
+          { "kind": "placeholder", "value": "countryCode" }
+        ],
+        "query": [
+          {
+            "name": "format",
+            "value": { "kind": "literal", "value": "json" }
+          }
+        ]
+      },
+      "accept": "application/json",
+      "approvedOrigins": ["https://api.worldbank.org"],
+      "allowedQueryParameters": ["format"],
+      "accessMode": "open",
+      "licenseName": "Creative Commons Attribution 4.0 International (CC BY 4.0)",
+      "licenseUrl": "https://datacatalog.worldbank.org/public-licenses",
+      "attribution": "World Bank, World Development Indicators; licensed under CC BY 4.0; changes and translations must be indicated.",
+      "refreshCadence": "annual",
+      "adapterId": "world-bank-country",
+      "adapterVersion": "1.0.0",
+      "adapterKind": "deterministic",
+      "fieldPaths": ["country.code", "country.name"]
+    },
+    {
+      "sourceId": "world-bank-gdp",
+      "sourceName": "World Bank",
+      "sourceFamily": "international-organization",
+      "credibility": "OFFICIAL",
+      "format": "json",
+      "countryScope": "all",
+      "requestTemplate": {
+        "origin": "https://api.worldbank.org",
+        "pathSegments": [
+          { "kind": "literal", "value": "v2" },
+          { "kind": "literal", "value": "country" },
+          { "kind": "placeholder", "value": "countryCode" },
+          { "kind": "literal", "value": "indicator" },
+          { "kind": "literal", "value": "NY.GDP.MKTP.CD" }
+        ],
+        "query": [
+          {
+            "name": "source",
+            "value": { "kind": "literal", "value": "2" }
+          },
+          {
+            "name": "format",
+            "value": { "kind": "literal", "value": "json" }
+          },
+          {
+            "name": "mrv",
+            "value": { "kind": "literal", "value": "1" }
+          },
+          {
+            "name": "per_page",
+            "value": { "kind": "literal", "value": "1" }
+          }
+        ]
+      },
+      "accept": "application/json",
+      "approvedOrigins": ["https://api.worldbank.org"],
+      "allowedQueryParameters": ["source", "format", "mrv", "per_page"],
+      "accessMode": "open",
+      "licenseName": "Creative Commons Attribution 4.0 International (CC BY 4.0)",
+      "licenseUrl": "https://datacatalog.worldbank.org/public-licenses",
+      "attribution": "World Bank, World Development Indicators; licensed under CC BY 4.0; changes and translations must be indicated.",
+      "refreshCadence": "annual",
+      "adapterId": "world-bank-gdp",
+      "adapterVersion": "1.0.0",
+      "adapterKind": "deterministic",
+      "fieldPaths": ["marketOverview.gdp"]
+    },
+    {
+      "sourceId": "world-bank-gdp-growth",
+      "sourceName": "World Bank",
+      "sourceFamily": "international-organization",
+      "credibility": "OFFICIAL",
+      "format": "json",
+      "countryScope": "all",
+      "requestTemplate": {
+        "origin": "https://api.worldbank.org",
+        "pathSegments": [
+          { "kind": "literal", "value": "v2" },
+          { "kind": "literal", "value": "country" },
+          { "kind": "placeholder", "value": "countryCode" },
+          { "kind": "literal", "value": "indicator" },
+          { "kind": "literal", "value": "NY.GDP.MKTP.KD.ZG" }
+        ],
+        "query": [
+          {
+            "name": "source",
+            "value": { "kind": "literal", "value": "2" }
+          },
+          {
+            "name": "format",
+            "value": { "kind": "literal", "value": "json" }
+          },
+          {
+            "name": "mrv",
+            "value": { "kind": "literal", "value": "1" }
+          },
+          {
+            "name": "per_page",
+            "value": { "kind": "literal", "value": "1" }
+          }
+        ]
+      },
+      "accept": "application/json",
+      "approvedOrigins": ["https://api.worldbank.org"],
+      "allowedQueryParameters": ["source", "format", "mrv", "per_page"],
+      "accessMode": "open",
+      "licenseName": "Creative Commons Attribution 4.0 International (CC BY 4.0)",
+      "licenseUrl": "https://datacatalog.worldbank.org/public-licenses",
+      "attribution": "World Bank, World Development Indicators; licensed under CC BY 4.0; changes and translations must be indicated.",
+      "refreshCadence": "annual",
+      "adapterId": "world-bank-gdp-growth",
+      "adapterVersion": "1.0.0",
+      "adapterKind": "deterministic",
+      "fieldPaths": ["marketOverview.gdpGrowth"]
+    },
+    {
+      "sourceId": "world-bank-population",
+      "sourceName": "World Bank",
+      "sourceFamily": "international-organization",
+      "credibility": "OFFICIAL",
+      "format": "json",
+      "countryScope": "all",
+      "requestTemplate": {
+        "origin": "https://api.worldbank.org",
+        "pathSegments": [
+          { "kind": "literal", "value": "v2" },
+          { "kind": "literal", "value": "country" },
+          { "kind": "placeholder", "value": "countryCode" },
+          { "kind": "literal", "value": "indicator" },
+          { "kind": "literal", "value": "SP.POP.TOTL" }
+        ],
+        "query": [
+          {
+            "name": "source",
+            "value": { "kind": "literal", "value": "2" }
+          },
+          {
+            "name": "format",
+            "value": { "kind": "literal", "value": "json" }
+          },
+          {
+            "name": "mrv",
+            "value": { "kind": "literal", "value": "1" }
+          },
+          {
+            "name": "per_page",
+            "value": { "kind": "literal", "value": "1" }
+          }
+        ]
+      },
+      "accept": "application/json",
+      "approvedOrigins": ["https://api.worldbank.org"],
+      "allowedQueryParameters": ["source", "format", "mrv", "per_page"],
+      "accessMode": "open",
+      "licenseName": "Creative Commons Attribution 4.0 International (CC BY 4.0)",
+      "licenseUrl": "https://datacatalog.worldbank.org/public-licenses",
+      "attribution": "World Bank, World Development Indicators; licensed under CC BY 4.0; changes and translations must be indicated.",
+      "refreshCadence": "annual",
+      "adapterId": "world-bank-population",
+      "adapterVersion": "1.0.0",
+      "adapterKind": "deterministic",
+      "fieldPaths": ["marketOverview.population"]
+    }
+  ],
+  "countryMappings": []
+}
