@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
+import type { BigIntStats } from "node:fs";
 import {
   lstat,
   mkdir,
@@ -43,6 +44,14 @@ type VerifiedCaptureV2 = {
   manifest: BasicRawCaptureManifestV2;
   body: Uint8Array;
 };
+type DirectoryIdentityV2 = Readonly<{
+  pathname: string;
+  dev: bigint;
+  ino: bigint;
+  type: bigint;
+}>;
+type DirectoryIdentitySnapshotV2 = readonly DirectoryIdentityV2[];
+const FILE_TYPE_MASK = 0o170000n;
 const STABLE_CAPTURE_ERRORS = new Set([
   "raw capture input is invalid",
   "raw capture path is not allowed",
@@ -83,8 +92,15 @@ async function captureBasicRawSourceV2Internal(
   validateCaptureInput(input);
   const paths = capturePaths(input);
   await prepareRawDirectory(input.repoRoot, paths);
+  const directoryIdentity = await snapshotDirectoryIdentity(
+    input.repoRoot,
+    paths.rawDirectory,
+  );
   const cached = await readVerifiedCapture(paths.sourceDirectory, input);
-  if (cached !== null) return resultFromCache(cached);
+  if (cached !== null) {
+    await requireUnchangedDirectoryIdentity(directoryIdentity);
+    return resultFromCache(cached);
+  }
 
   let transportResponse: BasicSourceTransportResponseV2;
   try {
@@ -92,6 +108,7 @@ async function captureBasicRawSourceV2Internal(
   } catch {
     throw new Error("raw capture transport failed");
   }
+  await requireUnchangedDirectoryIdentity(directoryIdentity);
   const response = snapshotBasicSourceTransportResponseV2(transportResponse);
   if (!isBasicSourceResponseAllowedV2(response, input.request)) {
     throw new Error("raw capture response is invalid");
@@ -107,6 +124,7 @@ async function captureBasicRawSourceV2Internal(
   if (!(await publishCapture(
     paths.rawDirectory,
     paths.sourceDirectory,
+    directoryIdentity,
     manifest,
     body,
   ))) {
@@ -223,14 +241,17 @@ async function readVerifiedCapture(
 async function publishCapture(
   rawDirectory: string,
   sourceDirectory: string,
+  directoryIdentity: DirectoryIdentitySnapshotV2,
   manifest: BasicRawCaptureManifestV2,
   body: Uint8Array,
 ): Promise<boolean> {
+  await requireUnchangedDirectoryIdentity(directoryIdentity);
   const temporaryDirectory = join(
     rawDirectory,
     `.tmp-${manifest.sourceId}-${randomUUID()}`,
   );
   await mkdir(temporaryDirectory, { mode: 0o700 });
+  const temporaryIdentity = await snapshotDirectory(temporaryDirectory);
   let published = false;
   try {
     await writeSyncedFile(
@@ -242,6 +263,8 @@ async function publishCapture(
       Buffer.from(JSON.stringify(manifest)),
     );
     await syncDirectoryIfSupported(temporaryDirectory);
+    await requireUnchangedDirectoryIdentity(directoryIdentity);
+    await requireUnchangedDirectoryIdentity([temporaryIdentity]);
     try {
       await rename(temporaryDirectory, sourceDirectory);
       published = true;
@@ -252,9 +275,89 @@ async function publishCapture(
     }
   } finally {
     if (!published) {
-      await rm(temporaryDirectory, { recursive: true, force: true });
+      await cleanupTemporaryDirectory(directoryIdentity, temporaryIdentity);
     }
   }
+}
+
+async function snapshotDirectoryIdentity(
+  root: string,
+  target: string,
+): Promise<DirectoryIdentitySnapshotV2> {
+  const relativeTarget = relative(root, target);
+  if (
+    relativeTarget === ".." ||
+    relativeTarget.startsWith(`..${sep}`) ||
+    isAbsolute(relativeTarget)
+  ) throw new Error("raw capture path is not allowed");
+
+  const identities: DirectoryIdentityV2[] = [];
+  let current = root;
+  identities.push(await snapshotDirectory(current));
+  for (const segment of relativeTarget.split(sep)) {
+    if (segment === "") continue;
+    current = join(current, segment);
+    identities.push(await snapshotDirectory(current));
+  }
+  return Object.freeze(identities);
+}
+
+async function snapshotDirectory(pathname: string): Promise<DirectoryIdentityV2> {
+  const details = await lstatBigInt(pathname);
+  if (
+    details === null ||
+    details.isSymbolicLink() ||
+    !details.isDirectory()
+  ) throw new Error("raw capture path is not allowed");
+  return Object.freeze({
+    pathname,
+    dev: details.dev,
+    ino: details.ino,
+    type: details.mode & FILE_TYPE_MASK,
+  });
+}
+
+async function requireUnchangedDirectoryIdentity(
+  expected: DirectoryIdentitySnapshotV2,
+): Promise<void> {
+  if (!(await hasUnchangedDirectoryIdentity(expected))) {
+    throw new Error("raw capture path is not allowed");
+  }
+}
+
+async function hasUnchangedDirectoryIdentity(
+  expected: DirectoryIdentitySnapshotV2,
+): Promise<boolean> {
+  for (const identity of expected) {
+    const details = await lstatBigInt(identity.pathname);
+    if (
+      details === null ||
+      details.isSymbolicLink() ||
+      !details.isDirectory() ||
+      details.dev !== identity.dev ||
+      details.ino !== identity.ino ||
+      (details.mode & FILE_TYPE_MASK) !== identity.type
+    ) return false;
+  }
+  return true;
+}
+
+async function cleanupTemporaryDirectory(
+  directoryIdentity: DirectoryIdentitySnapshotV2,
+  temporaryIdentity: DirectoryIdentityV2,
+): Promise<void> {
+  try {
+    if (!(await hasUnchangedDirectoryIdentity(directoryIdentity))) return;
+    if (!(await hasUnchangedDirectoryIdentity([temporaryIdentity]))) return;
+    // An orphan is safer than following a replaced ancestor during cleanup.
+    await rm(temporaryIdentity.pathname, { recursive: true, force: true });
+  } catch {
+    // Cleanup cannot safely replace the stable capture failure.
+  }
+}
+
+async function lstatBigInt(pathname: string): Promise<BigIntStats | null> {
+  return lstat(pathname, { bigint: true }).catch(() => null);
 }
 
 async function writeSyncedFile(

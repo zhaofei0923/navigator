@@ -4,6 +4,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   renameSync,
   rmSync,
   symlinkSync,
@@ -619,6 +620,28 @@ describe("Basic immutable raw capture v2", () => {
     expect(existsSync(v2SourceDirectory(root))).toBe(true);
   });
 
+  test("fails closed if raw-v2 becomes an external symlink during transport", async () => {
+    const root = repoRoot();
+    const outside = repoRoot();
+    const rawDirectory = v2RawDirectory(root);
+    const displacedRawDirectory = join(root, "displaced-raw-v2");
+    const body = new TextEncoder().encode("path identity changed");
+
+    await expect(captureBasicRawSourceV2(
+      captureInput(root),
+      {
+        async execute() {
+          expect(existsSync(rawDirectory)).toBe(true);
+          renameSync(rawDirectory, displacedRawDirectory);
+          symlinkSync(outside, rawDirectory, "dir");
+          return captureResponse(body, "text/csv");
+        },
+      },
+    )).rejects.toThrow("raw capture path is not allowed");
+
+    expect(readdirSync(outside)).toEqual([]);
+  });
+
   test("rejects symlinked roots and cache ancestors before transport", async () => {
     const container = repoRoot();
     const realRoot = repoRoot();
@@ -886,6 +909,10 @@ async function* chunks(body: Uint8Array): AsyncIterable<Uint8Array> {
 }
 
 function v2SourceDirectory(root: string, sourceId = "energy-csv"): string {
+  return join(v2RawDirectory(root), sourceId);
+}
+
+function v2RawDirectory(root: string): string {
   return join(
     root,
     ".cache",
@@ -893,7 +920,6 @@ function v2SourceDirectory(root: string, sourceId = "energy-csv"): string {
     "VN",
     "run-20260712",
     "raw-v2",
-    sourceId,
   );
 }
 

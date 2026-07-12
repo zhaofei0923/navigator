@@ -82,6 +82,13 @@ Payload 是 HTTP transfer decoding 之后、任何 JSON/CSV/document 解析之�
 
 Cache reuse 前重新解析 manifest、复核全部 identity/request/response policy、payload 文件名、大小和 SHA-256。缺文件、多文件、tamper、symlink、路径穿越或不完整 publication 全部 fail closed。v2 不读取、复制或回退到 v1 `raw/<sourceId>`；v1 同样不读取 `raw-v2/<sourceId>`。
 
+### 4.1 本地文件系统威胁模型
+
+- **防护对象。** 本节覆盖不可信的远程响应 bytes、非协调或意外的 cache 篡改，以及通过仓库内受信 transport 发起的正常并发 capture。
+- **信任边界。** `repoRoot` 与 `.cache` 的本地写权限属于受信操作环境；transport 实现必须是静态仓库代码，不得执行来源内容、加载动态插件，或启动修改 repo/cache 的后台任务。
+- **明确排除。** 另一个同权限本地进程/用户或恶意 transport 在目录检查后进行替换，或协调地同步改写 manifest 与 payload，不在当前防护范围内；此类 actor 已能修改源码、测试和组成 capture 的两文件 cache。
+- **更强防御。** 若未来要防御此类 actor，必须另立任务，采用 native `dirfd`/`openat`/`renameat`/`unlinkat` + `O_NOFOLLOW`，或外部签名/只追加信任根。当前 Node pathname 重验仅对可观察的身份变化 fail closed，不提供也不宣称内核级原子隔离。该边界不得用于跳过或放宽本节现有 symlink/path/tamper checks，也不改变 approved interface。
+
 ## 5. Strict CSV Grammar
 
 `parseBasicCsv()` 使用 `csv-parse/sync` 的 strict comma-delimited mode：

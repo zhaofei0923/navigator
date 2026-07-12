@@ -21,10 +21,29 @@ const MAX_COLUMNS = 256;
 const MAX_HEADER_BYTES = 256;
 const MAX_CELL_BYTES = 65_536;
 const MAX_RECORD_BYTES = 1_048_576;
+const TYPED_ARRAY_PROTOTYPE = Reflect.getPrototypeOf(Uint8Array.prototype);
+const TYPED_ARRAY_BYTE_LENGTH_GETTER = TYPED_ARRAY_PROTOTYPE === null
+  ? undefined
+  : Reflect.getOwnPropertyDescriptor(
+    TYPED_ARRAY_PROTOTYPE,
+    "byteLength",
+  )?.get;
 
 export function parseBasicCsv(body: Uint8Array): BasicCsvTable {
   try {
-    if (!(body instanceof Uint8Array) || isProxy(body)) invalidInput();
+    if (isProxy(body) || !(body instanceof Uint8Array)) invalidInput();
+    if (TYPED_ARRAY_BYTE_LENGTH_GETTER === undefined) invalidInput();
+    const byteLength: unknown = Reflect.apply(
+      TYPED_ARRAY_BYTE_LENGTH_GETTER,
+      body,
+      [],
+    );
+    if (
+      typeof byteLength !== "number" ||
+      !Number.isSafeInteger(byteLength) ||
+      byteLength === 0 ||
+      byteLength > MAX_RAW_BYTES
+    ) invalidInput();
     const snapshot = new Uint8Array(body);
     if (snapshot.byteLength === 0 || snapshot.byteLength > MAX_RAW_BYTES) {
       invalidInput();
@@ -177,7 +196,9 @@ function frozenDenseArray(
   maximum: number,
   allowEmpty: boolean,
 ): readonly unknown[] {
-  if (!Object.isFrozen(value)) invalidLocator();
+  if (isProxy(value) || !Array.isArray(value) || !Object.isFrozen(value)) {
+    invalidLocator();
+  }
   try {
     return denseArray(value, maximum, allowEmpty);
   } catch {

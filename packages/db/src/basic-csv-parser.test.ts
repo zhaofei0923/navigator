@@ -109,6 +109,76 @@ describe("Basic strict CSV parser", () => {
     expect(() => parseBasicCsv(value as Uint8Array)).toThrow(INPUT_ERROR);
   });
 
+  test("rejects proxied byte input without executing traps", () => {
+    const probe = { executions: 0 };
+    const input = hostileProxy(bytes("a\n1\n"), probe);
+
+    expect(() => parseBasicCsv(input)).toThrow(INPUT_ERROR);
+    expect(probe.executions).toBe(0);
+  });
+
+  test("rejects oversized input before creating a snapshot or decoder", () => {
+    const oversized = new Uint8Array(RAW_LIMIT + 1);
+    let spoofedByteLengthReads = 0;
+    Object.defineProperty(oversized, "byteLength", {
+      get() {
+        spoofedByteLengthReads += 1;
+        return 1;
+      },
+    });
+    const uint8ArrayDescriptor = Object.getOwnPropertyDescriptor(
+      globalThis,
+      "Uint8Array",
+    );
+    const textDecoderDescriptor = Object.getOwnPropertyDescriptor(
+      globalThis,
+      "TextDecoder",
+    );
+    if (
+      uint8ArrayDescriptor === undefined ||
+      textDecoderDescriptor === undefined
+    ) {
+      throw new Error("required globals are unavailable");
+    }
+    let snapshotCreations = 0;
+    let decoderCreations = 0;
+    const trackedUint8Array = new Proxy(Uint8Array, {
+      construct(target, argumentsList, newTarget) {
+        snapshotCreations += 1;
+        return Reflect.construct(target, argumentsList, newTarget);
+      },
+    });
+    const trackedTextDecoder = new Proxy(TextDecoder, {
+      construct(target, argumentsList, newTarget) {
+        decoderCreations += 1;
+        return Reflect.construct(target, argumentsList, newTarget);
+      },
+    });
+    let thrown: unknown;
+
+    try {
+      Object.defineProperty(globalThis, "Uint8Array", {
+        ...uint8ArrayDescriptor,
+        value: trackedUint8Array,
+      });
+      Object.defineProperty(globalThis, "TextDecoder", {
+        ...textDecoderDescriptor,
+        value: trackedTextDecoder,
+      });
+      parseBasicCsv(oversized);
+    } catch (error) {
+      thrown = error;
+    } finally {
+      Object.defineProperty(globalThis, "Uint8Array", uint8ArrayDescriptor);
+      Object.defineProperty(globalThis, "TextDecoder", textDecoderDescriptor);
+    }
+
+    expect(thrown).toEqual(new Error(INPUT_ERROR));
+    expect(spoofedByteLengthReads).toBe(0);
+    expect(snapshotCreations).toBe(0);
+    expect(decoderCreations).toBe(0);
+  });
+
   test("enforces the raw payload limit exactly", () => {
     const exact = csvAtRawLimit(RAW_LIMIT);
     expect(exact.byteLength).toBe(RAW_LIMIT);
@@ -235,6 +305,19 @@ describe("Basic CSV locator", () => {
     },
   );
 
+  test.each(["headers", "rows", "row"] as const)(
+    "rejects a nested %s Proxy without executing traps",
+    (kind) => {
+      const probe = { executions: 0 };
+      const table = nestedProxyTable(kind, probe);
+
+      expect(() => locateBasicCsvCell(table, 0, "a")).toThrow(
+        LOCATOR_ERROR,
+      );
+      expect(probe.executions).toBe(0);
+    },
+  );
+
   test("returns a frozen cell snapshot", () => {
     const table = parseBasicCsv(bytes("a\n1\n"));
     const cell = locateBasicCsvCell(table, 0, "a");
@@ -336,4 +419,42 @@ function unsafeTable(
   const table = kind === "proxy" ? new Proxy(value, {}) : value;
   Object.freeze(table);
   return table as unknown as BasicCsvTable;
+}
+
+function nestedProxyTable(
+  kind: "headers" | "rows" | "row",
+  probe: { executions: number },
+): BasicCsvTable {
+  const headers = Object.freeze(["a"]);
+  const row = Object.freeze(["1"]);
+  const rows = Object.freeze([row]);
+
+  if (kind === "headers") {
+    return Object.freeze({ headers: hostileProxy(headers, probe), rows });
+  }
+  if (kind === "rows") {
+    return Object.freeze({ headers, rows: hostileProxy(rows, probe) });
+  }
+  return Object.freeze({
+    headers,
+    rows: Object.freeze([hostileProxy(row, probe)]),
+  });
+}
+
+function hostileProxy<T extends object>(
+  value: T,
+  probe: { executions: number },
+): T {
+  const execute = (): never => {
+    probe.executions += 1;
+    throw new Error("CSV_PROXY_TRAP_DO_NOT_EXECUTE");
+  };
+  return new Proxy(value, {
+    get: execute,
+    getOwnPropertyDescriptor: execute,
+    getPrototypeOf: execute,
+    has: execute,
+    isExtensible: execute,
+    ownKeys: execute,
+  });
 }
