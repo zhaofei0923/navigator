@@ -417,6 +417,12 @@ function requestUrl(value: BasicCollectionJsonValue): string {
   }
   const parsed = new URL(result);
   if (parsed.toString() !== result) invalid();
+  if (
+    parsed.protocol !== "https:" ||
+    parsed.username !== "" ||
+    parsed.password !== "" ||
+    parsed.hash !== ""
+  ) invalid();
   return result;
 }
 

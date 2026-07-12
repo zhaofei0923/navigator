@@ -168,6 +168,9 @@ describe("Basic document observation plan parser", () => {
   test.each([
     ["surrounding whitespace", " https://documents.example/policy"],
     ["non-canonical origin", "https://documents.example"],
+    ["non-HTTPS protocol", "http://documents.example/policy"],
+    ["credentials", "https://user:pass@documents.example/policy"],
+    ["fragment", "https://documents.example/policy#section"],
     [
       "an 8193-byte URL",
       `${REQUEST_URL_PREFIX}${"a".repeat(8_193 - REQUEST_URL_PREFIX.length)}`,
