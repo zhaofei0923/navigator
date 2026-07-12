@@ -232,6 +232,61 @@ describe("Basic editorial evidence materializer", () => {
     expect(JSON.stringify(first)).toBe(JSON.stringify(second));
   });
 
+  test("materializes more than 256 validated editorial evidence entries in per-item batches", () => {
+    const locators = Array.from(
+      { length: 32 },
+      (_, index) => `json:/editorial/${String(index).padStart(2, "0")}`,
+    );
+    const source = sourceRecord("structured-source", { evidenceLocators: locators });
+    const values: readonly (readonly [
+      string,
+      BasicCountryEditorialInput["items"][number]["normalizedValue"],
+    ])[] = [
+      ["country.region", "southeast-asia"],
+      ["country.summary", { zh: "市场摘要", en: "Market summary" }],
+      ["marketOverview.energyDemand", { zh: "需求增长", en: "Demand is rising" }],
+      ["marketOverview.industryTags", ["solar", "wind"]],
+      ["marketOverview.keyIndicators[0].label", { zh: "人口", en: "Population" }],
+      ["marketOverview.keyIndicators[1].label", { zh: "国内生产总值", en: "GDP" }],
+      ["marketOverview.overview", { zh: "市场概览", en: "Market overview" }],
+      ["marketOverview.renewableTarget", { zh: "净零目标", en: "Net zero target" }],
+      ["marketOverview.techTags", ["lfp", "pv-module"]],
+    ];
+    const items = values.map(([fieldPath, normalizedValue]) => item(
+      fieldPath,
+      normalizedValue,
+      locators.map((locator, index) => evidence(
+        source.sourceId,
+        locator,
+        `${fieldPath}:${String(index).padStart(2, "0")}`,
+      )),
+    ));
+    const structuredEditorialEvidence = values.flatMap(([fieldPath]) =>
+      locators.map((locator, index) => structuredEvidence(
+        source.sourceId,
+        fieldPath,
+        locator,
+        `${fieldPath}:${String(index).padStart(2, "0")}`,
+      )));
+    const materializationInput = input({
+      editorial: editorialInput(items),
+      reviewedSources: register([source]),
+      structuredEditorialEvidence,
+    });
+
+    expect(structuredEditorialEvidence).toHaveLength(288);
+    expect(items.every(({ evidence: itemEvidence }) => itemEvidence.length === 32)).toBe(true);
+
+    const first = materializeBasicEditorialFacts(materializationInput);
+    const second = materializeBasicEditorialFacts(structuredClone(materializationInput));
+
+    expect(first.facts).toHaveLength(9);
+    expect(first.facts.reduce((total, fact) => total + fact.evidence.length, 0)).toBe(288);
+    expect(JSON.stringify(first)).toBe(JSON.stringify(second));
+    expectDeeplyFrozen(first);
+    expectDeeplyFrozen(second);
+  });
+
   test("rejects a reviewed source register missing a deterministic evidence source", () => {
     const deterministic = materializeBasicSourceFactsV2([{
       sourceId: "deterministic-source",

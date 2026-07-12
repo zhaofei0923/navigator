@@ -149,7 +149,7 @@ export function materializeBasicEditorialFacts(
       evidenceByKey.set(key, observation);
     }
 
-    const ordinary: BasicSourcedObservationV2[] = [];
+    const ordinaryByField = new Map<string, BasicSourcedObservationV2[]>();
     const nameFacts: BasicExtractedFactV2[] = [];
     const consumedKeys = new Set<string>();
     for (const item of editorial.items) {
@@ -158,6 +158,8 @@ export function materializeBasicEditorialFacts(
           riskySourceIds));
         continue;
       }
+      const ordinary = ordinaryByField.get(item.fieldPath) ?? [];
+      if (ordinaryByField.has(item.fieldPath)) invalid();
       for (const evidence of item.evidence) {
         const key = evidenceKey({ ...evidence, fieldPath: item.fieldPath });
         if (!evidenceByKey.has(key) || consumedKeys.has(key)) invalid();
@@ -174,11 +176,16 @@ export function materializeBasicEditorialFacts(
           uncertainty: item.uncertainty,
         });
       }
+      ordinaryByField.set(item.fieldPath, ordinary);
     }
     if (consumedKeys.size !== evidenceByKey.size) invalid();
 
     const facts = [
-      ...materializeBasicEditorialObservationsV2(ordinary),
+      ...Array.from(ordinaryByField.keys())
+        .sort(compareText)
+        .flatMap((fieldPath) => materializeBasicEditorialObservationsV2(
+          ordinaryByField.get(fieldPath) ?? [],
+        )),
       ...nameFacts,
     ].sort((left, right) => compareText(left.fieldPath, right.fieldPath));
     if (facts.length !== editorial.items.length) invalid();
@@ -458,7 +465,8 @@ function snapshotFact(value: BasicCollectionJsonValue): BasicExtractedFactV2 {
 function snapshotStructuredEvidence(
   value: unknown,
 ): readonly BasicStructuredEditorialEvidenceObservation[] {
-  const result = jsonArray(snapshotJson(value), MAX_EVIDENCE).map((entry) => {
+  const result = jsonArray(snapshotJson(value, (path) =>
+    path.length === 0 ? MAX_EVIDENCE : undefined), MAX_EVIDENCE).map((entry) => {
     const observation = exactRecord(entry, STRUCTURED_EVIDENCE_KEYS);
     if (!isText(observation.sourceId) || !isText(observation.fieldPath) || !isText(observation.locator)) {
       invalid();

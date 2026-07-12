@@ -5,6 +5,7 @@ import type { BasicCollectionJsonValue } from "./basic-collection-contracts.js";
 const INVALID = Symbol("invalid bounded JSON");
 const MAX_DEPTH = 64;
 const MAX_ARRAY_LENGTH = 256;
+const MAX_CONFIGURED_ARRAY_LENGTH = 2_048;
 const MAX_STRING_BYTES = 65_536;
 
 export type BasicBoundedJsonPath = readonly (string | number)[];
@@ -37,7 +38,7 @@ export function snapshotBasicBoundedArrayEntries(
   maximum = MAX_ARRAY_LENGTH,
 ): BasicBoundedArrayEntriesSnapshot {
   try {
-    const limit = boundedArrayLimit(maximum);
+    const limit = boundedArrayLimit(maximum, MAX_ARRAY_LENGTH);
     if (limit === INVALID) return { valid: false };
     const entries = snapshotArrayEntries(value, limit);
     return entries === INVALID
@@ -83,7 +84,7 @@ function snapshotArray(
   const configured = arrayLimit(path);
   const maximum = configured === undefined
     ? MAX_ARRAY_LENGTH
-    : boundedArrayLimit(configured);
+    : boundedArrayLimit(configured, MAX_CONFIGURED_ARRAY_LENGTH);
   if (maximum === INVALID) return INVALID;
   const entries = snapshotArrayEntries(value, maximum);
   if (entries === INVALID) return INVALID;
@@ -169,9 +170,9 @@ function snapshotRecord(
   return Object.freeze(result);
 }
 
-function boundedArrayLimit(value: number): number | typeof INVALID {
+function boundedArrayLimit(value: number, ceiling: number): number | typeof INVALID {
   return Number.isSafeInteger(value) && value >= 0
-    ? Math.min(value, MAX_ARRAY_LENGTH)
+    ? Math.min(value, ceiling)
     : INVALID;
 }
 
