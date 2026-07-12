@@ -9,6 +9,7 @@ import {
 } from "./collection/basic-document-observation-parser.js";
 import {
   materializeBasicDocumentEvidence,
+  snapshotBasicDocumentMaterializationProvenanceV2,
 } from "./collection/basic-document-observation-materializer.js";
 import type {
   BasicDocumentObservationPlan,
@@ -541,6 +542,80 @@ describe("Basic document evidence materializer", () => {
     expect(fixture.documentPlans).toEqual(documentPlansBefore);
   });
 
+  test("snapshots immutable provenance only for the exact successful result", async () => {
+    const fixture = await materializationFixture();
+    const result = materializeBasicDocumentEvidence(fixture);
+    const provenance = snapshotBasicDocumentMaterializationProvenanceV2(result);
+    const handmade = {
+      sources: result.sources,
+      facts: result.facts,
+      editorialEvidence: result.editorialEvidence,
+      sourceChecks: result.sourceChecks,
+      injectionRisks: result.injectionRisks,
+    };
+
+    expect(provenance).toEqual({
+      runId: MATERIALIZATION_RUN_ID,
+      countryCode: "VN",
+      catalogVersion: fixture.plan.catalogVersion,
+      catalogSha256: fixture.plan.catalogSha256,
+      manualSourceIds: ["official-html", "official-pdf"],
+    });
+    expect(Object.isFrozen(provenance)).toBe(true);
+    expect(Object.isFrozen(provenance?.manualSourceIds)).toBe(true);
+    expect(snapshotBasicDocumentMaterializationProvenanceV2(handmade)).toBeNull();
+    expect(snapshotBasicDocumentMaterializationProvenanceV2({ ...result })).toBeNull();
+    expect(snapshotBasicDocumentMaterializationProvenanceV2(
+      JSON.parse(JSON.stringify(result)),
+    )).toBeNull();
+    expect(snapshotBasicDocumentMaterializationProvenanceV2(
+      new Proxy(result, {}),
+    )).toBeNull();
+    expect(snapshotBasicDocumentMaterializationProvenanceV2(fixture)).toBeNull();
+  });
+
+  test("snapshots separate successful results by run, country, and catalog identity", async () => {
+    const fixture = await materializationFixture();
+    const otherRunFixture = await materializationFixture("OFFICIAL", {
+      runId: "other-run-20260712",
+    });
+    const otherCountryFixture = await materializationFixture("OFFICIAL", {
+      countryCode: "ID",
+    });
+    const otherCatalogFixture = await materializationFixture("OFFICIAL", {
+      catalogVersion: "2026.07.13.documents-1",
+    });
+
+    expect(snapshotBasicDocumentMaterializationProvenanceV2(
+      materializeBasicDocumentEvidence(fixture),
+    )).toMatchObject({
+      runId: MATERIALIZATION_RUN_ID,
+      countryCode: "VN",
+      catalogVersion: "2026.07.12.documents-1",
+    });
+    expect(snapshotBasicDocumentMaterializationProvenanceV2(
+      materializeBasicDocumentEvidence(otherRunFixture),
+    )).toMatchObject({
+      runId: "other-run-20260712",
+      countryCode: "VN",
+      catalogVersion: "2026.07.12.documents-1",
+    });
+    expect(snapshotBasicDocumentMaterializationProvenanceV2(
+      materializeBasicDocumentEvidence(otherCountryFixture),
+    )).toMatchObject({
+      runId: MATERIALIZATION_RUN_ID,
+      countryCode: "ID",
+      catalogVersion: "2026.07.12.documents-1",
+    });
+    expect(snapshotBasicDocumentMaterializationProvenanceV2(
+      materializeBasicDocumentEvidence(otherCatalogFixture),
+    )).toMatchObject({
+      runId: MATERIALIZATION_RUN_ID,
+      countryCode: "VN",
+      catalogVersion: "2026.07.13.documents-1",
+    });
+  });
+
   test("is order-independent and emits stable source, fact, and evidence ordering", async () => {
     const fixture = await materializationFixture();
 
@@ -960,15 +1035,22 @@ async function materializationFixture(
   options: Readonly<{
     plan?: BasicSourceExecutionPlan;
     runId?: string;
+    countryCode?: string;
+    catalogVersion?: string;
   }> = {},
 ): Promise<MaterializationFixture> {
-  const planValue = options.plan ?? materializationPlan(htmlCredibility);
+  const countryCode = options.countryCode ?? options.plan?.countryCode ?? "VN";
+  const planValue = options.plan ?? materializationPlan(
+    htmlCredibility,
+    countryCode,
+    options.catalogVersion,
+  );
   const runId = options.runId ?? MATERIALIZATION_RUN_ID;
   const root = mkdtempSync(join(tmpdir(), "navigator-document-materialization-"));
   materializationRoots.add(root);
   const run = await runBasicSourceExecutionPlanV2({
     repoRoot: root,
-    countryCode: "VN",
+    countryCode,
     runId,
     plan: planValue,
     transport: materializationTransport(planValue),
@@ -1000,10 +1082,16 @@ function handmadeMaterializationFixture(): MaterializationFixture {
 
 function materializationPlan(
   htmlCredibility: "OFFICIAL" | "UNVERIFIED",
+  countryCode = "VN",
+  catalogVersion?: string,
 ): BasicSourceExecutionPlan {
   return createBasicSourceExecutionPlan({
-    catalog: parseBasicSourceCatalog(materializationCatalog(htmlCredibility)),
-    countryCode: "VN",
+    catalog: parseBasicSourceCatalog(materializationCatalog(
+      htmlCredibility,
+      countryCode,
+      catalogVersion,
+    )),
+    countryCode,
     sourceIds: ["official-html", "official-pdf"],
   });
 }
@@ -1041,10 +1129,14 @@ async function* documentBytes(value: Uint8Array): AsyncIterable<Uint8Array> {
   yield new Uint8Array(value);
 }
 
-function materializationCatalog(htmlCredibility: "OFFICIAL" | "UNVERIFIED") {
+function materializationCatalog(
+  htmlCredibility: "OFFICIAL" | "UNVERIFIED",
+  countryCode = "VN",
+  catalogVersion = "2026.07.12.documents-1",
+) {
   return {
     schemaVersion: "basic-source-catalog/v1",
-    catalogVersion: "2026.07.12.documents-1",
+    catalogVersion,
     sources: [
       materializationCatalogSource({
         sourceId: "official-html",
@@ -1055,6 +1147,7 @@ function materializationCatalog(htmlCredibility: "OFFICIAL" | "UNVERIFIED") {
         accept: "text/html",
         filename: "official.html",
         fieldPaths: ["country.summary", "marketOverview.population"],
+        countryCode,
       }),
       materializationCatalogSource({
         sourceId: "official-pdf",
@@ -1065,6 +1158,7 @@ function materializationCatalog(htmlCredibility: "OFFICIAL" | "UNVERIFIED") {
         accept: "application/pdf",
         filename: "official.pdf",
         fieldPaths: ["marketOverview.gdp", "marketOverview.renewableTarget"],
+        countryCode,
       }),
       materializationCatalogSource({
         sourceId: "structured-data",
@@ -1077,6 +1171,7 @@ function materializationCatalog(htmlCredibility: "OFFICIAL" | "UNVERIFIED") {
         fieldPaths: ["country.code"],
         adapterId: "fixture-structured-adapter",
         adapterKind: "deterministic",
+        countryCode,
       }),
     ],
     countryMappings: [],
@@ -1094,6 +1189,7 @@ function materializationCatalogSource(value: {
   readonly fieldPaths: readonly string[];
   readonly adapterId?: string;
   readonly adapterKind?: string;
+  readonly countryCode: string;
 }) {
   return {
     sourceId: value.sourceId,
@@ -1101,7 +1197,7 @@ function materializationCatalogSource(value: {
     sourceFamily: value.sourceFamily,
     credibility: value.credibility,
     format: value.format,
-    countryScope: ["VN"],
+    countryScope: [value.countryCode],
     requestTemplate: {
       origin: "https://documents.example",
       pathSegments: [
