@@ -1,7 +1,7 @@
 # Basic 国家确定性采集与来源边界设计
 
 > 任务卡：`DATA-BASIC-SOURCE-BOUNDARY-1`
-> 状态：修订方向已由项目所有者确认，待书面规格复核
+> 状态：项目所有者已确认，可按分片实施
 > 日期：2026-07-12
 
 ## 1. 目标
@@ -157,7 +157,7 @@ adapterKind = deterministic | manual-document
 fieldPaths[]
 ```
 
-`format = html | pdf` 必须使用 `manual-document`；首版 `json | csv` 必须使用 `deterministic`。manual-document entry 的 adapter identity 固定指向 reviewed generic executor，国家与 URL 差异只存在 catalog 数据中，不形成国家特例代码。
+`format = html | pdf` 必须使用 `manual-document`；首版 `json | csv` 必须使用 `deterministic`。manual-document entry 的 adapter identity 固定为 `basic-manual-document-capture@1.0.0`，指向 reviewed generic executor；国家与 URL 差异只存在 catalog 数据中，不形成国家特例代码。parser 与 runner 都必须在 cache/network 前复核该 identity。
 
 `countryScope = ISO2[]` 时数组必须非空、去重并按字典序排序。单国政府或监管机构页面以相同 source entry 结构登记，并通过 `countryScope` 限制适用国家；不得在 adapter 代码中写国家特例。新增或变更国家专属 URL 仍须走 catalog code review。
 
@@ -255,6 +255,8 @@ injectionRisks[] = { sourceId, locator, severity, details }
 ```
 
 identity/digest 必须与 execution plan 一致；sources 必须非空、sourceId 唯一有序并恰好覆盖 deterministic run 的 sources；injectionRisks 使用既有 exact shape，允许空数组但不得引用外部 source/locator。`passed` 表示审核者已确认 catalog 许可/访问策略、国家和指标身份、capture hash 与 deterministic adapter validation 均通过；它不替代程序对 rawValue/locator 的验证。该临时输入只生成最终 sourceChecks/injectionRisks，不新增 committed artifact。
+
+deterministic adapter observations 在 preliminary 阶段按路径所有权分流：source-backed path 形成 preliminary fact；`country.name` 形成等待受控 enrichment 的 preliminary fact；editorial-owned path 只形成按 sourceId/fieldPath/locator/rawValue 稳定排序的 `structuredEditorialEvidence` 中间值；derived path 立即拒绝。`structuredEditorialEvidence` 不新增 committed artifact，只允许 §10.2 editorial item 逐字引用。不得把 editorial observation 先物化成 deterministic final fact，再与 manual editorial fact 产生伪冲突。
 
 ### 9.2 CSV
 
@@ -495,7 +497,9 @@ source-backed 值可由 JSON/CSV adapter 或受 §10.1 约束的 document observ
 
 - `country.code/name/summary/region/flagEmoji/updatedAt`；
 - market overview 的 14 个静态审计路径；
-- 每个连续 `keyIndicators[i]` 的 `label/value/unit/year`。
+- 至少一个 `keyIndicators[0]`，以及其后每个连续 `keyIndicators[i]` 的 `label/value/unit/year`。
+
+最终 v2 fact 在 candidate public boundary 必须再次按路径检查 extractionMethod，而不能只相信上游 runner：`country.name` 与 editorial paths 必须为 `manual`；derived paths 必须为 `deterministic`；source-backed paths 可为 deterministic adapter 或 reviewed document 产生的 `manual`。任一错误所有权在 artifact 生成前阻断。
 
 每个 evidence source 必须有 passed source check。missing、conflict、untrusted、非 open、`UNVERIFIED`、prompt injection 风险或 source check failure 均阻断；不得用模型、搜索摘要、估算或占位文案补齐必需事实。
 
@@ -571,8 +575,10 @@ Hermes 可在 source catalog 缺少某国来源时辅助研究能源部、监管
 - v2 三个 envelope schemaVersion 一致、draft 无 envelope、loader 拒绝 v1/v2 混合目录；
 - 同一语义的乱序 catalog/manual/editorial 输入产生 byte-identical v2 artifacts；
 - deterministic/manual 同 path 拒绝、同 method 合并，以及 country.name/derived 两个显式例外；
+- 至少一个完整 `keyIndicators[0]`，零指标或非连续指标阻断；
 - 所有失败路径验证 URL 参数值、raw 文本、token、cookie 和外部错误不泄漏；
 - ID-shaped fixture 完整覆盖 20 个静态路径和至少一个完整指标组；
+- 临时仓库中的 synthetic ID 集成从 catalog/execution plan、真实 v2 capture/cache、reviews、document/editorial materialization、candidate artifacts 一直运行到原子 staging writer，并逐边界验证同一 catalog digest、blocked 不写入、成功只有四文件且无 manifest/canonical 写入；
 - 无 canonical、Prisma、KnowledgeChunk、AI index、环境副作用或 Web import。
 
 ## 16. 多 Agent 执行与验收
