@@ -102,7 +102,7 @@ query[] = { name, value }
 { "kind": "placeholder", "value": "sourceCountryId" }
 ```
 
-Placeholder 不能进入 scheme、authority、query name 或 literal 子串。Literal 与 source mapping 值不得预编码 `%HH`。Materializer 验证大写 ISO2 后，以 `URL`、逐 path component 的 percent encoding 和 `URLSearchParams` 构造 URL；外部 ID 中的 `/` 只能成为 `%2F`，不能改变 path 层级。构造后再次验证 HTTPS、credentials、fragment、approved origin、query name 顺序与 cardinality。
+Placeholder 不能进入 scheme、authority、query name 或 literal 子串。Literal 与 source mapping 值不得预编码 `%HH`；path component 不能是会被 URL parser 规范化的 `.` 或 `..`。Materializer 验证大写 ISO2 后，以 `URL`、逐 path component 的 percent encoding 和 `URLSearchParams` 构造 URL；外部 ID 中的 `/` 只能成为 `%2F`，不能改变 path 层级。构造后再次验证 HTTPS、credentials、fragment、approved origin、query name 顺序与 cardinality。
 
 Query name 必须唯一且为非空 literal。`allowedQueryParameters[]` 必须逐项、按顺序等于 template query names；query 顺序是已审核请求的一部分，不自动排序。
 

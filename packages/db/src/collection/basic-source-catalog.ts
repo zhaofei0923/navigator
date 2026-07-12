@@ -475,6 +475,7 @@ function httpsUrl(value: unknown): string {
   const result = urlText(value);
   const parsed = new URL(result);
   if (
+    result.trim() !== result ||
     parsed.protocol !== "https:" ||
     parsed.username !== "" ||
     parsed.password !== "" ||

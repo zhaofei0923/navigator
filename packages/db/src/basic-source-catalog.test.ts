@@ -153,6 +153,12 @@ describe("Basic source catalog parser", () => {
       }),
     ],
     [
+      "a whitespace-padded license URL",
+      () => changedSource(validCatalog(), (source) => {
+        source.licenseUrl = " https://example.com/license ";
+      }),
+    ],
+    [
       "an unknown field path",
       () => changedSource(validCatalog(), (source) => {
         source.fieldPaths = ["marketOverview.unknown"];
@@ -476,6 +482,35 @@ describe("Basic source request materializer", () => {
       sourceIds: ["world-bank-country"],
     })).toThrow("source catalog execution plan is invalid");
   });
+
+  test.each([".", ".."]) (
+    "rejects a literal %s path component before URL normalization",
+    (component) => {
+      const value = validCatalog();
+      value.sources[0]!.requestTemplate.pathSegments[1] = {
+        kind: "literal",
+        value: component,
+      };
+      expect(() => createBasicSourceExecutionPlan({
+        catalog: parseBasicSourceCatalog(value),
+        countryCode: "VN",
+        sourceIds: ["world-bank-country"],
+      })).toThrow("source catalog execution plan is invalid");
+    },
+  );
+
+  test.each([".", ".."]) (
+    "rejects a mapped %s path component before URL normalization",
+    (component) => {
+      const value = mappedCatalog();
+      value.countryMappings[0]!.sourceCountryId = component;
+      expect(() => createBasicSourceExecutionPlan({
+        catalog: parseBasicSourceCatalog(value),
+        countryCode: "VN",
+        sourceIds: ["world-bank-country"],
+      })).toThrow("source catalog execution plan is invalid");
+    },
+  );
 });
 
 describe("Basic source adapter registry", () => {

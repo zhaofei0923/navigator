@@ -102,7 +102,7 @@ function materializeRequest(
 ): BasicSourcePlannedRequest {
   const url = new URL(source.requestTemplate.origin);
   const path = source.requestTemplate.pathSegments.map((token) =>
-    encodeURIComponent(tokenValue(token, countryCode, sourceCountryId)));
+    encodeURIComponent(pathTokenValue(token, countryCode, sourceCountryId)));
   url.pathname = `/${path.join("/")}`;
   url.search = "";
   for (const query of source.requestTemplate.query) {
@@ -131,6 +131,16 @@ function materializeRequest(
     allowedOrigins: Array.from(source.approvedOrigins),
     allowedQueryParameters: Array.from(source.allowedQueryParameters),
   };
+}
+
+function pathTokenValue(
+  token: BasicSourceCatalogToken,
+  countryCode: string,
+  sourceCountryId: string | null,
+): string {
+  const value = tokenValue(token, countryCode, sourceCountryId);
+  if (value === "." || value === "..") planInvalid();
+  return value;
 }
 
 function resolveSourceCountryId(
