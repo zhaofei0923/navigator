@@ -86,7 +86,33 @@ describe("Basic editorial evidence materializer", () => {
       fieldPath: "country.summary",
       locator: "json:/summary",
     }]);
+    const reversed = materializeBasicEditorialFacts(input({
+      editorial: editorialInput([
+        item("country.summary", { zh: "越南市场", en: "Vietnam market" }, [
+          evidence(source.sourceId, "json:/summary", {
+            "2": "two", "10": "ten", section: "overview",
+          }),
+        ], "Operator synthesis"),
+      ]),
+      reviewedSources: register([source]),
+      structuredEditorialEvidence: [structuredEvidence(
+        source.sourceId,
+        "country.summary",
+        "json:/summary",
+        { "10": "ten", "2": "two", section: "overview" },
+      )],
+    }));
+
+    rawValue.section = "mutated after materialization";
+    expect(result.facts[0]?.evidence[0]?.rawValue).toEqual({
+      "2": "two",
+      "10": "ten",
+      section: "overview",
+    });
+    expect(reversed).not.toBe(result);
+    expect(JSON.stringify(reversed)).toBe(JSON.stringify(result));
     expectDeeplyFrozen(result);
+    expectDeeplyFrozen(reversed);
   });
 
   test("binds evidence only from the exact branded document result", async () => {

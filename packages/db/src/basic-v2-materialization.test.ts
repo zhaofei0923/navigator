@@ -175,6 +175,71 @@ describe("Basic reviewed v2 materialization", () => {
       ]);
   });
 
+  test("rejects a structured review when the preliminary run has no deterministic sources", async () => {
+    const fixture = await documentFixture();
+    const unexpectedDeterministic = structuredPreliminary("country.name", {
+      zh: "Indonesia",
+      en: "Indonesia",
+    }, identityFrom(fixture.preliminary));
+
+    expectInvalid({
+      preliminary: fixture.preliminary,
+      structuredReview: structuredReview(unexpectedDeterministic),
+      documentResult: fixture.result,
+      editorial: documentEditorial(fixture),
+    });
+  });
+
+  test("rejects null document materialization when the preliminary run has document captures", async () => {
+    const fixture = await documentFixture();
+
+    expectInvalid({
+      preliminary: fixture.preliminary,
+      structuredReview: null,
+      documentResult: null,
+      editorial: documentEditorial(fixture),
+    });
+  });
+
+  test("rejects deterministic and manual sources that reuse the same source ID", async () => {
+    const fixture = await documentFixture();
+    const deterministic = structuredPreliminary("country.name", {
+      zh: "Indonesia",
+      en: "Indonesia",
+    }, identityFrom(fixture.preliminary), "official-html");
+    const preliminary = {
+      ...fixture.preliminary,
+      sourceRegister: deterministic.sourceRegister,
+      extractedFacts: deterministic.extractedFacts,
+      structuredEditorialEvidence: deterministic.structuredEditorialEvidence,
+      receipts: [...fixture.preliminary.receipts, ...deterministic.receipts],
+    };
+
+    expectInvalid({
+      preliminary,
+      structuredReview: structuredReview(deterministic),
+      documentResult: fixture.result,
+      editorial: editorial(preliminary, [{
+        fieldPath: "country.name",
+        normalizedValue: { zh: "印度尼西亚", en: "Indonesia" },
+        evidence: [editorialEvidence("official-html", "json:/country/name", "Indonesia")],
+        uncertainty: null,
+      }, documentSummaryItem()]),
+    });
+  });
+
+  test("rejects unsorted editorial items instead of normalizing contract input", async () => {
+    const value = await mixedInput();
+
+    expectInvalid({
+      ...value,
+      editorial: {
+        ...value.editorial,
+        items: [...value.editorial.items].reverse(),
+      },
+    });
+  });
+
   test.each([
     ["missing structured review", (value: ReviewedInput) => ({
       ...value, structuredReview: null,
@@ -434,13 +499,14 @@ function structuredPreliminary(
     catalogVersion: CATALOG_VERSION,
     catalogSha256: CATALOG_SHA256,
   },
+  sourceId = "structured-source",
 ): BasicPreliminarySourceRunV2 {
   const locator = fieldPath === "country.name" ? "json:/country/name" : "json:/population";
   const rawValue = fieldPath === "country.name" ? "Indonesia" : "100";
   const locators = [...new Set(["json:/country/id", locator])].sort();
-  const sources = [sourceRecord("structured-source", locators)];
+  const sources = [sourceRecord(sourceId, locators)];
   const observations = [{
-    sourceId: "structured-source",
+    sourceId,
     fieldPath: "country.code",
     locator: "json:/country/id",
     rawValue: "ID",
@@ -449,7 +515,7 @@ function structuredPreliminary(
     year: null,
     uncertainty: null,
   }, ...(fieldPath === "country.code" ? [] : [{
-    sourceId: "structured-source",
+    sourceId,
     fieldPath,
     locator,
     rawValue,
@@ -473,11 +539,20 @@ function structuredPreliminary(
     structuredEditorialEvidence: [],
     documentCaptures: [],
     receipts: [{
-      sourceId: "structured-source",
+      sourceId,
       contentSha256: DETERMINISTIC_SHA256,
       byteLength: 100,
       reused: false,
     }],
+  };
+}
+
+function identityFrom(preliminary: BasicPreliminarySourceRunV2) {
+  return {
+    runId: preliminary.sourceRegister.runId,
+    countryCode: preliminary.sourceRegister.countryCode,
+    catalogVersion: preliminary.sourceRegister.catalogVersion,
+    catalogSha256: preliminary.sourceRegister.catalogSha256,
   };
 }
 

@@ -157,6 +157,13 @@ describe("Basic derived fact materialization", () => {
       .not.toContain("mutated:/later");
   });
 
+  test("does not access runtime, model, search, socket, child-process, or environment ports", () => {
+    const result = withForbiddenRuntimeSentinels(() => materializeBasicDerivedFacts(completeInput()));
+
+    expect(result.facts.map(({ fieldPath }) => fieldPath)).toEqual(DERIVED_PATHS);
+    expectDeeplyFrozen(result);
+  });
+
   test.each([
     ["no active source", (input: DerivedInput) => ({ ...input, candidateFacts: [] })],
     ["noncandidate country code", (input: DerivedInput) => ({
@@ -457,6 +464,45 @@ function captureError(callback: () => unknown): Error | null {
     return null;
   } catch (error) {
     return error as Error;
+  }
+}
+
+function withForbiddenRuntimeSentinels<T>(callback: () => T): T {
+  const names = ["fetch", "model", "Hermes", "llama", "SearXNG", "search", "socket", "child_process"];
+  const globalDescriptors = names.map((name) => [
+    name,
+    Object.getOwnPropertyDescriptor(globalThis, name),
+  ] as const);
+  const environmentDescriptor = Object.getOwnPropertyDescriptor(process, "env");
+  const denied = (name: string): never => {
+    throw new Error(`forbidden runtime access: ${name}`);
+  };
+
+  try {
+    for (const [name, descriptor] of globalDescriptors) {
+      if (descriptor?.configurable === false) continue;
+      Object.defineProperty(globalThis, name, {
+        configurable: true,
+        get: () => denied(name),
+      });
+    }
+    if (environmentDescriptor?.configurable !== false) {
+      Object.defineProperty(process, "env", {
+        configurable: true,
+        get: () => denied("process.env"),
+      });
+    }
+    return callback();
+  } finally {
+    for (const [name, descriptor] of globalDescriptors) {
+      if (descriptor?.configurable === false) continue;
+      if (descriptor === undefined) Reflect.deleteProperty(globalThis, name);
+      else Object.defineProperty(globalThis, name, descriptor);
+    }
+    if (environmentDescriptor?.configurable !== false) {
+      if (environmentDescriptor === undefined) Reflect.deleteProperty(process, "env");
+      else Object.defineProperty(process, "env", environmentDescriptor);
+    }
   }
 }
 

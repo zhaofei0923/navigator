@@ -210,6 +210,13 @@ export interface BasicDocumentMaterializationProvenanceV2 {
   readonly catalogVersion: string;
   readonly catalogSha256: string;
   readonly manualSourceIds: readonly string[];
+  readonly captureBindings: readonly Readonly<{
+    sourceId: string;
+    requestUrl: string;
+    finalUrl: string;
+    retrievedAt: string;
+    contentSha256: string;
+  }>[];
 }
 
 export function snapshotBasicDocumentMaterializationProvenanceV2(
@@ -242,7 +249,9 @@ Expected failure: the result-provenance snapshot is not exported or defined.
 Create one module-private `WeakMap<object,
 BasicDocumentMaterializationProvenanceV2>`. Register a recursively frozen
 provenance object only after `materializeReviewedSources()` succeeds, using the
-already validated plan/capture/review identity and sorted manual source IDs.
+already validated plan/capture/review identity, sorted manual source IDs, and
+source-ID-sorted exact capture bindings (`sourceId`, `requestUrl`, `finalUrl`,
+`retrievedAt`, `contentSha256`).
 The snapshot performs no parsing or fallback and returns `null` unless its key
 is the exact result object. Do not add `usage` to
 `BasicEditorialEvidenceObservation` and do not change document result data

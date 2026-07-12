@@ -133,12 +133,14 @@ graph LR
 - 目标：按 [basic-country-document-evidence.md](./basic-country-document-evidence.md) 将 catalog-selected HTML/PDF source 通过唯一 generic executor 做 v2 raw capture，并以 exact structured/manual reviews 和 capture-hash-bound document plans 物化 manual preliminary facts、source records、checks、risks 与 editorial-evidence intermediates。
 - 验收：`basic-country-audit/v2` preliminary source register/extracted facts 绑定同一 catalog provenance；structured/manual source sets 非空、唯一、有序、互斥且完整覆盖；每个 manual source 的 plan/capture/review 精确绑定 run/country/catalog/adapter/request/response/hash；HTML/PDF locator 与 source ownership table fail closed；tuple conflict 不自动选择；failed checks、`UNVERIFIED` 与 injection risk 均被保留给后续 preflight。禁止 HTML/PDF parsing、OCR、模型、翻译、editorial final fact、draft、canonical/DB 写入、发布或 AI 资格。
 - 测试：document plan/materialization、review parser、v2 fact materializer 和 source-plan runner focused tests，以及仓库 `lint` / `typecheck` / `test` / forced Turbo gates；测试不发起真实来源网络请求。
-- 完成边界：本卡不构成可发布国家或完整 v2 candidate package。`DATA-BASIC-EDITORIAL-1` 仍需校验双语 editorial input；`DATA-BASIC-DETERMINISTIC-1` 仍需合并全部 material、组装 draft 与执行 model-free completeness/trust preflight；之后仍须项目所有者审核和既有发布闸门。
+- 完成边界：本卡不构成可发布国家或完整 v2 candidate package。`DATA-BASIC-EDITORIAL-1` 已完成双语 editorial input 与 reviewed materialization；`DATA-BASIC-DETERMINISTIC-1` 仍需合并全部 material、组装 draft 与执行 model-free completeness/trust preflight；之后仍须项目所有者审核和既有发布闸门。
 - 人工确认：否（不修改统一数据模型、AI Prompt/检索边界、权限、计费、canonical data 或 package root exports）。
 
-#### DATA-BASIC-EDITORIAL-1 Bilingual editorial evidence（后续）
-- 目标：从 Documents 保留的 structured/document editorial evidence 构建并校验 exact 双语 editorial input；不得把证据中间值直接当作 final fact。
-- 人工确认：否（若涉及数据模型、发布或 AI 边界，须另行人工确认）。
+#### DATA-BASIC-EDITORIAL-1 Bilingual editorial evidence（已完成）
+- 目标：已从 Documents 保留的 structured/document editorial evidence 构建 exact 双语 editorial input，并完成 reviewed-source union、primary source、`country.name` controlled enrichment、deterministic/manual collision rejection 和 derived audit metadata。详见 [basic-country-editorial-input.md](./basic-country-editorial-input.md)。
+- 验收：输入/证据/捕获 provenance 精确绑定；结果递归冻结、输入顺序无关；无 deterministic source 的 structured review、capture 缺少 document result、以及 deterministic/manual source-ID overlap 均 fail closed；不调用网络、模型、Hermes、搜索、环境、socket、child process、数据库或 draft assembler。
+- 完成边界：只产生 package-private in-memory reviewed materialization，不产生 draft、四文件 candidate、canonical 数据、发布或 AI 资格。
+- 人工确认：否（未修改数据模型、发布或 AI 边界）。
 
 #### DATA-BASIC-DETERMINISTIC-1 Candidate assembly and preflight（后续）
 - 目标：仅在结构化、document 与 editorial material 全部通过 exact binding 后，确定性组装 draft 和完整 v2 audit candidate，并保守阻断 missing/conflict/untrusted/failed/risk 输入。

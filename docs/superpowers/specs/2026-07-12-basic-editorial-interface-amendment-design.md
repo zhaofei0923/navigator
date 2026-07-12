@@ -68,6 +68,13 @@ interface BasicDocumentMaterializationProvenanceV2 {
   readonly catalogVersion: string;
   readonly catalogSha256: string;
   readonly manualSourceIds: readonly string[];
+  readonly captureBindings: readonly Readonly<{
+    sourceId: string;
+    requestUrl: string;
+    finalUrl: string;
+    retrievedAt: string;
+    contentSha256: string;
+  }>[];
 }
 ```
 
@@ -79,6 +86,11 @@ snapshotBasicDocumentMaterializationProvenanceV2(
   value: unknown,
 ): BasicDocumentMaterializationProvenanceV2 | null;
 ```
+
+`captureBindings` are source-ID sorted, recursively frozen, and bind every
+manual source to its request URL, final response URL, retrieval time, and
+content hash. Downstream reviewed materialization compares them to preliminary
+captures exactly.
 
 Handmade, spread, JSON-cloned, cross-run, cross-country, and cross-catalog
 results fail closed. The brand is registered only after capture, plan, review,
