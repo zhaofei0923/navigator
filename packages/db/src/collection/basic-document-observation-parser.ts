@@ -27,6 +27,7 @@ const ERROR = "document observation plan is invalid";
 const MAX_ARRAY_ITEMS = 256;
 const MAX_DEPTH = 64;
 const MAX_STRING_BYTES = 65_536;
+const MAX_URL_BYTES = 8_192;
 const INVALID = Symbol("invalid document observation snapshot");
 const ISO2 = /^[A-Z]{2}$/;
 const SAFE_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -36,6 +37,7 @@ const TOKEN = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/;
 const QUOTED_STRING = /^"(?:[\t !#-\[\]-~]|\\[\t !-~])*"$/;
 const PDF_LOCATOR = /^pdf:page=([1-9]\d*)#([\s\S]*)$/;
 const RESERVED_LOCATOR = /^(?:https?:\/\/|url(?:[:=\/])|search(?:[:=\/])|metadata(?:[:=\/])|capture(?:[:=\/]))/i;
+const CONTROL_CHARACTER = /[\u0000-\u001F\u007F]/;
 const PLAN_KEYS = [
   "schemaVersion",
   "runId",
@@ -195,16 +197,24 @@ function locator(value: BasicCollectionJsonValue, format: DocumentFormat): strin
 function htmlLocation(value: string): string {
   if (!value.startsWith("html:")) invalid();
   const location = value.slice("html:".length);
-  if (location.trim() === "") invalid();
-  return location;
+  return reviewedLocatorPart(location);
 }
 
 function pdfAnchor(value: string): string {
   const match = PDF_LOCATOR.exec(value);
   if (match === null) invalid();
   const anchor = match[2];
-  if (anchor === undefined || anchor.trim() === "") invalid();
-  return anchor;
+  if (anchor === undefined) invalid();
+  return reviewedLocatorPart(anchor);
+}
+
+function reviewedLocatorPart(value: string): string {
+  if (
+    value.trim() === "" ||
+    value.trim() !== value ||
+    CONTROL_CHARACTER.test(value)
+  ) invalid();
+  return value;
 }
 
 function documentFormat(value: string): DocumentFormat {
@@ -318,6 +328,10 @@ function snapshotRecord(
   const stringKeys = keys as string[];
   const result: { [key: string]: BasicCollectionJsonValue } = {};
   for (const key of stringKeys.sort(compareText)) {
+    if (
+      !isWellFormedUnicode(key) ||
+      Buffer.byteLength(key, "utf8") > MAX_STRING_BYTES
+    ) return INVALID;
     const descriptor = Object.getOwnPropertyDescriptor(value, key);
     if (
       descriptor === undefined ||
@@ -398,18 +412,12 @@ function digest(value: BasicCollectionJsonValue): string {
 
 function requestUrl(value: BasicCollectionJsonValue): string {
   const result = nonBlankText(value);
-  try {
-    const url = new URL(result);
-    if (
-      url.protocol !== "https:" ||
-      url.username !== "" ||
-      url.password !== "" ||
-      url.hash !== ""
-    ) invalid();
-    return result;
-  } catch {
+  if (Buffer.byteLength(result, "utf8") > MAX_URL_BYTES || result.trim() !== result) {
     invalid();
   }
+  const parsed = new URL(result);
+  if (parsed.toString() !== result) invalid();
+  return result;
 }
 
 function timestamp(value: BasicCollectionJsonValue): string {
@@ -440,7 +448,7 @@ function isWellFormedUnicode(value: string): boolean {
     const codeUnit = value.charCodeAt(index);
     if (codeUnit >= 0xD800 && codeUnit <= 0xDBFF) {
       const next = value.charCodeAt(index + 1);
-      if (next < 0xDC00 || next > 0xDFFF) return false;
+      if (!Number.isInteger(next) || next < 0xDC00 || next > 0xDFFF) return false;
       index += 1;
     } else if (codeUnit >= 0xDC00 && codeUnit <= 0xDFFF) {
       return false;

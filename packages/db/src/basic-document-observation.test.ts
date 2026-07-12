@@ -9,6 +9,7 @@ const CATALOG_SHA256 =
 const CONTENT_SHA256 =
   "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 const ERROR = "document observation plan is invalid";
+const REQUEST_URL_PREFIX = "https://documents.example/";
 
 type MutableRecord = Record<string | symbol, unknown>;
 
@@ -165,6 +166,17 @@ describe("Basic document observation plan parser", () => {
   });
 
   test.each([
+    ["surrounding whitespace", " https://documents.example/policy"],
+    ["non-canonical origin", "https://documents.example"],
+    [
+      "an 8193-byte URL",
+      `${REQUEST_URL_PREFIX}${"a".repeat(8_193 - REQUEST_URL_PREFIX.length)}`,
+    ],
+  ])("rejects a capture request URL with %s", (_label, requestUrl) => {
+    expectInvalid(plan({ capture: capture({ requestUrl }) }));
+  });
+
+  test.each([
     ["extra top-level key", (value: Record<string, unknown>) => ({ ...value, extra: true })],
     ["missing top-level key", (value: Record<string, unknown>) => {
       const copy = { ...value };
@@ -279,6 +291,14 @@ describe("Basic document observation plan parser", () => {
     ["page zero", "application/pdf", "pdf:page=0#overview"],
     ["blank PDF anchor", "application/pdf", "pdf:page=1#  "],
     ["blank HTML location", "text/html", "html:  "],
+    ["HTML trailing whitespace", "text/html", "html:section=overview "],
+    ["PDF trailing whitespace", "application/pdf", "pdf:page=1#overview "],
+    ["NUL HTML location", "text/html", "html:section=over\0view"],
+    ["NUL PDF anchor", "application/pdf", "pdf:page=1#over\0view"],
+    ["C0 HTML location", "text/html", "html:section=over\u001Fview"],
+    ["C0 PDF anchor", "application/pdf", "pdf:page=1#over\u001Fview"],
+    ["DEL HTML location", "text/html", "html:section=over\u007Fview"],
+    ["DEL PDF anchor", "application/pdf", "pdf:page=1#over\u007Fview"],
     ["URL location", "text/html", "html:https://search.example/?q=policy"],
     ["search location", "text/html", "html:search=renewable policy"],
     ["metadata location", "text/html", "html:metadata:/publishedAt"],
@@ -293,6 +313,26 @@ describe("Basic document observation plan parser", () => {
           : "html:section=population-table" }),
       ],
     }));
+  });
+
+  test("accepts a 65536-byte JSON object key", () => {
+    const key = "a".repeat(65_536);
+    const result = parseBasicDocumentObservationPlan(plan({ observations: [
+      editorialObservation({ rawValue: { [key]: "reviewed" } }),
+      sourceFactObservation(),
+    ] }));
+
+    expect(result.observations[0]?.rawValue).toEqual({ [key]: "reviewed" });
+  });
+
+  test.each([
+    ["an overlong key", "a".repeat(65_537)],
+    ["an ill-formed Unicode key", "\uD800"],
+  ])("rejects a JSON object with %s", (_label, key) => {
+    expectInvalid(plan({ observations: [
+      editorialObservation({ rawValue: { [key]: "reviewed" } }),
+      sourceFactObservation(),
+    ] }));
   });
 
   test("rejects cyclic, sparse, deep, oversized, and overlong input values", () => {
@@ -322,6 +362,21 @@ describe("Basic document observation plan parser", () => {
   test("returns a stable redacted error without inspecting document bytes", () => {
     const sentinel = "DOCUMENT_CONTENT_MUST_NOT_LEAK";
     const value = plan({ observations: nestedArrays(65, sentinel) });
+
+    try {
+      parseBasicDocumentObservationPlan(value);
+    } catch (error) {
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).toBe(ERROR);
+      expect((error as Error).message).not.toContain(sentinel);
+    }
+  });
+
+  test("returns a stable redacted error without leaking rejected values", () => {
+    const sentinel = "DOCUMENT_PLAN_VALUE_MUST_NOT_LEAK";
+    const value = plan({ capture: capture({
+      requestUrl: `${REQUEST_URL_PREFIX}${sentinel} `,
+    }) });
 
     try {
       parseBasicDocumentObservationPlan(value);
