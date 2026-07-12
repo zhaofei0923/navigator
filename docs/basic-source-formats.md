@@ -123,9 +123,15 @@ csv:/rows/<zero-based-data-row>/columns/<RFC6901-escaped-header>
 
 Header token 先将 `~` 转义为 `~0`，再将 `/` 转义为 `~1`。返回的 `rawValue` 必须与目标解析 cell 逐字一致；source-specific row selection、数值 normalization、unit/year 和 fact mapping 属于后续 reviewed adapter，不属于 generic CSV parser。
 
-## 7. Document 与后续边界
+## 7. Document 边界与人工证据
 
-`text/html` 和 `application/pdf` 在本任务中只允许 transport、raw byte capture、hash 和 manifest 登记。不得自动解析 DOM、正文、OCR 或 PDF text，也不得产生 preliminary fact。Document locator、人工 source review 和 evidence promotion 必须等待 `DATA-BASIC-DOCUMENTS-1`。
+`text/html` 和 `application/pdf` 仍只允许 transport、raw byte capture、hash
+和 manifest 登记；不得自动解析 DOM、正文、OCR 或 PDF text。`DATA-BASIC-DOCUMENTS-1`
+已在 [basic-country-document-evidence.md](./basic-country-document-evidence.md)
+定义它们的 generic manual-document executor、人工 review、capture-hash 绑定、
+HTML/PDF locator 与 manual evidence promotion。该文档边界仍不解析 bytes、不
+推断 locator，也不产生 editorial final fact、双语 draft、canonical 数据、数据库
+写入或发布能力；Editorial 和 Deterministic 分片尚未完成。
 
 所有 v2 API 保持 `@navigator/db` package-private，`packages/db/src/index.ts` 不导出。`csv-parse` 精确固定为 `7.0.1`，许可证为 MIT；本任务不引入其他依赖。
 

@@ -172,7 +172,23 @@ readiness 是单向安全约束，允许配对固定如下：
 
 冲突值永不由系统自动选择；未解决的冲突必须被保留并阻断。即使 `humanDecision.decision = approved`，本契约也不会写入 canonical 数据、改变审核状态、执行发布，或使数据可用于 AI；这些动作继续由既有人工审核与发布闸门控制。
 
-## 5. 验证结果形状
+## 5. Parallel v2 preliminary boundary
+
+`DATA-BASIC-DOCUMENTS-1` introduces a parallel preliminary path described in
+[basic-country-document-evidence.md](./basic-country-document-evidence.md).
+Its source register and extracted-facts envelopes use
+`basic-country-audit/v2`; source register additionally binds
+`catalogVersion` and `catalogSha256`. These are not v1 envelopes with
+optional keys, and one audit directory must never mix v1 and v2 envelope
+versions.
+
+This contract's v1 validator and four-file fixture bundle remain unchanged.
+The Documents slice does not yet create a v2 `review-report.json` or
+`market-overview.draft.json`, decide `readyForHumanReview`, write canonical
+data, or make records AI-usable. Those outputs require the later Editorial and
+Deterministic tasks plus the existing human publication gate.
+
+## 6. 验证结果形状
 
 每次验证均返回 `BasicCollectionAuditSummary`：`countryCode`（字符串）、`runId`（字符串）、`sourceCount`（数值）和 `factCount`（数值）。`BasicCollectionAuditValidationResult` 是以下二选一结果：
 
