@@ -62,6 +62,21 @@ export interface BasicDocumentMaterializationResult {
   readonly injectionRisks: readonly BasicInjectionRisk[];
 }
 
+export interface BasicDocumentMaterializationProvenanceV2 {
+  readonly runId: string;
+  readonly countryCode: string;
+  readonly catalogVersion: string;
+  readonly catalogSha256: string;
+  readonly manualSourceIds: readonly string[];
+  readonly captureBindings: readonly Readonly<{
+    sourceId: string;
+    requestUrl: string;
+    finalUrl: string;
+    retrievedAt: string;
+    contentSha256: string;
+  }>[];
+}
+
 export interface BasicDocumentMaterializationInput {
   readonly plan: BasicSourceExecutionPlan;
   readonly captures: readonly BasicDocumentCaptureV2[];
@@ -86,6 +101,17 @@ const INPUT_KEYS = ["plan", "captures", "review", "documentPlans"] as const;
 const PLAN_KEYS = ["catalogVersion", "catalogSha256", "countryCode", "sources"] as const;
 const CAPTURE_KEYS = ["catalogSource", "manifest"] as const;
 const MAX_ACTIVE_SOURCES = 64;
+const DOCUMENT_MATERIALIZATION_PROVENANCE = new WeakMap<
+  object,
+  BasicDocumentMaterializationProvenanceV2
+>();
+
+export function snapshotBasicDocumentMaterializationProvenanceV2(
+  value: unknown,
+): BasicDocumentMaterializationProvenanceV2 | null {
+  if (typeof value !== "object" || value === null) return null;
+  return DOCUMENT_MATERIALIZATION_PROVENANCE.get(value) ?? null;
+}
 
 export function materializeBasicDocumentEvidence(
   value: BasicDocumentMaterializationInput,
@@ -124,13 +150,32 @@ export function materializeBasicDocumentEvidence(
       trustedPlan.manualEntries,
     );
 
-    return materializeReviewedSources(
+    const result = materializeReviewedSources(
       trustedPlan,
       runId,
       captureBySource,
       reviewBySource,
       documentPlanBySource,
     );
+    DOCUMENT_MATERIALIZATION_PROVENANCE.set(result, deepFreezeBasicOfflineValue({
+      runId,
+      countryCode: trustedPlan.plan.countryCode,
+      catalogVersion: trustedPlan.plan.catalogVersion,
+      catalogSha256: trustedPlan.plan.catalogSha256,
+      manualSourceIds: trustedPlan.manualEntries.map(({ source }) => source.sourceId),
+      captureBindings: trustedPlan.manualEntries.map(({ source }) => {
+        const capture = captureBySource.get(source.sourceId);
+        if (capture === undefined) invalid();
+        return {
+          sourceId: source.sourceId,
+          requestUrl: capture.manifest.request.url,
+          finalUrl: capture.manifest.response.finalUrl,
+          retrievedAt: capture.manifest.response.retrievedAt,
+          contentSha256: capture.manifest.response.contentSha256,
+        };
+      }),
+    }));
+    return result;
   } catch {
     throw new Error(ERROR_MESSAGE);
   }

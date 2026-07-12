@@ -20,8 +20,11 @@ It is deliberately not a document parser, an OCR service, a model workflow,
 a translation workflow, an editorial-final-fact workflow, a draft assembler,
 a canonical-data writer, a database writer, or a publication/AI-readiness
 decision. A completed `DATA-BASIC-DOCUMENTS-1` therefore does not mean that a
-country is ready to publish. `DATA-BASIC-EDITORIAL-1` and
-`DATA-BASIC-DETERMINISTIC-1` remain required before the model-free candidate
+country is ready to publish. `DATA-BASIC-EDITORIAL-1` now owns exact bilingual
+input validation, trusted evidence binding, reviewed-source union, controlled
+name enrichment, and derived-fact materialization; see
+[basic-country-editorial-input.md](./basic-country-editorial-input.md).
+`DATA-BASIC-DETERMINISTIC-1` remains required before the model-free candidate
 pipeline can assemble and preflight a complete four-file v2 candidate package.
 
 ## 2. v2 Preliminary Material
@@ -59,6 +62,13 @@ cannot transfer materialization authority. Receipts intentionally
 contain only `sourceId`, content hash, byte length, and cache-reuse status;
 they expose no cache path or bytes. The two review schemas and document plan
 are temporary reviewed inputs, not extra committed audit artifacts.
+
+A successful document result has non-transferable, in-memory provenance. In
+addition to run/country/catalog identity and sorted `manualSourceIds`, it owns
+a recursively frozen, source-ID-sorted `captureBindings` array of exact
+`{ sourceId, requestUrl, finalUrl, retrievedAt, contentSha256 }` records.
+Editorial accepts only the exact branded result and compares every binding to
+the preliminary capture; a plain clone cannot carry this authority.
 
 The final v2 audit directory will retain the four legacy filenames. The three
 envelopes (`source-register.json`, `extracted-facts.json`, and
@@ -214,7 +224,7 @@ create knowledge chunks, or make anything AI-usable. It also must not relax
 v1 compatibility or introduce country-specific executor logic.
 
 `reviewStatus = draft` and `aiUsable = false` remain requirements of a future
-candidate draft. Only the later Editorial and Deterministic tasks can combine
-the retained intermediates into that draft and a complete v2 audit package;
-project-owner review and existing publication gates remain separate after
-those tasks.
+candidate draft. Editorial now consumes the retained intermediates only into a
+frozen in-memory reviewed materialization result; it does not create a draft
+or audit package. Deterministic still owns those artifacts, followed by
+project-owner review and existing publication gates.

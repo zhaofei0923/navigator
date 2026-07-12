@@ -4,11 +4,16 @@ import { isProxy } from "node:util/types";
 import type {
   BasicCollectionJsonValue,
 } from "./basic-collection-contracts.js";
+import {
+  snapshotBasicBoundedArrayEntries,
+  snapshotBasicBoundedJsonValue,
+} from "./basic-bounded-json.js";
 import type {
   BasicExtractedFactV2,
   BasicExtractionMethodV2,
   BasicFactEvidenceV2,
   BasicSourcedObservationV2,
+  BasicV2FieldOwner,
 } from "./basic-collection-v2-contracts.js";
 import { classifyBasicV2FieldPath } from "./basic-collection-v2-contracts.js";
 
@@ -24,7 +29,6 @@ const OBSERVATION_KEYS = [
   "year",
   "uncertainty",
 ] as const;
-const MAX_JSON_DEPTH = 64;
 const MAX_JSON_ARRAY_LENGTH = 256;
 const MAX_JSON_STRING_BYTES = 65_536;
 
@@ -39,14 +43,38 @@ export function materializeBasicSourceFactsV2(
     ) {
       invalid();
     }
+    return materializeFacts(
+      observations,
+      extractionMethod,
+      ["source-backed", "hybrid-name"],
+    );
+  } catch {
+    invalid();
+  }
+}
 
+export function materializeBasicEditorialObservationsV2(
+  observations: readonly BasicSourcedObservationV2[],
+): readonly BasicExtractedFactV2[] {
+  return materializeFacts(observations, "manual", ["editorial"]);
+}
+
+function materializeFacts(
+  observations: readonly BasicSourcedObservationV2[],
+  extractionMethod: BasicExtractionMethodV2,
+  allowedOwners: readonly BasicV2FieldOwner[],
+): readonly BasicExtractedFactV2[] {
+  try {
+    const values = snapshotBasicBoundedArrayEntries(
+      observations,
+      MAX_JSON_ARRAY_LENGTH,
+    );
+    if (!values.valid) invalid();
     const grouped = new Map<string, BasicSourcedObservationV2[]>();
-    for (const value of observations) {
+    for (const value of values.data) {
       const observation = snapshotObservation(value);
       const fieldOwner = classifyBasicV2FieldPath(observation.fieldPath);
-      if (fieldOwner !== "source-backed" && fieldOwner !== "hybrid-name") {
-        invalid();
-      }
+      if (fieldOwner === null || !allowedOwners.includes(fieldOwner)) invalid();
       const group = grouped.get(observation.fieldPath) ?? [];
       group.push(observation);
       grouped.set(observation.fieldPath, group);
@@ -124,7 +152,10 @@ function snapshotObservation(value: unknown): BasicSourcedObservationV2 {
     typeof locator !== "string" ||
     !(unit === null || typeof unit === "string") ||
     !(year === null || typeof year === "number" && Number.isFinite(year)) ||
-    !(uncertainty === null || typeof uncertainty === "string")
+    !(uncertainty === null || typeof uncertainty === "string") ||
+    !boundedString(sourceId) || !boundedString(fieldPath) || !boundedString(locator) ||
+    !(unit === null || boundedString(unit)) ||
+    !(uncertainty === null || boundedString(uncertainty))
   ) {
     invalid();
   }
@@ -201,105 +232,13 @@ function canonicalJson(value: BasicCollectionJsonValue): string {
 }
 
 function snapshotJson(value: unknown): BasicCollectionJsonValue {
-  return snapshotJsonValue(value, 0, new Set<object>());
+  const snapshot = snapshotBasicBoundedJsonValue(value);
+  if (!snapshot.valid) invalid();
+  return snapshot.data;
 }
 
-function snapshotJsonValue(
-  value: unknown,
-  depth: number,
-  ancestors: Set<object>,
-): BasicCollectionJsonValue {
-  if (value === null || typeof value === "boolean") {
-    return value;
-  }
-  if (typeof value === "string") {
-    if (Buffer.byteLength(value, "utf8") > MAX_JSON_STRING_BYTES) invalid();
-    return value;
-  }
-  if (typeof value === "number") {
-    if (!Number.isFinite(value)) invalid();
-    return value;
-  }
-  if (
-    typeof value !== "object" ||
-    value === null ||
-    depth >= MAX_JSON_DEPTH ||
-    isProxy(value) ||
-    ancestors.has(value)
-  ) {
-    invalid();
-  }
-  ancestors.add(value);
-  try {
-    return Array.isArray(value)
-      ? snapshotJsonArray(value, depth, ancestors)
-      : snapshotJsonObject(value, depth, ancestors);
-  } finally {
-    ancestors.delete(value);
-  }
-}
-
-function snapshotJsonArray(
-  value: object,
-  depth: number,
-  ancestors: Set<object>,
-): BasicCollectionJsonValue {
-  if (Object.getPrototypeOf(value) !== Array.prototype) invalid();
-  const lengthDescriptor = Object.getOwnPropertyDescriptor(value, "length");
-  if (
-    lengthDescriptor === undefined ||
-    lengthDescriptor.enumerable ||
-    !Object.hasOwn(lengthDescriptor, "value") ||
-    typeof lengthDescriptor.value !== "number" ||
-    !Number.isSafeInteger(lengthDescriptor.value) ||
-    lengthDescriptor.value < 0 ||
-    lengthDescriptor.value > MAX_JSON_ARRAY_LENGTH ||
-    Reflect.ownKeys(value).length !== lengthDescriptor.value + 1
-  ) {
-    invalid();
-  }
-  const snapshot: BasicCollectionJsonValue[] = [];
-  for (let index = 0; index < lengthDescriptor.value; index += 1) {
-    const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
-    if (
-      descriptor === undefined ||
-      !descriptor.enumerable ||
-      !Object.hasOwn(descriptor, "value")
-    ) {
-      invalid();
-    }
-    snapshot.push(snapshotJsonValue(descriptor.value, depth + 1, ancestors));
-  }
-  return Object.freeze(snapshot) as unknown as BasicCollectionJsonValue;
-}
-
-function snapshotJsonObject(
-  value: object,
-  depth: number,
-  ancestors: Set<object>,
-): BasicCollectionJsonValue {
-  if (Object.getPrototypeOf(value) !== Object.prototype) invalid();
-  const keys = Reflect.ownKeys(value);
-  if (keys.some((key) => typeof key !== "string")) invalid();
-  const textKeys = keys as string[];
-  const snapshot: Record<string, BasicCollectionJsonValue> = {};
-  for (const key of textKeys.sort(compareText)) {
-    const descriptor = Object.getOwnPropertyDescriptor(value, key);
-    if (
-      descriptor === undefined ||
-      !descriptor.enumerable ||
-      !Object.hasOwn(descriptor, "value")
-    ) {
-      invalid();
-    }
-    Object.defineProperty(snapshot, key, {
-      value: snapshotJsonValue(descriptor.value, depth + 1, ancestors),
-      enumerable: true,
-      writable: false,
-      configurable: false,
-    });
-  }
-  return Object.freeze(snapshot);
+function boundedString(value: string): boolean {
+  return Buffer.byteLength(value, "utf8") <= MAX_JSON_STRING_BYTES;
 }
 
 function compareEvidence(left: BasicFactEvidenceV2, right: BasicFactEvidenceV2): number {

@@ -185,8 +185,11 @@ versions.
 This contract's v1 validator and four-file fixture bundle remain unchanged.
 The Documents slice does not yet create a v2 `review-report.json` or
 `market-overview.draft.json`, decide `readyForHumanReview`, write canonical
-data, or make records AI-usable. Those outputs require the later Editorial and
-Deterministic tasks plus the existing human publication gate.
+data, or make records AI-usable. Editorial now produces only the frozen
+in-memory reviewed materialization described in
+[basic-country-editorial-input.md](./basic-country-editorial-input.md);
+Deterministic still owns candidate artifacts and preflight, followed by the
+existing human publication gate.
 
 ## 6. 验证结果形状
 

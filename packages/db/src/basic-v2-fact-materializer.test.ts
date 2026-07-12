@@ -4,6 +4,7 @@ import {
   classifyBasicV2FieldPath,
 } from "./collection/basic-collection-v2-contracts.js";
 import {
+  materializeBasicEditorialObservationsV2,
   materializeBasicSourceFactsV2,
   type BasicSourcedObservationV2,
 } from "./collection/basic-v2-fact-materializer.js";
@@ -275,6 +276,178 @@ describe("Basic audit v2 fact materializer", () => {
     expect(() => materializeBasicSourceFactsV2([
       observation(),
     ], "hermes" as never)).toThrow("source fact materialization is invalid");
+  });
+
+  test("materializes narrative editorial observations as manual candidate facts", () => {
+    const [fact] = materializeBasicEditorialObservationsV2([
+      observation({
+        fieldPath: "country.summary",
+        rawValue: { zh: "市场概览", en: "Market overview" },
+        normalizedValue: { zh: "市场概览", en: "Market overview" },
+      }),
+    ]);
+
+    expect(fact).toMatchObject({
+      fieldPath: "country.summary",
+      status: "candidate",
+      extractionMethod: "manual",
+    });
+  });
+
+  test("rejects oversized and accessor-backed editorial observation arrays before reading entries", () => {
+    const probe = { executions: 0 };
+    const oversized = Array.from({ length: MAX_JSON_ARRAY_LENGTH + 1 }, () =>
+      observation({ fieldPath: "country.summary" }));
+    Object.defineProperty(oversized, "0", {
+      enumerable: true,
+      get() {
+        probe.executions += 1;
+        return observation({ fieldPath: "country.summary" });
+      },
+    });
+    const accessorBacked = [observation({ fieldPath: "country.summary" })];
+    Object.defineProperty(accessorBacked, "0", {
+      enumerable: true,
+      get() {
+        probe.executions += 1;
+        return observation({ fieldPath: "country.summary" });
+      },
+    });
+
+    for (const observations of [oversized, accessorBacked]) {
+      const error = captureMaterializationError(() =>
+        materializeBasicEditorialObservationsV2(observations));
+      expect(error?.message).toBe("source fact materialization is invalid");
+    }
+    expect(probe.executions).toBe(0);
+  });
+
+  test("rejects oversized nested editorial strings with a redacted error", () => {
+    const sentinel = `SECRET-editorial-${"x".repeat(MAX_JSON_STRING_BYTES)}`;
+    const error = captureMaterializationError(() =>
+      materializeBasicEditorialObservationsV2([
+        observation({
+          fieldPath: "country.summary",
+          rawValue: { nested: sentinel },
+          normalizedValue: { zh: "摘要", en: "Summary" },
+        }),
+      ]));
+
+    expect(error?.message).toBe("source fact materialization is invalid");
+    expect(error?.message).not.toContain("SECRET-editorial-");
+  });
+
+  test("materializes regional editorial observations as manual candidate facts", () => {
+    const [fact] = materializeBasicEditorialObservationsV2([
+      observation({
+        fieldPath: "country.region",
+        rawValue: "Southeast Asia",
+        normalizedValue: "Southeast Asia",
+      }),
+    ]);
+
+    expect(fact).toMatchObject({
+      fieldPath: "country.region",
+      status: "candidate",
+      extractionMethod: "manual",
+    });
+  });
+
+  test.each([
+    "marketOverview.industryTags",
+    "marketOverview.techTags",
+  ])("materializes %s arrays as manual candidate facts", (fieldPath) => {
+    const [fact] = materializeBasicEditorialObservationsV2([
+      observation({
+        fieldPath,
+        rawValue: ["solar", "storage"],
+        normalizedValue: ["solar", "storage"],
+      }),
+    ]);
+
+    expect(fact).toMatchObject({
+      fieldPath,
+      status: "candidate",
+      extractionMethod: "manual",
+    });
+  });
+
+  test.each([
+    "marketOverview.keyIndicators[0].label",
+    "marketOverview.keyIndicators[17].label",
+  ])("materializes exact indicator label path %s", (fieldPath) => {
+    const [fact] = materializeBasicEditorialObservationsV2([
+      observation({ fieldPath, rawValue: "Installed capacity", normalizedValue: "Installed capacity" }),
+    ]);
+
+    expect(fact).toMatchObject({
+      fieldPath,
+      status: "candidate",
+      extractionMethod: "manual",
+    });
+  });
+
+  test("canonicalizes integer-style JSON object keys identically for editorial observations", () => {
+    const facts = [
+      materializeBasicEditorialObservationsV2([
+        observation({
+          sourceId: "source-b",
+          fieldPath: "country.summary",
+          locator: "table:2",
+          rawValue: { "10": "ten", "2": "two", nested: { "10": 10, "2": 2 } },
+          normalizedValue: { "10": "ten", "2": "two" },
+        }),
+        observation({
+          sourceId: "source-a",
+          fieldPath: "country.summary",
+          locator: "table:1",
+          rawValue: { "2": "two", "10": "ten", nested: { "2": 2, "10": 10 } },
+          normalizedValue: { "2": "two", "10": "ten" },
+        }),
+      ]),
+      materializeBasicEditorialObservationsV2([
+        observation({
+          sourceId: "source-a",
+          fieldPath: "country.summary",
+          locator: "table:1",
+          rawValue: { "10": "ten", "2": "two", nested: { "10": 10, "2": 2 } },
+          normalizedValue: { "10": "ten", "2": "two" },
+        }),
+        observation({
+          sourceId: "source-b",
+          fieldPath: "country.summary",
+          locator: "table:2",
+          rawValue: { "2": "two", "10": "ten", nested: { "2": 2, "10": 10 } },
+          normalizedValue: { "2": "two", "10": "ten" },
+        }),
+      ]),
+    ];
+
+    expect(facts[0]?.[0]?.factId).toBe(facts[1]?.[0]?.factId);
+    expect(facts[0]?.[0]?.evidence).toEqual(facts[1]?.[0]?.evidence);
+    expect(JSON.stringify(facts[0])).toBe(JSON.stringify(facts[1]));
+  });
+
+  test.each([
+    "country.code",
+    "country.name",
+    "country.flagEmoji",
+    "marketOverview.population",
+    "marketOverview.source",
+    "marketOverview.keyIndicators[-1].label",
+    "marketOverview.keyIndicators[01].label",
+    "marketOverview.unknown",
+  ])("rejects non-editorial path %s", (fieldPath) => {
+    expect(() => materializeBasicEditorialObservationsV2([
+      observation({ fieldPath }),
+    ])).toThrow("source fact materialization is invalid");
+  });
+
+  test("rejects mixed-owner editorial batches", () => {
+    expect(() => materializeBasicEditorialObservationsV2([
+      observation({ fieldPath: "country.summary" }),
+      observation({ fieldPath: "marketOverview.population" }),
+    ])).toThrow("source fact materialization is invalid");
   });
 
   test.each([
