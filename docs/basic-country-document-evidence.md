@@ -53,7 +53,9 @@ receipts[]
 
 `sourceRegister` carries the catalog version and digest; `extractedFacts` is
 bound to the same run and country. `documentCaptures` are catalog source plus
-the verified `basic-country-raw-capture/v2` manifest. Receipts intentionally
+the verified `basic-country-raw-capture/v2` manifest; they also carry
+runner-registered, in-memory provenance, so copying or serializing a capture
+cannot transfer materialization authority. Receipts intentionally
 contain only `sourceId`, content hash, byte length, and cache-reuse status;
 they expose no cache path or bytes. The two review schemas and document plan
 are temporary reviewed inputs, not extra committed audit artifacts.

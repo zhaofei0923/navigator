@@ -1,4 +1,8 @@
-import { describe, expect, test } from "vitest";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+import { afterEach, describe, expect, test, vi } from "vitest";
 
 import {
   parseBasicDocumentObservationPlan,
@@ -25,6 +29,12 @@ import {
   createBasicSourceExecutionPlan,
   type BasicSourceExecutionPlan,
 } from "./collection/basic-source-request-materializer.js";
+import {
+  runBasicSourceExecutionPlanV2,
+} from "./collection/basic-source-plan-runner-v2.js";
+import type {
+  BasicSourceTransportV2,
+} from "./collection/basic-source-v2-contracts.js";
 
 const CATALOG_SHA256 =
   "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789";
@@ -35,6 +45,16 @@ const REQUEST_URL_PREFIX = "https://documents.example/";
 const SECOND_CONTENT_SHA256 =
   "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210";
 const MATERIALIZATION_ERROR = "basic document evidence materialization is invalid";
+const MATERIALIZATION_RUN_ID = "run-20260712";
+const materializationRoots = new Set<string>();
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  for (const root of materializationRoots) {
+    rmSync(root, { recursive: true, force: true });
+  }
+  materializationRoots.clear();
+});
 
 type MutableRecord = Record<string | symbol, unknown>;
 
@@ -424,8 +444,14 @@ interface MaterializationFixture {
 }
 
 describe("Basic document evidence materializer", () => {
-  test("materializes exact catalog/capture/review owners and reviewed document observations", () => {
-    const fixture = materializationFixture();
+  test("rejects self-consistent handmade document captures", () => {
+    const fixture = handmadeMaterializationFixture();
+
+    expectMaterializationInvalid(fixture);
+  });
+
+  test("materializes exact catalog/capture/review owners and reviewed document observations", async () => {
+    const fixture = await materializationFixture();
     const capturesBefore = structuredClone(fixture.captures);
     const reviewBefore = structuredClone(fixture.review);
     const documentPlansBefore = structuredClone(fixture.documentPlans);
@@ -439,7 +465,7 @@ describe("Basic document evidence materializer", () => {
         sourceUrl: "https://documents.example/sources/VN/official.html",
         retrievedAt: "2026-07-12T04:00:00.000Z",
         publishedAt: "2026-07-01T00:00:00.000Z",
-        contentSha256: CONTENT_SHA256,
+        contentSha256: fixture.captures[0]!.manifest.response.contentSha256,
         evidenceLocators: [
           "html:section=overview",
           "html:section=population-table;row=2025",
@@ -457,7 +483,7 @@ describe("Basic document evidence materializer", () => {
         sourceUrl: "https://documents.example/sources/VN/official.pdf",
         retrievedAt: "2026-07-12T05:00:00.000Z",
         publishedAt: null,
-        contentSha256: SECOND_CONTENT_SHA256,
+        contentSha256: fixture.captures[1]!.manifest.response.contentSha256,
         evidenceLocators: [
           "pdf:page=2#gdp-table",
           "pdf:page=3#renewable-target",
@@ -515,8 +541,8 @@ describe("Basic document evidence materializer", () => {
     expect(fixture.documentPlans).toEqual(documentPlansBefore);
   });
 
-  test("is order-independent and emits stable source, fact, and evidence ordering", () => {
-    const fixture = materializationFixture();
+  test("is order-independent and emits stable source, fact, and evidence ordering", async () => {
+    const fixture = await materializationFixture();
 
     const forward = materializeBasicDocumentEvidence(fixture);
     const reversed = materializeBasicDocumentEvidence({
@@ -528,8 +554,8 @@ describe("Basic document evidence materializer", () => {
     expect(reversed).toEqual(forward);
   });
 
-  test("preserves failed checks, UNVERIFIED credibility, and reviewed prompt risks for preflight", () => {
-    const fixture = materializationFixture("UNVERIFIED");
+  test("preserves failed checks, UNVERIFIED credibility, and reviewed prompt risks for preflight", async () => {
+    const fixture = await materializationFixture("UNVERIFIED");
     const review = reviewedManualSources(fixture.plan, {
       "official-html": {
         sourceCheck: { status: "failed", notes: "Hash reviewed but access check failed" },
@@ -585,21 +611,60 @@ describe("Basic document evidence materializer", () => {
     expectDeeplyFrozen(result);
   });
 
-  test("rejects a forged or mixed-provenance execution plan", () => {
-    const fixture = materializationFixture();
-    const other = materializationFixture();
+  test("rejects a forged or mixed-provenance execution plan", async () => {
+    const fixture = await materializationFixture();
+    const other = await materializationFixture();
     const forged = structuredClone(fixture.plan);
     const mixed = {
       ...fixture.plan,
       sources: [
         fixture.plan.sources[0]!,
         other.plan.sources[1]!,
-        fixture.plan.sources[2]!,
       ],
     };
 
     expectMaterializationInvalid({ ...fixture, plan: forged });
     expectMaterializationInvalid({ ...fixture, plan: mixed });
+  });
+
+  test("rejects spread and JSON-cloned runner captures", async () => {
+    const fixture = await materializationFixture();
+    const spreadCapture = { ...fixture.captures[0] } as BasicDocumentCaptureV2;
+    const jsonCapture = JSON.parse(
+      JSON.stringify(fixture.captures[0]),
+    ) as BasicDocumentCaptureV2;
+
+    expectMaterializationInvalid({
+      ...fixture,
+      captures: [spreadCapture, ...fixture.captures.slice(1)],
+    });
+    expectMaterializationInvalid({
+      ...fixture,
+      captures: [jsonCapture, ...fixture.captures.slice(1)],
+    });
+  });
+
+  test("rejects branded captures mixed across plans, catalogs, and runs", async () => {
+    const fixture = await materializationFixture();
+    const otherPlan = await materializationFixture();
+    const otherCatalog = await materializationFixture("UNVERIFIED");
+    const otherRun = await materializationFixture("OFFICIAL", {
+      plan: fixture.plan,
+      runId: "other-run-20260712",
+    });
+
+    expectMaterializationInvalid({
+      ...fixture,
+      captures: [fixture.captures[0]!, otherPlan.captures[1]!],
+    });
+    expectMaterializationInvalid({
+      ...fixture,
+      captures: [fixture.captures[0]!, otherCatalog.captures[1]!],
+    });
+    expectMaterializationInvalid({
+      ...fixture,
+      captures: [fixture.captures[0]!, otherRun.captures[1]!],
+    });
   });
 
   test.each([
@@ -611,9 +676,12 @@ describe("Basic document evidence materializer", () => {
       ...fixture,
       captures: [...fixture.captures, fixture.captures[0]],
     })],
-    ["structured capture overlap", (fixture: MaterializationFixture) => ({
+    ["untrusted capture overlap", (fixture: MaterializationFixture) => ({
       ...fixture,
-      captures: [...fixture.captures, structuredCapture(fixture.plan)],
+      captures: [
+        ...fixture.captures,
+        structuredClone(fixture.captures[0]!),
+      ],
     })],
     ["missing document plan", (fixture: MaterializationFixture) => ({
       ...fixture,
@@ -630,8 +698,8 @@ describe("Basic document evidence materializer", () => {
         sourceId: "structured-data",
       }],
     })],
-  ])("rejects %s", (_label, mutate) => {
-    const fixture = materializationFixture();
+  ])("rejects %s", async (_label, mutate) => {
+    const fixture = await materializationFixture();
     expectMaterializationInvalid(mutate(fixture));
   });
 
@@ -660,8 +728,8 @@ describe("Basic document evidence materializer", () => {
       ...value,
       catalogSha256: SECOND_CONTENT_SHA256,
     })],
-  ])("rejects %s mismatch", (_label, mutate) => {
-    const fixture = materializationFixture();
+  ])("rejects %s mismatch", async (_label, mutate) => {
+    const fixture = await materializationFixture();
     const invalidReview = mutate(structuredClone(fixture.review) as unknown as Record<string, unknown>);
     expectMaterializationInvalid({ ...fixture, review: invalidReview });
   });
@@ -683,8 +751,8 @@ describe("Basic document evidence materializer", () => {
       ...captureValue,
       catalogSha256: SECOND_CONTENT_SHA256,
     })],
-  ])("rejects %s mismatch", (_label, mutateManifest) => {
-    const fixture = materializationFixture();
+  ])("rejects %s mismatch", async (_label, mutateManifest) => {
+    const fixture = await materializationFixture();
     const captures = replaceFirstCaptureManifest(fixture, mutateManifest);
     expectMaterializationInvalid({ ...fixture, captures });
   });
@@ -696,8 +764,8 @@ describe("Basic document evidence materializer", () => {
     ["retrieval timestamp", { retrievedAt: "2026-07-12T04:00:01.000Z" }],
     ["byte length", { byteLength: 1_025 }],
     ["content hash", { contentSha256: SECOND_CONTENT_SHA256 }],
-  ])("rejects document-plan %s drift", (_label, captureOverrides) => {
-    const fixture = materializationFixture();
+  ])("rejects document-plan %s drift", async (_label, captureOverrides) => {
+    const fixture = await materializationFixture();
     const documentPlans = replaceFirstDocumentPlan(fixture, {
       capture: {
         ...fixture.documentPlans[0]!.capture,
@@ -759,14 +827,14 @@ describe("Basic document evidence materializer", () => {
         contentSha256: SECOND_CONTENT_SHA256,
       },
     })],
-  ])("rejects raw-capture %s drift", (_label, mutateManifest) => {
-    const fixture = materializationFixture();
+  ])("rejects raw-capture %s drift", async (_label, mutateManifest) => {
+    const fixture = await materializationFixture();
     const captures = replaceFirstCaptureManifest(fixture, mutateManifest);
     expectMaterializationInvalid({ ...fixture, captures });
   });
 
-  test("rejects catalog owner drift and a forged non-open execution", () => {
-    const fixture = materializationFixture();
+  test("rejects catalog owner drift and a forged non-open execution", async () => {
+    const fixture = await materializationFixture();
     const captures = [{
       ...fixture.captures[0],
       catalogSource: {
@@ -782,8 +850,8 @@ describe("Basic document evidence materializer", () => {
     expectMaterializationInvalid({ ...fixture, plan: forgedPlan });
   });
 
-  test("rejects unaccepted risk locators and unsupported severity binding", () => {
-    const fixture = materializationFixture();
+  test("rejects unaccepted risk locators and unsupported severity binding", async () => {
+    const fixture = await materializationFixture();
     const unknownLocatorReview = reviewedManualSourcesValue(fixture.plan, {
       "official-html": {
         promptInjectionRisk: "suspected",
@@ -809,8 +877,8 @@ describe("Basic document evidence materializer", () => {
     expectMaterializationInvalid({ ...fixture, review: wrongSeverityReview });
   });
 
-  test("rejects catalog-unaccepted paths, owner bypasses, and mixed MIME locators", () => {
-    const fixture = materializationFixture();
+  test("rejects catalog-unaccepted paths, owner bypasses, and mixed MIME locators", async () => {
+    const fixture = await materializationFixture();
     const unacceptedPath = replaceFirstDocumentPlan(fixture, {
       observations: [
         fixture.documentPlans[0]!.observations[0],
@@ -851,8 +919,8 @@ describe("Basic document evidence materializer", () => {
     expectMaterializationInvalid({ ...fixture, documentPlans: mixedMime });
   });
 
-  test("rejects exact-input accessors without executing them", () => {
-    const fixture = materializationFixture();
+  test("rejects exact-input accessors without executing them", async () => {
+    const fixture = await materializationFixture();
     const probe = { executions: 0 };
     const input = { ...fixture } as MutableRecord;
     Object.defineProperty(input, "captures", {
@@ -867,8 +935,8 @@ describe("Basic document evidence materializer", () => {
     expect(probe.executions).toBe(0);
   });
 
-  test("returns one stable redacted error without leaking rejected material", () => {
-    const fixture = materializationFixture();
+  test("returns one stable redacted error without leaking rejected material", async () => {
+    const fixture = await materializationFixture();
     const sentinel = "DOCUMENT_MATERIALIZATION_SECRET_MUST_NOT_LEAK";
     const documentPlans = replaceFirstDocumentPlan(fixture, {
       capture: {
@@ -887,17 +955,25 @@ describe("Basic document evidence materializer", () => {
   });
 });
 
-function materializationFixture(
+async function materializationFixture(
   htmlCredibility: "OFFICIAL" | "UNVERIFIED" = "OFFICIAL",
-): MaterializationFixture {
-  const planValue = createBasicSourceExecutionPlan({
-    catalog: parseBasicSourceCatalog(materializationCatalog(htmlCredibility)),
+  options: Readonly<{
+    plan?: BasicSourceExecutionPlan;
+    runId?: string;
+  }> = {},
+): Promise<MaterializationFixture> {
+  const planValue = options.plan ?? materializationPlan(htmlCredibility);
+  const runId = options.runId ?? MATERIALIZATION_RUN_ID;
+  const root = mkdtempSync(join(tmpdir(), "navigator-document-materialization-"));
+  materializationRoots.add(root);
+  const run = await runBasicSourceExecutionPlanV2({
+    repoRoot: root,
     countryCode: "VN",
-    sourceIds: ["official-html", "official-pdf", "structured-data"],
+    runId,
+    plan: planValue,
+    transport: materializationTransport(planValue),
   });
-  const captures = planValue.sources
-    .filter(({ source }) => source.adapterKind === "manual-document")
-    .map((entry, index) => documentCapture(entry, index, planValue));
+  const captures = run.documentCaptures;
   const fixtureBase = {
     plan: planValue,
     captures,
@@ -905,8 +981,64 @@ function materializationFixture(
   };
   return {
     ...fixtureBase,
+    review: reviewedManualSources(planValue, {}, runId),
+  };
+}
+
+function handmadeMaterializationFixture(): MaterializationFixture {
+  const planValue = materializationPlan("OFFICIAL");
+  const captures = planValue.sources.map(
+    (entry, index) => documentCapture(entry, index, planValue),
+  );
+  return {
+    plan: planValue,
+    captures,
+    documentPlans: captures.map(documentObservationPlan),
     review: reviewedManualSources(planValue),
   };
+}
+
+function materializationPlan(
+  htmlCredibility: "OFFICIAL" | "UNVERIFIED",
+): BasicSourceExecutionPlan {
+  return createBasicSourceExecutionPlan({
+    catalog: parseBasicSourceCatalog(materializationCatalog(htmlCredibility)),
+    countryCode: "VN",
+    sourceIds: ["official-html", "official-pdf"],
+  });
+}
+
+function materializationTransport(
+  planValue: BasicSourceExecutionPlan,
+): BasicSourceTransportV2 {
+  const sourceByUrl = new Map(planValue.sources.map((entry) => [
+    entry.request.url,
+    entry.source,
+  ]));
+  return {
+    async execute(request) {
+      const source = sourceByUrl.get(request.url);
+      if (source === undefined) throw new Error("unexpected document request");
+      const isHtml = source.format === "html";
+      const body = new TextEncoder().encode(
+        isHtml ? "<html>reviewed fixture</html>" : "%PDF-1.7\nreviewed fixture",
+      );
+      return {
+        status: 200,
+        finalUrl: request.url,
+        redirectChain: [],
+        contentType: source.accept,
+        retrievedAt: isHtml
+          ? "2026-07-12T04:00:00.000Z"
+          : "2026-07-12T05:00:00.000Z",
+        body: documentBytes(body),
+      };
+    },
+  };
+}
+
+async function* documentBytes(value: Uint8Array): AsyncIterable<Uint8Array> {
+  yield new Uint8Array(value);
 }
 
 function materializationCatalog(htmlCredibility: "OFFICIAL" | "UNVERIFIED") {
@@ -1101,16 +1233,18 @@ type ManualReviewOverride = Readonly<{
 function reviewedManualSources(
   planValue: BasicSourceExecutionPlan,
   overrides: Readonly<Record<string, ManualReviewOverride>> = {},
+  runId = MATERIALIZATION_RUN_ID,
 ): BasicManualSourceReview {
   return parseBasicManualSourceReview(
-    reviewedManualSourcesValue(planValue, overrides),
-    reviewExpectation(planValue),
+    reviewedManualSourcesValue(planValue, overrides, runId),
+    reviewExpectation(planValue, runId),
   );
 }
 
 function reviewedManualSourcesValue(
   planValue: BasicSourceExecutionPlan,
   overrides: Readonly<Record<string, ManualReviewOverride>> = {},
+  runId = MATERIALIZATION_RUN_ID,
 ): Record<string, unknown> {
   const sources = planValue.sources
     .filter(({ source }) => source.adapterKind === "manual-document")
@@ -1130,7 +1264,7 @@ function reviewedManualSourcesValue(
     });
   return {
     schemaVersion: "basic-manual-source-review/v1",
-    runId: "run-20260712",
+    runId,
     countryCode: planValue.countryCode,
     catalogVersion: planValue.catalogVersion,
     catalogSha256: planValue.catalogSha256,
@@ -1138,9 +1272,12 @@ function reviewedManualSourcesValue(
   };
 }
 
-function reviewExpectation(planValue: BasicSourceExecutionPlan) {
+function reviewExpectation(
+  planValue: BasicSourceExecutionPlan,
+  runId = MATERIALIZATION_RUN_ID,
+) {
   return {
-    runId: "run-20260712",
+    runId,
     countryCode: planValue.countryCode,
     catalogVersion: planValue.catalogVersion,
     catalogSha256: planValue.catalogSha256,
@@ -1172,34 +1309,6 @@ function replaceFirstDocumentPlan(
     ...fixture.documentPlans[0],
     ...overrides,
   } as unknown as BasicDocumentObservationPlan, ...fixture.documentPlans.slice(1)];
-}
-
-function structuredCapture(planValue: BasicSourceExecutionPlan): BasicDocumentCaptureV2 {
-  const entry = planValue.sources.find(({ source }) => source.sourceId === "structured-data");
-  if (entry === undefined) throw new Error("structured fixture missing");
-  return {
-    catalogSource: entry.source,
-    manifest: {
-      schemaVersion: "basic-country-raw-capture/v2",
-      countryCode: planValue.countryCode,
-      runId: "run-20260712",
-      catalogVersion: planValue.catalogVersion,
-      catalogSha256: planValue.catalogSha256,
-      adapterId: entry.source.adapterId,
-      adapterVersion: entry.source.adapterVersion,
-      sourceId: entry.source.sourceId,
-      request: entry.request,
-      response: {
-        status: 200,
-        finalUrl: entry.request.url,
-        redirectChain: [],
-        contentType: "application/json",
-        retrievedAt: "2026-07-12T03:00:00.000Z",
-        byteLength: 128,
-        contentSha256: CONTENT_SHA256,
-      },
-    },
-  };
 }
 
 function expectMaterializationInvalid(value: unknown): void {

@@ -19,9 +19,11 @@ import {
 } from "./collection/basic-source-catalog.js";
 import {
   runBasicSourceExecutionPlanV2,
+  snapshotBasicDocumentCaptureProvenanceV2,
 } from "./collection/basic-source-plan-runner-v2.js";
 import {
   createBasicSourceExecutionPlan,
+  snapshotBasicSourceExecutionPlanEntryProvenance,
   type BasicSourceExecutionPlan,
 } from "./collection/basic-source-request-materializer.js";
 import type {
@@ -324,6 +326,21 @@ describe("catalog-driven Basic source plan runner v2", () => {
         }),
       }]);
       expect("body" in (result.documentCaptures[0] as unknown as object)).toBe(false);
+      const capture = result.documentCaptures[0]!;
+      const provenance = snapshotBasicDocumentCaptureProvenanceV2(capture);
+      expect(provenance).toMatchObject({
+        runId: RUN_ID,
+        countryCode: "VN",
+        catalogVersion: plan.catalogVersion,
+        catalogSha256: plan.catalogSha256,
+        sourceId: `official-${format}`,
+      });
+      expect(provenance?.entryProvenance).toBe(
+        snapshotBasicSourceExecutionPlanEntryProvenance(plan.sources[0]),
+      );
+      expect(provenance?.catalogSource).toBe(capture.catalogSource);
+      expect(provenance?.manifest).toBe(capture.manifest);
+      expect(snapshotBasicDocumentCaptureProvenanceV2({ ...capture })).toBeNull();
       expectDeeplyFrozen(result);
     },
   );

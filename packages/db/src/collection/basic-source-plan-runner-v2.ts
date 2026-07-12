@@ -62,8 +62,23 @@ export interface BasicSourcePlanRunnerInputV2 {
 
 type BoundEntry = Readonly<{
   entry: BasicSourceExecutionPlanEntry;
+  entryProvenance: BasicSourceExecutionPlanEntryProvenance;
   request: BasicSourceRequestV2;
   adapter: BasicDeterministicSourceAdapter | null;
+}>;
+
+export type BasicDocumentCaptureProvenanceV2 = Readonly<{
+  entryProvenance: BasicSourceExecutionPlanEntryProvenance;
+  runId: string;
+  countryCode: string;
+  catalogVersion: string;
+  catalogSha256: string;
+  sourceId: string;
+  adapterId: string;
+  adapterVersion: string;
+  catalogSource: BasicSourceCatalogSource;
+  request: BasicSourceRequestV2;
+  manifest: BasicRawCaptureManifestV2;
 }>;
 
 const ERROR_MESSAGE = "basic source plan run is invalid";
@@ -86,6 +101,21 @@ const MAX_ACTIVE_SOURCES = 64;
 const MAX_OBSERVATIONS = 256;
 const MAX_STRING_BYTES = 65_536;
 const MAX_TRANSPORT_PROTOTYPE_DEPTH = 16;
+const RUNNER_ENTRY_PROVENANCE = new WeakMap<
+  object,
+  BasicSourceExecutionPlanEntryProvenance
+>();
+const DOCUMENT_CAPTURE_PROVENANCE = new WeakMap<
+  object,
+  BasicDocumentCaptureProvenanceV2
+>();
+
+export function snapshotBasicDocumentCaptureProvenanceV2(
+  value: unknown,
+): BasicDocumentCaptureProvenanceV2 | null {
+  if (typeof value !== "object" || value === null) return null;
+  return DOCUMENT_CAPTURE_PROVENANCE.get(value) ?? null;
+}
 
 export async function runBasicSourceExecutionPlanV2(
   value: BasicSourcePlanRunnerInputV2,
@@ -142,10 +172,14 @@ function snapshotPlan(value: unknown, countryCode: string): BasicSourceExecution
   const rebuiltEntries = entries.map((entry) => {
     if (sourceIds.has(entry.source.sourceId)) invalid();
     sourceIds.add(entry.source.sourceId);
-    return Object.freeze({
+    const rebuilt = Object.freeze({
       source: entry.source,
       request: snapshotBasicSourceRequestV2(entry.request),
     });
+    const provenance = snapshotBasicSourceExecutionPlanEntryProvenance(entry);
+    if (provenance === null) invalid();
+    RUNNER_ENTRY_PROVENANCE.set(rebuilt, provenance);
+    return rebuilt;
   }).sort((left, right) => compareText(
     left.source.sourceId,
     right.source.sourceId,
@@ -211,11 +245,14 @@ function bindEntries(
 ): readonly BoundEntry[] {
   return Object.freeze(plan.sources.map((entry) => {
     const { source } = entry;
+    const entryProvenance = RUNNER_ENTRY_PROVENANCE.get(entry);
+    if (entryProvenance === undefined) invalid();
     const request = snapshotBasicSourceRequestV2(entry.request);
     if (source.adapterKind === "deterministic") {
       if (source.format !== "json" && source.format !== "csv") invalid();
       return Object.freeze({
         entry,
+        entryProvenance,
         request,
         adapter: resolveBasicSourceAdapter(entry, countryCode),
       });
@@ -226,7 +263,7 @@ function bindEntries(
       source.adapterId !== BASIC_MANUAL_DOCUMENT_ADAPTER_ID ||
       source.adapterVersion !== BASIC_MANUAL_DOCUMENT_ADAPTER_VERSION
     ) invalid();
-    return Object.freeze({ entry, request, adapter: null });
+    return Object.freeze({ entry, entryProvenance, request, adapter: null });
   }));
 }
 
@@ -245,10 +282,25 @@ async function executeEntries(
     const capture = await captureBasicRawSourceV2(captureInput, input.transport);
     receipts.push(receiptFrom(capture));
     if (bound.adapter === null) {
-      documentCaptures.push({
+      const manifest = await readVerifiedManifest(captureInput, capture);
+      const documentCapture = deepFreezeBasicOfflineValue({
         catalogSource: bound.entry.source,
-        manifest: await readVerifiedManifest(captureInput, capture),
+        manifest,
       });
+      DOCUMENT_CAPTURE_PROVENANCE.set(documentCapture, Object.freeze({
+        entryProvenance: bound.entryProvenance,
+        runId: input.runId,
+        countryCode: input.countryCode,
+        catalogVersion: input.plan.catalogVersion,
+        catalogSha256: input.plan.catalogSha256,
+        sourceId: bound.entry.source.sourceId,
+        adapterId: bound.entry.source.adapterId,
+        adapterVersion: bound.entry.source.adapterVersion,
+        catalogSource: bound.entry.source,
+        request: bound.request,
+        manifest,
+      }));
+      documentCaptures.push(documentCapture);
       continue;
     }
 

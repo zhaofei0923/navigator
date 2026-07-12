@@ -48,6 +48,9 @@ import {
   isBasicSourceResponseAllowedV2,
 } from "./basic-source-transport-v2.js";
 import {
+  snapshotBasicDocumentCaptureProvenanceV2,
+} from "./basic-source-plan-runner-v2.js";
+import {
   materializeBasicSourceFactsV2,
 } from "./basic-v2-fact-materializer.js";
 
@@ -68,6 +71,7 @@ export interface BasicDocumentMaterializationInput {
 
 type TrustedPlan = Readonly<{
   plan: BasicSourceExecutionPlan;
+  entryProvenance: BasicSourceExecutionPlanEntryProvenance;
   manualEntries: readonly BasicSourceExecutionPlanEntry[];
   deterministicSourceIds: readonly string[];
 }>;
@@ -92,7 +96,7 @@ export function materializeBasicDocumentEvidence(
     const trustedPlan = snapshotTrustedPlan(input.get("plan"));
     if (trustedPlan.manualEntries.length === 0) invalid();
 
-    const captures = snapshotCaptures(input.get("captures"));
+    const captures = snapshotCaptures(input.get("captures"), trustedPlan);
     const captureBySource = exactCoverage(
       captures,
       ({ manifest }) => manifest.sourceId,
@@ -189,17 +193,52 @@ function snapshotTrustedPlan(value: unknown): TrustedPlan {
       countryCode,
       sources: Object.freeze(trustedEntries),
     }),
+    entryProvenance: sharedProvenance ?? invalid(),
     manualEntries: Object.freeze(manualEntries),
     deterministicSourceIds: Object.freeze(deterministicSourceIds),
   });
 }
 
-function snapshotCaptures(value: unknown): readonly ParsedCapture[] {
+function snapshotCaptures(
+  value: unknown,
+  trustedPlan: TrustedPlan,
+): readonly ParsedCapture[] {
   return Object.freeze(denseDataArray(value, MAX_ACTIVE_SOURCES).map((item) => {
+    const provenance = snapshotBasicDocumentCaptureProvenanceV2(item);
+    const entry = provenance === null
+      ? undefined
+      : trustedPlan.manualEntries.find(
+        ({ source }) => source.sourceId === provenance.sourceId,
+      );
+    if (
+      provenance === null ||
+      entry === undefined ||
+      provenance.entryProvenance !== trustedPlan.entryProvenance ||
+      provenance.runId !== provenance.manifest.runId ||
+      provenance.countryCode !== trustedPlan.plan.countryCode ||
+      provenance.countryCode !== provenance.manifest.countryCode ||
+      provenance.catalogVersion !== trustedPlan.plan.catalogVersion ||
+      provenance.catalogVersion !== provenance.manifest.catalogVersion ||
+      provenance.catalogSha256 !== trustedPlan.plan.catalogSha256 ||
+      provenance.catalogSha256 !== provenance.manifest.catalogSha256 ||
+      provenance.sourceId !== entry.source.sourceId ||
+      provenance.sourceId !== provenance.manifest.sourceId ||
+      provenance.adapterId !== entry.source.adapterId ||
+      provenance.adapterId !== provenance.manifest.adapterId ||
+      provenance.adapterVersion !== entry.source.adapterVersion ||
+      provenance.adapterVersion !== provenance.manifest.adapterVersion ||
+      provenance.catalogSource !== entry.source ||
+      !sameRequest(provenance.request, entry.request) ||
+      !sameRequest(provenance.manifest.request, provenance.request)
+    ) invalid();
     const properties = exactDataProperties(item, CAPTURE_KEYS);
-    if (properties === null) invalid();
+    if (
+      properties === null ||
+      properties.get("catalogSource") !== provenance.catalogSource ||
+      properties.get("manifest") !== provenance.manifest
+    ) invalid();
     const manifest = parseBasicRawCaptureManifestV2(properties.get("manifest"));
-    if (manifest === null) invalid();
+    if (manifest === null || !sameManifest(manifest, provenance.manifest)) invalid();
     return Object.freeze({
       catalogSource: properties.get("catalogSource"),
       manifest,
@@ -471,6 +510,28 @@ function sameRequest(
 function sameStrings(left: readonly string[], right: readonly string[]): boolean {
   return left.length === right.length &&
     left.every((value, index) => value === right[index]);
+}
+
+function sameManifest(
+  left: BasicRawCaptureManifestV2,
+  right: BasicRawCaptureManifestV2,
+): boolean {
+  return left.schemaVersion === right.schemaVersion &&
+    left.countryCode === right.countryCode &&
+    left.runId === right.runId &&
+    left.catalogVersion === right.catalogVersion &&
+    left.catalogSha256 === right.catalogSha256 &&
+    left.adapterId === right.adapterId &&
+    left.adapterVersion === right.adapterVersion &&
+    left.sourceId === right.sourceId &&
+    sameRequest(left.request, right.request) &&
+    left.response.status === right.response.status &&
+    left.response.finalUrl === right.response.finalUrl &&
+    sameStrings(left.response.redirectChain, right.response.redirectChain) &&
+    left.response.contentType === right.response.contentType &&
+    left.response.retrievedAt === right.response.retrievedAt &&
+    left.response.byteLength === right.response.byteLength &&
+    left.response.contentSha256 === right.response.contentSha256;
 }
 
 function compareEditorialEvidence(
