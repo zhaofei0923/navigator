@@ -6,7 +6,11 @@ import {
   canonicalizeBasicSourceCatalog,
   parseBasicSourceCatalog,
 } from "./collection/basic-source-catalog.js";
-import { createBasicSourceExecutionPlan } from "./collection/basic-source-request-materializer.js";
+import { resolveBasicSourceAdapter } from "./collection/basic-source-adapter-registry.js";
+import {
+  createBasicSourceExecutionPlan,
+  type BasicSourceExecutionPlanEntry,
+} from "./collection/basic-source-request-materializer.js";
 
 type MutableRecord = Record<string, unknown>;
 
@@ -471,6 +475,63 @@ describe("Basic source request materializer", () => {
   });
 });
 
+describe("Basic source adapter registry", () => {
+  test("resolves all four reviewed World Bank adapter identities", () => {
+    const plan = createBasicSourceExecutionPlan({
+      catalog: parseBasicSourceCatalog(fourWorldBankCatalog()),
+      countryCode: "VN",
+      sourceIds: [
+        "world-bank-country",
+        "world-bank-gdp",
+        "world-bank-gdp-growth",
+        "world-bank-population",
+      ],
+    });
+
+    expect(plan.sources.map((entry) =>
+      resolveBasicSourceAdapter(entry, "VN").adapterId)).toEqual([
+      "world-bank-country",
+      "world-bank-gdp",
+      "world-bank-gdp-growth",
+      "world-bank-population",
+    ]);
+  });
+
+  test.each([
+    ["source id", (entry: MutableRegistryEntry) => { entry.source.sourceId = "world-bank-country-drift"; }],
+    ["source name", (entry: MutableRegistryEntry) => { entry.source.sourceName = "World Bank Drift"; }],
+    ["source family", (entry: MutableRegistryEntry) => { entry.source.sourceFamily = "government"; }],
+    ["credibility", (entry: MutableRegistryEntry) => { entry.source.credibility = "VERIFIED"; }],
+    ["adapter id", (entry: MutableRegistryEntry) => { entry.source.adapterId = "unknown-adapter"; }],
+    ["adapter version", (entry: MutableRegistryEntry) => { entry.source.adapterVersion = "1.0.1"; }],
+    ["request method", (entry: MutableRegistryEntry) => { entry.request.method = "POST"; }],
+    ["request URL", (entry: MutableRegistryEntry) => { entry.request.url = "https://api.worldbank.org/v2/country/ID?format=json"; }],
+    ["request Accept", (entry: MutableRegistryEntry) => { entry.request.accept = "text/csv"; }],
+    ["request origins", (entry: MutableRegistryEntry) => { entry.request.allowedOrigins = ["https://example.com"]; }],
+    ["request query names", (entry: MutableRegistryEntry) => { entry.request.allowedQueryParameters = ["other"]; }],
+    ["catalog Accept", (entry: MutableRegistryEntry) => { entry.source.accept = "text/csv"; }],
+    ["catalog origins", (entry: MutableRegistryEntry) => { entry.source.approvedOrigins = ["https://example.com"]; }],
+    ["catalog query names", (entry: MutableRegistryEntry) => { entry.source.allowedQueryParameters = ["other"]; }],
+    ["adapter kind", (entry: MutableRegistryEntry) => { entry.source.adapterKind = "manual-document"; }],
+    ["format", (entry: MutableRegistryEntry) => { entry.source.format = "csv"; }],
+    ["access mode", (entry: MutableRegistryEntry) => { entry.source.accessMode = "optional-credentialed"; }],
+  ])("rejects %s drift", (_label, mutate) => {
+    const entry = mutableRegistryEntry();
+    mutate(entry);
+    expect(() => resolveBasicSourceAdapter(
+      entry as unknown as BasicSourceExecutionPlanEntry,
+      "VN",
+    )).toThrow("source catalog adapter binding is invalid");
+  });
+
+  test("rejects an invalid country before returning an adapter", () => {
+    expect(() => resolveBasicSourceAdapter(
+      mutableRegistryEntry() as unknown as BasicSourceExecutionPlanEntry,
+      "vn",
+    )).toThrow("source catalog adapter binding is invalid");
+  });
+});
+
 function validCatalog() {
   return {
     schemaVersion: "basic-source-catalog/v1",
@@ -663,6 +724,78 @@ function twoSourceCatalog() {
   population.fieldPaths = ["marketOverview.population"];
   value.sources.push(population);
   return value;
+}
+
+interface MutableRegistryEntry {
+  source: ReturnType<typeof validSource>;
+  request: {
+    method: string;
+    url: string;
+    accept: string;
+    allowedOrigins: string[];
+    allowedQueryParameters: string[];
+  };
+}
+
+function mutableRegistryEntry(): MutableRegistryEntry {
+  const plan = createBasicSourceExecutionPlan({
+    catalog: parseBasicSourceCatalog(validCatalog()),
+    countryCode: "VN",
+    sourceIds: ["world-bank-country"],
+  });
+  return structuredClone(plan.sources[0]!) as unknown as MutableRegistryEntry;
+}
+
+function fourWorldBankCatalog() {
+  const value = validCatalog();
+  value.sources = [
+    validSource(),
+    indicatorSource(
+      "world-bank-gdp",
+      "NY.GDP.MKTP.CD",
+      "marketOverview.gdp",
+    ),
+    indicatorSource(
+      "world-bank-gdp-growth",
+      "NY.GDP.MKTP.KD.ZG",
+      "marketOverview.gdpGrowth",
+    ),
+    indicatorSource(
+      "world-bank-population",
+      "SP.POP.TOTL",
+      "marketOverview.population",
+    ),
+  ];
+  return value;
+}
+
+function indicatorSource(
+  sourceId: string,
+  indicator: string,
+  fieldPath: string,
+) {
+  const source = validSource();
+  source.sourceId = sourceId;
+  source.adapterId = sourceId;
+  source.requestTemplate = {
+    origin: "https://api.worldbank.org",
+    pathSegments: [
+      { kind: "literal", value: "v2" },
+      { kind: "literal", value: "country" },
+      { kind: "placeholder", value: "countryCode" },
+      { kind: "literal", value: "indicator" },
+      { kind: "literal", value: indicator },
+    ],
+    query: [
+      { name: "source", value: { kind: "literal", value: "2" } },
+      { name: "format", value: { kind: "literal", value: "json" } },
+      { name: "mrv", value: { kind: "literal", value: "1" } },
+      { name: "per_page", value: { kind: "literal", value: "1" } },
+    ],
+  };
+  source.allowedQueryParameters = ["source", "format", "mrv", "per_page"];
+  source.fieldPaths = [fieldPath];
+  return source;
 }
 
 function countryCodes(count: number): string[] {
