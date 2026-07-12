@@ -2,9 +2,7 @@ import {
   expectUtcRfc3339Timestamp,
   SAFE_RUN_ID,
 } from "../seed/basic-country-validation-utils.js";
-import {
-  snapshotBasicOfflineValue,
-} from "./basic-offline-value.js";
+import { isProxy } from "node:util/types";
 import {
   BASIC_MANUAL_SOURCE_REVIEW_SCHEMA_VERSION,
   BASIC_STRUCTURED_SOURCE_REVIEW_SCHEMA_VERSION,
@@ -38,6 +36,8 @@ const MANUAL_ERROR = "manual source review is invalid";
 const MAX_SOURCE_REVIEWS = 64;
 const MAX_ARRAY_ITEMS = 256;
 const MAX_STRING_BYTES = 65_536;
+const MAX_SNAPSHOT_DEPTH = 64;
+const INVALID_SNAPSHOT = Symbol("invalid source review snapshot");
 const ISO2 = /^[A-Z]{2}$/;
 const SAFE_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const SAFE_VERSION = /^[a-z0-9]+(?:[._-][a-z0-9]+)*$/;
@@ -223,10 +223,6 @@ function parseStructuredRisks(
       details: nonBlankText(record.details),
     });
   });
-  requireSortedUnique(
-    risks,
-    (risk) => `${risk.sourceId}\u0000${risk.locator}\u0000${risk.severity}\u0000${risk.details}`,
-  );
   return Object.freeze(risks);
 }
 
@@ -273,10 +269,6 @@ function parseManualRisks(
       details: nonBlankText(record.details),
     });
   });
-  requireSortedUnique(
-    risks,
-    (risk) => `${risk.locator}\u0000${risk.severity}\u0000${risk.details}`,
-  );
   return Object.freeze(risks);
 }
 
@@ -293,9 +285,109 @@ function snapshotExactRecord<const Keys extends readonly string[]>(
   value: unknown,
   keys: Keys,
 ): ExactRecord<Keys> {
-  const snapshot = snapshotBasicOfflineValue(value);
-  if (!snapshot.valid) invalid();
-  return exactRecord(snapshot.data, keys);
+  const snapshot = snapshotSourceReviewValue(value);
+  if (snapshot === INVALID_SNAPSHOT) invalid();
+  return exactRecord(snapshot, keys);
+}
+
+function snapshotSourceReviewValue(value: unknown): unknown | typeof INVALID_SNAPSHOT {
+  return snapshotSourceReviewValueAt(value, 0, new Set<object>());
+}
+
+function snapshotSourceReviewValueAt(
+  value: unknown,
+  depth: number,
+  ancestors: Set<object>,
+): unknown | typeof INVALID_SNAPSHOT {
+  try {
+    if (value === null || typeof value === "boolean") return value;
+    if (typeof value === "string") {
+      return isBoundedSnapshotString(value) ? value : INVALID_SNAPSHOT;
+    }
+    if (typeof value === "number") {
+      return Number.isFinite(value) ? value : INVALID_SNAPSHOT;
+    }
+    if (
+      typeof value !== "object" ||
+      depth >= MAX_SNAPSHOT_DEPTH ||
+      isProxy(value) ||
+      ancestors.has(value)
+    ) return INVALID_SNAPSHOT;
+
+    ancestors.add(value);
+    const snapshot = Array.isArray(value)
+      ? snapshotSourceReviewArray(value, depth, ancestors)
+      : snapshotSourceReviewRecord(value, depth, ancestors);
+    ancestors.delete(value);
+    return snapshot;
+  } catch {
+    return INVALID_SNAPSHOT;
+  }
+}
+
+function snapshotSourceReviewArray(
+  value: unknown[],
+  depth: number,
+  ancestors: Set<object>,
+): unknown[] | typeof INVALID_SNAPSHOT {
+  if (Object.getPrototypeOf(value) !== Array.prototype) return INVALID_SNAPSHOT;
+  const length = Object.getOwnPropertyDescriptor(value, "length");
+  if (
+    length === undefined ||
+    !Object.hasOwn(length, "value") ||
+    typeof length.value !== "number" ||
+    !Number.isSafeInteger(length.value) ||
+    length.value < 0 ||
+    length.value > MAX_ARRAY_ITEMS
+  ) return INVALID_SNAPSHOT;
+
+  const ownKeys = Reflect.ownKeys(value);
+  if (ownKeys.length !== length.value + 1) return INVALID_SNAPSHOT;
+  const snapshot: unknown[] = [];
+  for (let index = 0; index < length.value; index += 1) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+    if (
+      descriptor === undefined ||
+      !descriptor.enumerable ||
+      !Object.hasOwn(descriptor, "value")
+    ) return INVALID_SNAPSHOT;
+    const child = snapshotSourceReviewValueAt(descriptor.value, depth + 1, ancestors);
+    if (child === INVALID_SNAPSHOT) return INVALID_SNAPSHOT;
+    snapshot.push(child);
+  }
+  return snapshot;
+}
+
+function snapshotSourceReviewRecord(
+  value: object,
+  depth: number,
+  ancestors: Set<object>,
+): Record<string, unknown> | typeof INVALID_SNAPSHOT {
+  if (Object.getPrototypeOf(value) !== Object.prototype) return INVALID_SNAPSHOT;
+  const keys = Reflect.ownKeys(value);
+  if (keys.some((key) => typeof key !== "string")) return INVALID_SNAPSHOT;
+  const snapshot: Record<string, unknown> = {};
+  for (const key of keys) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (
+      descriptor === undefined ||
+      !descriptor.enumerable ||
+      !Object.hasOwn(descriptor, "value")
+    ) return INVALID_SNAPSHOT;
+    const child = snapshotSourceReviewValueAt(descriptor.value, depth + 1, ancestors);
+    if (child === INVALID_SNAPSHOT) return INVALID_SNAPSHOT;
+    Object.defineProperty(snapshot, key, {
+      value: child,
+      enumerable: true,
+      writable: true,
+      configurable: true,
+    });
+  }
+  return snapshot;
+}
+
+function isBoundedSnapshotString(value: string): boolean {
+  return isWellFormedUnicode(value) && Buffer.byteLength(value, "utf8") <= MAX_STRING_BYTES;
 }
 
 function exactRecord<const Keys extends readonly string[]>(

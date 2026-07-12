@@ -137,13 +137,9 @@ function unsafeRecord(
   });
 }
 
-function deepValue(depth: number): Record<string, unknown> {
-  const value = structured();
-  let current = value;
-  for (let index = 0; index < depth; index += 1) {
-    current.extra = {};
-    current = current.extra as Record<string, unknown>;
-  }
+function nestedArrays(depth: number, leaf: unknown): unknown {
+  let value = leaf;
+  for (let index = 0; index < depth; index += 1) value = [value];
   return value;
 }
 
@@ -191,13 +187,28 @@ describe("Basic structured source review parser", () => {
     cyclic.cycle = cyclic;
     const sparse = structured();
     sparse.sources = new Array(1);
-    const nonFinite = structured();
-    (nonFinite.sources as Record<string, unknown>[])[0]!.unexpected = Number.NaN;
+    const deep = structured({
+      sources: nestedArrays(65, "REVIEW_DEPTH_MUST_NOT_LEAK"),
+    });
+    const nonFinite = structured({ sources: [Number.NaN] });
 
     expectStructuredInvalid(cyclic);
     expectStructuredInvalid(sparse);
-    expectStructuredInvalid(deepValue(64));
+    expectStructuredInvalid(deep);
     expectStructuredInvalid(nonFinite);
+  });
+
+  test("rejects a 65-level nested review value without leaking it", () => {
+    const sentinel = "REVIEW_DEPTH_MUST_NOT_LEAK";
+    const value = structured({ sources: nestedArrays(65, sentinel) });
+
+    try {
+      parseBasicStructuredSourceReview(value, expected() as never);
+    } catch (error) {
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).toBe(STRUCTURED_ERROR);
+      expect((error as Error).message).not.toContain(sentinel);
+    }
   });
 
   test.each([
@@ -243,13 +254,23 @@ describe("Basic structured source review parser", () => {
     ["malformed CSV locator", [{ ...structuredRisk(), locator: "csv:/rows/01/columns/value" }]],
     ["invalid risk severity", [{ ...structuredRisk(), severity: "none" }]],
     ["blank risk details", [{ ...structuredRisk(), details: "  " }]],
-    ["unsorted risks", [
-      { ...structuredRisk(), sourceId: "world-bank", locator: "json:/z" },
-      { ...structuredRisk(), sourceId: "energy-csv", locator: "csv:/rows/0/columns/a" },
-    ]],
-    ["duplicate risks", [structuredRisk(), structuredRisk()]],
   ])("rejects %s", (_label, injectionRisks) => {
     expectStructuredInvalid(structured({ injectionRisks }));
+  });
+
+  test("preserves unsorted duplicate reviewed risks", () => {
+    const injectionRisks = [
+      { ...structuredRisk(), sourceId: "world-bank", locator: "json:/z" },
+      structuredRisk(),
+      structuredRisk(),
+    ];
+
+    const result = parseBasicStructuredSourceReview(
+      structured({ injectionRisks }),
+      expected() as never,
+    );
+
+    expect(result.injectionRisks).toEqual(injectionRisks);
   });
 
   test("accepts a root JSON pointer without asserting source fact membership", () => {
@@ -265,15 +286,45 @@ describe("Basic structured source review parser", () => {
     expect(result.injectionRisks[0]?.locator).toBe("json:");
   });
 
+  test("accepts exactly 256 risk rows", () => {
+    const injectionRisks = risks(256);
+
+    const result = parseBasicStructuredSourceReview(
+      structured({ injectionRisks }),
+      expected() as never,
+    );
+
+    expect(result.injectionRisks).toEqual(injectionRisks);
+  });
+
+  test("rejects 257 risk rows", () => {
+    expectStructuredInvalid(structured({ injectionRisks: risks(257) }));
+  });
+
   test.each([
-    ["review sources", 65, (value: Record<string, unknown>) => { value.sources = sourceChecks(65); }],
-    ["risk rows", 257, (value: Record<string, unknown>) => { value.injectionRisks = risks(257); }],
-    ["string bytes", 65_537, (value: Record<string, unknown>) => { value.runId = "a".repeat(65_537); }],
-  ])("rejects the %s resource limit", (_label, _count, change) => {
+    ["review sources", (value: Record<string, unknown>) => { value.sources = sourceChecks(65); }, expected({ deterministicSourceIds: sourceIds(65) })],
+  ])("rejects the %s resource limit", (_label, change, identity) => {
     const value = structured();
     change(value);
-    expectStructuredInvalid(value, expected({
-      deterministicSourceIds: sourceIds(65),
+    expectStructuredInvalid(value, identity);
+  });
+
+  test("accepts a 65,536-byte UTF-8 risk detail", () => {
+    const details = "\u{1F642}".repeat(16_384);
+    const injectionRisks = [{ ...structuredRisk(), details }];
+
+    const result = parseBasicStructuredSourceReview(
+      structured({ injectionRisks }),
+      expected() as never,
+    );
+
+    expect(result.injectionRisks[0]?.details).toBe(details);
+  });
+
+  test("rejects a 65,537-byte UTF-8 risk detail", () => {
+    const details = `${"\u{1F642}".repeat(16_384)}x`;
+    expectStructuredInvalid(structured({
+      injectionRisks: [{ ...structuredRisk(), details }],
     }));
   });
 });
@@ -383,6 +434,21 @@ describe("Basic manual source review parser", () => {
     expect(result.sources[0]?.injectionRisks).toHaveLength(2);
   });
 
+  test("preserves unsorted duplicate reviewed local risks", () => {
+    const injectionRisks = [
+      manualRisk("confirmed", "pdf:page=2#appendix"),
+      manualRisk("suspected", "html:section=overview"),
+      manualRisk("suspected", "html:section=overview"),
+    ];
+    const value = manual();
+    (value.sources as Record<string, unknown>[])[0]!.promptInjectionRisk = "confirmed";
+    (value.sources as Record<string, unknown>[])[0]!.injectionRisks = injectionRisks;
+
+    const result = parseBasicManualSourceReview(value, expected() as never);
+
+    expect(result.sources[0]?.injectionRisks).toEqual(injectionRisks);
+  });
+
   test("rejects overlap between deterministic and manual source identities", () => {
     const identity = expected({
       deterministicSourceIds: ["energy-csv", "energy-html", "world-bank"],
@@ -391,19 +457,46 @@ describe("Basic manual source review parser", () => {
     expectManualInvalid(manual(), identity);
   });
 
-  test.each([
-    ["manual reviews", (value: Record<string, unknown>) => { value.sources = manualSources(65); }],
-    ["local risks", (value: Record<string, unknown>) => {
-      (value.sources as Record<string, unknown>[])[0]!.injectionRisks = manualRisks(257);
-      (value.sources as Record<string, unknown>[])[0]!.promptInjectionRisk = "suspected";
-    }],
-    ["string bytes", (value: Record<string, unknown>) => {
-      (value.sources as Record<string, unknown>[])[0]!.accessNotes = "x".repeat(65_537);
-    }],
-  ])("rejects the %s resource limit", (_label, change) => {
+  test("accepts exactly 256 local risks", () => {
+    const injectionRisks = manualRisks(256);
     const value = manual();
-    change(value);
+    (value.sources as Record<string, unknown>[])[0]!.injectionRisks = injectionRisks;
+    (value.sources as Record<string, unknown>[])[0]!.promptInjectionRisk = "suspected";
+
+    const result = parseBasicManualSourceReview(value, expected() as never);
+
+    expect(result.sources[0]?.injectionRisks).toEqual(injectionRisks);
+  });
+
+  test("rejects 257 local risks", () => {
+    const value = manual();
+    (value.sources as Record<string, unknown>[])[0]!.injectionRisks = manualRisks(257);
+    (value.sources as Record<string, unknown>[])[0]!.promptInjectionRisk = "suspected";
+
+    expectManualInvalid(value);
+  });
+
+  test("rejects 65 manual reviews", () => {
+    const value = manual();
+    value.sources = manualSources(65);
     expectManualInvalid(value, expected({ manualSourceIds: sourceIds(65) }));
+  });
+
+  test("accepts a 65,536-byte UTF-8 access note", () => {
+    const accessNotes = "\u{1F642}".repeat(16_384);
+    const value = manual();
+    (value.sources as Record<string, unknown>[])[0]!.accessNotes = accessNotes;
+
+    const result = parseBasicManualSourceReview(value, expected() as never);
+
+    expect(result.sources[0]?.accessNotes).toBe(accessNotes);
+  });
+
+  test("rejects a 65,537-byte UTF-8 access note", () => {
+    const value = manual();
+    (value.sources as Record<string, unknown>[])[0]!.accessNotes =
+      `${"\u{1F642}".repeat(16_384)}x`;
+    expectManualInvalid(value);
   });
 });
 
