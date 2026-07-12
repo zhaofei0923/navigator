@@ -41,6 +41,16 @@ const CATALOG_SHA256 =
   "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789";
 const DETERMINISTIC_SHA256 =
   "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+const DERIVED_PATHS = [
+  "country.flagEmoji",
+  "country.updatedAt",
+  "marketOverview.collectedAt",
+  "marketOverview.countryCode",
+  "marketOverview.credibility",
+  "marketOverview.source",
+  "marketOverview.sourceUrl",
+  "marketOverview.updatedAt",
+] as const;
 const roots = new Set<string>();
 
 afterEach(() => {
@@ -65,13 +75,26 @@ describe("Basic reviewed v2 materialization", () => {
       }]),
     });
 
-    expect(result.materialization.sourceRegister).toEqual(preliminary.sourceRegister);
-    expect(result.materialization.extractedFacts.facts).toHaveLength(1);
-    expect(result.materialization.extractedFacts.facts[0]).toMatchObject({
+    expect(result.materialization.sourceRegister.sources[0]?.evidenceLocators).toEqual([
+      "capture:/retrievedAt",
+      "json:/country/id",
+      "json:/country/name",
+      "metadata:/credibility",
+      "metadata:/publishedAt",
+      "metadata:/sourceName",
+      "metadata:/sourceUrl",
+    ]);
+    expect(result.materialization.extractedFacts.facts).toHaveLength(10);
+    expect(result.materialization.extractedFacts.facts.find(
+      ({ fieldPath }) => fieldPath === "country.name",
+    )).toMatchObject({
       fieldPath: "country.name",
       status: "candidate",
       extractionMethod: "manual",
     });
+    expect(result.materialization.extractedFacts.facts.filter(
+      ({ fieldPath }) => DERIVED_PATHS.includes(fieldPath as typeof DERIVED_PATHS[number]),
+    ).map(({ fieldPath }) => fieldPath)).toEqual(DERIVED_PATHS);
     expect(result.materialization.receipts).toEqual(preliminary.receipts);
     expect(result.sourceChecks).toEqual([
       { sourceId: "structured-source", status: "passed", notes: null },
@@ -89,22 +112,31 @@ describe("Basic reviewed v2 materialization", () => {
       editorial: documentEditorial(fixture),
     });
 
-    expect(result.materialization.sourceRegister.sources).toEqual([{
-      ...fixture.result.sources[0],
-      evidenceLocators: ["html:section=overview"],
-    }]);
-    expect(result.materialization.extractedFacts.facts).toMatchObject([{
+    expect(result.materialization.sourceRegister.sources[0]?.evidenceLocators).toEqual([
+      "capture:/retrievedAt",
+      "html:meta=country-code",
+      "html:section=overview",
+      "metadata:/credibility",
+      "metadata:/publishedAt",
+      "metadata:/sourceName",
+      "metadata:/sourceUrl",
+    ]);
+    expect(result.materialization.extractedFacts.facts.find(
+      ({ fieldPath }) => fieldPath === "country.summary",
+    )).toMatchObject({
       fieldPath: "country.summary",
       extractionMethod: "manual",
       status: "candidate",
-    }]);
+    });
     expect(result.materialization.receipts).toEqual(fixture.preliminary.receipts);
     expect(result.sourceChecks).toEqual(fixture.result.sourceChecks);
     expectDeeplyFrozen(result);
   });
 
   test("builds a source-ID-sorted mixed union with complete review ownership", async () => {
-    const fixture = await documentFixture();
+    const fixture = await documentFixture(
+      "reviewed fixture", false, false, null, false, { countryCodeFact: false },
+    );
     const preliminary = withStructuredSource(fixture.preliminary);
     const result = materializeBasicReviewedRunV2({
       preliminary,
@@ -128,7 +160,19 @@ describe("Basic reviewed v2 materialization", () => {
     expect(result.sourceChecks.map(({ sourceId }) => sourceId))
       .toEqual(["official-html", "structured-source"]);
     expect(result.materialization.extractedFacts.facts.map(({ fieldPath }) => fieldPath))
-      .toEqual(["country.name", "country.summary"]);
+      .toEqual([
+        "country.code",
+        "country.flagEmoji",
+        "country.name",
+        "country.summary",
+        "country.updatedAt",
+        "marketOverview.collectedAt",
+        "marketOverview.countryCode",
+        "marketOverview.credibility",
+        "marketOverview.source",
+        "marketOverview.sourceUrl",
+        "marketOverview.updatedAt",
+      ]);
   });
 
   test.each([
@@ -393,7 +437,27 @@ function structuredPreliminary(
 ): BasicPreliminarySourceRunV2 {
   const locator = fieldPath === "country.name" ? "json:/country/name" : "json:/population";
   const rawValue = fieldPath === "country.name" ? "Indonesia" : "100";
-  const sources = [sourceRecord("structured-source", [locator])];
+  const locators = [...new Set(["json:/country/id", locator])].sort();
+  const sources = [sourceRecord("structured-source", locators)];
+  const observations = [{
+    sourceId: "structured-source",
+    fieldPath: "country.code",
+    locator: "json:/country/id",
+    rawValue: "ID",
+    normalizedValue: "ID",
+    unit: null,
+    year: null,
+    uncertainty: null,
+  }, ...(fieldPath === "country.code" ? [] : [{
+    sourceId: "structured-source",
+    fieldPath,
+    locator,
+    rawValue,
+    normalizedValue,
+    unit: fieldPath === "country.name" ? null : "people",
+    year: fieldPath === "country.name" ? null : 2025,
+    uncertainty: null,
+  }])];
   return {
     sourceRegister: {
       schemaVersion: "basic-country-audit/v2",
@@ -404,16 +468,7 @@ function structuredPreliminary(
       schemaVersion: "basic-country-audit/v2",
       runId: identity.runId,
       countryCode: identity.countryCode,
-      facts: materializeBasicSourceFactsV2([{
-        sourceId: "structured-source",
-        fieldPath,
-        locator,
-        rawValue,
-        normalizedValue,
-        unit: fieldPath === "country.name" ? null : "people",
-        year: fieldPath === "country.name" ? null : 2025,
-        uncertainty: null,
-      }], "deterministic"),
+      facts: materializeBasicSourceFactsV2(observations, "deterministic"),
     },
     structuredEditorialEvidence: [],
     documentCaptures: [],
@@ -514,6 +569,7 @@ interface DocumentFixtureOverrides {
   readonly credibility?: "OFFICIAL" | "VERIFIED";
   readonly filename?: string;
   readonly retrievedAt?: string;
+  readonly countryCodeFact?: boolean;
 }
 
 async function documentFixture(
@@ -524,6 +580,7 @@ async function documentFixture(
   withSecondSource = false,
   overrides: DocumentFixtureOverrides = {},
 ): Promise<DocumentFixture> {
+  const withCountryCode = overrides.countryCodeFact ?? true;
   const catalog = parseBasicSourceCatalog({
     schemaVersion: "basic-source-catalog/v1",
     catalogVersion: CATALOG_VERSION,
@@ -555,8 +612,8 @@ async function documentFixture(
       adapterVersion: "1.0.0",
       adapterKind: "manual-document",
       fieldPaths: withPopulation
-        ? ["country.summary", "marketOverview.population"]
-        : ["country.summary"],
+        ? [...(withCountryCode ? ["country.code"] : []), "country.summary", "marketOverview.population"]
+        : [...(withCountryCode ? ["country.code"] : []), "country.summary"],
     }, ...(withSecondSource ? [{
       sourceId: "official-pdf",
       sourceName: "Official PDF publication",
@@ -638,6 +695,16 @@ async function documentFixture(
       contentSha256: capture.manifest.response.contentSha256,
     },
     observations: capture.catalogSource.sourceId === "official-html" ? [
+      ...(withCountryCode ? [{
+        usage: "source-fact" as const,
+        fieldPath: "country.code",
+        locator: "html:meta=country-code",
+        rawValue: "ID",
+        normalizedValue: "ID",
+        unit: null,
+        year: null,
+        uncertainty: null,
+      }] : []),
       {
         usage: "editorial-evidence",
         fieldPath: "country.summary",
@@ -717,7 +784,9 @@ function documentEditorial(fixture: DocumentFixture): BasicCountryEditorialInput
 }
 
 async function mixedInput(): Promise<ReviewedInput> {
-  const fixture = await documentFixture();
+  const fixture = await documentFixture(
+    "reviewed fixture", false, false, null, false, { countryCodeFact: false },
+  );
   const preliminary = withStructuredSource(fixture.preliminary);
   return {
     preliminary,

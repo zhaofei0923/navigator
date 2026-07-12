@@ -21,6 +21,7 @@ import {
   snapshotBasicDocumentMaterializationProvenanceV2,
   type BasicDocumentMaterializationResult,
 } from "./basic-document-observation-materializer.js";
+import { materializeBasicDerivedFacts } from "./basic-derived-fact-materializer.js";
 import {
   materializeBasicEditorialFacts,
 } from "./basic-editorial-materializer.js";
@@ -127,19 +128,28 @@ export function materializeBasicReviewedRunV2(
       sourceChecks,
       injectionRisks,
     });
-    const facts = mergeFacts(
+    const mergedFacts = mergeFacts(
       preliminary.extractedFacts.facts,
       documentResult?.facts ?? [],
       editorialResult.facts,
     );
+    const derived = materializeBasicDerivedFacts({
+      countryCode: reviewedSources.countryCode,
+      primarySourceId: editorial.primarySourceId,
+      sourceRegister: reviewedSources,
+      candidateFacts: mergedFacts,
+    });
+    const facts = [...mergedFacts, ...derived.facts]
+      .sort((left, right) => compareText(left.fieldPath, right.fieldPath));
+    requireUnique(facts.map(({ fieldPath }) => fieldPath));
 
     return deepFreezeBasicOfflineValue({
       materialization: {
-        sourceRegister: reviewedSources,
+        sourceRegister: derived.sourceRegister,
         extractedFacts: {
           schemaVersion: BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION,
-          runId: reviewedSources.runId,
-          countryCode: reviewedSources.countryCode,
+          runId: derived.sourceRegister.runId,
+          countryCode: derived.sourceRegister.countryCode,
           facts,
         },
         receipts,
