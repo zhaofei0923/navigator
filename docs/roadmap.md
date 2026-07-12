@@ -129,6 +129,21 @@ graph LR
 - 测试：v1/v2 metadata、transport、capture 与 CSV focused tests，以及仓库 `lint` / `typecheck` / `test` / forced Turbo gates；测试不发起真实来源网络请求。
 - 人工确认：否（唯一新依赖 `csv-parse@7.0.1` 已由项目所有者批准；本卡不修改统一数据模型、AI Prompt/检索边界、权限、计费、canonical data 或 package root exports）。
 
+#### DATA-BASIC-DOCUMENTS-1 Document evidence and manual review（已完成）
+- 目标：按 [basic-country-document-evidence.md](./basic-country-document-evidence.md) 将 catalog-selected HTML/PDF source 通过唯一 generic executor 做 v2 raw capture，并以 exact structured/manual reviews 和 capture-hash-bound document plans 物化 manual preliminary facts、source records、checks、risks 与 editorial-evidence intermediates。
+- 验收：`basic-country-audit/v2` preliminary source register/extracted facts 绑定同一 catalog provenance；structured/manual source sets 非空、唯一、有序、互斥且完整覆盖；每个 manual source 的 plan/capture/review 精确绑定 run/country/catalog/adapter/request/response/hash；HTML/PDF locator 与 source ownership table fail closed；tuple conflict 不自动选择；failed checks、`UNVERIFIED` 与 injection risk 均被保留给后续 preflight。禁止 HTML/PDF parsing、OCR、模型、翻译、editorial final fact、draft、canonical/DB 写入、发布或 AI 资格。
+- 测试：document plan/materialization、review parser、v2 fact materializer 和 source-plan runner focused tests，以及仓库 `lint` / `typecheck` / `test` / forced Turbo gates；测试不发起真实来源网络请求。
+- 完成边界：本卡不构成可发布国家或完整 v2 candidate package。`DATA-BASIC-EDITORIAL-1` 仍需校验双语 editorial input；`DATA-BASIC-DETERMINISTIC-1` 仍需合并全部 material、组装 draft 与执行 model-free completeness/trust preflight；之后仍须项目所有者审核和既有发布闸门。
+- 人工确认：否（不修改统一数据模型、AI Prompt/检索边界、权限、计费、canonical data 或 package root exports）。
+
+#### DATA-BASIC-EDITORIAL-1 Bilingual editorial evidence（后续）
+- 目标：从 Documents 保留的 structured/document editorial evidence 构建并校验 exact 双语 editorial input；不得把证据中间值直接当作 final fact。
+- 人工确认：否（若涉及数据模型、发布或 AI 边界，须另行人工确认）。
+
+#### DATA-BASIC-DETERMINISTIC-1 Candidate assembly and preflight（后续）
+- 目标：仅在结构化、document 与 editorial material 全部通过 exact binding 后，确定性组装 draft 和完整 v2 audit candidate，并保守阻断 missing/conflict/untrusted/failed/risk 输入。
+- 人工确认：否（candidate 仍为 `draft`、`aiUsable = false`；canonical 发布另经人工审核）。
+
 #### DATA-BASIC-<ISO2> 单国 Basic 数据任务卡
 - 目标：每张任务卡只采集一个 ISO 3166-1 alpha-2 国家，使用固定 10 模块模型完成 Basic 国家骨架和市场基础画像。
 - 验收：一国一任务卡、一分支、一审核周期，且仅合并一次到 `main`；合并后的 `main` 验证通过后，仅推送一次到 `origin/main`。数据先为 `draft`，仅在人工审核后发布；Basic 数据保持 `aiUsable = false` 且不产生知识片段；通过仓库校验和代表性 Web 检查，确认基础画像正常渲染、`BUILDING` 模块显示占位。

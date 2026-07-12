@@ -34,6 +34,12 @@ export interface BasicSourceExecutionPlan {
   readonly sources: readonly BasicSourceExecutionPlanEntry[];
 }
 
+export interface BasicSourceExecutionPlanEntryProvenance {
+  readonly catalogVersion: string;
+  readonly catalogSha256: string;
+  readonly countryCode: string;
+}
+
 const PLAN_ERROR = "source catalog execution plan is invalid";
 const MAPPING_ERROR = "source catalog mapping is invalid";
 const INPUT_KEYS = ["catalog", "countryCode", "sourceIds"] as const;
@@ -44,6 +50,23 @@ const SHA256 = /^[0-9a-f]{64}$/;
 const PRE_ENCODED = /%[0-9A-Fa-f]{2}/;
 const MAX_ACTIVE_SOURCES = 64;
 const MAX_URL_BYTES = 8_192;
+const ENTRY_PROVENANCE = new WeakMap<
+  object,
+  BasicSourceExecutionPlanEntryProvenance
+>();
+
+export function isBasicSourceExecutionPlanEntryTrusted(
+  value: unknown,
+): value is BasicSourceExecutionPlanEntry {
+  return typeof value === "object" && value !== null && ENTRY_PROVENANCE.has(value);
+}
+
+export function snapshotBasicSourceExecutionPlanEntryProvenance(
+  value: unknown,
+): BasicSourceExecutionPlanEntryProvenance | null {
+  if (typeof value !== "object" || value === null) return null;
+  return ENTRY_PROVENANCE.get(value) ?? null;
+}
 
 export function createBasicSourceExecutionPlan(input: {
   readonly catalog: BasicSourceCatalogSnapshot;
@@ -84,12 +107,19 @@ export function createBasicSourceExecutionPlan(input: {
         request: materializeRequest(source, countryCode, sourceCountryId),
       };
     });
-    return deepFreezeBasicOfflineValue({
+    const plan: BasicSourceExecutionPlan = deepFreezeBasicOfflineValue({
       catalogVersion: catalog.catalog.catalogVersion,
       catalogSha256: catalog.catalogSha256,
       countryCode,
       sources,
     });
+    const provenance = Object.freeze({
+      catalogVersion: catalog.catalog.catalogVersion,
+      catalogSha256: catalog.catalogSha256,
+      countryCode,
+    });
+    for (const entry of plan.sources) ENTRY_PROVENANCE.set(entry, provenance);
+    return plan;
   } catch (error) {
     if (error instanceof Error && error.message === MAPPING_ERROR) throw error;
     throw new Error(PLAN_ERROR);

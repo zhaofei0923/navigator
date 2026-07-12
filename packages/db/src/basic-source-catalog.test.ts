@@ -12,6 +12,8 @@ import {
 import { resolveBasicSourceAdapter } from "./collection/basic-source-adapter-registry.js";
 import {
   createBasicSourceExecutionPlan,
+  isBasicSourceExecutionPlanEntryTrusted,
+  snapshotBasicSourceExecutionPlanEntryProvenance,
   type BasicSourceExecutionPlanEntry,
 } from "./collection/basic-source-request-materializer.js";
 
@@ -394,6 +396,33 @@ describe("Basic source request materializer", () => {
     expect(Object.isFrozen(plan)).toBe(true);
     expect(Object.isFrozen(plan.sources)).toBe(true);
     expect(Object.isFrozen(plan.sources[0]?.request)).toBe(true);
+  });
+
+  test("binds materialized entries to unforgeable full-catalog provenance", () => {
+    const catalog = parseBasicSourceCatalog(twoSourceCatalog());
+    const plan = createBasicSourceExecutionPlan({
+      catalog,
+      countryCode: "VN",
+      sourceIds: ["world-bank-country", "world-bank-population"],
+    });
+
+    const firstProvenance = snapshotBasicSourceExecutionPlanEntryProvenance(
+      plan.sources[0],
+    );
+    const secondProvenance = snapshotBasicSourceExecutionPlanEntryProvenance(
+      plan.sources[1],
+    );
+    expect(firstProvenance).toEqual({
+      catalogVersion: catalog.catalog.catalogVersion,
+      catalogSha256: catalog.catalogSha256,
+      countryCode: "VN",
+    });
+    expect(secondProvenance).toBe(firstProvenance);
+    expect(isBasicSourceExecutionPlanEntryTrusted(plan.sources[0])).toBe(true);
+
+    const forgedEntry = structuredClone(plan.sources[0]);
+    expect(isBasicSourceExecutionPlanEntryTrusted(forgedEntry)).toBe(false);
+    expect(snapshotBasicSourceExecutionPlanEntryProvenance(forgedEntry)).toBeNull();
   });
 
   test("materializes a literal-only URL", () => {
