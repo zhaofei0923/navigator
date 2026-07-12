@@ -24,6 +24,9 @@ const OBSERVATION_KEYS = [
   "year",
   "uncertainty",
 ] as const;
+const MAX_JSON_DEPTH = 64;
+const MAX_JSON_ARRAY_LENGTH = 256;
+const MAX_JSON_STRING_BYTES = 65_536;
 
 export function materializeBasicSourceFactsV2(
   observations: readonly BasicSourcedObservationV2[],
@@ -198,14 +201,19 @@ function canonicalJson(value: BasicCollectionJsonValue): string {
 }
 
 function snapshotJson(value: unknown): BasicCollectionJsonValue {
-  return snapshotJsonValue(value, new Set<object>());
+  return snapshotJsonValue(value, 0, new Set<object>());
 }
 
 function snapshotJsonValue(
   value: unknown,
+  depth: number,
   ancestors: Set<object>,
 ): BasicCollectionJsonValue {
-  if (value === null || typeof value === "string" || typeof value === "boolean") {
+  if (value === null || typeof value === "boolean") {
+    return value;
+  }
+  if (typeof value === "string") {
+    if (Buffer.byteLength(value, "utf8") > MAX_JSON_STRING_BYTES) invalid();
     return value;
   }
   if (typeof value === "number") {
@@ -215,6 +223,7 @@ function snapshotJsonValue(
   if (
     typeof value !== "object" ||
     value === null ||
+    depth >= MAX_JSON_DEPTH ||
     isProxy(value) ||
     ancestors.has(value)
   ) {
@@ -223,8 +232,8 @@ function snapshotJsonValue(
   ancestors.add(value);
   try {
     return Array.isArray(value)
-      ? snapshotJsonArray(value, ancestors)
-      : snapshotJsonObject(value, ancestors);
+      ? snapshotJsonArray(value, depth, ancestors)
+      : snapshotJsonObject(value, depth, ancestors);
   } finally {
     ancestors.delete(value);
   }
@@ -232,6 +241,7 @@ function snapshotJsonValue(
 
 function snapshotJsonArray(
   value: object,
+  depth: number,
   ancestors: Set<object>,
 ): BasicCollectionJsonValue {
   if (Object.getPrototypeOf(value) !== Array.prototype) invalid();
@@ -243,6 +253,7 @@ function snapshotJsonArray(
     typeof lengthDescriptor.value !== "number" ||
     !Number.isSafeInteger(lengthDescriptor.value) ||
     lengthDescriptor.value < 0 ||
+    lengthDescriptor.value > MAX_JSON_ARRAY_LENGTH ||
     Reflect.ownKeys(value).length !== lengthDescriptor.value + 1
   ) {
     invalid();
@@ -257,13 +268,14 @@ function snapshotJsonArray(
     ) {
       invalid();
     }
-    snapshot.push(snapshotJsonValue(descriptor.value, ancestors));
+    snapshot.push(snapshotJsonValue(descriptor.value, depth + 1, ancestors));
   }
   return Object.freeze(snapshot) as unknown as BasicCollectionJsonValue;
 }
 
 function snapshotJsonObject(
   value: object,
+  depth: number,
   ancestors: Set<object>,
 ): BasicCollectionJsonValue {
   if (Object.getPrototypeOf(value) !== Object.prototype) invalid();
@@ -281,7 +293,7 @@ function snapshotJsonObject(
       invalid();
     }
     Object.defineProperty(snapshot, key, {
-      value: snapshotJsonValue(descriptor.value, ancestors),
+      value: snapshotJsonValue(descriptor.value, depth + 1, ancestors),
       enumerable: true,
       writable: false,
       configurable: false,

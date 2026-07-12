@@ -9,6 +9,19 @@ import {
 } from "./collection/basic-v2-fact-materializer.js";
 
 const METHODS = ["deterministic", "manual"] as const;
+const JSON_VALUE_KEYS = ["rawValue", "normalizedValue"] as const;
+const MAX_JSON_DEPTH = 64;
+const MAX_JSON_ARRAY_LENGTH = 256;
+const MAX_JSON_STRING_BYTES = 65_536;
+const OVER_LIMIT_JSON_VALUES = [
+  ["depth", nestedJsonArray(MAX_JSON_DEPTH + 1)],
+  ["array length", Array.from({ length: MAX_JSON_ARRAY_LENGTH + 1 }, () => null)],
+  [
+    "ASCII string bytes",
+    `SECRET-ascii-${"a".repeat(MAX_JSON_STRING_BYTES - "SECRET-ascii-".length + 1)}`,
+  ],
+  ["UTF-8 string bytes", "\ud83d\ude00".repeat(MAX_JSON_STRING_BYTES / 4 + 1)],
+] as const;
 
 describe("Basic audit v2 fact materializer", () => {
   test.each(METHODS)(
@@ -165,6 +178,43 @@ describe("Basic audit v2 fact materializer", () => {
   );
 
   test.each(METHODS)(
+    "accepts JSON snapshots at each exact resource limit for %s observations",
+    (extractionMethod) => {
+      for (const valueKey of JSON_VALUE_KEYS) {
+        for (const value of [
+          nestedJsonArray(MAX_JSON_DEPTH),
+          Array.from({ length: MAX_JSON_ARRAY_LENGTH }, () => null),
+          "a".repeat(MAX_JSON_STRING_BYTES),
+          "\ud83d\ude00".repeat(MAX_JSON_STRING_BYTES / 4),
+        ]) {
+          expect(materializeBasicSourceFactsV2([
+            observation({ [valueKey]: value }),
+          ], extractionMethod)).toHaveLength(1);
+        }
+      }
+    },
+  );
+
+  test.each(METHODS.flatMap((extractionMethod) =>
+    JSON_VALUE_KEYS.flatMap((valueKey) =>
+      OVER_LIMIT_JSON_VALUES.map(([limit, value]) => [
+        extractionMethod,
+        valueKey,
+        limit,
+        value,
+      ] as const)),
+  ))(
+    "rejects %s %s one beyond the %s limit",
+    (extractionMethod, valueKey, _limit, value) => {
+      const error = captureMaterializationError(() => materializeBasicSourceFactsV2([
+        observation({ [valueKey]: value }),
+      ], extractionMethod));
+      expect(error?.message).toBe("source fact materialization is invalid");
+      expect(error?.message).not.toContain("SECRET-ascii-");
+    },
+  );
+
+  test.each(METHODS)(
     "rejects non-JSON and descriptor-unsafe evidence values for %s observations",
     (extractionMethod) => {
       const sparse = [1, , 3];
@@ -278,6 +328,12 @@ function observation(
     uncertainty: null,
     ...overrides,
   };
+}
+
+function nestedJsonArray(depth: number): unknown {
+  let value: unknown = null;
+  for (let index = 0; index < depth; index += 1) value = [value];
+  return value;
 }
 
 function captureMaterializationError(action: () => void): Error | null {
