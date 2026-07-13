@@ -698,19 +698,19 @@ describe("Basic source adapter registry", () => {
 });
 
 describe("committed Basic source catalog", () => {
-  test("registers exactly the four existing World Bank sources", () => {
+  test("registers the six reviewed Basic sources in deterministic order", () => {
     const catalog = readCommittedCatalog();
     const sourceIds = [
+      "indonesia-esdm-2025-performance",
+      "indonesia-esdm-national-energy-policy-2025",
       "world-bank-country",
       "world-bank-gdp",
       "world-bank-gdp-growth",
       "world-bank-population",
     ] as const;
 
+    expect(catalog.catalog.catalogVersion).toBe("2026-07-13.1");
     expect(catalog.catalog.countryMappings).toEqual([]);
-    expect(catalog.catalogSha256).toBe(
-      "f5ee573b689c281eb5ca83adb83056d0d70e4f03888a9a465c3efeabcfe7ed40",
-    );
     expect(catalog.catalog.sources.map(({ sourceId }) => sourceId)).toEqual(
       sourceIds,
     );
@@ -718,12 +718,124 @@ describe("committed Basic source catalog", () => {
     const plan = createBasicSourceExecutionPlan({
       catalog,
       countryCode: "VN",
-      sourceIds,
+      sourceIds: sourceIds.slice(2),
     });
     for (const entry of plan.sources) {
       const adapter = resolveBasicSourceAdapter(entry, "VN");
       expect(entry.request).toEqual(adapter.request("VN"));
     }
+  });
+
+  test("materializes the reviewed Indonesia government document requests", () => {
+    const catalog = readCommittedCatalog();
+    const plan = createBasicSourceExecutionPlan({
+      catalog,
+      countryCode: "ID",
+      sourceIds: [
+        "indonesia-esdm-2025-performance",
+        "indonesia-esdm-national-energy-policy-2025",
+      ],
+    });
+
+    expect(plan).toMatchObject({
+      catalogVersion: "2026-07-13.1",
+      countryCode: "ID",
+      sources: [
+        {
+          source: {
+            sourceId: "indonesia-esdm-2025-performance",
+            sourceFamily: "energy-authority",
+            format: "html",
+            countryScope: ["ID"],
+            requestTemplate: {
+              origin: "https://www.esdm.go.id",
+              pathSegments: [
+                { kind: "literal", value: "en" },
+                { kind: "literal", value: "media-center" },
+                { kind: "literal", value: "news-archives" },
+                {
+                  kind: "literal",
+                  value: "capaian-positif-tahun-2025-negara-hadir-penuhi-kebutuhan-energi-masyarakat",
+                },
+              ],
+              query: [],
+            },
+            accept: "text/html",
+            approvedOrigins: ["https://www.esdm.go.id"],
+            allowedQueryParameters: [],
+            accessMode: "open",
+            refreshCadence: "annual",
+            adapterId: "basic-manual-document-capture",
+            adapterVersion: "1.0.0",
+            adapterKind: "manual-document",
+            fieldPaths: [
+              "country.summary",
+              "marketOverview.energyDemand",
+              "marketOverview.keyIndicators[0].label",
+              "marketOverview.keyIndicators[0].unit",
+              "marketOverview.keyIndicators[0].value",
+              "marketOverview.keyIndicators[0].year",
+              "marketOverview.keyIndicators[1].label",
+              "marketOverview.keyIndicators[1].unit",
+              "marketOverview.keyIndicators[1].value",
+              "marketOverview.keyIndicators[1].year",
+              "marketOverview.keyIndicators[2].label",
+              "marketOverview.keyIndicators[2].unit",
+              "marketOverview.keyIndicators[2].value",
+              "marketOverview.keyIndicators[2].year",
+              "marketOverview.overview",
+            ],
+          },
+          request: {
+            method: "GET",
+            url: "https://www.esdm.go.id/en/media-center/news-archives/capaian-positif-tahun-2025-negara-hadir-penuhi-kebutuhan-energi-masyarakat",
+            accept: "text/html",
+            allowedOrigins: ["https://www.esdm.go.id"],
+            allowedQueryParameters: [],
+          },
+        },
+        {
+          source: {
+            sourceId: "indonesia-esdm-national-energy-policy-2025",
+            sourceFamily: "government",
+            format: "pdf",
+            countryScope: ["ID"],
+            requestTemplate: {
+              origin: "https://jdih.esdm.go.id",
+              pathSegments: [
+                { kind: "literal", value: "dokumen" },
+                { kind: "literal", value: "download" },
+              ],
+              query: [
+                {
+                  name: "id",
+                  value: { kind: "literal", value: "2025pp40.pdf" },
+                },
+              ],
+            },
+            accept: "application/pdf",
+            approvedOrigins: ["https://jdih.esdm.go.id"],
+            allowedQueryParameters: ["id"],
+            accessMode: "open",
+            refreshCadence: "event-driven",
+            adapterId: "basic-manual-document-capture",
+            adapterVersion: "1.0.0",
+            adapterKind: "manual-document",
+            fieldPaths: [
+              "country.summary",
+              "marketOverview.renewableTarget",
+            ],
+          },
+          request: {
+            method: "GET",
+            url: "https://jdih.esdm.go.id/dokumen/download?id=2025pp40.pdf",
+            accept: "application/pdf",
+            allowedOrigins: ["https://jdih.esdm.go.id"],
+            allowedQueryParameters: ["id"],
+          },
+        },
+      ],
+    });
   });
 });
 

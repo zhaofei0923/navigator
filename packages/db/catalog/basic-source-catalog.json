@@ -1,7 +1,92 @@
 {
   "schemaVersion": "basic-source-catalog/v1",
-  "catalogVersion": "2026-07-12.1",
+  "catalogVersion": "2026-07-13.1",
   "sources": [
+    {
+      "sourceId": "indonesia-esdm-2025-performance",
+      "sourceName": "Indonesia Ministry of Energy and Mineral Resources",
+      "sourceFamily": "energy-authority",
+      "credibility": "OFFICIAL",
+      "format": "html",
+      "countryScope": ["ID"],
+      "requestTemplate": {
+        "origin": "https://www.esdm.go.id",
+        "pathSegments": [
+          { "kind": "literal", "value": "en" },
+          { "kind": "literal", "value": "media-center" },
+          { "kind": "literal", "value": "news-archives" },
+          {
+            "kind": "literal",
+            "value": "capaian-positif-tahun-2025-negara-hadir-penuhi-kebutuhan-energi-masyarakat"
+          }
+        ],
+        "query": []
+      },
+      "accept": "text/html",
+      "approvedOrigins": ["https://www.esdm.go.id"],
+      "allowedQueryParameters": [],
+      "accessMode": "open",
+      "licenseName": "Official publication; no open-content license declared",
+      "licenseUrl": "https://www.esdm.go.id/en/media-center/news-archives/capaian-positif-tahun-2025-negara-hadir-penuhi-kebutuhan-energi-masyarakat",
+      "attribution": "Factual extraction with attribution to the official Indonesia Ministry of Energy and Mineral Resources publication; no open-content license is asserted.",
+      "refreshCadence": "annual",
+      "adapterId": "basic-manual-document-capture",
+      "adapterVersion": "1.0.0",
+      "adapterKind": "manual-document",
+      "fieldPaths": [
+        "country.summary",
+        "marketOverview.energyDemand",
+        "marketOverview.keyIndicators[0].label",
+        "marketOverview.keyIndicators[0].unit",
+        "marketOverview.keyIndicators[0].value",
+        "marketOverview.keyIndicators[0].year",
+        "marketOverview.keyIndicators[1].label",
+        "marketOverview.keyIndicators[1].unit",
+        "marketOverview.keyIndicators[1].value",
+        "marketOverview.keyIndicators[1].year",
+        "marketOverview.keyIndicators[2].label",
+        "marketOverview.keyIndicators[2].unit",
+        "marketOverview.keyIndicators[2].value",
+        "marketOverview.keyIndicators[2].year",
+        "marketOverview.overview"
+      ]
+    },
+    {
+      "sourceId": "indonesia-esdm-national-energy-policy-2025",
+      "sourceName": "Government of Indonesia",
+      "sourceFamily": "government",
+      "credibility": "OFFICIAL",
+      "format": "pdf",
+      "countryScope": ["ID"],
+      "requestTemplate": {
+        "origin": "https://jdih.esdm.go.id",
+        "pathSegments": [
+          { "kind": "literal", "value": "dokumen" },
+          { "kind": "literal", "value": "download" }
+        ],
+        "query": [
+          {
+            "name": "id",
+            "value": { "kind": "literal", "value": "2025pp40.pdf" }
+          }
+        ]
+      },
+      "accept": "application/pdf",
+      "approvedOrigins": ["https://jdih.esdm.go.id"],
+      "allowedQueryParameters": ["id"],
+      "accessMode": "open",
+      "licenseName": "Official regulation; no open-content license declared",
+      "licenseUrl": "https://jdih.esdm.go.id/dokumen/view?id=2620",
+      "attribution": "Factual extraction with attribution to Government Regulation No. 40 of 2025, published through the official ESDM JDIH record; no open-content license is asserted.",
+      "refreshCadence": "event-driven",
+      "adapterId": "basic-manual-document-capture",
+      "adapterVersion": "1.0.0",
+      "adapterKind": "manual-document",
+      "fieldPaths": [
+        "country.summary",
+        "marketOverview.renewableTarget"
+      ]
+    },
     {
       "sourceId": "world-bank-country",
       "sourceName": "World Bank",
