@@ -34,8 +34,10 @@
       "adapterVersion": "1.0.0",
       "adapterKind": "manual-document",
       "fieldPaths": [
+        "country.region",
         "country.summary",
         "marketOverview.energyDemand",
+        "marketOverview.industryTags",
         "marketOverview.keyIndicators[0].label",
         "marketOverview.keyIndicators[0].unit",
         "marketOverview.keyIndicators[0].value",
@@ -48,7 +50,9 @@
         "marketOverview.keyIndicators[2].unit",
         "marketOverview.keyIndicators[2].value",
         "marketOverview.keyIndicators[2].year",
-        "marketOverview.overview"
+        "marketOverview.overview",
+        "marketOverview.renewableTarget",
+        "marketOverview.techTags"
       ]
     },
     {
@@ -82,10 +86,7 @@
       "adapterId": "basic-manual-document-capture",
       "adapterVersion": "1.0.0",
       "adapterKind": "manual-document",
-      "fieldPaths": [
-        "country.summary",
-        "marketOverview.renewableTarget"
-      ]
+      "fieldPaths": ["marketOverview.renewableTarget"]
     },
     {
       "sourceId": "world-bank-country",

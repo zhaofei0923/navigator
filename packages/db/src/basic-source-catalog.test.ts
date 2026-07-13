@@ -711,6 +711,9 @@ describe("committed Basic source catalog", () => {
 
     expect(catalog.catalog.catalogVersion).toBe("2026-07-13.1");
     expect(catalog.catalog.countryMappings).toEqual([]);
+    expect(catalog.catalogSha256).toBe(
+      "f8d404e342262ee44a7cb3a1099029131b3fc188494e6ad0fd9c846611513d12",
+    );
     expect(catalog.catalog.sources.map(({ sourceId }) => sourceId)).toEqual(
       sourceIds,
     );
@@ -769,8 +772,10 @@ describe("committed Basic source catalog", () => {
             adapterVersion: "1.0.0",
             adapterKind: "manual-document",
             fieldPaths: [
+              "country.region",
               "country.summary",
               "marketOverview.energyDemand",
+              "marketOverview.industryTags",
               "marketOverview.keyIndicators[0].label",
               "marketOverview.keyIndicators[0].unit",
               "marketOverview.keyIndicators[0].value",
@@ -784,6 +789,8 @@ describe("committed Basic source catalog", () => {
               "marketOverview.keyIndicators[2].value",
               "marketOverview.keyIndicators[2].year",
               "marketOverview.overview",
+              "marketOverview.renewableTarget",
+              "marketOverview.techTags",
             ],
           },
           request: {
@@ -821,10 +828,7 @@ describe("committed Basic source catalog", () => {
             adapterId: "basic-manual-document-capture",
             adapterVersion: "1.0.0",
             adapterKind: "manual-document",
-            fieldPaths: [
-              "country.summary",
-              "marketOverview.renewableTarget",
-            ],
+            fieldPaths: ["marketOverview.renewableTarget"],
           },
           request: {
             method: "GET",
