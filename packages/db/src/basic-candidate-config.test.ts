@@ -56,9 +56,10 @@ vi.mock("node:fs/promises", async (importOriginal) => {
         throw new Error("SECRET direct descendant open");
       }
       const swap = filesystemProbe.swapBeforeOpen;
+      // A held directory descriptor legitimately survives an ancestor rename on Linux.
       if (
         swap !== null && candidate.startsWith("/proc/self/fd/") &&
-        candidate.endsWith("/structured.json")
+        candidate.endsWith("/reviews")
       ) {
         filesystemProbe.ancestorSwapCount += 1;
         filesystemProbe.swapBeforeOpen = null;
