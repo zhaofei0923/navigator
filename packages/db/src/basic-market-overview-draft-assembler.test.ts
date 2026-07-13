@@ -1,4 +1,17 @@
-import { describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
+
+const { legacySnapshot } = vi.hoisted(() => ({ legacySnapshot: vi.fn() }));
+
+vi.mock("./collection/basic-llama-draft-schema.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./collection/basic-llama-draft-schema.js")>();
+  return {
+    ...actual,
+    snapshotBasicLlamaJson: (...args: Parameters<typeof actual.snapshotBasicLlamaJson>) => {
+      legacySnapshot();
+      return actual.snapshotBasicLlamaJson(...args);
+    },
+  };
+});
 
 import {
   createBasicCollectionAuditFixture,
@@ -17,6 +30,10 @@ type DraftInput = {
   readonly sourceRegister: unknown;
   readonly extractedFacts: unknown;
 };
+
+beforeEach(() => {
+  legacySnapshot.mockClear();
+});
 
 function assemble(bundle: BasicCollectionAuditBundle): BasicMarketOverviewDraft | null {
   return assembleBasicMarketOverviewDraft({
@@ -117,6 +134,13 @@ describe("assembleBasicMarketOverviewDraft v1 characterization", () => {
       keyIndicators: [],
     });
   });
+
+  test("uses the legacy snapshot/parser path for exact v1 envelopes", () => {
+    const bundle = readBasicCollectionAuditFixture("normal");
+
+    expect(assemble(bundle)).toEqual(bundle.marketOverviewDraft);
+    expect(legacySnapshot).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe("assembleBasicMarketOverviewDraft v2-ready input", () => {
@@ -137,6 +161,22 @@ describe("assembleBasicMarketOverviewDraft v2-ready input", () => {
       reviewStatus: "draft",
       aiUsable: false,
     });
+  });
+
+  test.each([
+    ["an oversized nested string", (bundle: BasicCollectionAuditBundle) => {
+      factFor(bundle, "marketOverview.overview").evidence[0]!.normalizedValue = "x".repeat(65_537);
+    }],
+    ["an oversized nested array", (bundle: BasicCollectionAuditBundle) => {
+      factFor(bundle, "marketOverview.overview").evidence[0]!.normalizedValue =
+        Array.from({ length: 257 }, (_, index) => index);
+    }],
+  ])("rejects %s through the bounded v2 path without legacy snapshotting", (_name, mutate) => {
+    const bundle = v2Ready();
+    mutate(bundle);
+
+    expect(assemble(bundle)).toBeNull();
+    expect(legacySnapshot).not.toHaveBeenCalled();
   });
 
   test.each([
@@ -202,6 +242,25 @@ describe("assembleBasicMarketOverviewDraft v2-ready input", () => {
 });
 
 describe("assembleBasicMarketOverviewDraft unknown-input boundary", () => {
+  test("does not execute a hostile schemaVersion accessor or traverse its envelope", () => {
+    const bundle = v2Ready();
+    let schemaVersionCalls = 0;
+    const sourceRegister = { ...bundle.sourceRegister } as unknown as Record<string, unknown>;
+    delete sourceRegister.schemaVersion;
+    Object.defineProperty(sourceRegister, "schemaVersion", {
+      enumerable: true,
+      get() {
+        schemaVersionCalls += 1;
+        throw new Error("schemaVersion accessor must not run");
+      },
+    });
+    (bundle as unknown as { sourceRegister: unknown }).sourceRegister = sourceRegister;
+
+    expect(assemble(bundle)).toBeNull();
+    expect(schemaVersionCalls).toBe(0);
+    expect(legacySnapshot).not.toHaveBeenCalled();
+  });
+
   test("rejects accessors, proxies, and cycles without executing accessors", () => {
     const bundle = v2Ready();
     let getterCalls = 0;

@@ -1,6 +1,8 @@
 import { isDeepStrictEqual } from "node:util";
+import { isProxy } from "node:util/types";
 
 import {
+  BASIC_COLLECTION_AUDIT_SCHEMA_VERSION,
   BASIC_COLLECTION_REQUIRED_STATIC_FACT_PATHS,
   type BasicCollectionJsonValue,
   type BasicMarketOverviewDraft,
@@ -27,8 +29,9 @@ const V2_REGISTER_KEYS = [
   "schemaVersion", "runId", "countryCode", "catalogVersion", "catalogSha256", "sources",
 ] as const;
 const V2_FACTS_KEYS = ["schemaVersion", "runId", "countryCode", "facts"] as const;
-const V1_REGISTER_KEYS = ["schemaVersion", "runId", "countryCode", "sources"] as const;
 const SHA256 = /^[0-9a-f]{64}$/;
+
+type BasicEnvelopeSchema = "v1" | "v2";
 
 interface GroundedFacts {
   readonly values: Map<string, BasicCollectionJsonValue>;
@@ -44,17 +47,17 @@ export function assembleBasicMarketOverviewDraft(input: {
 
   const sourceValue = values.get("sourceRegister");
   const factsValue = values.get("extractedFacts");
-  const legacySource = snapshotBasicLlamaJson(sourceValue);
-  const legacyFacts = snapshotBasicLlamaJson(factsValue);
-  if (!legacySource.valid || !legacyFacts.valid) return null;
 
-  const sourceSchema = schemaVersion(legacySource.data);
-  const factsSchema = schemaVersion(legacyFacts.data);
-  if (sourceSchema === undefined || factsSchema === undefined || sourceSchema !== factsSchema) return null;
-  if (sourceSchema === BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION) {
+  const sourceSchema = exactEnvelopeSchema(sourceValue);
+  const factsSchema = exactEnvelopeSchema(factsValue);
+  if (sourceSchema === null || factsSchema === null || sourceSchema !== factsSchema) return null;
+  if (sourceSchema === "v2") {
     return assembleV2(sourceValue, factsValue);
   }
 
+  const legacySource = snapshotBasicLlamaJson(sourceValue);
+  const legacyFacts = snapshotBasicLlamaJson(factsValue);
+  if (!legacySource.valid || !legacyFacts.valid) return null;
   const register = parseBasicLlamaRegisterSnapshot(legacySource.data);
   const extracted = parseBasicLlamaFactsSnapshot(legacyFacts.data);
   return assembleParsed(register, extracted, false);
@@ -232,9 +235,23 @@ function parseAndCanonicalizeDraft(value: unknown): BasicMarketOverviewDraft | n
   }
 }
 
-function schemaVersion(value: BasicCollectionJsonValue): string | undefined {
-  return typeof value === "object" && value !== null && !Array.isArray(value) &&
-    typeof value.schemaVersion === "string" ? value.schemaVersion : undefined;
+function exactEnvelopeSchema(value: unknown): BasicEnvelopeSchema | null {
+  try {
+    if (
+      typeof value !== "object" || value === null || isProxy(value) || Array.isArray(value) ||
+      Object.getPrototypeOf(value) !== Object.prototype
+    ) return null;
+    const descriptor = Object.getOwnPropertyDescriptor(value, "schemaVersion");
+    if (
+      descriptor === undefined || !descriptor.enumerable || !Object.hasOwn(descriptor, "value") ||
+      typeof descriptor.value !== "string"
+    ) return null;
+    if (descriptor.value === BASIC_COLLECTION_AUDIT_SCHEMA_VERSION) return "v1";
+    if (descriptor.value === BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION) return "v2";
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 function exactRecord(
