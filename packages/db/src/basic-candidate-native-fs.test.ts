@@ -110,6 +110,35 @@ describe("Basic candidate native no-replace publisher", () => {
     }
   }, 15_000);
 
+  test("rejects permissive existing hierarchy modes while allowing owner-safe data mode", async () => {
+    const root = await createTemporaryRoot();
+    await mkdir(join(root, "data"), { mode: 0o755 });
+    await mkdir(join(root, "staging"), { mode: 0o755 });
+    const parent = await openDirectory(root);
+    try {
+      const data = ensureWithMode(parent.fd, "data", 0o755);
+      closeBasicCandidateNativeDirectory(data);
+
+      await chmod(join(root, "data"), 0o777);
+      expect(ensureFailure(parent.fd, "data", 0o755)).toBeInstanceOf(Error);
+      expect(ensureFailure(parent.fd, "staging", 0o700)).toBeInstanceOf(Error);
+    } finally {
+      await parent.close();
+    }
+  });
+
+  test.runIf(typeof process.geteuid === "function" && process.geteuid() !== 0)(
+    "rejects an existing hierarchy directory owned by another effective user",
+    async () => {
+      const parent = await openDirectory("/");
+      try {
+        expect(ensureFailure(parent.fd, "etc", 0o755)).toBeInstanceOf(Error);
+      } finally {
+        await parent.close();
+      }
+    },
+  );
+
   test("creates and holds an exclusive sibling directory before returning", async () => {
     const root = await createTemporaryRoot();
     const parent = await openDirectory(root);
@@ -141,7 +170,7 @@ describe("Basic candidate native no-replace publisher", () => {
         closeBasicCandidateNativeDirectory(created);
       }
       for (let index = 0; index < 64; index += 1) {
-        const ensured = ensureBasicCandidateDirectoryNative(parent.fd, "ensured");
+        const ensured = ensureBasicCandidateDirectoryNative(parent.fd, "ensured", 0o700);
         closeBasicCandidateNativeDirectory(ensured);
       }
     } finally {
@@ -442,7 +471,7 @@ function runIsolatedDlopenReplacement(): Readonly<{ status: string }> {
         const parent = openSync(root, constants.O_RDONLY | constants.O_DIRECTORY);
         const name = "basic-candidate-dlopen-" + process.pid;
         try {
-          const directory = nativeFs.ensureBasicCandidateDirectoryNative(parent, name);
+          const directory = nativeFs.ensureBasicCandidateDirectoryNative(parent, name, 0o700);
           nativeFs.closeBasicCandidateNativeDirectory(directory);
           rmdirSync(root + "/" + name);
           process.stdout.write(JSON.stringify({ status: "loaded" }));
@@ -471,6 +500,22 @@ async function createTemporaryRoot(): Promise<string> {
   temporaryRoots.push(root);
   await chmod(root, 0o700);
   return root;
+}
+
+const ensureWithMode = ensureBasicCandidateDirectoryNative as unknown as (
+  parentDirFd: unknown,
+  name: unknown,
+  expectedMode: unknown,
+) => ReturnType<typeof ensureBasicCandidateDirectoryNative>;
+
+function ensureFailure(parentDirFd: number, name: string, expectedMode: number): Error | null {
+  try {
+    const directory = ensureWithMode(parentDirFd, name, expectedMode);
+    closeBasicCandidateNativeDirectory(directory);
+    return null;
+  } catch (error) {
+    return error instanceof Error ? error : new Error("non-error native failure");
+  }
 }
 
 function openDirectory(pathname: string) {
@@ -562,6 +607,7 @@ function runEnsureWorker(
       const directory = nativeFs.ensureBasicCandidateDirectoryNative(
         workerData.parentDirFd,
         workerData.name,
+        0o700,
       );
       try {
         parentPort.postMessage({

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-import { createBasicCollectionAuditFixture } from "./basic-collection-test-fixture.js";
+import { createBasicCollectionAuditV2Fixture } from "./basic-collection-test-fixture.js";
 import {
   BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION,
   classifyBasicV2FieldPath,
@@ -528,24 +528,8 @@ describe("model-free Basic deterministic candidate", () => {
 type CandidateFixture = ReturnType<typeof candidateFixture>;
 
 function candidateFixture() {
-  const bundle = structuredClone(createBasicCollectionAuditFixture());
-  const sourceRegister = {
-    ...bundle.sourceRegister,
-    schemaVersion: BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION,
-    catalogVersion: "catalog-v1",
-    catalogSha256: "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
-  };
-  const extractedFacts = {
-    ...bundle.extractedFacts,
-    schemaVersion: BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION,
-  };
-  for (const fact of extractedFacts.facts) {
-    const owner = classifyBasicV2FieldPath(fact.fieldPath);
-    fact.extractionMethod = owner === "source-backed" || owner === "derived"
-      ? "deterministic"
-      : "manual";
-  }
-  extractedFacts.facts.sort((left, right) => compareText(left.fieldPath, right.fieldPath));
+  const bundle = structuredClone(createBasicCollectionAuditV2Fixture());
+  const { sourceRegister, extractedFacts } = bundle;
   const materialization = {
     sourceRegister,
     extractedFacts,
@@ -565,7 +549,7 @@ function candidateFixture() {
     catalogVersion: sourceRegister.catalogVersion,
     catalogSha256: sourceRegister.catalogSha256,
     runner,
-    sourceChecks: bundle.reviewReport.sourceChecks.sort((left, right) => compareText(left.sourceId, right.sourceId)),
+    sourceChecks: [...bundle.reviewReport.sourceChecks],
     injectionRisks: [],
   };
   return { input, materialization, calls: () => calls };

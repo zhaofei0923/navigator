@@ -1,10 +1,9 @@
 import { describe, expect, test } from "vitest";
 
-import { createBasicCollectionAuditFixture } from "./basic-collection-test-fixture.js";
-import type { BasicCollectionAuditBundle } from "./collection/basic-collection-contracts.js";
+import { createBasicCollectionAuditV2Fixture } from "./basic-collection-test-fixture.js";
 import {
   BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION,
-  classifyBasicV2FieldPath,
+  type BasicCollectionAuditBundleV2,
   type BasicCollectionAuditAssemblyInputV2,
 } from "./collection/basic-collection-v2-contracts.js";
 import { assembleBasicCollectionAuditBundleV2 } from "./collection/basic-audit-v2-assembler.js";
@@ -152,49 +151,19 @@ describe("Basic audit v2 assembler", () => {
   });
 });
 
-type MutableAssemblyInput = {
-  countryDirectory: string;
-  runId: string;
-  catalogVersion: string;
-  catalogSha256: string;
-  sourceRegister: Omit<BasicCollectionAuditBundle["sourceRegister"], "schemaVersion"> & {
-    schemaVersion: typeof BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION;
-    catalogVersion: string;
-    catalogSha256: string;
-  };
-  extractedFacts: Omit<BasicCollectionAuditBundle["extractedFacts"], "schemaVersion"> & {
-    schemaVersion: typeof BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION;
-  };
-  marketOverviewDraft: BasicCollectionAuditBundle["marketOverviewDraft"];
-  sourceChecks: BasicCollectionAuditBundle["reviewReport"]["sourceChecks"];
-  injectionRisks: BasicCollectionAuditBundle["reviewReport"]["injectionRisks"];
-};
+type MutableAssemblyInput = DeepMutable<BasicCollectionAuditAssemblyInputV2>;
+
+type DeepMutable<T> = T extends readonly (infer Item)[]
+  ? DeepMutable<Item>[]
+  : T extends object
+    ? { -readonly [Key in keyof T]: DeepMutable<T[Key]> }
+    : T;
 
 function assemblyInput(): MutableAssemblyInput {
-  const bundle = structuredClone(createBasicCollectionAuditFixture());
-  const sourceRegister: MutableAssemblyInput["sourceRegister"] = {
-    schemaVersion: BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION,
-    runId: bundle.sourceRegister.runId,
-    countryCode: bundle.sourceRegister.countryCode,
-    catalogVersion: "catalog-v1",
-    catalogSha256:
-      "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
-    sources: bundle.sourceRegister.sources,
-  };
-  const extractedFacts: MutableAssemblyInput["extractedFacts"] = {
-    schemaVersion: BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION,
-    runId: bundle.extractedFacts.runId,
-    countryCode: bundle.extractedFacts.countryCode,
-    facts: bundle.extractedFacts.facts,
-  };
-  for (const fact of extractedFacts.facts) {
-    const owner = classifyBasicV2FieldPath(fact.fieldPath);
-    fact.extractionMethod = owner === "source-backed" || owner === "derived"
-      ? "deterministic"
-      : "manual";
-  }
-  extractedFacts.facts.sort((left, right) =>
-    compareText(left.fieldPath, right.fieldPath));
+  const bundle = structuredClone(createBasicCollectionAuditV2Fixture()) as DeepMutable<
+    BasicCollectionAuditBundleV2
+  >;
+  const { sourceRegister, extractedFacts } = bundle;
   return {
     countryDirectory: bundle.countryDirectory,
     runId: bundle.runId,
@@ -203,8 +172,8 @@ function assemblyInput(): MutableAssemblyInput {
     sourceRegister,
     extractedFacts,
     marketOverviewDraft: bundle.marketOverviewDraft,
-    sourceChecks: bundle.reviewReport.sourceChecks,
-    injectionRisks: bundle.reviewReport.injectionRisks,
+    sourceChecks: [...bundle.reviewReport.sourceChecks],
+    injectionRisks: [...bundle.reviewReport.injectionRisks],
   };
 }
 

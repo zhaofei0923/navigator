@@ -1,11 +1,7 @@
 import { describe, expect, test } from "vitest";
 
-import { createBasicCollectionAuditFixture } from "./basic-collection-test-fixture.js";
-import type { BasicCollectionAuditBundle } from "./collection/basic-collection-contracts.js";
-import {
-  BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION,
-  classifyBasicV2FieldPath,
-} from "./collection/basic-collection-v2-contracts.js";
+import { createBasicCollectionAuditV2Fixture } from "./basic-collection-test-fixture.js";
+import type { BasicCollectionAuditBundleV2 } from "./collection/basic-collection-v2-contracts.js";
 import {
   createBasicCollectionAuditArtifactsV2,
   serializeBasicCollectionAuditArtifactsV2,
@@ -193,38 +189,16 @@ describe("Basic audit v2 artifacts", () => {
 });
 
 function createV2Bundle() {
-  const bundle = structuredClone(createBasicCollectionAuditFixture()) as unknown as Omit<
-    BasicCollectionAuditBundle,
-    "sourceRegister" | "extractedFacts" | "reviewReport"
-  > & {
-    sourceRegister: Omit<BasicCollectionAuditBundle["sourceRegister"], "schemaVersion"> & {
-      schemaVersion: typeof BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION;
-      catalogVersion: string;
-      catalogSha256: string;
-    };
-    extractedFacts: Omit<BasicCollectionAuditBundle["extractedFacts"], "schemaVersion"> & {
-      schemaVersion: typeof BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION;
-    };
-    reviewReport: Omit<BasicCollectionAuditBundle["reviewReport"], "schemaVersion"> & {
-      schemaVersion: typeof BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION;
-    };
-  };
-  bundle.sourceRegister.schemaVersion = BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION;
-  bundle.sourceRegister.catalogVersion = "catalog-v1";
-  bundle.sourceRegister.catalogSha256 =
-    "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789";
-  bundle.extractedFacts.schemaVersion = BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION;
-  bundle.reviewReport.schemaVersion = BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION;
-  for (const fact of bundle.extractedFacts.facts) {
-    const owner = classifyBasicV2FieldPath(fact.fieldPath);
-    fact.extractionMethod = owner === "source-backed" || owner === "derived"
-      ? "deterministic"
-      : "manual";
-  }
-  bundle.extractedFacts.facts.sort((left, right) =>
-    compareText(left.fieldPath, right.fieldPath));
-  return bundle;
+  return structuredClone(createBasicCollectionAuditV2Fixture()) as DeepMutable<
+    BasicCollectionAuditBundleV2
+  >;
 }
+
+type DeepMutable<T> = T extends readonly (infer Item)[]
+  ? DeepMutable<Item>[]
+  : T extends object
+    ? { -readonly [Key in keyof T]: DeepMutable<T[Key]> }
+    : T;
 
 function artifactMap(
   artifacts: ReturnType<typeof createBasicCollectionAuditArtifactsV2>,
@@ -248,8 +222,4 @@ function expectRecursivelyFrozen(value: unknown): void {
   if (value === null || typeof value !== "object") return;
   expect(Object.isFrozen(value)).toBe(true);
   for (const child of Object.values(value)) expectRecursivelyFrozen(child);
-}
-
-function compareText(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
 }

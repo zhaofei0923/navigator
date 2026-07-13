@@ -12,7 +12,7 @@ const NATIVE_PATH = resolve(
 
 type NativeOperations = Readonly<{
   createExclusiveDirectory(parentDirFd: number, name: string): unknown;
-  ensureDirectory(parentDirFd: number, name: string): unknown;
+  ensureDirectory(parentDirFd: number, name: string, expectedMode: number): unknown;
   closeDirectory(directoryFd: number): unknown;
   renameNoReplace(
     parentDirFd: number,
@@ -57,12 +57,14 @@ export function createBasicCandidateExclusiveDirectoryNative(
 export function ensureBasicCandidateDirectoryNative(
   parentDirFd: unknown,
   name: unknown,
+  expectedMode: unknown,
 ): BasicCandidateEnsuredNativeDirectory {
   try {
     if (nativeOperations === null) invalid();
     const ensured = parseEnsuredDirectory(nativeOperations.ensureDirectory(
       parseDirectoryFd(parentDirFd),
       parseComponent(name),
+      parseDirectoryMode(expectedMode),
     ));
     NATIVE_DIRECTORIES.add(ensured);
     return ensured;
@@ -239,6 +241,11 @@ function parseIdentity(value: unknown): bigint {
     typeof value !== "bigint" || value < 0n ||
     value > 0xffff_ffff_ffff_ffffn
   ) invalid();
+  return value;
+}
+
+function parseDirectoryMode(value: unknown): number {
+  if (value !== 0o700 && value !== 0o755) invalid();
   return value;
 }
 

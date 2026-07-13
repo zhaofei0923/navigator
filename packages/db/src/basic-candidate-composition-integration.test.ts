@@ -30,22 +30,15 @@ import type {
   BasicSourceTransportV2,
 } from "./collection/basic-source-v2-contracts.js";
 import { materializeBasicReviewedRunV2 } from "./collection/basic-v2-materialization.js";
+import { runBasicDeterministicCandidate } from "./collection/basic-deterministic-candidate.js";
 import { writeBasicCandidateArtifacts } from "./cli/basic-candidate-artifact-writer.js";
-import {
-  composeBasicCountryCandidate,
-  type BasicCandidateCompositionDependencies,
-} from "./cli/basic-candidate-composition.js";
+import { composeBasicCountryCandidate } from "./cli/basic-candidate-composition.js";
 import {
   BASIC_COUNTRY_CANDIDATE_CONFIG_SCHEMA_VERSION,
-  loadBasicCandidateConfig,
   parseBasicCandidateConfig,
-  readBasicCandidateCatalog,
-  readBasicCandidateConfigInput,
 } from "./cli/basic-candidate-config.js";
-import { runBasicCandidateProduction } from "./cli/basic-candidate-production-runner.js";
 import {
   closeBasicCandidateWorkspace,
-  getBasicCandidateWorkspaceDescriptorRoot,
   openBasicCandidateWorkspace,
 } from "./cli/basic-candidate-workspace.js";
 
@@ -171,16 +164,12 @@ describe("synthetic catalog-to-staging Basic candidate integration", () => {
         .toEqual(EXPECTED_FIELD_PATHS);
       workspace = await openBasicCandidateWorkspace(repoRoot);
 
-      const candidateInputs: Parameters<typeof runBasicCandidateProduction>[0][] = [];
-      const dependencies = productionDependencies((input) => {
-        candidateInputs.push(input);
-      });
       const cacheOnlyTransport = throwingTransport();
       const first = await composeBasicCountryCandidate({
         workspace,
         configPath: CONFIG_PATH,
         transport: cacheOnlyTransport,
-      }, dependencies);
+      });
 
       expect(cacheOnlyTransport.execute).not.toHaveBeenCalled();
       expect(first.status).toBe("ready");
@@ -189,14 +178,6 @@ describe("synthetic catalog-to-staging Basic candidate integration", () => {
         valid: true,
         readyForHumanReview: true,
         blockers: [],
-      });
-      expect(candidateInputs).toHaveLength(1);
-      expect(candidateInputs[0]).toMatchObject({
-        countryDirectory: COUNTRY_DIRECTORY,
-        countryCode: COUNTRY_CODE,
-        runId: RUN_ID,
-        catalogVersion: plan.catalogVersion,
-        catalogSha256: plan.catalogSha256,
       });
       expect(first.candidate?.artifacts?.["extracted-facts.json"].facts).toHaveLength(24);
       expect(first.candidate?.artifacts?.["source-register.json"].sources).toHaveLength(5);
@@ -217,19 +198,22 @@ describe("synthetic catalog-to-staging Basic candidate integration", () => {
         workspace,
         configPath: CONFIG_PATH,
         transport: secondTransport,
-      }, dependencies);
+      });
       expect(secondTransport.execute).not.toHaveBeenCalled();
       expect(second.status).toBe("ready");
       expect(serializedCandidate(second.candidate)).toEqual(firstBytes);
-      expect(candidateInputs).toHaveLength(2);
-
-      const successfulCandidateInput = candidateInputs[candidateInputs.length - 1];
-      if (successfulCandidateInput === undefined) {
-        throw new Error("expected production composition candidate input");
-      }
-      const blockedCandidate = await runBasicCandidateProduction({
-        ...successfulCandidateInput,
-        sourceChecks: successfulCandidateInput.sourceChecks.map((check) =>
+      const blockedCandidate = await runBasicDeterministicCandidate({
+        countryDirectory: COUNTRY_DIRECTORY,
+        countryCode: COUNTRY_CODE,
+        runId: RUN_ID,
+        catalogVersion: plan.catalogVersion,
+        catalogSha256: plan.catalogSha256,
+        runner: Object.freeze({
+          run() {
+            return Promise.resolve(reviewed.materialization);
+          },
+        }),
+        sourceChecks: reviewed.sourceChecks.map((check) =>
           check.sourceId === MANUAL_SOURCE_ID
             ? {
                 ...check,
@@ -237,6 +221,7 @@ describe("synthetic catalog-to-staging Basic candidate integration", () => {
                 notes: "Synthetic fixture-only trust check failed",
               }
             : check),
+        injectionRisks: reviewed.injectionRisks,
       });
       expect(blockedCandidate.failedStage).toBe("preflight");
       expect(blockedCandidate.artifacts).toBeNull();
@@ -280,30 +265,6 @@ describe("synthetic catalog-to-staging Basic candidate integration", () => {
     })).toThrow("basic candidate config is invalid");
   });
 });
-
-function productionDependencies(
-  observeCandidate: (input: Parameters<typeof runBasicCandidateProduction>[0]) => void,
-): BasicCandidateCompositionDependencies {
-  return {
-    loadConfig: loadBasicCandidateConfig,
-    readCatalog: readBasicCandidateCatalog,
-    parseCatalog: parseBasicSourceCatalog,
-    createPlan: createBasicSourceExecutionPlan,
-    runPlan: runBasicSourceExecutionPlanV2,
-    readConfigInput: readBasicCandidateConfigInput,
-    parseStructuredReview: parseBasicStructuredSourceReview,
-    parseManualReview: parseBasicManualSourceReview,
-    parseDocumentPlan: parseBasicDocumentObservationPlan,
-    materializeDocument: materializeBasicDocumentEvidence,
-    parseEditorial: parseBasicCountryEditorialInput,
-    materializeReviewed: materializeBasicReviewedRunV2,
-    async runCandidate(input) {
-      observeCandidate(input);
-      return runBasicCandidateProduction(input);
-    },
-    getWorkspaceDescriptorRoot: getBasicCandidateWorkspaceDescriptorRoot,
-  };
-}
 
 function syntheticCatalog(): Record<string, unknown> {
   const committed = JSON.parse(readFileSync(

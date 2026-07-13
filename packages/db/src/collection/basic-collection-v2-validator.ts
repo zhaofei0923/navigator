@@ -1,3 +1,6 @@
+import { REGIONS } from "@navigator/shared-types/schema";
+import { expectUtcRfc3339Timestamp } from "../seed/basic-country-validation-utils.js";
+
 import {
   BASIC_COLLECTION_BLOCKER_CODES,
   BASIC_COLLECTION_REQUIRED_STATIC_FACT_PATHS,
@@ -11,8 +14,10 @@ import {
   type BasicCollectionReviewReportV2,
   type BasicExtractedFactV2,
   type BasicFactEvidenceV2,
+  classifyBasicV2FieldPath,
 } from "./basic-collection-v2-contracts.js";
 import { parseBasicCollectionAuditBundleV2 } from "./basic-collection-v2-parser.js";
+import { materializeBasicDerivedFacts } from "./basic-derived-fact-materializer.js";
 import { validateBasicV2FactOwnership } from "./basic-v2-fact-ownership.js";
 import {
   deepFreezeBasicOfflineValue,
@@ -110,6 +115,7 @@ function classify(bundle: BasicCollectionAuditBundleV2): {
     if (fact.status === "conflict") blockerSet.add("UNRESOLVED_CONFLICT");
     if (fact.status === "untrusted") blockerSet.add("UNTRUSTED_INPUT");
   }
+  validateDerivedBinding(bundle, errors);
 
   const missingFields = deriveMissingFields(bundle.extractedFacts.facts, factPaths);
   if (missingFields.length > 0) blockerSet.add("MISSING_REQUIRED_FACT");
@@ -191,8 +197,32 @@ function validateCandidateValues(
     }
   }
   if (fact.fieldPath === "country.code") {
-    if (first !== bundle.sourceRegister.countryCode) {
+    if (!isIso2(first) || first !== bundle.sourceRegister.countryCode) {
       errors.push(`extractedFacts.facts[${factIndex}].normalizedValue must match sourceRegister.countryCode`);
+    }
+    return;
+  }
+  if (fact.fieldPath === "country.name" || fact.fieldPath === "country.summary") {
+    if (!isFinalLocalizedText(first)) {
+      errors.push(`extractedFacts.facts[${factIndex}].normalizedValue must be exact nonblank bilingual text for ${fact.fieldPath}`);
+    }
+    return;
+  }
+  if (fact.fieldPath === "country.region") {
+    if (typeof first !== "string" || !REGIONS.includes(first as never)) {
+      errors.push(`extractedFacts.facts[${factIndex}].normalizedValue must be a registered country.region`);
+    }
+    return;
+  }
+  if (fact.fieldPath === "country.flagEmoji") {
+    if (typeof first !== "string" || first.trim().length === 0) {
+      errors.push(`extractedFacts.facts[${factIndex}].normalizedValue must be a nonblank country flag`);
+    }
+    return;
+  }
+  if (fact.fieldPath === "country.updatedAt") {
+    if (!isUtcTimestamp(first)) {
+      errors.push(`extractedFacts.facts[${factIndex}].normalizedValue must be a UTC RFC3339 timestamp`);
     }
     return;
   }
@@ -207,6 +237,64 @@ function validateCandidateValues(
       errors.push(`extractedFacts.facts[${factIndex}].evidence[${evidenceIndex}].normalizedValue must deeply equal marketOverviewDraft.${fact.fieldPath.slice("marketOverview.".length)}`);
     }
   }
+}
+
+function validateDerivedBinding(
+  bundle: BasicCollectionAuditBundleV2,
+  errors: string[],
+): void {
+  const derivedFacts = bundle.extractedFacts.facts.filter(
+    ({ fieldPath }) => classifyBasicV2FieldPath(fieldPath) === "derived",
+  );
+  const primarySourceFact = derivedFacts.find(
+    ({ fieldPath }) => fieldPath === "marketOverview.source",
+  );
+  const primarySourceId = primarySourceFact?.status === "candidate" &&
+      primarySourceFact.evidence.length === 1
+    ? primarySourceFact.evidence[0]?.sourceId
+    : undefined;
+  if (primarySourceId === undefined) {
+    errors.push("deterministic derived facts must bind one reviewed primary source");
+    return;
+  }
+  try {
+    const rebuilt = materializeBasicDerivedFacts({
+      countryCode: bundle.sourceRegister.countryCode,
+      primarySourceId,
+      sourceRegister: bundle.sourceRegister,
+      candidateFacts: bundle.extractedFacts.facts.filter((fact) =>
+        classifyBasicV2FieldPath(fact.fieldPath) !== "derived" &&
+        (fact.status === "candidate" || fact.status === "conflict")),
+    });
+    if (
+      !deeplyEqualBasicOfflineValue(rebuilt.sourceRegister, bundle.sourceRegister) ||
+      !deeplyEqualBasicOfflineValue(rebuilt.facts, derivedFacts)
+    ) {
+      errors.push("deterministic derived facts must exactly match reviewed source metadata");
+    }
+  } catch {
+    errors.push("deterministic derived facts must exactly match reviewed source metadata");
+  }
+}
+
+function isFinalLocalizedText(
+  value: BasicCollectionJsonValue | undefined,
+): value is Readonly<{ zh: string; en: string }> {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
+  const keys = Object.keys(value);
+  return keys.length === 2 && keys.includes("zh") && keys.includes("en") &&
+    typeof value.zh === "string" && value.zh.trim().length > 0 &&
+    typeof value.en === "string" && value.en.trim().length > 0;
+}
+
+function isIso2(value: BasicCollectionJsonValue | undefined): value is string {
+  return typeof value === "string" && /^[A-Z]{2}$/.test(value);
+}
+
+function isUtcTimestamp(value: BasicCollectionJsonValue | undefined): value is string {
+  const errors: string[] = [];
+  expectUtcRfc3339Timestamp(value, "timestamp", errors);
+  return errors.length === 0;
 }
 
 function validateConflicts(

@@ -38,11 +38,14 @@ vi.mock("node:fs", async (importOriginal) => {
   };
 });
 
-import { createBasicCollectionAuditFixture } from "./basic-collection-test-fixture.js";
+import {
+  createBasicCollectionAuditFixture,
+  createBasicCollectionAuditV2Fixture,
+} from "./basic-collection-test-fixture.js";
 import type { BasicCollectionAuditBundle } from "./collection/basic-collection-contracts.js";
 import {
   BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION,
-  classifyBasicV2FieldPath,
+  type BasicCollectionAuditBundleV2,
 } from "./collection/basic-collection-v2-contracts.js";
 import { loadBasicCollectionAuditBundleVersioned } from "./collection/basic-collection-versioned-loader.js";
 
@@ -271,38 +274,16 @@ describe("versioned Basic collection audit loader", () => {
 });
 
 function createV2Bundle() {
-  const bundle = structuredClone(createBasicCollectionAuditFixture()) as unknown as Omit<
-    BasicCollectionAuditBundle,
-    "sourceRegister" | "extractedFacts" | "reviewReport"
-  > & {
-    sourceRegister: Omit<BasicCollectionAuditBundle["sourceRegister"], "schemaVersion"> & {
-      schemaVersion: typeof BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION;
-      catalogVersion: string;
-      catalogSha256: string;
-    };
-    extractedFacts: Omit<BasicCollectionAuditBundle["extractedFacts"], "schemaVersion"> & {
-      schemaVersion: typeof BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION;
-    };
-    reviewReport: Omit<BasicCollectionAuditBundle["reviewReport"], "schemaVersion"> & {
-      schemaVersion: typeof BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION;
-    };
-  };
-  bundle.sourceRegister.schemaVersion = BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION;
-  bundle.sourceRegister.catalogVersion = "catalog-v1";
-  bundle.sourceRegister.catalogSha256 =
-    "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789";
-  bundle.extractedFacts.schemaVersion = BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION;
-  bundle.reviewReport.schemaVersion = BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION;
-  for (const fact of bundle.extractedFacts.facts) {
-    const owner = classifyBasicV2FieldPath(fact.fieldPath);
-    fact.extractionMethod = owner === "source-backed" || owner === "derived"
-      ? "deterministic"
-      : "manual";
-  }
-  bundle.extractedFacts.facts.sort((left, right) =>
-    left.fieldPath.localeCompare(right.fieldPath));
-  return bundle;
+  return structuredClone(createBasicCollectionAuditV2Fixture()) as DeepMutable<
+    BasicCollectionAuditBundleV2
+  >;
 }
+
+type DeepMutable<T> = T extends readonly (infer Item)[]
+  ? DeepMutable<Item>[]
+  : T extends object
+    ? { -readonly [Key in keyof T]: DeepMutable<T[Key]> }
+    : T;
 
 interface StagingBundle {
   readonly countryDirectory: string;

@@ -12,6 +12,7 @@ const nativeProbe = vi.hoisted(() => ({
     ino: bigint;
     created?: boolean;
   }>,
+  ensureModes: [] as unknown[],
 }));
 
 const openProbe = vi.hoisted(() => ({
@@ -28,7 +29,8 @@ vi.mock("./cli/basic-candidate-native-fs.js", () => ({
   createBasicCandidateExclusiveDirectoryNative() {
     return nativeProbe.directory;
   },
-  ensureBasicCandidateDirectoryNative() {
+  ensureBasicCandidateDirectoryNative(_parent: unknown, _name: unknown, mode: unknown) {
+    nativeProbe.ensureModes.push(mode);
     return nativeProbe.directory;
   },
 }));
@@ -80,6 +82,7 @@ describe("Basic candidate constrained filesystem descriptor lifecycle", () => {
     nativeProbe.closeCalls = 0;
     nativeProbe.closeFailure = false;
     nativeProbe.directory = null;
+    nativeProbe.ensureModes = [];
     openProbe.duplicatePath = "";
     openProbe.failDuplicate = false;
     expect(openProbe.openDuplicates.size).toBe(0);
@@ -104,6 +107,21 @@ describe("Basic candidate constrained filesystem descriptor lifecycle", () => {
       await closeFixture(fixture);
     },
   );
+
+  test("forwards the repository-data hierarchy policy to the native ensure boundary", async () => {
+    const fixture = await heldDirectoryFixture();
+    await configureNativeResult(fixture.raw, true);
+
+    const result = await ensureBasicCandidateDirectoryChild(
+      fixture.parent,
+      "data",
+      0o755,
+    );
+
+    expect(nativeProbe.ensureModes).toEqual([0o755]);
+    await result.directory.handle.close();
+    await closeFixture(fixture);
+  });
 
   test.each(["create", "ensure"] as const)(
     "closes raw and duplicated fds when %s identity validation fails",

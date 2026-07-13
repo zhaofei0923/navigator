@@ -14,6 +14,8 @@
 #include <unistd.h>
 
 #define BASIC_COMPONENT_MAX_BYTES 255U
+#define BASIC_PRIVATE_DIRECTORY_MODE 0700U
+#define BASIC_REPOSITORY_DATA_MODE 0755U
 
 typedef struct {
   char bytes[BASIC_COMPONENT_MAX_BYTES + 1U];
@@ -42,6 +44,17 @@ static int read_directory_fd(napi_env env, napi_value value, int *result) {
 static int read_identity(napi_env env, napi_value value, uint64_t *result) {
   bool lossless = false;
   return napi_get_value_bigint_uint64(env, value, result, &lossless) == napi_ok && lossless;
+}
+
+static int read_directory_mode(napi_env env, napi_value value, mode_t *result) {
+  uint32_t raw_mode = 0U;
+  if (napi_get_value_uint32(env, value, &raw_mode) != napi_ok ||
+      (raw_mode != BASIC_PRIVATE_DIRECTORY_MODE &&
+       raw_mode != BASIC_REPOSITORY_DATA_MODE)) {
+    return 0;
+  }
+  *result = (mode_t)raw_mode;
+  return 1;
 }
 
 static int read_component(napi_env env, napi_value value, basic_component *result) {
@@ -92,6 +105,18 @@ static const char *failure_status(int error_number) {
 static int same_directory(const struct stat *left, const struct stat *right) {
   return S_ISDIR(left->st_mode) && S_ISDIR(right->st_mode) &&
     left->st_dev == right->st_dev && left->st_ino == right->st_ino;
+}
+
+static int valid_hierarchy_directory(const struct stat *details, mode_t policy) {
+  mode_t permissions = details->st_mode & 0777U;
+  if (!S_ISDIR(details->st_mode) || details->st_uid != geteuid()) {
+    return 0;
+  }
+  if (policy == BASIC_PRIVATE_DIRECTORY_MODE) {
+    return permissions == BASIC_PRIVATE_DIRECTORY_MODE;
+  }
+  return policy == BASIC_REPOSITORY_DATA_MODE &&
+    (permissions & 0700U) == 0700U && (permissions & 0022U) == 0U;
 }
 
 static napi_value make_created_directory(
@@ -146,7 +171,8 @@ static napi_value open_directory_result(
   napi_env env,
   int parent_fd,
   const basic_component *name,
-  int created
+  int created,
+  mode_t policy
 ) {
   int directory_fd = openat(
     parent_fd,
@@ -157,7 +183,8 @@ static napi_value open_directory_result(
   struct stat named_details;
   if (directory_fd < 0 || fstat(directory_fd, &opened_details) != 0 ||
       fstatat(parent_fd, name->bytes, &named_details, AT_SYMLINK_NOFOLLOW) != 0 ||
-      !same_directory(&opened_details, &named_details)) {
+      !same_directory(&opened_details, &named_details) ||
+      !valid_hierarchy_directory(&opened_details, policy)) {
     int saved_error = errno;
     if (directory_fd >= 0) close(directory_fd);
     return make_status(env, failure_status(saved_error));
@@ -189,21 +216,29 @@ static napi_value create_exclusive_directory(napi_env env, napi_callback_info in
   if (mkdirat(parent_fd, name.bytes, 0700) != 0) {
     return make_status(env, failure_status(errno));
   }
-  return open_directory_result(env, parent_fd, &name, -1);
+  return open_directory_result(
+    env,
+    parent_fd,
+    &name,
+    -1,
+    BASIC_PRIVATE_DIRECTORY_MODE
+  );
 }
 
 static napi_value ensure_directory(napi_env env, napi_callback_info info) {
-  size_t argument_count = 2U;
-  napi_value arguments[2] = {NULL, NULL};
+  size_t argument_count = 3U;
+  napi_value arguments[3] = {NULL, NULL, NULL};
   int parent_fd = -1;
   int created = 0;
+  mode_t policy = 0U;
   basic_component name = {{0}};
   struct stat parent_details;
 
   if (napi_get_cb_info(env, info, &argument_count, arguments, NULL, NULL) != napi_ok ||
-      argument_count != 2U ||
+      argument_count != 3U ||
       !read_directory_fd(env, arguments[0], &parent_fd) ||
-      !read_component(env, arguments[1], &name)) {
+      !read_component(env, arguments[1], &name) ||
+      !read_directory_mode(env, arguments[2], &policy)) {
     return make_status(env, "ERR_INVALID");
   }
   if (fstat(parent_fd, &parent_details) != 0) {
@@ -217,7 +252,7 @@ static napi_value ensure_directory(napi_env env, napi_callback_info info) {
   } else if (errno != EEXIST) {
     return make_status(env, failure_status(errno));
   }
-  return open_directory_result(env, parent_fd, &name, created);
+  return open_directory_result(env, parent_fd, &name, created, policy);
 }
 
 static napi_value close_directory(napi_env env, napi_callback_info info) {

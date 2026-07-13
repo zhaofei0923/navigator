@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import { describe, expect, test } from "vitest";
 
 import { createBasicCollectionAuditFixture } from "./basic-collection-test-fixture.js";
@@ -12,6 +14,7 @@ import {
   type BasicExtractedFactV2,
 } from "./collection/basic-collection-v2-contracts.js";
 import { validateBasicV2FactOwnership } from "./collection/basic-v2-fact-ownership.js";
+import { materializeBasicDerivedFacts } from "./collection/basic-derived-fact-materializer.js";
 import {
   isBasicCollectionAuditValidationResultV2FromValidator,
   validateBasicCollectionAuditBundleV2,
@@ -95,6 +98,7 @@ describe("Basic collection audit v2 validation", () => {
       const fact = factAt(bundle, fieldPath);
       fact.extractionMethod = "manual";
       setEvidenceLocator(bundle, fact, "html:section=reviewed-value");
+      if (fieldPath === "country.code") rematerializeDerived(bundle);
 
       expect(validateBasicCollectionAuditBundleV2(bundle)).toMatchObject({
         valid: true,
@@ -133,6 +137,46 @@ describe("Basic collection audit v2 validation", () => {
       blockers: [],
       readyForHumanReview: true,
     });
+  });
+
+  test.each([
+    ["country.name blank zh", "country.name", { zh: "  ", en: "Example Land" }],
+    ["country.summary blank en", "country.summary", { zh: "示例摘要", en: "\t" }],
+    ["country.region outside the registered taxonomy", "country.region", "TEST_REGION"],
+  ] as const)("rejects malformed final country material: %s", (_name, fieldPath, value) => {
+    const bundle = createV2Bundle();
+    setCandidateValue(bundle, fieldPath, value);
+
+    expectInvalid(bundle, fieldPath);
+  });
+
+  test.each([
+    ["flag", "country.flagEmoji", "XX"],
+    ["country timestamp", "country.updatedAt", "2026-07-11T00:00:00.000Z"],
+    ["collected timestamp", "marketOverview.collectedAt", "2026-07-11T00:00:00.000Z"],
+    ["credibility", "marketOverview.credibility", "VERIFIED"],
+    ["source name", "marketOverview.source", "Unreviewed source"],
+    ["unrelated source URL", "marketOverview.sourceUrl", "https://unrelated.example/source"],
+    ["credential-bearing source URL", "marketOverview.sourceUrl", "https://user:secret@example.com/source"],
+    ["updated timestamp", "marketOverview.updatedAt", "2026-07-11T00:00:00.000Z"],
+  ] as const)("rejects deterministic derived metadata drift: %s", (_name, fieldPath, value) => {
+    const bundle = createV2Bundle();
+    setCandidateValue(bundle, fieldPath, value);
+    setDraftValue(bundle, fieldPath, value);
+
+    expectInvalid(bundle, "derived");
+  });
+
+  test("rejects country-code derivation whose reviewed raw identity drifted", () => {
+    const bundle = createV2Bundle();
+    bundle.sourceRegister.countryCode = "YY";
+    bundle.extractedFacts.countryCode = "YY";
+    bundle.reviewReport.countryCode = "YY";
+    bundle.marketOverviewDraft.countryCode = "YY";
+    setCandidateValue(bundle, "country.code", "YY");
+    setCandidateValue(bundle, "marketOverview.countryCode", "YY");
+
+    expectInvalid(bundle, "derived");
   });
 
   test.each([
@@ -187,7 +231,7 @@ describe("Basic collection audit v2 validation", () => {
     ["unsafe source", (bundle: MutableV2Bundle) => {
       bundle.sourceRegister.sources[0]!.promptInjectionRisk = "suspected";
       blockReport(bundle);
-    }, ""],
+    }, "derived"],
     ["injection risk", (bundle: MutableV2Bundle) => {
       bundle.reviewReport.injectionRisks = [{
         sourceId: "source-1",
@@ -430,6 +474,22 @@ function createMutableV2Bundle() {
     fact.extractionMethod = owner === "source-backed" || owner === "derived"
       ? "deterministic"
       : "manual";
+    fact.factId = `fact-${createHash("sha256").update(fact.fieldPath, "utf8").digest("hex").slice(0, 16)}`;
+  }
+  setCandidateValue(bundle, "country.region", "southeast-asia");
+  const candidateFacts = bundle.extractedFacts.facts.filter(
+    ({ fieldPath }) => classifyBasicV2FieldPath(fieldPath) !== "derived",
+  ) as BasicExtractedFactV2[];
+  const derived = structuredClone(materializeBasicDerivedFacts({
+    countryCode: bundle.sourceRegister.countryCode,
+    primarySourceId: "source-1",
+    sourceRegister: bundle.sourceRegister,
+    candidateFacts,
+  }));
+  bundle.sourceRegister = derived.sourceRegister as MutableV2Bundle["sourceRegister"];
+  bundle.extractedFacts.facts = [...candidateFacts, ...derived.facts] as MutableV2Bundle["extractedFacts"]["facts"];
+  for (const fact of derived.facts) {
+    setDraftValue(bundle, fact.fieldPath, fact.evidence[0]?.normalizedValue ?? null);
   }
   bundle.extractedFacts.facts.sort((left, right) =>
     compareText(left.fieldPath, right.fieldPath));
@@ -482,6 +542,45 @@ function setEvidenceLocator(
   source.evidenceLocators = [
     ...new Set([...source.evidenceLocators, locator]),
   ].sort(compareText);
+}
+
+function setCandidateValue(
+  bundle: MutableV2Bundle,
+  fieldPath: string,
+  value: BasicCollectionJsonValue,
+): void {
+  for (const evidence of factAt(bundle, fieldPath).evidence) {
+    evidence.normalizedValue = value;
+  }
+}
+
+function setDraftValue(
+  bundle: MutableV2Bundle,
+  fieldPath: string,
+  value: BasicCollectionJsonValue,
+): void {
+  if (!fieldPath.startsWith("marketOverview.")) return;
+  const key = fieldPath.slice("marketOverview.".length) as keyof MutableV2Bundle["marketOverviewDraft"];
+  (bundle.marketOverviewDraft as unknown as Record<string, BasicCollectionJsonValue>)[key] = value;
+}
+
+function rematerializeDerived(bundle: MutableV2Bundle): void {
+  const candidateFacts = bundle.extractedFacts.facts.filter(
+    ({ fieldPath }) => classifyBasicV2FieldPath(fieldPath) !== "derived",
+  ) as BasicExtractedFactV2[];
+  const primarySourceId = factAt(bundle, "marketOverview.source").evidence[0]!.sourceId;
+  const rebuilt = structuredClone(materializeBasicDerivedFacts({
+    countryCode: bundle.sourceRegister.countryCode,
+    primarySourceId,
+    sourceRegister: bundle.sourceRegister,
+    candidateFacts,
+  }));
+  bundle.sourceRegister = rebuilt.sourceRegister as MutableV2Bundle["sourceRegister"];
+  bundle.extractedFacts.facts = [...candidateFacts, ...rebuilt.facts] as MutableV2Bundle["extractedFacts"]["facts"];
+  bundle.extractedFacts.facts.sort((left, right) => compareText(left.fieldPath, right.fieldPath));
+  for (const fact of rebuilt.facts) {
+    setDraftValue(bundle, fact.fieldPath, fact.evidence[0]?.normalizedValue ?? null);
+  }
 }
 
 function addSecondEvidence(

@@ -82,10 +82,11 @@ export async function ensureBasicCandidateDirectoryChild(
   name: unknown,
   mode: number,
 ): Promise<Readonly<{ directory: BasicCandidateHeldDirectory; created: boolean }>> {
-  if (mode !== 0o700) invalid();
+  if (mode !== 0o700 && mode !== 0o755) invalid();
   const ensured = ensureBasicCandidateDirectoryNative(
     parent.handle.fd,
     parseBasicCandidatePathComponent(name),
+    mode,
   );
   const directory = await duplicateNativeDirectory(ensured);
   return Object.freeze({ directory, created: ensured.created });

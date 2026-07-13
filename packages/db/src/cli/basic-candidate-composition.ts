@@ -14,6 +14,7 @@ import {
 import { runBasicSourceExecutionPlanV2 } from "../collection/basic-source-plan-runner-v2.js";
 import type { BasicSourceTransportV2 } from "../collection/basic-source-v2-contracts.js";
 import { materializeBasicReviewedRunV2 } from "../collection/basic-v2-materialization.js";
+import { runBasicDeterministicCandidate } from "../collection/basic-deterministic-candidate.js";
 import {
   closeBasicCandidateConfig,
   loadBasicCandidateConfig,
@@ -26,7 +27,6 @@ import {
   getBasicCandidateWorkspaceDescriptorRoot,
   type BasicCandidateWorkspace,
 } from "./basic-candidate-workspace.js";
-import { runBasicCandidateProduction } from "./basic-candidate-production-runner.js";
 
 export interface BasicCandidateCompositionInput {
   readonly workspace: BasicCandidateWorkspace;
@@ -52,7 +52,7 @@ export interface BasicCandidateCompositionDependencies {
   materializeDocument: typeof materializeBasicDocumentEvidence;
   parseEditorial: typeof parseBasicCountryEditorialInput;
   materializeReviewed: typeof materializeBasicReviewedRunV2;
-  runCandidate: typeof runBasicCandidateProduction;
+  runCandidate: typeof runBasicDeterministicCandidate;
   getWorkspaceDescriptorRoot: typeof getBasicCandidateWorkspaceDescriptorRoot;
 }
 
@@ -69,7 +69,7 @@ const DEFAULT_DEPENDENCIES: BasicCandidateCompositionDependencies = Object.freez
   materializeDocument: materializeBasicDocumentEvidence,
   parseEditorial: parseBasicCountryEditorialInput,
   materializeReviewed: materializeBasicReviewedRunV2,
-  runCandidate: runBasicCandidateProduction,
+  runCandidate: runBasicDeterministicCandidate,
   getWorkspaceDescriptorRoot: getBasicCandidateWorkspaceDescriptorRoot,
 });
 
@@ -77,11 +77,20 @@ const ERROR_RESULT: BasicCandidateCompositionResult = Object.freeze({
   status: "error",
   candidate: null,
 });
+const PRODUCTION_COMPOSITION_RESULTS = new WeakSet<object>();
+
+export function isBasicCandidateProductionResult(
+  value: unknown,
+): value is BasicDeterministicCandidateResult {
+  return typeof value === "object" && value !== null &&
+    PRODUCTION_COMPOSITION_RESULTS.has(value);
+}
 
 export async function composeBasicCountryCandidate(
   input: BasicCandidateCompositionInput,
   dependencies: BasicCandidateCompositionDependencies = DEFAULT_DEPENDENCIES,
 ): Promise<BasicCandidateCompositionResult> {
+  const productionComposition = dependencies === DEFAULT_DEPENDENCIES;
   let loaded: LoadedBasicCandidateConfig | null = null;
   try {
     loaded = await dependencies.loadConfig(input.workspace, input.configPath);
@@ -164,6 +173,7 @@ export async function composeBasicCountryCandidate(
       injectionRisks: reviewed.injectionRisks,
     });
     if (isReadyCandidate(candidate)) {
+      if (productionComposition) PRODUCTION_COMPOSITION_RESULTS.add(candidate);
       return Object.freeze({ status: "ready", candidate });
     }
     if (isBlockedCandidate(candidate)) {

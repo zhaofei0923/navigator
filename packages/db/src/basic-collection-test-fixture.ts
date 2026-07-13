@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 
 import type {
@@ -9,6 +10,13 @@ import type {
 } from "./collection/basic-collection-contracts.js";
 import { BASIC_COLLECTION_AUDIT_SCHEMA_VERSION } from "./collection/basic-collection-contracts.js";
 import { validateBasicCollectionAuditBundle } from "./collection/basic-collection-validator.js";
+import {
+  BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION,
+  classifyBasicV2FieldPath,
+  type BasicCollectionAuditBundleV2,
+  type BasicExtractedFactV2,
+} from "./collection/basic-collection-v2-contracts.js";
+import { materializeBasicDerivedFacts } from "./collection/basic-derived-fact-materializer.js";
 
 export type BasicCollectionFixtureScenario =
   | "normal"
@@ -73,6 +81,68 @@ export function createBasicCollectionAuditFixture(
     extractedFacts: createFacts(runId, countryCode, marketOverviewDraft),
     marketOverviewDraft,
     reviewReport: createReviewReport(runId, countryCode),
+  };
+}
+
+export function createBasicCollectionAuditV2Fixture(): BasicCollectionAuditBundleV2 {
+  const legacy = structuredClone(createBasicCollectionAuditFixture());
+  const sourceRegister = {
+    ...legacy.sourceRegister,
+    schemaVersion: BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION,
+    catalogVersion: "catalog-v1",
+    catalogSha256: "a".repeat(64),
+  };
+  const candidateFacts: BasicExtractedFactV2[] = legacy.extractedFacts.facts
+    .filter(({ fieldPath }) => classifyBasicV2FieldPath(fieldPath) !== "derived")
+    .map((fact) => {
+      const owner = classifyBasicV2FieldPath(fact.fieldPath);
+      const copy = structuredClone(fact);
+      copy.factId = `fact-${createHash("sha256").update(fact.fieldPath, "utf8").digest("hex").slice(0, 16)}`;
+      if (copy.fieldPath === "country.region") {
+        for (const evidence of copy.evidence) {
+          evidence.rawValue = "southeast-asia";
+          evidence.normalizedValue = "southeast-asia";
+        }
+      }
+      return {
+        ...copy,
+        extractionMethod: owner === "source-backed" ? "deterministic" : "manual",
+      };
+    });
+  const derived = materializeBasicDerivedFacts({
+    countryCode: sourceRegister.countryCode,
+    primarySourceId: "source-1",
+    sourceRegister,
+    candidateFacts,
+  });
+  const marketOverviewDraft = structuredClone(legacy.marketOverviewDraft);
+  for (const fact of derived.facts) {
+    if (!fact.fieldPath.startsWith("marketOverview.")) continue;
+    const key = fact.fieldPath.slice("marketOverview.".length);
+    const value = fact.evidence[0]?.normalizedValue;
+    if (value !== undefined) {
+      (marketOverviewDraft as unknown as Record<string, BasicCollectionJsonValue>)[key] = value;
+    }
+  }
+  return {
+    countryDirectory: legacy.countryDirectory,
+    runId: legacy.runId,
+    sourceRegister: structuredClone(derived.sourceRegister),
+    extractedFacts: {
+      schemaVersion: BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION,
+      runId: legacy.runId,
+      countryCode: sourceRegister.countryCode,
+      facts: structuredClone([...candidateFacts, ...derived.facts]).sort((left, right) =>
+        left.fieldPath < right.fieldPath ? -1 : left.fieldPath > right.fieldPath ? 1 : 0),
+    },
+    marketOverviewDraft,
+    reviewReport: {
+      ...legacy.reviewReport,
+      schemaVersion: BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION,
+      sourceChecks: [...legacy.reviewReport.sourceChecks].sort((left, right) =>
+        left.sourceId < right.sourceId ? -1 : left.sourceId > right.sourceId ? 1 : 0),
+      humanDecision: null,
+    },
   };
 }
 

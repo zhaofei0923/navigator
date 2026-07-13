@@ -28,7 +28,7 @@ import {
   type BasicCandidateRegularFileIdentity,
 } from "./basic-candidate-constrained-fs.js";
 import { renameBasicCandidateDirectoryChildNoReplaceNative } from "./basic-candidate-native-fs.js";
-import { isBasicCandidateProductionResult } from "./basic-candidate-production-runner.js";
+import { isBasicCandidateProductionResult } from "./basic-candidate-composition.js";
 import {
   getBasicCandidateWorkspaceRootDirectory,
   type BasicCandidateWorkspace,
@@ -90,9 +90,9 @@ export async function writeBasicCandidateArtifacts(
     root = getBasicCandidateWorkspaceRootDirectory(
       input.get("workspace") as BasicCandidateWorkspace,
     );
-    data = await prepareDirectory(root, "data");
-    staging = await prepareDirectory(data, "staging");
-    country = await prepareDirectory(staging, authenticated.countryDirectory);
+    data = await prepareDirectory(root, "data", 0o755);
+    staging = await prepareDirectory(data, "staging", 0o700);
+    country = await prepareDirectory(staging, authenticated.countryDirectory, 0o700);
     await requireWriterHierarchy(root, data, staging, country, authenticated.countryDirectory);
 
     temporaryName = `.candidate-${authenticated.runId}-${randomUUID()}.tmp`;
@@ -176,8 +176,9 @@ function authenticateCandidate(value: unknown): AuthenticatedArtifacts {
 async function prepareDirectory(
   parent: BasicCandidateHeldDirectory,
   name: string,
+  mode: 0o700 | 0o755,
 ): Promise<BasicCandidateHeldDirectory> {
-  const result = await ensureBasicCandidateDirectoryChild(parent, name, 0o700);
+  const result = await ensureBasicCandidateDirectoryChild(parent, name, mode);
   try {
     if (result.created) await syncBasicCandidateParentDirectory(parent);
     return result.directory;

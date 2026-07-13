@@ -4,6 +4,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import {
+  chmod,
   lstat,
   mkdir,
   mkdtemp,
@@ -17,7 +18,15 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-import { createBasicCollectionAuditFixture } from "./basic-collection-test-fixture.js";
+const productionCandidates = vi.hoisted(() => new WeakSet<object>());
+
+vi.mock("./cli/basic-candidate-composition.js", () => ({
+  isBasicCandidateProductionResult(value: unknown) {
+    return typeof value === "object" && value !== null && productionCandidates.has(value);
+  },
+}));
+
+import { createBasicCollectionAuditV2Fixture } from "./basic-collection-test-fixture.js";
 import {
   BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION,
   classifyBasicV2FieldPath,
@@ -29,7 +38,6 @@ import { createBasicDeterministicSuccessResult } from "./collection/basic-determ
 import {
   writeBasicCandidateArtifacts as writeBasicCandidateArtifactsWithWorkspace,
 } from "./cli/basic-candidate-artifact-writer.js";
-import { runBasicCandidateProduction } from "./cli/basic-candidate-production-runner.js";
 import {
   closeBasicCandidateWorkspace,
   openBasicCandidateWorkspace,
@@ -59,9 +67,14 @@ vi.mock("./cli/basic-candidate-native-fs.js", async (importOriginal) => {
     ensureBasicCandidateDirectoryNative(
       parentDirFd: unknown,
       name: unknown,
+      expectedMode: unknown,
     ) {
       if (typeof name === "string") nativePublishProbe.ensureCalls.push(name);
-      const ensured = actual.ensureBasicCandidateDirectoryNative(parentDirFd, name);
+      const ensured = actual.ensureBasicCandidateDirectoryNative(
+        parentDirFd,
+        name,
+        expectedMode,
+      );
       if (
         nativePublishProbe.replaceAfterEnsure === name &&
         typeof parentDirFd === "number" && typeof name === "string"
@@ -454,6 +467,24 @@ describe("Basic candidate atomic artifact writer", () => {
     })).rejects.toThrow("basic candidate artifact write failed");
   });
 
+  test.each([
+    ["data", 0o777],
+    ["data/staging", 0o755],
+    ["data/staging/example-land", 0o755],
+  ] as const)("rejects an unsafe existing %s hierarchy mode", async (relative, mode) => {
+    const repoRoot = await createRepoRoot();
+    const hierarchy = join(repoRoot, relative);
+    await mkdir(hierarchy, { recursive: true, mode });
+    await chmod(hierarchy, mode);
+
+    await expect(writeBasicCandidateArtifacts({
+      repoRoot,
+      candidate: await readyCandidate(),
+    })).rejects.toThrow("basic candidate artifact write failed");
+    expect(await pathExists(join(repoRoot, "data", "staging", "example-land", "run-001")))
+      .toBe(false);
+  });
+
   test("rejects a pre-existing symlink target without following it", async () => {
     const repoRoot = await createRepoRoot();
     const outside = join(repoRoot, "outside");
@@ -708,28 +739,14 @@ async function readyCandidate() {
 }
 
 async function buildReadyCandidate() {
-  return runBasicCandidateProduction(createReadyCandidateInput());
+  const candidate = await runBasicDeterministicCandidate(createReadyCandidateInput());
+  productionCandidates.add(candidate);
+  return candidate;
 }
 
 function createReadyCandidateInput() {
-  const bundle = structuredClone(createBasicCollectionAuditFixture());
-  const sourceRegister = {
-    ...bundle.sourceRegister,
-    schemaVersion: BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION,
-    catalogVersion: "catalog-v1",
-    catalogSha256: "a".repeat(64),
-  };
-  const extractedFacts = {
-    ...bundle.extractedFacts,
-    schemaVersion: BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION,
-  };
-  for (const fact of extractedFacts.facts) {
-    const owner = classifyBasicV2FieldPath(fact.fieldPath);
-    fact.extractionMethod = owner === "source-backed" || owner === "derived"
-      ? "deterministic"
-      : "manual";
-  }
-  extractedFacts.facts.sort((left, right) => left.fieldPath.localeCompare(right.fieldPath));
+  const bundle = structuredClone(createBasicCollectionAuditV2Fixture());
+  const { sourceRegister, extractedFacts } = bundle;
   const materialization = {
     sourceRegister,
     extractedFacts,
@@ -742,7 +759,7 @@ function createReadyCandidateInput() {
     catalogVersion: sourceRegister.catalogVersion,
     catalogSha256: sourceRegister.catalogSha256,
     runner: { run() { return Promise.resolve(materialization); } },
-    sourceChecks: bundle.reviewReport.sourceChecks.sort((left, right) =>
+    sourceChecks: [...bundle.reviewReport.sourceChecks].sort((left, right) =>
       left.sourceId.localeCompare(right.sourceId)),
     injectionRisks: [],
   };

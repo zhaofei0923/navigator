@@ -2,8 +2,21 @@ import { lstat, mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/
 import { join } from "node:path";
 
 import { afterEach, describe, expect, test } from "vitest";
+import { vi } from "vitest";
 
-import { createBasicCollectionAuditFixture } from "./basic-collection-test-fixture.js";
+const productionCandidates = vi.hoisted(() => new WeakSet<object>());
+
+vi.mock("./cli/basic-candidate-composition.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./cli/basic-candidate-composition.js")>();
+  return {
+    ...actual,
+    isBasicCandidateProductionResult(value: unknown) {
+      return typeof value === "object" && value !== null && productionCandidates.has(value);
+    },
+  };
+});
+
+import { createBasicCollectionAuditV2Fixture } from "./basic-collection-test-fixture.js";
 import {
   BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION,
   classifyBasicV2FieldPath,
@@ -11,7 +24,7 @@ import {
 } from "./collection/basic-collection-v2-contracts.js";
 import { writeBasicCandidateArtifacts } from "./cli/basic-candidate-artifact-writer.js";
 import { composeBasicCountryCandidate } from "./cli/basic-candidate-composition.js";
-import { runBasicCandidateProduction } from "./cli/basic-candidate-production-runner.js";
+import { runBasicDeterministicCandidate } from "./collection/basic-deterministic-candidate.js";
 import {
   BASIC_COUNTRY_CANDIDATE_CONFIG_SCHEMA_VERSION,
   loadBasicCandidateConfig,
@@ -206,38 +219,24 @@ async function createIntegratedWorkspace(): Promise<string> {
 }
 
 async function createReadyCandidate() {
-  const bundle = structuredClone(createBasicCollectionAuditFixture());
-  const sourceRegister = {
-    ...bundle.sourceRegister,
-    schemaVersion: BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION,
-    catalogVersion: "catalog-v1",
-    catalogSha256: "a".repeat(64),
-  };
-  const extractedFacts = {
-    ...bundle.extractedFacts,
-    schemaVersion: BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION,
-  };
-  for (const fact of extractedFacts.facts) {
-    const owner = classifyBasicV2FieldPath(fact.fieldPath);
-    fact.extractionMethod = owner === "source-backed" || owner === "derived"
-      ? "deterministic"
-      : "manual";
-  }
-  extractedFacts.facts.sort((left, right) => left.fieldPath.localeCompare(right.fieldPath));
+  const bundle = structuredClone(createBasicCollectionAuditV2Fixture());
+  const { sourceRegister, extractedFacts } = bundle;
   const materialization = {
     sourceRegister,
     extractedFacts,
     receipts: [],
   } as unknown as BasicDeterministicMaterializationResultV2;
-  return runBasicCandidateProduction({
+  const candidate = await runBasicDeterministicCandidate({
     countryDirectory: bundle.countryDirectory,
     countryCode: sourceRegister.countryCode,
     runId: sourceRegister.runId,
     catalogVersion: sourceRegister.catalogVersion,
     catalogSha256: sourceRegister.catalogSha256,
     runner: { run() { return Promise.resolve(materialization); } },
-    sourceChecks: bundle.reviewReport.sourceChecks.sort((left, right) =>
+    sourceChecks: [...bundle.reviewReport.sourceChecks].sort((left, right) =>
       left.sourceId.localeCompare(right.sourceId)),
     injectionRisks: [],
   });
+  productionCandidates.add(candidate);
+  return candidate;
 }
