@@ -1,5 +1,7 @@
 # Basic Country Collection Documentation Implementation Plan
 
+> **Status: Superseded for current rollout.** This plan's Indonesia-Complete assumptions are historical and have been superseded by `DOCS-BASIC-FIRST-1`. Do not use this plan as a current country rollout requirement; all countries, including `ID`, now require a first real `BASIC` delivery before a separately approved upgrade.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Establish the repository's Basic-first country collection standard and define the independently reviewable follow-up task cards for template validation, collection tooling, and one-country-at-a-time rollout.

@@ -71,7 +71,7 @@
 
 - 数据库：用独立测试库（`.env.test` 的 `DATABASE_URL`）或事务回滚/内存替身，禁止连生产库。
 - LLM / embedding：mock `AI_PROVIDER` 调用，断言**过滤发生在检索层**而非依赖模型。
-- 测试 fixture 参考印尼样板（[indonesia-seed.md](./indonesia-seed.md)），但用最小化数据集，避免为单国写特例。
+- 现有 `data/indonesia/` 是 legacy synthetic regression fixture，不是 rollout sample、真实已发布国家数据或可复制 seed 模板；测试使用最小化数据集，避免为单国写特例。
 - Deterministic Basic candidate 的 `ID` fixture 只能验证 ISO2/coverage shape；名称、URL、来源内容、值和时间必须明确标为 synthetic fixture-only，不能复制或声称任何真实印度尼西亚事实。
 
 ---
