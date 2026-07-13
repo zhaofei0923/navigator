@@ -3,18 +3,24 @@ export const workspaceName = "@navigator/db" as const;
 export { createBasicCountryBundle } from "./seed/basic-country-template.js";
 export { loadBasicCountryBundle } from "./seed/basic-country-loader.js";
 export { validateBasicCountryBundle } from "./seed/basic-country-validator.js";
-export {
-  BASIC_COUNTRY_CANONICAL_MAPPING_VERSION,
-  createBasicCountryBundleFromApprovedAudit,
-  validateApprovedBasicCountryPublication,
-} from "./seed/basic-country-publication.js";
 export { buildBasicCountryImportPlan } from "./seed/basic-country-import.js";
-export { preflightBasicCountryActivation } from "./seed/basic-country-activation-preflight.js";
 export {
   BASIC_COLLECTION_AUDIT_SCHEMA_VERSION,
   BASIC_COLLECTION_BLOCKER_CODES,
 } from "./collection/basic-collection-contracts.js";
+export {
+  BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION,
+} from "./collection/basic-collection-v2-contracts.js";
+export {
+  BASIC_DETERMINISTIC_STAGE_NAMES,
+} from "./collection/basic-deterministic-candidate-contracts.js";
 export { loadBasicCollectionAuditBundle } from "./collection/basic-collection-loader.js";
+export {
+  loadBasicCollectionAuditBundleVersioned,
+} from "./collection/basic-collection-versioned-loader.js";
+export {
+  runBasicDeterministicCandidate,
+} from "./collection/basic-deterministic-candidate.js";
 export { validateBasicCollectionAuditBundle } from "./collection/basic-collection-validator.js";
 export { createBasicSourceTransport } from "./collection/basic-source-transport.js";
 export { captureBasicRawSource } from "./collection/basic-raw-capture.js";
@@ -58,18 +64,9 @@ export type {
   JsonRecord,
 } from "./seed/basic-country-types.js";
 export type {
-  BasicApprovedCountryPublicationInput,
-} from "./seed/basic-country-publication.js";
-export type {
   BasicCountryImportPlan,
   BasicSeedImportOperation,
 } from "./seed/basic-country-import.js";
-export type {
-  BasicActivationCountPort,
-  BasicActivationModel,
-  BasicActivationScope,
-  BasicCountryActivationPreflightResult,
-} from "./seed/basic-country-activation-preflight.js";
 export type {
   BasicRawCaptureResult,
 } from "./collection/basic-raw-capture.js";
@@ -138,6 +135,13 @@ export type {
   BasicCollectionAuditArtifactName,
   BasicCollectionAuditArtifacts,
 } from "./collection/basic-offline-audit-artifacts.js";
+export type {
+  BasicCollectionAuditArtifactsV2,
+  BasicCollectionAuditBundleV2,
+} from "./collection/basic-collection-v2-contracts.js";
+export type {
+  BasicDeterministicCandidateResult,
+} from "./collection/basic-deterministic-candidate-contracts.js";
 export type {
   BasicCollectionAuditAssemblyInput,
   BasicOfflineDryRunScenario,

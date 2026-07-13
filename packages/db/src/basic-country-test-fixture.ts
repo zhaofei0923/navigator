@@ -2,12 +2,6 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import {
-  BASIC_COLLECTION_AUDIT_SCHEMA_VERSION,
-  type BasicCollectionAuditBundle,
-  type BasicCollectionJsonValue,
-  type BasicMarketOverviewDraft,
-} from "./collection/basic-collection-contracts.js";
 import { createBasicCountryBundle } from "./seed/basic-country-template.js";
 import type {
   BasicCountryBundle,
@@ -19,97 +13,9 @@ export function createValidBundle(): BasicCountryBundle {
   return createBasicCountryBundle(createReviewedInput());
 }
 
-export function createUnapprovedBundle(): BasicCountryBundle {
-  const bundle = structuredClone(createValidBundle());
-  const audit = getRecord(bundle.audit.run.reviewReport, "reviewReport");
-  audit.humanDecision = null;
-  return bundle;
-}
-
-export function createApprovedAuditBundle(): BasicCollectionAuditBundle {
-  const runId = "run-01";
-  const countryCode = "VN";
-  const marketOverviewDraft = createMarketOverviewDraft(countryCode);
-  const countryFacts: Array<readonly [string, BasicCollectionJsonValue]> = [
-    ["country.code", countryCode],
-    ["country.name", { zh: "越南", en: "Vietnam" }],
-    ["country.summary", { zh: "市场基础画像", en: "Market baseline" }],
-    ["country.region", "southeast-asia"],
-    ["country.flagEmoji", "VN"],
-    ["country.updatedAt", "2026-07-10T00:00:00.000Z"],
-  ];
-  const marketFacts = marketFactValues(marketOverviewDraft);
+export function createReviewedInput(): BasicCountryTemplateInput {
   return {
     countryDirectory: "vietnam",
-    runId,
-    sourceRegister: {
-      schemaVersion: BASIC_COLLECTION_AUDIT_SCHEMA_VERSION,
-      runId,
-      countryCode,
-      sources: [{
-        sourceId: "source-1",
-        sourceName: "Official source",
-        sourceUrl: "https://example.com/source",
-        retrievedAt: "2026-07-09T00:00:00.000Z",
-        publishedAt: "2026-07-08T00:00:00.000Z",
-        contentSha256:
-          "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
-        evidenceLocators: ["table 1"],
-        sourceFamily: "official-statistics",
-        accessStatus: "open",
-        accessNotes: null,
-        credibility: "OFFICIAL",
-        discoveryOnly: false,
-        promptInjectionRisk: "none",
-      }],
-    },
-    extractedFacts: {
-      schemaVersion: BASIC_COLLECTION_AUDIT_SCHEMA_VERSION,
-      runId,
-      countryCode,
-      facts: [...countryFacts, ...marketFacts].map(
-        ([fieldPath, normalizedValue], index) => ({
-          factId: `fact-${index + 1}`,
-          fieldPath,
-          status: "candidate",
-          evidence: [{
-            sourceId: "source-1",
-            locator: "table 1",
-            rawValue: structuredClone(normalizedValue),
-            normalizedValue: structuredClone(normalizedValue),
-            unit: null,
-            year: null,
-          }],
-          extractionMethod: "deterministic",
-          uncertainty: null,
-        }),
-      ),
-    },
-    marketOverviewDraft,
-    reviewReport: {
-      schemaVersion: BASIC_COLLECTION_AUDIT_SCHEMA_VERSION,
-      runId,
-      countryCode,
-      status: "ready-for-human-review",
-      missingFields: [],
-      conflicts: [],
-      sourceChecks: [{ sourceId: "source-1", status: "passed", notes: null }],
-      injectionRisks: [],
-      publicationRecommendation: "request-human-review",
-      humanDecision: {
-        decision: "approved",
-        reviewerId: "fixture-reviewer",
-        decidedAt: "2026-07-11T00:00:00Z",
-        notes: "Approved fixture for publication-gate tests",
-      },
-    },
-  };
-}
-
-export function createReviewedInput(): BasicCountryTemplateInput {
-  const audit = createApprovedAuditBundle();
-  return {
-    countryDirectory: audit.countryDirectory,
     country: {
       code: "VN",
       name: { zh: "越南", en: "Vietnam" },
@@ -118,86 +24,49 @@ export function createReviewedInput(): BasicCountryTemplateInput {
       flagEmoji: "VN",
       updatedAt: "2026-07-10T00:00:00.000Z",
     },
-    marketOverview: { ...audit.marketOverviewDraft, reviewStatus: "published" },
+    marketOverview: {
+      overview: { zh: "市场概览", en: "Market overview" },
+      population: 100000000,
+      gdp: 400000000000,
+      gdpGrowth: 5.2,
+      energyDemand: { zh: "能源需求", en: "Energy demand" },
+      renewableTarget: { zh: "可再生能源目标", en: "Renewable target" },
+      keyIndicators: [
+        {
+          label: { zh: "装机容量", en: "Installed capacity" },
+          value: "20",
+          unit: "GW",
+          year: 2025,
+        },
+      ],
+      source: "Official source",
+      sourceUrl: "https://example.com/source",
+      collectedAt: "2026-07-09T00:00:00.000Z",
+      updatedAt: "2026-07-10T00:00:00.000Z",
+      credibility: "OFFICIAL",
+      reviewStatus: "published",
+      aiUsable: false,
+      countryCode: "VN",
+      industryTags: ["solar"],
+      techTags: ["pv-module"],
+    },
     manifest: {
-      activeRunId: audit.runId,
-      mappingVersion: "basic-country-canonical/v1",
-      auditBundlePath: `data/staging/${audit.countryDirectory}/${audit.runId}`,
+      activeRunId: "run-01",
+      mappingVersion: "basic-v1",
+      auditBundlePath: "data/staging/vietnam/run-01",
     },
     auditRun: {
-      runId: audit.runId,
-      sourceRegister: { ...audit.sourceRegister },
-      extractedFacts: { ...audit.extractedFacts },
-      marketOverviewDraft: { ...audit.marketOverviewDraft },
-      reviewReport: { ...audit.reviewReport },
+      runId: "run-01",
+      sourceRegister: { marker: "AUDIT_SENTINEL" },
+      extractedFacts: { marker: "AUDIT_SENTINEL" },
+      marketOverviewDraft: {
+        marker: "AUDIT_SENTINEL",
+        reviewStatus: "draft",
+        aiUsable: false,
+      },
+      reviewReport: { marker: "AUDIT_SENTINEL" },
     },
   };
-}
-
-function createMarketOverviewDraft(countryCode: string): BasicMarketOverviewDraft {
-  return {
-    overview: { zh: "市场概览", en: "Market overview" },
-    population: 100000000,
-    gdp: 400000000000,
-    gdpGrowth: 5.2,
-    energyDemand: { zh: "能源需求", en: "Energy demand" },
-    renewableTarget: { zh: "可再生能源目标", en: "Renewable target" },
-    keyIndicators: [{
-      label: { zh: "装机容量", en: "Installed capacity" },
-      value: "20",
-      unit: "GW",
-      year: 2025,
-    }],
-    source: "Official source",
-    sourceUrl: "https://example.com/source",
-    collectedAt: "2026-07-09T00:00:00.000Z",
-    updatedAt: "2026-07-10T00:00:00.000Z",
-    credibility: "OFFICIAL",
-    reviewStatus: "draft",
-    aiUsable: false,
-    countryCode,
-    industryTags: ["solar"],
-    techTags: ["pv-module"],
-  };
-}
-
-function marketFactValues(
-  draft: BasicMarketOverviewDraft,
-): Array<readonly [string, BasicCollectionJsonValue]> {
-  const values: Array<readonly [string, BasicCollectionJsonValue]> = [
-    ["marketOverview.overview", { zh: draft.overview.zh, en: draft.overview.en }],
-    ["marketOverview.population", draft.population],
-    ["marketOverview.gdp", draft.gdp],
-    ["marketOverview.gdpGrowth", draft.gdpGrowth],
-    ["marketOverview.energyDemand", {
-      zh: draft.energyDemand.zh,
-      en: draft.energyDemand.en,
-    }],
-    ["marketOverview.renewableTarget", {
-      zh: draft.renewableTarget.zh,
-      en: draft.renewableTarget.en,
-    }],
-    ["marketOverview.source", draft.source],
-    ["marketOverview.sourceUrl", draft.sourceUrl],
-    ["marketOverview.collectedAt", draft.collectedAt],
-    ["marketOverview.updatedAt", draft.updatedAt],
-    ["marketOverview.credibility", draft.credibility],
-    ["marketOverview.countryCode", draft.countryCode],
-    ["marketOverview.industryTags", draft.industryTags],
-    ["marketOverview.techTags", draft.techTags],
-  ];
-  for (const [index, indicator] of draft.keyIndicators.entries()) {
-    values.push(
-      [`marketOverview.keyIndicators[${index}].label`, {
-        zh: indicator.label.zh,
-        en: indicator.label.en,
-      }],
-      [`marketOverview.keyIndicators[${index}].value`, indicator.value],
-      [`marketOverview.keyIndicators[${index}].unit`, indicator.unit],
-      [`marketOverview.keyIndicators[${index}].year`, indicator.year],
-    );
-  }
-  return values;
 }
 
 export function getRecord(value: unknown, label: string): JsonRecord {

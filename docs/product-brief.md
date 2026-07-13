@@ -13,7 +13,7 @@
 
 - 国家维度统一，所有国家共用 10 个分析模块。
 - 数据深度按 Basic / Standard / Complete 覆盖等级渐进。
-- 所有选定国家均先通过其两位国家码的 `DATA-BASIC-<ISO2>` 任务卡达到 Basic；印尼使用 `DATA-BASIC-ID`。当前没有国家被指定为 Standard 或 Complete，后续升级须单独人工批准。
+- 所有国家（包括 `ID`）的首次真实数据交付必须恰好为 `BASIC`。后续 Standard 或 Complete 只能通过单独、经人工批准的升级任务交付。
 - Web 是主产品形态，小程序/H5 是轻入口与转化入口。
 
 ---

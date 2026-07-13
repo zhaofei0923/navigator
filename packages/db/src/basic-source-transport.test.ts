@@ -252,6 +252,17 @@ describe("Basic source transport", () => {
     );
   });
 
+  test.each(["text/csv", "text/html", "application/pdf"])(
+    "keeps the v1 request boundary closed to %s",
+    async (accept) => {
+      const transport = createBasicSourceTransport(createFetch([]));
+
+      await expect(
+        transport.execute({ ...REQUEST, accept }),
+      ).rejects.toThrow("source request URL is not allowed");
+    },
+  );
+
   test.each([
     ["application/json", true],
     ["application/problem+json", true],

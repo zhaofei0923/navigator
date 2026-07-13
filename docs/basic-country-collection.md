@@ -1,15 +1,17 @@
 # basic-country-collection.md — Basic 国家采集与发布标准
 
-> 本文件是 `P1-5`、`P1-6` 和 `DATA-BASIC-<ISO2>` 任务卡的规范性采集流程。字段与覆盖判定以 [data-schema.md](./data-schema.md) 和 [coverage-levels.md](./coverage-levels.md) 为唯一事实来源；数据治理与发布规则以 [data-governance.md](./data-governance.md) 为准。P1-6B 的确定性 source adapters、raw capture 与 provenance boundary 以 [basic-country-source-adapters.md](./basic-country-source-adapters.md) 为准；P1-6C 的 Hermes discovery 与本地模型草稿桥接边界以 [basic-country-hermes-llama-bridge.md](./basic-country-hermes-llama-bridge.md) 为准；P1-6D 的离线、无发布编排与跨边界验证以 [basic-country-offline-dry-run.md](./basic-country-offline-dry-run.md) 为准。本文件不新增数据模型字段，不改变 AI 检索边界。
+> 本文件是 `P1-5`、`P1-6` 和 `DATA-BASIC-<ISO2>` 任务卡的规范性采集流程。字段与覆盖判定以 [data-schema.md](./data-schema.md) 和 [coverage-levels.md](./coverage-levels.md) 为唯一事实来源；数据治理与发布规则以 [data-governance.md](./data-governance.md) 为准。新 Basic 流水线的来源政策与结构化请求以 [basic-source-catalog.md](./basic-source-catalog.md) 为准，v2 多格式传输、raw capture 和 CSV 边界以 [basic-source-formats.md](./basic-source-formats.md) 为准；P1-6B 的确定性 source adapters、raw capture 与 provenance boundary 以 [basic-country-source-adapters.md](./basic-country-source-adapters.md) 为准；确定性 v2 candidate、CLI 与四文件 writer 以 [basic-deterministic-candidate.md](./basic-deterministic-candidate.md) 为准；P1-6C 的 legacy bridge 边界以 [basic-country-hermes-llama-bridge.md](./basic-country-hermes-llama-bridge.md) 为准；P1-6D 的离线、无发布编排与跨边界验证以 [basic-country-offline-dry-run.md](./basic-country-offline-dry-run.md) 为准。本文件不新增数据模型字段，不改变 AI 检索边界。
+
+所有国家（包括 `ID`）的首次真实数据交付必须恰好为 `BASIC`。`STANDARD` 与 `COMPLETE` 只可在该国 Basic 验收后，通过单独、经人工批准的升级任务启动。
 
 ## 1. 范围与完成定义
 
-每个 Basic 国家使用同一固定 10 模块模型，不得为任何国家增加特例文件、字段或页面。所有选定国家（包括印尼 `ID`）都必须完成其两位国家码的 `DATA-BASIC-<ISO2>` 任务卡并达到 `BASIC`；印尼任务卡为 `DATA-BASIC-ID`。当前没有国家被指定为 `STANDARD` 或 `COMPLETE`，之后才可进入单独、经人工批准的 `STANDARD` 或 `COMPLETE` 升级任务；禁止国家直接以 `STANDARD` 或 `COMPLETE` 进入产品。Basic 首次交付只建立该国的国家骨架和市场基础画像：
+每个 Basic 国家使用相同的固定 10 模块模型，不得为任何国家增加特例文件、字段或页面。每个新选定的目标国家都必须完成其 `DATA-BASIC-<ISO2>` 任务卡并达到 `BASIC`，之后才可进入单独、经人工批准的 `STANDARD` 或 `COMPLETE` 升级任务；禁止任何国家直接以 `STANDARD` 或 `COMPLETE` 进入产品。Basic 首次交付只建立该国的国家骨架和市场基础画像：
 
 - `country.json` 必须包含 ISO 3166-1 alpha-2 国家码、`{ zh, en }` 的国家名和摘要、地区、国旗展示字段、整体 `updatedAt`，以及全部 10 个模块的 `moduleCoverage`。
 - `country.json` 的 `coverageLevel` 必须由覆盖判定得出为**恰好** `BASIC`，不得人工覆盖。`market-overview` 为 `PARTIAL` 或 `COMPLETE`；其余九个模块必须均为 `BUILDING`、`dataCount = 0`，且没有任何 `published` 记录，并保留统一占位，不创建虚构的占位业务记录。满足 `STANDARD` 判定条件的交付必须拒绝；后续数据只能在单独、经人工批准的升级任务中提交。
 - `market-overview.json` 必须是每国唯一的对象记录，按 [data-schema.md §5.1](./data-schema.md) 填写可验证的基础市场画像、`keyIndicators` 和完整元字段：`source`、`sourceUrl`、`collectedAt`、`updatedAt`、`credibility`、`reviewStatus`、`aiUsable`、`countryCode`、`industryTags`、`techTags`。字段必须存在；标签仅可使用已登记的枚举，且仅当没有适用标签时才可为空。`sourceUrl` 仅可为 HTTP(S) URL 或按现有 schema 规则为 `null`；为 `null` 时 `source` 必须包含字面量 `sourceUrl null` 说明无链接原因。所有可读字段和指标标签均使用 `{ zh, en }`；缺任一语言按既有降级规则标注，不能留空或报错。Basic 的 `aiUsable` 必须为 `false`。
-- 所有发布的 Basic 记录均须符合 [data-governance.md](./data-governance.md) 的来源、时间、可信度、审核状态、标签和双语要求。Basic 数据始终为 `aiUsable = false`，本阶段不得产生或导入 `knowledge` 知识片段。
+- 所有发布的 Basic 记录均须符合 [data-governance.md](./data-governance.md) 的来源、时间、可信度、审核状态、标签和双语要求。Basic 数据始终为 `aiUsable = false`，本阶段不产生知识片段，也不得导入 `knowledge` 知识片段。
 
 完成的 Basic 国家可在 C 端展示国家基础画像和其余模块的 `BUILDING` 占位；它不提供该国的 AI 深度问答，也不因 `published` 状态自动进入 AI 检索。
 
@@ -32,6 +34,8 @@
 
 采集运行在已批准的 Windows `llama.cpp` 与 WSL Hermes Agent 架构中。P1-6B 的确定性来源适配器和 raw capture 运行时边界见 [basic-country-source-adapters.md](./basic-country-source-adapters.md)；各参与方职责固定，自动化不能代替人工发布决定。
 
+已批准的确定性 Basic 迁移采用并行 v2 路径：source catalog 固定来源、许可、请求、字段归属和 adapter identity；`DATA-BASIC-FORMATS-1` 已交付隔离的 raw-capture/v2、四 MIME transport 和 strict CSV parser/locator；`DATA-BASIC-DOCUMENTS-1` 已交付 generic HTML/PDF capture、人工 review、capture-hash-bound document plan 与 manual preliminary evidence，详见 [basic-country-document-evidence.md](./basic-country-document-evidence.md)。`DATA-BASIC-EDITORIAL-1` 已将 exact 双语 operator input、reviewed-source union、primary source、`country.name` enrichment、mixed-method rejection 与 derived metadata 收束为冻结的 in-memory materialization，详见 [basic-country-editorial-input.md](./basic-country-editorial-input.md)。HTML/PDF bytes 仍不自动解析。`DATA-BASIC-DETERMINISTIC-1` 已交付 model-free draft assembler、trust/completeness preflight、v2 candidate、versioned loader 与 constrained staging CLI，详见 [basic-deterministic-candidate.md](./basic-deterministic-candidate.md)。完整 v2 normal path 不依赖 Hermes、SearXNG 或本地模型；P1-6C 只保留 `legacy collection compatibility`，不供新 CLI、AI 顾问或报告能力使用。本节后续 P1-6A/B/C/D 描述保留既有 v1 历史与兼容边界，不得被解释为 catalog 已接入 v1 runner。
+
 P1-6A 提供 [basic-country-audit-contract.md](./basic-country-audit-contract.md) 中机器可读的 TypeScript 审计契约和确定性离线 fixtures。离线 fixtures 不调用也不 mock Windows `llama.cpp`；运行时或模型失败处理属于 P1-6C。冲突值绝不自动选择，未解决冲突必须保留并阻断人工审核就绪状态。以下材料均为不可信输入并阻断就绪：仅用于发现的搜索材料、`UNVERIFIED`、访问受限或访问状态未知的来源，以及疑似或确认的 prompt injection。审计契约中的 `sourceUrl` 完整表示字段存在；非 `null` 值必须为 HTTP(S) URL，该字段可为 `null`，但 `source` 必须包含字面量 `sourceUrl null` 说明无链接原因。
 
 P1-6D 只在内存中编排和验证 P1-6A/B/C 既有边界，不创建 raw cache、真实 staging、manifest、canonical、Prisma、覆盖或发布动作。Normal 在 P1-6B runner 后必须以 source/fact 快照和显式 checks/risks 完成不依赖模型草稿的 preflight，任何来源风险或 blocker 均在 P1-6C bridge/model 前停止。它不能替代本节的采集、审核或人工发布闸门；其四文件审计映射仅可用于离线验证，任何冲突修正均须新 run，不能改写旧包。
@@ -53,10 +57,10 @@ P1-6D 只在内存中编排和验证 P1-6A/B/C 既有边界，不创建 raw cach
 
 所有研究工作先保存在 canonical country seed 之外的按国家和批次隔离的暂存区。路径中的 `<ISO2>` 是 ISO 3166-1 alpha-2 国家码，`<country>` 是与 canonical data 目录一致的国家目录名，`<runId>` 是该次采集的稳定运行标识。每个产物必须可通过来源登记关联到同一批次：
 
-1. **raw cache**：`.cache/basic-country/<ISO2>/<runId>/raw/`，存放确定性采集器、浏览器或提取工具获取的原始响应、文件或页面快照；它是本地专用目录，记录获取方式与时间，且**永不提交**。
+1. **raw cache**：v1 compatibility 使用 `.cache/basic-country/<ISO2>/<runId>/raw/`；v2 reviewed catalog capture 只使用 `.cache/basic-country/<ISO2>/<runId>/raw-v2/`。两个 namespace 不互相复用，均存放原始响应、文件或页面快照，记录获取方式与时间，且**永不提交**。v2 HTML/PDF 可由 Documents 的 generic executor capture，并只能通过与 manifest 精确绑定的人工 evidence plan 晋升；raw bytes 本身从不被自动解析。
 2. **source register**：`data/staging/<country>/<runId>/source-register.json`，为每个 `sourceId` 保留来源身份、原始 URL、检索时间、已知时的发布时间、内容 SHA-256、证据定位符、来源族、许可或访问限制与可信度。
 3. **extracted facts**：`data/staging/<country>/<runId>/extracted-facts.json`，完整覆盖固定 country/market overview 路径及草稿中每个关键指标的四个子路径，将每个路径映射到一个或多个 `sourceId`，并逐项保存精确原始值、与草稿深度一致的 candidate 标准化值、适用的单位和年份，以及证据定位符；同时记录提取方法与不确定性说明。
-4. **bilingual draft**：`data/staging/<country>/<runId>/market-overview.draft.json`，由本地模型或人工基于 extracted facts 形成 schema-constrained `{ zh, en }` 草稿，所有记录保持 `draft` 且 `aiUsable = false`。
+4. **bilingual draft**：`data/staging/<country>/<runId>/market-overview.draft.json`，由 `DATA-BASIC-DETERMINISTIC-1` 的 model-free assembler 基于完整 reviewed material 形成 schema-constrained `{ zh, en }` 草稿；所有记录保持 `draft` 且 `aiUsable = false`。v2 normal path 不调用模型。
 5. **review report**：`data/staging/<country>/<runId>/review-report.json`，记录审核结论、待解决冲突、缺失字段、来源抽检、注入风险、发布建议以及人工决定。
 
 人工批准后，canonical data 与同一 `<runId>` 的非 raw 审计包必须一并提交：`data/staging/<country>/<runId>/` 必须包含 `source-register.json`、`extracted-facts.json`、`market-overview.draft.json` 与 `review-report.json`。该已提交审计包不可变；任何修正必须创建新的 `<runId>`，不得改写已批准批次。
@@ -74,6 +78,8 @@ P1-6D 只在内存中编排和验证 P1-6A/B/C 既有边界，不创建 raw cach
 P1-5 只接受当前已登记的地区和行业/技术标签枚举。未登记值会阻断校验，必须通过单独、经批准的数据模型变更处理，绝不得被强制映射到相近枚举。P1-5 同时校验国家代码为两个大写字母；由于当前模型没有完整 ISO 注册表，实际 ISO 成员资格仍须由来源和人工审核确认。
 
 暂存区、`collection-manifest.json` 和 raw cache 不是产品数据，不能被 seed 记录、C 端响应、覆盖计数或 AI 检索使用。
+
+`pnpm candidate:basic-country -- .cache/basic-country/<ISO2>/<runId>/candidate-config.json` 只在 candidate 通过全部八个 stage、v2 validation、零 blocker 与 `readyForHumanReview` 后，原子写入上述四文件。blocked/error 不写 staging final directory；成功也不创建 canonical country directory 或 `collection-manifest.json`。该命令结束后必须停在人工审核，不得把“written”解释为批准或发布。
 
 ## 5. 审核与发布闸门
 
@@ -105,7 +111,7 @@ Basic 的 `published` 仅代表可展示，不代表可检索：所有 Basic 记
 - [ ] `market-overview.json` 是唯一对象记录，达到 `PARTIAL` 或 `COMPLETE`；其余九个模块均为 `BUILDING`、`dataCount = 0`，且没有 `published` 记录。
 - [ ] `coverageLevel` 经既有规则派生为恰好 `BASIC`，未手工覆盖；交付不满足 `STANDARD` 判定，`BUILDING` 模块没有虚构记录。
 - [ ] `market-overview.json` 具备 `source`、`sourceUrl`、`collectedAt`、`updatedAt`、`credibility`、`reviewStatus`、`aiUsable`、`countryCode`、`industryTags`、`techTags`；标签仅使用已登记枚举，仅无适用标签时为空；`sourceUrl` 为 HTTP(S) URL 或 `null`，为 `null` 时 `source` 包含字面量 `sourceUrl null`；`aiUsable = false`。
-- [ ] 已提交的 `data/staging/<country>/<runId>/` 包含 source register、extracted facts、bilingual draft 和 review report；raw cache 保持本地且未提交。`source-register.json` 保留来源身份、原始 URL、检索时间、已知发布时间、内容 SHA-256、证据定位符和可信度；`extracted-facts.json` 为每个 canonical 字段路径保留 source ID、精确原始值、标准化值、适用单位/年份和证据定位符。
+- [ ] 已提交的 `data/staging/<country>/<runId>/` 包含 source register、extracted facts、bilingual draft 和 review report；v1 `raw/` 与 v2 `raw-v2/` cache 都保持本地且未提交、不能互相复用。`source-register.json` 保留来源身份、原始 URL、检索时间、已知发布时间、内容 SHA-256、证据定位符和可信度；`extracted-facts.json` 为每个 canonical 字段路径保留 source ID、精确原始值、标准化值、适用单位/年份和证据定位符。
 - [ ] 审计事实覆盖全部 20 个静态必需路径及每个 `keyIndicators[i]` 的四个子路径；market overview candidate normalized value 与草稿深度一致，country candidate 有 evidence，且每个 evidence 来源至少有一条 passed source check。
 - [ ] readiness 配对符合单向安全约束：有 blocker 仅允许 `blocked/do-not-publish`；无 blocker 允许 ready/request 或保守 blocked/do-not-publish，拒绝交叉配对。
 - [ ] `data/<country>/collection-manifest.json` 以 `activeRunId` 和 `mappingVersion` 指向已提交审计包，且仅作为非导入审计元数据。
@@ -114,7 +120,7 @@ Basic 的 `published` 仅代表可展示，不代表可检索：所有 Basic 记
 - [ ] 全部 Basic 记录为 `aiUsable = false`，没有知识片段或 AI 检索入口的数据依赖。
 - [ ] 仓库校验和代表性 Web 检查通过，`BUILDING` 模块显示占位且不报错。
 
-Basic 国家至少每六个月复核一次。复核须重新检查来源可访问性、关键指标年份、可再生能源目标、元字段和模块状态，并在 review report 中记录结论；升级至 `STANDARD` 或 `COMPLETE` 仍由人工决定。
+Basic 国家至少每六个月复核一次。复核须重新检查来源可访问性、关键指标年份、可再生能源目标、元字段和模块状态，并在 review report 中记录结论；升级至 `STANDARD` 或 `COMPLETE` 仍须以单独、经人工批准的升级任务执行。
 
 ## 8. 试点顺序与人工确认
 

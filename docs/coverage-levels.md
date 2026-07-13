@@ -10,7 +10,7 @@
 统一数据模型下，所有国家共用同一套 10 个模块与页面结构，差异只体现在「数据深度」。
 覆盖等级是对「数据深度」的标准化分级，使得：
 
-- 产品可以从统一的 Basic 路径复制到 30-50 国，未建设的模块**显示占位而非报错**；
+- 产品可以通过国家中立模板零成本复制到 30-50 国，未建设的模块**显示占位而非报错**；
 - 用户对每个国家的数据完备度有明确预期；
 - 运营侧有清晰的建设目标（从 BASIC → STANDARD → COMPLETE）。
 
@@ -90,13 +90,13 @@
 
 ## 6. 运营建设路径（参考）
 
+所有国家（包括 `ID`）的首次真实数据交付必须恰好为 `BASIC`。`STANDARD` 与 `COMPLETE` 保留为通用等级，只能在该国 Basic 验收后，通过单独、经人工批准的升级任务启动。
+
 | 阶段 | 目标等级 | 建设重点 |
 |------|----------|----------|
 | 入库 | BASIC | 填充 `market-overview` 核心字段与国家元信息 |
 | 决策要素 | STANDARD | 补齐 policy / risk / opportunities |
 | 深度覆盖 | COMPLETE | 补齐 projects / partners / chinese-companies / entry-strategy / reports，并沉淀 ai-advisor 知识片段 |
-
-> 所有选定国家（包括印尼 `ID`）均先通过 `DATA-BASIC-<ISO2>` 任务卡达到 `BASIC`；印尼使用 `DATA-BASIC-ID`。当前没有国家被指定为 `STANDARD` 或 `COMPLETE`，这些等级仅可通过单独、经人工批准的升级任务取得。
 
 ---
 

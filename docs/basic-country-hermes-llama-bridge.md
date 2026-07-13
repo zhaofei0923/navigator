@@ -2,6 +2,8 @@
 
 > 本文件是 P1-6C 的规范性运行时边界。它补充 [basic-country-collection.md](./basic-country-collection.md)、[basic-country-audit-contract.md](./basic-country-audit-contract.md) 与 [basic-country-source-adapters.md](./basic-country-source-adapters.md)，不新增 canonical 数据模型字段、审核状态、AI 检索范围或第五个 committed audit artifact。
 
+> 状态：`legacy collection compatibility`。本 bridge 只保留既有 v1 collection 兼容行为；新的 `candidate:basic-country` CLI、AI 顾问和报告能力均不调用 Hermes discovery、llama transport 或本 bridge。
+
 ## 1. 目标与非目标
 
 P1-6C 在 P1-6A/B 之间增加两个受控桥接层：
@@ -200,4 +202,4 @@ P1-6C 单元测试必须使用 injected fakes/fetch 和 fake timers，并把 glo
 
 测试至少覆盖 discovery exact parsing/timeout/redaction、search snippet 隔离、原始 JSON pointer 与 SHA 校验、source policy、冲突/不可信处理、base path collision、模型请求 schema、loopback policy、body/time limits、所有 model failure 类别、draft lock、双语降级、facts grounding、公共导出和 canonical/import/AI 隔离。
 
-P1-6D 负责把 P1-6A/B/C 内存产物组装为离线四文件 audit bundle，生成保守 review report，并验证 normal/missing/conflict/untrusted 四条完整路径。P1-6D 仍不得自动发布或选择冲突值。
+P1-6D 保留既有 v1 离线四文件兼容验证。新的生产 v2 candidate 路径由 [basic-deterministic-candidate.md](./basic-deterministic-candidate.md) 定义并保持 model-free；它不复用本 bridge，仍不得自动发布或选择冲突值。

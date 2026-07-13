@@ -4,18 +4,21 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build:basic-candidate-native": "node scripts/build-basic-candidate-native.mjs",
     "lint": "tsc --project tsconfig.json --noEmit --pretty false",
     "prisma": "prisma",
     "prisma:validate": "DATABASE_URL=${DATABASE_URL:-postgresql://navigator:navigator@localhost:5432/navigator} prisma validate --schema prisma/schema.prisma",
-    "candidate:basic-country": "node --experimental-transform-types --experimental-loader ../../scripts/node-ts-source-loader.mjs src/collection/basic-country-candidate-cli.ts",
-    "preflight:basic-activation": "node --experimental-transform-types --experimental-loader ../../scripts/node-ts-source-loader.mjs src/seed/basic-country-activation-preflight-cli.ts",
+    "precandidate:basic-country": "pnpm run build:basic-candidate-native",
+    "candidate:basic-country": "node src/cli/candidate-basic-country.ts",
     "seed:indonesia": "node src/seed/indonesia-seed.ts",
     "typecheck": "tsc --project tsconfig.json --noEmit --pretty false",
+    "pretest": "pnpm run build:basic-candidate-native",
     "test": "vitest run"
   },
   "dependencies": {
     "@navigator/shared-types": "workspace:*",
-    "@prisma/client": "^6.19.3"
+    "@prisma/client": "^6.19.3",
+    "csv-parse": "7.0.1"
   },
   "devDependencies": {
     "prisma": "^6.19.3"

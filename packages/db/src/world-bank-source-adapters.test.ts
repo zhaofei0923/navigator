@@ -7,6 +7,9 @@ import { describe, expect, test } from "vitest";
 import { worldBankCountryAdapter } from "./collection/adapters/world-bank-country.js";
 import { WORLD_BANK_CORE_INDICATOR_ADAPTERS } from "./collection/adapters/world-bank-indicators.js";
 import type { BasicDeterministicSourceAdapter } from "./collection/basic-source-adapter-contracts.js";
+import { resolveBasicSourceAdapter } from "./collection/basic-source-adapter-registry.js";
+import { parseBasicSourceCatalog } from "./collection/basic-source-catalog.js";
+import { createBasicSourceExecutionPlan } from "./collection/basic-source-request-materializer.js";
 
 const COUNTRY_SHA256 =
   "7ddd064eb77613024ad050f7b885a61c239c01692ec59ef4b352ed100f2b7525";
@@ -155,6 +158,44 @@ describe("World Bank adapter documentation", () => {
     expect(plan).toContain(
       "A synthetic null `value` must emit raw and normalized `null` without guessing.",
     );
+  });
+});
+
+describe("World Bank catalog bindings", () => {
+  test("preserves requests and keeps fixture observations inside catalog field paths", () => {
+    const catalogPath = fileURLToPath(
+      new URL("../catalog/basic-source-catalog.json", import.meta.url),
+    );
+    const catalogValue: unknown = JSON.parse(readFileSync(catalogPath, "utf8"));
+    const catalog = parseBasicSourceCatalog(catalogValue);
+    const plan = createBasicSourceExecutionPlan({
+      catalog,
+      countryCode: "VN",
+      sourceIds: [
+        "world-bank-country",
+        "world-bank-gdp",
+        "world-bank-gdp-growth",
+        "world-bank-population",
+      ],
+    });
+    const fixtures = new Map<string, Uint8Array>([
+      ["world-bank-country", COUNTRY_FIXTURE.body],
+      ...INDICATOR_CASES.map(({ indicator, fixture }) => [
+        adapterFor(indicator).sourceId,
+        fixture.body,
+      ] as const),
+    ]);
+
+    for (const entry of plan.sources) {
+      const adapter = resolveBasicSourceAdapter(entry, "VN");
+      expect(entry.request).toEqual(adapter.request("VN"));
+      const body = fixtures.get(entry.source.sourceId);
+      if (body === undefined) throw new Error("catalog fixture is missing");
+      const observations = adapter.extract(adapterInput(body)).observations;
+      expect(observations.length).toBeGreaterThan(0);
+      expect(observations.every(({ fieldPath }) =>
+        entry.source.fieldPaths.includes(fieldPath))).toBe(true);
+    }
   });
 });
 

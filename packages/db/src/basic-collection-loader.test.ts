@@ -8,6 +8,9 @@ import { afterEach, describe, expect, test } from "vitest";
 
 import type { BasicCollectionAuditBundle } from "./collection/basic-collection-contracts.js";
 import {
+  BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION,
+} from "./collection/basic-collection-v2-contracts.js";
+import {
   type BasicCollectionFixtureScenario,
   readBasicCollectionAuditFixture,
 } from "./basic-collection-test-fixture.js";
@@ -156,6 +159,24 @@ describe("Basic collection audit loader", () => {
         fixture.runId,
       ),
     ).toThrow("sourceRegister.runId must match runId");
+  });
+
+  test("keeps the legacy loader exact and rejects v2 artifact keys", async () => {
+    const fixture = writeFixtureStaging("normal");
+    writeJson(join(fixture.auditDirectory, "source-register.json"), {
+      ...fixture.bundle.sourceRegister,
+      schemaVersion: BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION,
+      catalogVersion: "catalog-v1",
+      catalogSha256:
+        "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+    });
+    const loadBundle = await importBasicCollectionAuditBundleLoader();
+
+    expect(() => loadBundle(
+      fixture.repoRoot,
+      fixture.countryDirectory,
+      fixture.runId,
+    )).toThrow("sourceRegister must have exactly schemaVersion, runId, countryCode, and sources own keys");
   });
 });
 

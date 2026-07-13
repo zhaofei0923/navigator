@@ -319,6 +319,33 @@ describe("Basic immutable raw capture", () => {
     });
   });
 
+  test("does not reuse a raw-v2 namespace as the v1 cache", async () => {
+    const repoRoot = createRepoRoot();
+    await captureBasicRawSource(input(repoRoot), transport(BODY));
+    const v2Directory = join(
+      repoRoot,
+      ".cache",
+      "basic-country",
+      "VN",
+      "run-20260710",
+      "raw-v2",
+    );
+    renameSync(rawDirectory(repoRoot), v2Directory);
+    let calls = 0;
+
+    const result = await captureBasicRawSource(input(repoRoot), {
+      async execute() {
+        calls += 1;
+        return response(BODY);
+      },
+    });
+
+    expect(calls).toBe(1);
+    expect(result.reused).toBe(false);
+    expect(existsSync(v2Directory)).toBe(true);
+    expect(existsSync(rawDirectory(repoRoot))).toBe(true);
+  });
+
   test("rejects a one-byte cache payload tamper before transport", async () => {
     const repoRoot = createRepoRoot();
     await captureBasicRawSource(input(repoRoot), transport(BODY));

@@ -32,7 +32,7 @@ graph LR
 | 阶段 | 目标 | 主要依据文档 | 关口 |
 |------|------|--------------|------|
 | P0 地基 | 可运行骨架 + 共享枚举/双语工具 + 环境/CI/文档守卫 | env-config、i18n、testing、data-schema、product-brief | — |
-| P1 数据层 | 数据模型落地 + 数据治理校验 + 通用 Basic 采集/发布路径 + 覆盖判定 | data-schema、coverage-levels、data-governance、basic-country-collection、country-rollout | ⚠️ |
+| P1 数据层 | 数据模型落地 + 数据治理校验 + Basic 首次交付 + 覆盖判定 | data-schema、coverage-levels、data-governance、indonesia-seed、country-rollout | ⚠️ |
 | P2 Web 展示 | 首页 / 国家 / AI 咨询 / 报告四板块 + i18n | product-brief、api-contract、coverage-levels、i18n | — |
 | P3 AI 顾问 | RAG 管道 + 问答接口（占位边界） | ai-advisor | ⚠️ |
 | P4 权限/会员/留资 | 门控 + 报告下载 + 留资 | auth-membership | ⚠️ |
@@ -71,25 +71,27 @@ graph LR
 ### P1 — 数据层 ⚠️
 
 > P1-1 至 P1-3 是 P2 Web 展示的技术前置；P1-4 至 P1-6 定义国家扩展计划、Basic 模板校验和采集管道，不新增数据模型，最终国家清单、顺序、发布和升级均须人工确认。
+>
+> 所有国家（包括 `ID`）的首次真实数据交付必须恰好为 `BASIC`。`STANDARD` 与 `COMPLETE` 只可在该国 Basic 验收后，通过单独、经人工批准的升级任务启动。
 
 #### P1-1 Prisma schema（数据模型落地）⚠️
 - 目标：按 [data-schema.md](./data-schema.md) 建 `packages/db` schema：`Country`、`ModuleCoverage`、10 模块、`KnowledgeChunk`（pgvector）、`Lead`，枚举与元字段齐全。
 - 验收：schema 与 data-schema 完全一致；迁移可执行；`shared-types` 与 schema 枚举一致；报告 `accessLevel`、`Lead.contact` 按 data-schema §6 加密存储、知识片段双语向量字段齐全；不得新增评分/国家计划持久化字段，若需新增字段必须先改 `data-schema.md`。
 - 人工确认：**是（修改统一数据模型，AGENTS.md §11）** —— PR 标注。
 
-#### P1-2 印尼深度 seed 与数据治理校验（历史，已交付）
-- 历史目标：印尼深度 seed 与数据治理校验。
-- 状态：已由 `DATA-BASIC-ID` 取代；该迁移将印尼纳入所有国家通用的 Basic-first 路径。历史记录保留，不再作为当前数据建设或发布依据。
-- 当前权威：按 [basic-country-collection.md](./basic-country-collection.md) 的通用 Basic 采集、审计与发布路径执行。
+#### P1-2 历史印尼 fixture 与数据治理校验
+- 目标：保留 `data/indonesia/` 的 legacy synthetic regression fixture 覆盖，并实现 [data-governance.md](./data-governance.md) 数据质量校验；它不是当前国家 rollout 样板或真实数据。
+- 验收：fixture 回归校验通过；缺元字段不得入库；`draft` / `pending` / `UNVERIFIED` 反例不进入 C 端展示、覆盖判定或 AI 检索；真实 `ID` 数据仅可由未来 `DATA-BASIC-ID` 依 Basic 验收另行交付。
+- 人工确认：否（不改结构；改结构须回 P1-1）。
 
 #### P1-3 覆盖等级判定逻辑
 - 目标：实现 [coverage-levels.md §3](./coverage-levels.md) 的模块级 + 国家级判定，计数口径按 C 端可展示数据（`published` 且 `credibility != UNVERIFIED`）。
-- 验收：阈值边界单测覆盖；`draft` / `pending` / `UNVERIFIED` 不计入覆盖判定计数；对象型模块按核心字段填充率判定；`ai-advisor` 按可用知识片段判定；通用 Standard/Complete 阈值保留供未来单独升级任务使用。
+- 验收：阈值边界单测覆盖；`draft` / `pending` / `UNVERIFIED` 不计入覆盖判定计数；对象型模块按核心字段填充率判定；`ai-advisor` 按可用知识片段判定；历史 synthetic fixture 仅作为回归输入，不定义真实国家 rollout 状态。
 - 人工确认：否。
 
-#### P1-4 首批国家建设计划与复制模板
-- 目标：按 [country-rollout.md](./country-rollout.md) 与 [basic-country-collection.md](./basic-country-collection.md) 整理国家建设计划、覆盖升级节奏与通用 Basic 任务卡模板规则，不落库。
-- 验收：所有国家从 Basic 进入，未来 Complete / Standard 候选与人工确认项清晰；不得把国家优先级、覆盖升级结论、评分结果写入持久化字段；后续新增国家 seed 必须独立任务卡、独立验收。
+#### P1-4 首批国家建设计划与中立模板
+- 目标：按 [country-rollout.md](./country-rollout.md)、[basic-country-collection.md](./basic-country-collection.md) 与 [indonesia-seed.md](./indonesia-seed.md) 整理 Basic 首次交付、覆盖升级节奏与国家中立 seed 模板规则，不落库。
+- 验收：所有候选国家先交付 Basic，Standard / Complete 仅作为后续独立人工批准升级；不得把国家优先级、覆盖升级结论、评分结果写入持久化字段；后续新增国家 seed 必须独立任务卡、独立验收。
 - 人工确认：否（仅文档候选；最终 30–50 国家清单、优先级与升级结论须人工确认）。
 
 #### P1-5 Basic 国家模板与通用校验器
@@ -117,15 +119,42 @@ graph LR
 - 验收：仅 `normal` 可调用 injected P1-6B runner；runner 返回后先以 source/fact 快照与显式 `sourceChecks`/`injectionRisks` 完成不依赖 draft 的 preflight，任何 failed check、injection risk、missing/conflict/untrusted 或不可信来源均须在 injected P1-6C bridge/model 前停止。成功结果须为 `blockers = []`、`readyForHumanReview = true` 的固定四文件递归冻结映射。`missing`、`conflict`、`untrusted` union 不含 runner/bridge/model，runtime 拒绝这些额外 own keys，两个 model-capable stages 均为 `skipped`，并分别且仅有 `MISSING_REQUIRED_FACT`、`UNRESOLVED_CONFLICT`、`UNTRUSTED_INPUT`；冲突处置必须新 run。DB 与 Web 各自在本包测试边界内证明 import/coverage/AI eligibility 和 country service/route 隔离，DB 测试不得导入 Web，也不得发明 sentinel seam。`boundaryVerdict` 的 `KnowledgeChunk = 0`、`aiUsable = true` 记录数 0、`aiEligibleKnowledgeIds = []` 仅为 fixed negative-only attestation，不是 artifact/AI payload，不得声称运行当前不存在的 RAG。生产 API 不 I/O、不返回 canonical/Prisma/coverage/AI/publish payload；测试不得真实 fetch、Hermes、llama transport 或 child process。
 - 人工确认：否（若引入第三方依赖或触及既有 AGENTS.md 人工闸门，须单独人工确认）。
 
+#### DATA-BASIC-CATALOG-1 Versioned source catalog（已完成）
+- 目标：按 [basic-source-catalog.md](./basic-source-catalog.md) 与已批准的 [Basic 来源边界设计](./superpowers/specs/2026-07-12-basic-source-boundary-design.md) 建立 exact、version-controlled source catalog、country identifier mapping、结构化 GET materializer 和静态 adapter registry；首版只绑定四个既有 World Bank open JSON adapters。
+- 验收：catalog parser 从 `unknown` 重建、递归冻结并生成 canonical `catalogSha256`；unsafe shape、资源超限、mapping/source/field drift、manual executor identity drift 与 optional-credentialed selection 全部 fail closed；四个 World Bank 请求和离线 fixture observations 与既有 v1 行为一致；不修改 v1 request/capture/audit、公开 exports、Prisma、canonical data 或 AI 边界，测试不发起网络请求。
+- 测试：catalog/parser/materializer/registry focused tests、World Bank fixture 回归、P1-6B runner 回归，以及仓库 `lint` / `typecheck` / `test` / forced Turbo gates。
+- 人工确认：否（来源边界设计已由项目所有者批准；本卡不新增依赖，不修改统一数据模型、AI Prompt/检索边界、权限或计费）。
+
+#### DATA-BASIC-FORMATS-1 Multi-format transport and raw capture v2（已完成）
+- 目标：按 [basic-source-formats.md](./basic-source-formats.md) 和已批准的 [Basic 来源边界设计](./superpowers/specs/2026-07-12-basic-source-boundary-design.md) 增加 package-private 的 exact v2 contracts、JSON/CSV/HTML/PDF transport、catalog-bound immutable `raw-v2` capture/cache，以及 strict CSV parser/locator。
+- 验收：`basic-country-raw-capture/v2` manifest 精确绑定 catalog version/digest 并保持 request list 顺序；四 MIME matrix、HTTPS/origin/query/redirect、10 MiB、hash、atomic publication、tamper/symlink/concurrency 和 v1/v2 namespace 隔离全部 fail closed；CSV fatal UTF-8、单 BOM、RFC 4180 quoting、row/column/header/cell/record limits 与 RFC 6901 locator 有 exact boundary tests；HTML/PDF 只 capture bytes/hash，不解析事实。
+- 测试：v1/v2 metadata、transport、capture 与 CSV focused tests，以及仓库 `lint` / `typecheck` / `test` / forced Turbo gates；测试不发起真实来源网络请求。
+- 人工确认：否（唯一新依赖 `csv-parse@7.0.1` 已由项目所有者批准；本卡不修改统一数据模型、AI Prompt/检索边界、权限、计费、canonical data 或 package root exports）。
+
+#### DATA-BASIC-DOCUMENTS-1 Document evidence and manual review（已完成）
+- 目标：按 [basic-country-document-evidence.md](./basic-country-document-evidence.md) 将 catalog-selected HTML/PDF source 通过唯一 generic executor 做 v2 raw capture，并以 exact structured/manual reviews 和 capture-hash-bound document plans 物化 manual preliminary facts、source records、checks、risks 与 editorial-evidence intermediates。
+- 验收：`basic-country-audit/v2` preliminary source register/extracted facts 绑定同一 catalog provenance；structured/manual source sets 非空、唯一、有序、互斥且完整覆盖；每个 manual source 的 plan/capture/review 精确绑定 run/country/catalog/adapter/request/response/hash；HTML/PDF locator 与 source ownership table fail closed；tuple conflict 不自动选择；failed checks、`UNVERIFIED` 与 injection risk 均被保留给后续 preflight。禁止 HTML/PDF parsing、OCR、模型、翻译、editorial final fact、draft、canonical/DB 写入、发布或 AI 资格。
+- 测试：document plan/materialization、review parser、v2 fact materializer 和 source-plan runner focused tests，以及仓库 `lint` / `typecheck` / `test` / forced Turbo gates；测试不发起真实来源网络请求。
+- 完成边界：本卡自身不构成可发布国家或完整 v2 candidate package。`DATA-BASIC-EDITORIAL-1` 已完成双语 editorial input 与 reviewed materialization，`DATA-BASIC-DETERMINISTIC-1` 已完成后续 material 合并、draft 组装与 model-free completeness/trust preflight；任何真实国家 candidate 之后仍须项目所有者审核和既有发布闸门。
+- 人工确认：否（不修改统一数据模型、AI Prompt/检索边界、权限、计费、canonical data 或 package root exports）。
+
+#### DATA-BASIC-EDITORIAL-1 Bilingual editorial evidence（已完成）
+- 目标：已从 Documents 保留的 structured/document editorial evidence 构建 exact 双语 editorial input，并完成 reviewed-source union、primary source、`country.name` controlled enrichment、deterministic/manual collision rejection 和 derived audit metadata。详见 [basic-country-editorial-input.md](./basic-country-editorial-input.md)。
+- 验收：输入/证据/捕获 provenance 精确绑定；结果递归冻结、输入顺序无关；无 deterministic source 的 structured review、capture 缺少 document result、以及 deterministic/manual source-ID overlap 均 fail closed；不调用网络、模型、Hermes、搜索、环境、socket、child process、数据库或 draft assembler。
+- 完成边界：只产生 package-private in-memory reviewed materialization，不产生 draft、四文件 candidate、canonical 数据、发布或 AI 资格。
+- 人工确认：否（未修改数据模型、发布或 AI 边界）。
+
+#### DATA-BASIC-DETERMINISTIC-1 Candidate assembly and preflight（已完成）
+- 目标：仅在结构化、document 与 editorial material 全部通过 exact binding 后，确定性组装 draft 和完整 `basic-country-audit/v2` candidate，并保守阻断 missing/conflict/untrusted/failed/risk 输入。
+- 验收：`runBasicDeterministicCandidate()` 固定八个 stage，只有 valid、`readyForHumanReview`、零 blocker 的结果可产生四文件 artifacts；versioned loader 支持纯 v1/纯 v2 并拒绝混合。`candidate:basic-country` 从 catalog-bound `raw-v2`、exact reviews/document/editorial inputs 进行 production composition，在 Linux native no-replace writer 中只写 `data/staging/<countryDirectory>/<runId>/` 的四文件；blocked/error 不写 final staging，且无 manifest、canonical、Prisma、coverage、KnowledgeChunk、AI index 或发布动作。公开 surface 只增加 approved core/loader、schema/stage constants 和 consumer result/bundle/artifact types，v1 exports 保持不变。
+- 测试：synthetic ID-shaped fixture 和 Linux `/tmp` full composition integration 覆盖 20 个静态路径、完整指标组、cache-only rerun、object-key byte identity、unsorted-array rejection、blocked/ready native writer 与 side-effect boundary；通过 clean native build、focused tests、仓库 lint/typecheck/test 和 forced Turbo gates。该 fixture 不包含或声明任何真实印度尼西亚采集事实。
+- 完成边界：本卡只完成可供人工审核的 `draft`、`aiUsable = false` staging candidate 能力；未执行真实 `ID` 数据采集、canonical mapping、人工批准或发布。
+- 人工确认：否（candidate 仍为 `draft`、`aiUsable = false`；真实国家启动、canonical 发布和覆盖升级另经人工审核）。
+
 #### DATA-BASIC-<ISO2> 单国 Basic 数据任务卡
 - 目标：每张任务卡只采集一个 ISO 3166-1 alpha-2 国家，使用固定 10 模块模型完成 Basic 国家骨架和市场基础画像。
-- 验收：一国一任务卡、一分支、一审核周期，且仅合并一次到 `main`；合并后的 `main` 验证通过后，仅推送一次到 `origin/main`。数据先为 `draft`，仅在人工审核后发布；Basic 数据保持 `aiUsable = false` 且不产生知识片段；通过仓库校验和代表性 Web 检查，确认基础画像正常渲染、`BUILDING` 模块显示占位。
+- 验收：一国一任务卡、一分支、一审核周期，且仅合并一次到 `main`；合并后的 `main` 验证通过后，仅推送一次到 `origin/main`。数据先为 `draft`，仅在人工审核后发布；首次真实交付恰好为 `BASIC`，`market-overview` 外九个模块均为 `BUILDING`；Basic 数据保持 `aiUsable = false` 且不产生知识片段；通过仓库校验和代表性 Web 检查，确认基础画像正常渲染、`BUILDING` 模块显示占位。
 - 人工确认：是（国家启动、发布、最终 30–50 国清单、国家顺序和覆盖升级均由人工决定）。
-
-#### DATA-BASIC-ID 印尼 Basic 原子迁移
-- 目标：将印尼纳入通用 Basic-first 路径，使用 `DATA-BASIC-ID` 原子替换历史深度样板，并保持固定数据模型、未来 Standard/Complete 规则和 AI 检索边界不变。
-- 验收：印尼通过通用 Basic 采集、审计和发布路径达到 `BASIC`；其余九个模块保持 `BUILDING`；当前没有国家被指定为 `STANDARD` 或 `COMPLETE`；静态仓库、导入计划与 Web 行为在同一次迁移中一致。
-- 人工确认：是（国家发布与原子迁移审核；不得执行外部数据库破坏性清理）。
 
 ### P2 — Web 展示
 
@@ -141,7 +170,7 @@ graph LR
 
 #### P2-3 国家详情（十模块骨架）
 - 目标：`GET /countries/:code` + `/modules/:moduleKey`，详情页渲染十模块；`BUILDING` 显示占位不报错。
-- 验收：国家十模块正常渲染；`BUILDING` 模块占位；`textMode` 与 `_i18nFallback` 正确；E2E 通过。
+- 验收：以任一 Basic 国家十模块骨架渲染：`market-overview` 正常显示，其余九个 `BUILDING` 模块显示占位；`textMode` 与 `_i18nFallback` 正确；E2E 通过。
 - 人工确认：否。
 
 #### P2-4 首页 / AI 咨询 / 报告入口
