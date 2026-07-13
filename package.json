@@ -4,6 +4,7 @@
   "private": true,
   "packageManager": "pnpm@11.10.0",
   "scripts": {
+    "candidate:basic-country": "pnpm --filter @navigator/db candidate:basic-country",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "vitest run tests && turbo run test",
