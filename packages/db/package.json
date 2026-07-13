@@ -4,12 +4,15 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build:basic-candidate-native": "node scripts/build-basic-candidate-native.mjs",
     "lint": "tsc --project tsconfig.json --noEmit --pretty false",
     "prisma": "prisma",
     "prisma:validate": "DATABASE_URL=${DATABASE_URL:-postgresql://navigator:navigator@localhost:5432/navigator} prisma validate --schema prisma/schema.prisma",
+    "precandidate:basic-country": "pnpm run build:basic-candidate-native",
     "candidate:basic-country": "node src/cli/candidate-basic-country.ts",
     "seed:indonesia": "node src/seed/indonesia-seed.ts",
     "typecheck": "tsc --project tsconfig.json --noEmit --pretty false",
+    "pretest": "pnpm run build:basic-candidate-native",
     "test": "vitest run"
   },
   "dependencies": {
