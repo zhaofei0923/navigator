@@ -55,6 +55,9 @@ import type {
   BasicSourceFamily,
   BasicSourceRecord,
   BasicSourceRegister,
+  BasicCollectionAuditArtifactsV2,
+  BasicCollectionAuditBundleV2,
+  BasicDeterministicCandidateResult,
 } from "./index.js";
 
 // @ts-expect-error BasicHermesSourcedObservation is package-private.
@@ -116,6 +119,28 @@ type ParseResponseLeak = typeof import("./index.js")["parseResponse"];
 type ExtractContentLeak = typeof import("./index.js")["extractContent"];
 // @ts-expect-error BasicCollectionBridgeError is package-private.
 type BasicCollectionBridgeErrorLeak = typeof import("./index.js")["BasicCollectionBridgeError"];
+// @ts-expect-error BasicDeterministicCandidateInput is package-private.
+import type { BasicDeterministicCandidateInput } from "./index.js";
+// @ts-expect-error BasicDeterministicRunnerPort is package-private.
+import type { BasicDeterministicRunnerPort } from "./index.js";
+// @ts-expect-error BasicCollectionAuditAssemblyInputV2 is package-private.
+import type { BasicCollectionAuditAssemblyInputV2 } from "./index.js";
+// @ts-expect-error BasicCollectionAuditSerializedArtifactsV2 is package-private.
+import type { BasicCollectionAuditSerializedArtifactsV2 } from "./index.js";
+// @ts-expect-error BasicDeterministicMaterializationResultV2 is package-private.
+import type { BasicDeterministicMaterializationResultV2 } from "./index.js";
+// @ts-expect-error BasicCollectionAuditValidationResultV2 is package-private.
+import type { BasicCollectionAuditValidationResultV2 } from "./index.js";
+// @ts-expect-error BasicCollectionReviewReportV2 is package-private.
+import type { BasicCollectionReviewReportV2 } from "./index.js";
+// @ts-expect-error BasicDeterministicBoundaryVerdict is package-private.
+import type { BasicDeterministicBoundaryVerdict } from "./index.js";
+// @ts-expect-error BasicDeterministicCandidateStage is package-private.
+import type { BasicDeterministicCandidateStage } from "./index.js";
+// @ts-expect-error BasicDeterministicStageName is package-private.
+import type { BasicDeterministicStageName } from "./index.js";
+// @ts-expect-error BasicDeterministicStageOutcome is package-private.
+import type { BasicDeterministicStageOutcome } from "./index.js";
 
 import * as database from "./index.js";
 import { createBasicCollectionAuditFixture } from "./basic-collection-test-fixture.js";
@@ -133,7 +158,9 @@ import {
   BASIC_RAW_CAPTURE_SCHEMA_VERSION,
   BASIC_SOURCE_MAX_REDIRECTS,
   BASIC_COLLECTION_AUDIT_SCHEMA_VERSION,
+  BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION,
   BASIC_COLLECTION_BLOCKER_CODES,
+  BASIC_DETERMINISTIC_STAGE_NAMES,
   WORLD_BANK_CORE_INDICATOR_ADAPTERS,
   buildBasicCountryImportPlan,
   bridgeBasicMarketOverviewDraft,
@@ -142,7 +169,9 @@ import {
   createBasicLlamaCppDraftTransport,
   createBasicCountryBundle,
   loadBasicCollectionAuditBundle,
+  loadBasicCollectionAuditBundleVersioned,
   loadBasicCountryBundle,
+  runBasicDeterministicCandidate,
   runBasicDeterministicSourceAdapters,
   runBasicHermesDiscovery,
   promoteBasicHermesJsonEvidence,
@@ -176,6 +205,64 @@ describe("@navigator/db", () => {
       "UNRESOLVED_CONFLICT",
       "UNTRUSTED_INPUT",
     ]);
+  });
+
+  test("exports exactly the approved deterministic v2 runtime surface", () => {
+    expect(runBasicDeterministicCandidate).toBeTypeOf("function");
+    expect(loadBasicCollectionAuditBundleVersioned).toBeTypeOf("function");
+    expect(BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION).toBe(
+      "basic-country-audit/v2",
+    );
+    expect(BASIC_DETERMINISTIC_STAGE_NAMES).toEqual([
+      "input",
+      "runner",
+      "preflight",
+      "draft-assemble",
+      "audit-assemble",
+      "validate",
+      "artifacts",
+      "boundary",
+    ]);
+
+    const deterministicV2Exports = Object.keys(database).filter((name) =>
+      name === "BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION" ||
+      name === "BASIC_DETERMINISTIC_STAGE_NAMES" ||
+      name.includes("BasicDeterministicCandidate") ||
+      name.endsWith("Versioned"));
+    expect(deterministicV2Exports.sort()).toEqual([
+      "BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION",
+      "BASIC_DETERMINISTIC_STAGE_NAMES",
+      "loadBasicCollectionAuditBundleVersioned",
+      "runBasicDeterministicCandidate",
+    ]);
+  });
+
+  test("keeps deterministic v2 composition internals package-private", () => {
+    for (const internalName of [
+      "assembleBasicCollectionAuditBundleV2",
+      "assembleBasicMarketOverviewDraft",
+      "classifyBasicV2FieldPath",
+      "composeBasicCountryCandidate",
+      "createBasicCollectionAuditArtifactsV2",
+      "createBasicSourceExecutionPlan",
+      "loadBasicCandidateConfig",
+      "materializeBasicDocumentEvidence",
+      "materializeBasicReviewedRunV2",
+      "openBasicCandidateWorkspace",
+      "parseBasicCountryEditorialInput",
+      "parseBasicDocumentObservationPlan",
+      "parseBasicManualSourceReview",
+      "parseBasicSourceCatalog",
+      "parseBasicStructuredSourceReview",
+      "preflightBasicDeterministicCollection",
+      "runBasicCandidateProduction",
+      "runBasicSourceExecutionPlanV2",
+      "serializeBasicCollectionAuditArtifactsV2",
+      "validateBasicCollectionAuditBundleV2",
+      "writeBasicCandidateArtifacts",
+    ]) {
+      expect(database).not.toHaveProperty(internalName);
+    }
   });
 
   test("exports the reviewed deterministic source adapter API", () => {
@@ -265,6 +352,16 @@ describe("@navigator/db", () => {
     ] | null = null;
 
     expect(publicContractTypeWitness).toBeNull();
+  });
+
+  test("exports only the consumer-facing deterministic v2 contract types", () => {
+    const publicDeterministicV2TypeWitness: [
+      BasicCollectionAuditArtifactsV2,
+      BasicCollectionAuditBundleV2,
+      BasicDeterministicCandidateResult,
+    ] | null = null;
+
+    expect(publicDeterministicV2TypeWitness).toBeNull();
   });
 
   test("makes every reviewed source adapter contract type public", () => {

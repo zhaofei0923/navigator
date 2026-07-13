@@ -133,7 +133,7 @@ graph LR
 - 目标：按 [basic-country-document-evidence.md](./basic-country-document-evidence.md) 将 catalog-selected HTML/PDF source 通过唯一 generic executor 做 v2 raw capture，并以 exact structured/manual reviews 和 capture-hash-bound document plans 物化 manual preliminary facts、source records、checks、risks 与 editorial-evidence intermediates。
 - 验收：`basic-country-audit/v2` preliminary source register/extracted facts 绑定同一 catalog provenance；structured/manual source sets 非空、唯一、有序、互斥且完整覆盖；每个 manual source 的 plan/capture/review 精确绑定 run/country/catalog/adapter/request/response/hash；HTML/PDF locator 与 source ownership table fail closed；tuple conflict 不自动选择；failed checks、`UNVERIFIED` 与 injection risk 均被保留给后续 preflight。禁止 HTML/PDF parsing、OCR、模型、翻译、editorial final fact、draft、canonical/DB 写入、发布或 AI 资格。
 - 测试：document plan/materialization、review parser、v2 fact materializer 和 source-plan runner focused tests，以及仓库 `lint` / `typecheck` / `test` / forced Turbo gates；测试不发起真实来源网络请求。
-- 完成边界：本卡不构成可发布国家或完整 v2 candidate package。`DATA-BASIC-EDITORIAL-1` 已完成双语 editorial input 与 reviewed materialization；`DATA-BASIC-DETERMINISTIC-1` 仍需合并全部 material、组装 draft 与执行 model-free completeness/trust preflight；之后仍须项目所有者审核和既有发布闸门。
+- 完成边界：本卡自身不构成可发布国家或完整 v2 candidate package。`DATA-BASIC-EDITORIAL-1` 已完成双语 editorial input 与 reviewed materialization，`DATA-BASIC-DETERMINISTIC-1` 已完成后续 material 合并、draft 组装与 model-free completeness/trust preflight；任何真实国家 candidate 之后仍须项目所有者审核和既有发布闸门。
 - 人工确认：否（不修改统一数据模型、AI Prompt/检索边界、权限、计费、canonical data 或 package root exports）。
 
 #### DATA-BASIC-EDITORIAL-1 Bilingual editorial evidence（已完成）
@@ -142,9 +142,12 @@ graph LR
 - 完成边界：只产生 package-private in-memory reviewed materialization，不产生 draft、四文件 candidate、canonical 数据、发布或 AI 资格。
 - 人工确认：否（未修改数据模型、发布或 AI 边界）。
 
-#### DATA-BASIC-DETERMINISTIC-1 Candidate assembly and preflight（后续）
-- 目标：仅在结构化、document 与 editorial material 全部通过 exact binding 后，确定性组装 draft 和完整 v2 audit candidate，并保守阻断 missing/conflict/untrusted/failed/risk 输入。
-- 人工确认：否（candidate 仍为 `draft`、`aiUsable = false`；canonical 发布另经人工审核）。
+#### DATA-BASIC-DETERMINISTIC-1 Candidate assembly and preflight（已完成）
+- 目标：仅在结构化、document 与 editorial material 全部通过 exact binding 后，确定性组装 draft 和完整 `basic-country-audit/v2` candidate，并保守阻断 missing/conflict/untrusted/failed/risk 输入。
+- 验收：`runBasicDeterministicCandidate()` 固定八个 stage，只有 valid、`readyForHumanReview`、零 blocker 的结果可产生四文件 artifacts；versioned loader 支持纯 v1/纯 v2 并拒绝混合。`candidate:basic-country` 从 catalog-bound `raw-v2`、exact reviews/document/editorial inputs 进行 production composition，在 Linux native no-replace writer 中只写 `data/staging/<countryDirectory>/<runId>/` 的四文件；blocked/error 不写 final staging，且无 manifest、canonical、Prisma、coverage、KnowledgeChunk、AI index 或发布动作。公开 surface 只增加 approved core/loader、schema/stage constants 和 consumer result/bundle/artifact types，v1 exports 保持不变。
+- 测试：synthetic ID-shaped fixture 和 Linux `/tmp` full composition integration 覆盖 20 个静态路径、完整指标组、cache-only rerun、object-key byte identity、unsorted-array rejection、blocked/ready native writer 与 side-effect boundary；通过 clean native build、focused tests、仓库 lint/typecheck/test 和 forced Turbo gates。该 fixture 不包含或声明任何真实印度尼西亚采集事实。
+- 完成边界：本卡只完成可供人工审核的 `draft`、`aiUsable = false` staging candidate 能力；未执行真实 `ID` 数据采集、canonical mapping、人工批准或发布。
+- 人工确认：否（candidate 仍为 `draft`、`aiUsable = false`；真实国家启动、canonical 发布和覆盖升级另经人工审核）。
 
 #### DATA-BASIC-<ISO2> 单国 Basic 数据任务卡
 - 目标：每张任务卡只采集一个 ISO 3166-1 alpha-2 国家，使用固定 10 模块模型完成 Basic 国家骨架和市场基础画像。

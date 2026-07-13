@@ -12,6 +12,10 @@ export type BasicBoundedJsonPath = readonly (string | number)[];
 export type BasicBoundedArrayLimit = (
   path: BasicBoundedJsonPath,
 ) => number | undefined;
+export type BasicBoundedJsonBudgets = Readonly<{
+  maximumObjectProperties?: number;
+  maximumTotalNodes?: number;
+}>;
 
 export type BasicBoundedJsonSnapshot =
   | Readonly<{ valid: true; data: BasicCollectionJsonValue }>
@@ -24,14 +28,41 @@ export type BasicBoundedArrayEntriesSnapshot =
 export function snapshotBasicBoundedJsonValue(
   value: unknown,
   arrayLimit: BasicBoundedArrayLimit = () => undefined,
+  budgets: BasicBoundedJsonBudgets = {},
 ): BasicBoundedJsonSnapshot {
   try {
-    const data = snapshotAt(value, 0, [], new Set<object>(), arrayLimit);
+    const maximumObjectProperties = optionalBudget(
+      budgets.maximumObjectProperties,
+    );
+    const maximumTotalNodes = optionalBudget(budgets.maximumTotalNodes);
+    if (
+      maximumObjectProperties === INVALID ||
+      maximumTotalNodes === INVALID
+    ) return { valid: false };
+    const state: SnapshotBudgetState = {
+      maximumObjectProperties,
+      maximumTotalNodes,
+      totalNodes: 0,
+    };
+    const data = snapshotAt(
+      value,
+      0,
+      [],
+      new Set<object>(),
+      arrayLimit,
+      state,
+    );
     return data === INVALID ? { valid: false } : { valid: true, data };
   } catch {
     return { valid: false };
   }
 }
+
+type SnapshotBudgetState = {
+  readonly maximumObjectProperties: number | undefined;
+  readonly maximumTotalNodes: number | undefined;
+  totalNodes: number;
+};
 
 export function snapshotBasicBoundedArrayEntries(
   value: unknown,
@@ -55,7 +86,13 @@ function snapshotAt(
   path: BasicBoundedJsonPath,
   ancestors: Set<object>,
   arrayLimit: BasicBoundedArrayLimit,
+  state: SnapshotBudgetState,
 ): BasicCollectionJsonValue | typeof INVALID {
+  if (
+    state.maximumTotalNodes !== undefined &&
+    state.totalNodes >= state.maximumTotalNodes
+  ) return INVALID;
+  state.totalNodes += 1;
   if (value === null || typeof value === "boolean") return value;
   if (typeof value === "number") return Number.isFinite(value) ? value : INVALID;
   if (typeof value === "string") return boundedString(value) ? value : INVALID;
@@ -67,8 +104,8 @@ function snapshotAt(
   ancestors.add(value);
   try {
     return Array.isArray(value)
-      ? snapshotArray(value, depth, path, ancestors, arrayLimit)
-      : snapshotRecord(value, depth, path, ancestors, arrayLimit);
+      ? snapshotArray(value, depth, path, ancestors, arrayLimit, state)
+      : snapshotRecord(value, depth, path, ancestors, arrayLimit, state);
   } finally {
     ancestors.delete(value);
   }
@@ -80,6 +117,7 @@ function snapshotArray(
   path: BasicBoundedJsonPath,
   ancestors: Set<object>,
   arrayLimit: BasicBoundedArrayLimit,
+  state: SnapshotBudgetState,
 ): BasicCollectionJsonValue | typeof INVALID {
   const configured = arrayLimit(path);
   const maximum = configured === undefined
@@ -97,6 +135,7 @@ function snapshotArray(
       [...path, index],
       ancestors,
       arrayLimit,
+      state,
     );
     if (child === INVALID) return INVALID;
     result.push(child);
@@ -138,9 +177,14 @@ function snapshotRecord(
   path: BasicBoundedJsonPath,
   ancestors: Set<object>,
   arrayLimit: BasicBoundedArrayLimit,
+  state: SnapshotBudgetState,
 ): BasicCollectionJsonValue | typeof INVALID {
   if (Object.getPrototypeOf(value) !== Object.prototype) return INVALID;
   const keys = Reflect.ownKeys(value);
+  if (
+    state.maximumObjectProperties !== undefined &&
+    keys.length > state.maximumObjectProperties
+  ) return INVALID;
   if (keys.some((key) => typeof key !== "string" || !boundedString(key))) {
     return INVALID;
   }
@@ -158,6 +202,7 @@ function snapshotRecord(
       [...path, key],
       ancestors,
       arrayLimit,
+      state,
     );
     if (child === INVALID) return INVALID;
     Object.defineProperty(result, key, {
@@ -174,6 +219,13 @@ function boundedArrayLimit(value: number, ceiling: number): number | typeof INVA
   return Number.isSafeInteger(value) && value >= 0
     ? Math.min(value, ceiling)
     : INVALID;
+}
+
+function optionalBudget(
+  value: number | undefined,
+): number | undefined | typeof INVALID {
+  if (value === undefined) return undefined;
+  return Number.isSafeInteger(value) && value >= 0 ? value : INVALID;
 }
 
 function boundedString(value: string): boolean {

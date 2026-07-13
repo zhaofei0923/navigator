@@ -172,24 +172,35 @@ readiness 是单向安全约束，允许配对固定如下：
 
 冲突值永不由系统自动选择；未解决的冲突必须被保留并阻断。即使 `humanDecision.decision = approved`，本契约也不会写入 canonical 数据、改变审核状态、执行发布，或使数据可用于 AI；这些动作继续由既有人工审核与发布闸门控制。
 
-## 5. Parallel v2 preliminary boundary
+## 5. v2 deterministic candidate boundary
 
-`DATA-BASIC-DOCUMENTS-1` introduces a parallel preliminary path described in
-[basic-country-document-evidence.md](./basic-country-document-evidence.md).
-Its source register and extracted-facts envelopes use
-`basic-country-audit/v2`; source register additionally binds
-`catalogVersion` and `catalogSha256`. These are not v1 envelopes with
-optional keys, and one audit directory must never mix v1 and v2 envelope
-versions.
+`DATA-BASIC-DETERMINISTIC-1` completes the parallel v2 candidate path defined
+in [basic-deterministic-candidate.md](./basic-deterministic-candidate.md). The
+four filenames remain unchanged. `source-register.json`,
+`extracted-facts.json`, and `review-report.json` are exact
+`basic-country-audit/v2` envelopes; `market-overview.draft.json` remains the
+existing envelope-free draft shape. The v2 source register additionally binds
+`catalogVersion` and `catalogSha256`, while the v2 review report fixes
+`humanDecision = null` at candidate time.
 
-This contract's v1 validator and four-file fixture bundle remain unchanged.
-The Documents slice does not yet create a v2 `review-report.json` or
-`market-overview.draft.json`, decide `readyForHumanReview`, write canonical
-data, or make records AI-usable. Editorial now produces only the frozen
-in-memory reviewed materialization described in
-[basic-country-editorial-input.md](./basic-country-editorial-input.md);
-Deterministic still owns candidate artifacts and preflight, followed by the
-existing human publication gate.
+v2 is not v1 with optional keys. v2 final facts allow only `deterministic` and
+`manual` extraction methods, enforce path ownership, require all 20 static
+paths plus at least one complete contiguous indicator group beginning at index
+0, and bind every evidence source to a passed check. A ready candidate must be
+structurally valid, have no blocker, and use the
+`ready-for-human-review/request-human-review` pairing. It remains `draft` and
+`aiUsable = false` and does not authorize canonical, manifest, Prisma,
+coverage, publication, KnowledgeChunk, or AI-index writes.
+
+The original v1 validator, loader, fixtures, schema string, and public surface
+remain unchanged. `loadBasicCollectionAuditBundleVersioned()` loads a pure v1
+or pure v2 four-file directory and rejects every mixed-version permutation
+before validation. The existing `loadBasicCollectionAuditBundle()` remains
+v1-only. Documents and Editorial remain the package-private upstream
+materialization boundaries described in
+[basic-country-document-evidence.md](./basic-country-document-evidence.md) and
+[basic-country-editorial-input.md](./basic-country-editorial-input.md); the
+candidate still stops for mandatory human review before any publication task.
 
 ## 6. 验证结果形状
 

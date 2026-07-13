@@ -8,7 +8,19 @@ export {
   BASIC_COLLECTION_AUDIT_SCHEMA_VERSION,
   BASIC_COLLECTION_BLOCKER_CODES,
 } from "./collection/basic-collection-contracts.js";
+export {
+  BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION,
+} from "./collection/basic-collection-v2-contracts.js";
+export {
+  BASIC_DETERMINISTIC_STAGE_NAMES,
+} from "./collection/basic-deterministic-candidate-contracts.js";
 export { loadBasicCollectionAuditBundle } from "./collection/basic-collection-loader.js";
+export {
+  loadBasicCollectionAuditBundleVersioned,
+} from "./collection/basic-collection-versioned-loader.js";
+export {
+  runBasicDeterministicCandidate,
+} from "./collection/basic-deterministic-candidate.js";
 export { validateBasicCollectionAuditBundle } from "./collection/basic-collection-validator.js";
 export { createBasicSourceTransport } from "./collection/basic-source-transport.js";
 export { captureBasicRawSource } from "./collection/basic-raw-capture.js";
@@ -123,6 +135,13 @@ export type {
   BasicCollectionAuditArtifactName,
   BasicCollectionAuditArtifacts,
 } from "./collection/basic-offline-audit-artifacts.js";
+export type {
+  BasicCollectionAuditArtifactsV2,
+  BasicCollectionAuditBundleV2,
+} from "./collection/basic-collection-v2-contracts.js";
+export type {
+  BasicDeterministicCandidateResult,
+} from "./collection/basic-deterministic-candidate-contracts.js";
 export type {
   BasicCollectionAuditAssemblyInput,
   BasicOfflineDryRunScenario,

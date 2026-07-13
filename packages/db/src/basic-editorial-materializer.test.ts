@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
 
 import type {
+  BasicCollectionJsonValue,
   BasicInjectionRisk,
   BasicSourceCheck,
   BasicSourceRecord,
@@ -429,6 +430,54 @@ describe("Basic editorial evidence materializer", () => {
       zh: "越南",
       en: "Viet Nam",
     });
+  });
+
+  test("enriches a deterministic preliminary country name whose Chinese value is blank", () => {
+    const result = materializeBasicEditorialFacts(preliminaryNameInput({
+      zh: "",
+      en: "Viet Nam",
+    }));
+
+    expect(result.facts).toHaveLength(1);
+    expect(result.facts[0]).toMatchObject({
+      fieldPath: "country.name",
+      status: "candidate",
+      extractionMethod: "manual",
+    });
+    expect(result.facts[0]?.evidence[0]?.normalizedValue).toEqual({
+      zh: "越南",
+      en: "Viet Nam",
+    });
+  });
+
+  test.each([
+    ["missing Chinese key", { en: "Viet Nam" }],
+    ["extra key", { zh: "", en: "Viet Nam", extra: "unexpected" }],
+    ["non-string Chinese value", { zh: 1, en: "Viet Nam" }],
+    ["non-string English value", { zh: "", en: 1 }],
+    ["blank English value", { zh: "", en: " " }],
+    ["oversized Chinese value", { zh: "x".repeat(65_537), en: "Viet Nam" }],
+  ])("rejects a preliminary country name with %s", (_label, normalizedValue) => {
+    expectInvalid(preliminaryNameInput(normalizedValue));
+  });
+
+  test("rejects accessor, symbol, and proxy preliminary country names without executing them", () => {
+    const probe = { executions: 0 };
+    const accessorValue = { zh: "" };
+    Object.defineProperty(accessorValue, "en", {
+      enumerable: true,
+      get() {
+        probe.executions += 1;
+        return "Viet Nam";
+      },
+    });
+    const symbolValue = { zh: "", en: "Viet Nam", [Symbol("extra")]: "unexpected" };
+    const proxyValue = new Proxy({ zh: "", en: "Viet Nam" }, {});
+
+    expectInvalid(preliminaryNameInput(accessorValue));
+    expectInvalid(preliminaryNameInput(symbolValue));
+    expectInvalid(preliminaryNameInput(proxyValue));
+    expect(probe.executions).toBe(0);
   });
 
   test.each([
@@ -974,6 +1023,39 @@ function input(overrides: Partial<{
 
 function structuredSuccessInput(overrides: Parameters<typeof input>[0] = {}) {
   return input(overrides);
+}
+
+function preliminaryNameInput(normalizedValue: unknown): ReturnType<typeof input> {
+  const source = sourceRecord("structured-source", {
+    evidenceLocators: ["json:/name"],
+  });
+  const validFact = materializeBasicSourceFactsV2([{
+    sourceId: source.sourceId,
+    fieldPath: "country.name",
+    locator: "json:/name",
+    rawValue: "Viet Nam",
+    normalizedValue: { zh: "Viet Nam", en: "Viet Nam" },
+    unit: null,
+    year: null,
+    uncertainty: "Official English spelling",
+  }], "deterministic")[0]!;
+  const preliminaryFact = {
+    ...validFact,
+    evidence: validFact.evidence.map((entry) => ({
+      ...entry,
+      normalizedValue: normalizedValue as BasicCollectionJsonValue,
+    })),
+  };
+  return input({
+    editorial: editorialInput([
+      item("country.name", { zh: "越南", en: "Viet Nam" }, [
+        evidence(source.sourceId, "json:/name", "Viet Nam"),
+      ], "Official English spelling"),
+    ]),
+    reviewedSources: register([source]),
+    preliminaryFacts: facts([preliminaryFact]),
+    structuredEditorialEvidence: [],
+  });
 }
 
 function expectInvalid(value: ReturnType<typeof input>): void {

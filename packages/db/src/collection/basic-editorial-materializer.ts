@@ -237,7 +237,7 @@ function materializeName(
   for (const evidence of item.evidence) {
     const sourceEvidence = preliminaryByKey.get(nameEvidenceKey(evidence));
     if (sourceEvidence === undefined) invalid();
-    const sourceName = localizedText(sourceEvidence.normalizedValue);
+    const sourceName = preliminaryNameText(sourceEvidence.normalizedValue);
     if (normalized.en !== sourceName.en) invalid();
     requireConsumable(evidence.sourceId, sourceById, checkById, riskySourceIds);
     observations.push({
@@ -571,6 +571,14 @@ function jsonArray(value: BasicCollectionJsonValue, maximum: number): readonly B
 function localizedText(value: BasicCollectionJsonValue): Readonly<{ zh: string; en: string }> {
   const record = exactRecord(value, ["zh", "en"] as const);
   return { zh: nonBlankText(record.zh), en: nonBlankText(record.en) };
+}
+
+function preliminaryNameText(
+  value: BasicCollectionJsonValue,
+): Readonly<{ zh: string; en: string }> {
+  const record = exactRecord(value, ["zh", "en"] as const);
+  if (!isText(record.zh)) invalid();
+  return { zh: record.zh, en: nonBlankText(record.en) };
 }
 
 function evidenceKey(value: BasicStructuredEditorialEvidenceObservation): string {
