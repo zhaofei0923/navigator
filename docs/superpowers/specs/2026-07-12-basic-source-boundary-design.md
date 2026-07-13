@@ -606,6 +606,6 @@ pnpm turbo run lint typecheck test --force
 
 ## 17. 后续任务
 
-五张实现任务卡全部合并并推送后恢复 `DATA-BASIC-ID`，以 `r2` 做首个真实、无 AI 服务依赖的集成验证。印尼四文件候选包只有在来源、事实、双语人工输入、风险和 review report 均通过独立审查后才提交项目所有者；项目所有者批准前不生成 canonical 数据。
+五张实现任务卡全部合并并推送后恢复 `DATA-BASIC-ID`，以 `r2` 做首个真实、恰好为 `BASIC`、无 AI 服务依赖的集成验证。印尼四文件候选包只有在来源、事实、双语人工输入、风险和 review report 均通过独立审查后才提交项目所有者；项目所有者批准前不生成 canonical 数据。
 
 印尼验证通过后，另行创建 5 国 Basic 试点任务，建议顺序为 `VN`、`SA`、`AE`、`BR`、`ZA`。每国保持 `BASIC`、其他九模块 `BUILDING`、所有 Basic 数据 `aiUsable = false`；30–50 国扩展不属于本任务。

@@ -30,7 +30,7 @@ en      # 英文（一等公民）
 ```
 BASIC       # 基础覆盖
 STANDARD    # 标准覆盖
-COMPLETE    # 完整覆盖（印尼为样板）
+COMPLETE    # 完整覆盖
 ```
 
 ### 1.3 模块标识（ModuleKey）—— 固定 10 个

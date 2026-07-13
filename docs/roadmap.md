@@ -32,7 +32,7 @@ graph LR
 | 阶段 | 目标 | 主要依据文档 | 关口 |
 |------|------|--------------|------|
 | P0 地基 | 可运行骨架 + 共享枚举/双语工具 + 环境/CI/文档守卫 | env-config、i18n、testing、data-schema、product-brief | — |
-| P1 数据层 | 数据模型落地 + 数据治理校验 + 印尼样板 + 覆盖判定 | data-schema、coverage-levels、data-governance、indonesia-seed、country-rollout | ⚠️ |
+| P1 数据层 | 数据模型落地 + 数据治理校验 + Basic 首次交付 + 覆盖判定 | data-schema、coverage-levels、data-governance、indonesia-seed、country-rollout | ⚠️ |
 | P2 Web 展示 | 首页 / 国家 / AI 咨询 / 报告四板块 + i18n | product-brief、api-contract、coverage-levels、i18n | — |
 | P3 AI 顾问 | RAG 管道 + 问答接口（占位边界） | ai-advisor | ⚠️ |
 | P4 权限/会员/留资 | 门控 + 报告下载 + 留资 | auth-membership | ⚠️ |
@@ -71,25 +71,27 @@ graph LR
 ### P1 — 数据层 ⚠️
 
 > P1-1 至 P1-3 是 P2 Web 展示的技术前置；P1-4 至 P1-6 定义国家扩展计划、Basic 模板校验和采集管道，不新增数据模型，最终国家清单、顺序、发布和升级均须人工确认。
+>
+> 所有国家（包括 `ID`）的首次真实数据交付必须恰好为 `BASIC`。`STANDARD` 与 `COMPLETE` 只可在该国 Basic 验收后，通过单独、经人工批准的升级任务启动。
 
 #### P1-1 Prisma schema（数据模型落地）⚠️
 - 目标：按 [data-schema.md](./data-schema.md) 建 `packages/db` schema：`Country`、`ModuleCoverage`、10 模块、`KnowledgeChunk`（pgvector）、`Lead`，枚举与元字段齐全。
 - 验收：schema 与 data-schema 完全一致；迁移可执行；`shared-types` 与 schema 枚举一致；报告 `accessLevel`、`Lead.contact` 按 data-schema §6 加密存储、知识片段双语向量字段齐全；不得新增评分/国家计划持久化字段，若需新增字段必须先改 `data-schema.md`。
 - 人工确认：**是（修改统一数据模型，AGENTS.md §11）** —— PR 标注。
 
-#### P1-2 印尼样板 seed 与数据治理校验
-- 目标：`data/indonesia/` 按 [indonesia-seed.md](./indonesia-seed.md) 填充至 COMPLETE；实现 seed 导入与 [data-governance.md](./data-governance.md) 数据质量校验。
-- 验收：seed 校验通过（双语齐全、元字段齐全、来源/可信度合法、枚举合法、`countryCode=ID`）；缺元字段不得入库；`draft` / `pending` / `UNVERIFIED` 反例不进入 C 端展示、覆盖判定或 AI 检索；报告 `accessLevel` 合法；印尼判定为 COMPLETE。
+#### P1-2 历史印尼 fixture 与数据治理校验
+- 目标：保留 `data/indonesia/` 的 legacy synthetic regression fixture 覆盖，并实现 [data-governance.md](./data-governance.md) 数据质量校验；它不是当前国家 rollout 样板或真实数据。
+- 验收：fixture 回归校验通过；缺元字段不得入库；`draft` / `pending` / `UNVERIFIED` 反例不进入 C 端展示、覆盖判定或 AI 检索；真实 `ID` 数据仅可由未来 `DATA-BASIC-ID` 依 Basic 验收另行交付。
 - 人工确认：否（不改结构；改结构须回 P1-1）。
 
 #### P1-3 覆盖等级判定逻辑
 - 目标：实现 [coverage-levels.md §3](./coverage-levels.md) 的模块级 + 国家级判定，计数口径按 C 端可展示数据（`published` 且 `credibility != UNVERIFIED`）。
-- 验收：阈值边界单测覆盖；`draft` / `pending` / `UNVERIFIED` 不计入覆盖判定计数；对象型模块按核心字段填充率判定；`ai-advisor` 按可用知识片段判定；印尼样板判定为 COMPLETE。
+- 验收：阈值边界单测覆盖；`draft` / `pending` / `UNVERIFIED` 不计入覆盖判定计数；对象型模块按核心字段填充率判定；`ai-advisor` 按可用知识片段判定；历史 synthetic fixture 仅作为回归输入，不定义真实国家 rollout 状态。
 - 人工确认：否。
 
-#### P1-4 首批国家建设计划与复制模板
-- 目标：按 [country-rollout.md](./country-rollout.md)、[basic-country-collection.md](./basic-country-collection.md) 与 [indonesia-seed.md §5](./indonesia-seed.md) 整理国家建设计划、覆盖升级节奏与从印尼复制到新国家的 seed 模板规则，不落库。
-- 验收：Complete / Standard / Basic 候选与人工确认项清晰；不得把国家优先级、覆盖升级结论、评分结果写入持久化字段；后续新增国家 seed 必须独立任务卡、独立验收。
+#### P1-4 首批国家建设计划与中立模板
+- 目标：按 [country-rollout.md](./country-rollout.md)、[basic-country-collection.md](./basic-country-collection.md) 与 [indonesia-seed.md](./indonesia-seed.md) 整理 Basic 首次交付、覆盖升级节奏与国家中立 seed 模板规则，不落库。
+- 验收：所有候选国家先交付 Basic，Standard / Complete 仅作为后续独立人工批准升级；不得把国家优先级、覆盖升级结论、评分结果写入持久化字段；后续新增国家 seed 必须独立任务卡、独立验收。
 - 人工确认：否（仅文档候选；最终 30–50 国家清单、优先级与升级结论须人工确认）。
 
 #### P1-5 Basic 国家模板与通用校验器
@@ -151,7 +153,7 @@ graph LR
 
 #### DATA-BASIC-<ISO2> 单国 Basic 数据任务卡
 - 目标：每张任务卡只采集一个 ISO 3166-1 alpha-2 国家，使用固定 10 模块模型完成 Basic 国家骨架和市场基础画像。
-- 验收：一国一任务卡、一分支、一审核周期，且仅合并一次到 `main`；合并后的 `main` 验证通过后，仅推送一次到 `origin/main`。数据先为 `draft`，仅在人工审核后发布；Basic 数据保持 `aiUsable = false` 且不产生知识片段；通过仓库校验和代表性 Web 检查，确认基础画像正常渲染、`BUILDING` 模块显示占位。
+- 验收：一国一任务卡、一分支、一审核周期，且仅合并一次到 `main`；合并后的 `main` 验证通过后，仅推送一次到 `origin/main`。数据先为 `draft`，仅在人工审核后发布；首次真实交付恰好为 `BASIC`，`market-overview` 外九个模块均为 `BUILDING`；Basic 数据保持 `aiUsable = false` 且不产生知识片段；通过仓库校验和代表性 Web 检查，确认基础画像正常渲染、`BUILDING` 模块显示占位。
 - 人工确认：是（国家启动、发布、最终 30–50 国清单、国家顺序和覆盖升级均由人工决定）。
 
 ### P2 — Web 展示
@@ -168,7 +170,7 @@ graph LR
 
 #### P2-3 国家详情（十模块骨架）
 - 目标：`GET /countries/:code` + `/modules/:moduleKey`，详情页渲染十模块；`BUILDING` 显示占位不报错。
-- 验收：印尼十模块正常渲染；`BUILDING` 模块占位；`textMode` 与 `_i18nFallback` 正确；E2E 通过。
+- 验收：以任一 Basic 国家十模块骨架渲染：`market-overview` 正常显示，其余九个 `BUILDING` 模块显示占位；`textMode` 与 `_i18nFallback` 正确；E2E 通过。
 - 人工确认：否。
 
 #### P2-4 首页 / AI 咨询 / 报告入口

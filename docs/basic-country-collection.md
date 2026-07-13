@@ -2,14 +2,16 @@
 
 > 本文件是 `P1-5`、`P1-6` 和 `DATA-BASIC-<ISO2>` 任务卡的规范性采集流程。字段与覆盖判定以 [data-schema.md](./data-schema.md) 和 [coverage-levels.md](./coverage-levels.md) 为唯一事实来源；数据治理与发布规则以 [data-governance.md](./data-governance.md) 为准。新 Basic 流水线的来源政策与结构化请求以 [basic-source-catalog.md](./basic-source-catalog.md) 为准，v2 多格式传输、raw capture 和 CSV 边界以 [basic-source-formats.md](./basic-source-formats.md) 为准；P1-6B 的确定性 source adapters、raw capture 与 provenance boundary 以 [basic-country-source-adapters.md](./basic-country-source-adapters.md) 为准；确定性 v2 candidate、CLI 与四文件 writer 以 [basic-deterministic-candidate.md](./basic-deterministic-candidate.md) 为准；P1-6C 的 legacy bridge 边界以 [basic-country-hermes-llama-bridge.md](./basic-country-hermes-llama-bridge.md) 为准；P1-6D 的离线、无发布编排与跨边界验证以 [basic-country-offline-dry-run.md](./basic-country-offline-dry-run.md) 为准。本文件不新增数据模型字段，不改变 AI 检索边界。
 
+所有国家（包括 `ID`）的首次真实数据交付必须恰好为 `BASIC`。`STANDARD` 与 `COMPLETE` 只可在该国 Basic 验收后，通过单独、经人工批准的升级任务启动。
+
 ## 1. 范围与完成定义
 
-每个 Basic 国家使用与印尼（`ID`）相同的固定 10 模块模型，不得为任何国家增加特例文件、字段或页面。除既有 Complete 参考国家 `ID` 外，每个新选定的目标国家都必须完成其 `DATA-BASIC-<ISO2>` 任务卡并达到 `BASIC`，之后才可进入单独、经人工批准的 `STANDARD` 或 `COMPLETE` 升级任务；禁止新国家直接以 `STANDARD` 或 `COMPLETE` 进入产品。Basic 首次交付只建立该国的国家骨架和市场基础画像：
+每个 Basic 国家使用相同的固定 10 模块模型，不得为任何国家增加特例文件、字段或页面。每个新选定的目标国家都必须完成其 `DATA-BASIC-<ISO2>` 任务卡并达到 `BASIC`，之后才可进入单独、经人工批准的 `STANDARD` 或 `COMPLETE` 升级任务；禁止任何国家直接以 `STANDARD` 或 `COMPLETE` 进入产品。Basic 首次交付只建立该国的国家骨架和市场基础画像：
 
 - `country.json` 必须包含 ISO 3166-1 alpha-2 国家码、`{ zh, en }` 的国家名和摘要、地区、国旗展示字段、整体 `updatedAt`，以及全部 10 个模块的 `moduleCoverage`。
 - `country.json` 的 `coverageLevel` 必须由覆盖判定得出为**恰好** `BASIC`，不得人工覆盖。`market-overview` 为 `PARTIAL` 或 `COMPLETE`；其余九个模块必须均为 `BUILDING`、`dataCount = 0`，且没有任何 `published` 记录，并保留统一占位，不创建虚构的占位业务记录。满足 `STANDARD` 判定条件的交付必须拒绝；后续数据只能在单独、经人工批准的升级任务中提交。
 - `market-overview.json` 必须是每国唯一的对象记录，按 [data-schema.md §5.1](./data-schema.md) 填写可验证的基础市场画像、`keyIndicators` 和完整元字段：`source`、`sourceUrl`、`collectedAt`、`updatedAt`、`credibility`、`reviewStatus`、`aiUsable`、`countryCode`、`industryTags`、`techTags`。字段必须存在；标签仅可使用已登记的枚举，且仅当没有适用标签时才可为空。`sourceUrl` 仅可为 HTTP(S) URL 或按现有 schema 规则为 `null`；为 `null` 时 `source` 必须包含字面量 `sourceUrl null` 说明无链接原因。所有可读字段和指标标签均使用 `{ zh, en }`；缺任一语言按既有降级规则标注，不能留空或报错。Basic 的 `aiUsable` 必须为 `false`。
-- 所有发布的 Basic 记录均须符合 [data-governance.md](./data-governance.md) 的来源、时间、可信度、审核状态、标签和双语要求。Basic 数据始终为 `aiUsable = false`，本阶段不得产生或导入 `knowledge` 知识片段。
+- 所有发布的 Basic 记录均须符合 [data-governance.md](./data-governance.md) 的来源、时间、可信度、审核状态、标签和双语要求。Basic 数据始终为 `aiUsable = false`，本阶段不产生知识片段，也不得导入 `knowledge` 知识片段。
 
 完成的 Basic 国家可在 C 端展示国家基础画像和其余模块的 `BUILDING` 占位；它不提供该国的 AI 深度问答，也不因 `published` 状态自动进入 AI 检索。
 
@@ -118,7 +120,7 @@ Basic 的 `published` 仅代表可展示，不代表可检索：所有 Basic 记
 - [ ] 全部 Basic 记录为 `aiUsable = false`，没有知识片段或 AI 检索入口的数据依赖。
 - [ ] 仓库校验和代表性 Web 检查通过，`BUILDING` 模块显示占位且不报错。
 
-Basic 国家至少每六个月复核一次。复核须重新检查来源可访问性、关键指标年份、可再生能源目标、元字段和模块状态，并在 review report 中记录结论；升级至 `STANDARD` 或 `COMPLETE` 仍由人工决定。
+Basic 国家至少每六个月复核一次。复核须重新检查来源可访问性、关键指标年份、可再生能源目标、元字段和模块状态，并在 review report 中记录结论；升级至 `STANDARD` 或 `COMPLETE` 仍须以单独、经人工批准的升级任务执行。
 
 ## 8. 试点顺序与人工确认
 

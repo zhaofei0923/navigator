@@ -1,5 +1,7 @@
 # Basic Country Template and Validator Implementation Plan
 
+> **Status: Superseded for current rollout.** This plan's Indonesia-Complete assumptions are historical and have been superseded by `DOCS-BASIC-FIRST-1`. Do not use this plan as a current country rollout requirement; all countries, including `ID`, now require a first real `BASIC` delivery before a separately approved upgrade.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add a reusable, country-neutral Basic seed builder, filesystem loader, validator, and Prisma import-plan builder that enforce the P1-5 contract without changing the unified data model.
