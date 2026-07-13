@@ -16,6 +16,7 @@ import { runBasicSourceExecutionPlanV2 } from "../collection/basic-source-plan-r
 import type { BasicSourceTransportV2 } from "../collection/basic-source-v2-contracts.js";
 import { materializeBasicReviewedRunV2 } from "../collection/basic-v2-materialization.js";
 import {
+  closeBasicCandidateConfig,
   loadBasicCandidateConfig,
   parseBasicCandidateConfig,
   readBasicCandidateCatalog,
@@ -75,8 +76,9 @@ export async function composeBasicCountryCandidate(
   input: BasicCandidateCompositionInput,
   dependencies: BasicCandidateCompositionDependencies = DEFAULT_DEPENDENCIES,
 ): Promise<BasicCandidateCompositionResult> {
+  let loaded: LoadedBasicCandidateConfig | null = null;
   try {
-    const loaded = await dependencies.loadConfig(input.repoRoot, input.configPath);
+    loaded = await dependencies.loadConfig(input.repoRoot, input.configPath);
     const config = parseBasicCandidateConfig(readLoadedConfig(loaded));
     const catalog = dependencies.parseCatalog(
       await dependencies.readCatalog(input.repoRoot),
@@ -164,6 +166,8 @@ export async function composeBasicCountryCandidate(
     return ERROR_RESULT;
   } catch {
     return ERROR_RESULT;
+  } finally {
+    if (loaded !== null) await closeBasicCandidateConfig(loaded);
   }
 }
 

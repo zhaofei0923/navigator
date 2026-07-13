@@ -1,15 +1,4 @@
-import type { BigIntStats } from "node:fs";
-import {
-  chmod,
-  lstat,
-  mkdir,
-  open,
-  readFile,
-  readdir,
-  rename,
-  rm,
-} from "node:fs/promises";
-import { isAbsolute, join, resolve } from "node:path";
+import { randomUUID } from "node:crypto";
 import { isProxy } from "node:util/types";
 
 import { serializeBasicCollectionAuditArtifactsV2 } from "../collection/basic-audit-v2-artifacts.js";
@@ -20,10 +9,27 @@ import {
   BASIC_DETERMINISTIC_STAGE_NAMES,
   type BasicDeterministicCandidateResult,
 } from "../collection/basic-deterministic-candidate-contracts.js";
+import { isBasicDeterministicCandidateResultFromCore } from "../collection/basic-deterministic-candidate-result.js";
 import {
   SAFE_COUNTRY_DIRECTORY,
   SAFE_RUN_ID,
 } from "../seed/basic-country-validation-utils.js";
+import {
+  cleanupBasicCandidateTemporaryDirectory,
+  closeBasicCandidateHeldDirectories,
+  createBasicCandidateExclusiveDirectory,
+  ensureBasicCandidateDirectoryChild,
+  openBasicCandidateTrustedDirectory,
+  renameBasicCandidateDirectoryChild,
+  requireBasicCandidateDirectoryEntries,
+  requireBasicCandidateHeldChild,
+  setBasicCandidateDirectoryMode,
+  syncBasicCandidateDirectory,
+  verifyBasicCandidateRegularFile,
+  writeBasicCandidateExclusiveFile,
+  type BasicCandidateHeldDirectory,
+  type BasicCandidateRegularFileIdentity,
+} from "./basic-candidate-constrained-fs.js";
 
 export interface BasicCandidateArtifactWriteInput {
   readonly repoRoot: string;
@@ -33,13 +39,6 @@ export interface BasicCandidateArtifactWriteInput {
 export interface BasicCandidateArtifactWriteResult {
   readonly status: "written";
 }
-
-type Identity = Readonly<{
-  pathname: string;
-  dev: bigint;
-  ino: bigint;
-  type: bigint;
-}>;
 
 type AuthenticatedArtifacts = Readonly<{
   countryDirectory: string;
@@ -63,9 +62,6 @@ const BOUNDARY_KEYS = [
   "coverageDerivation", "publishAction", "knowledgeChunkCount",
   "aiUsableTrueCount", "aiEligibleKnowledgeIds",
 ] as const;
-const FILE_TYPE_MASK = 0o170000n;
-const DIRECTORY_TYPE = 0o040000n;
-const REGULAR_FILE_TYPE = 0o100000n;
 const WRITTEN_RESULT: BasicCandidateArtifactWriteResult = Object.freeze({
   status: "written",
 });
@@ -73,65 +69,104 @@ const WRITTEN_RESULT: BasicCandidateArtifactWriteResult = Object.freeze({
 export async function writeBasicCandidateArtifacts(
   value: BasicCandidateArtifactWriteInput,
 ): Promise<BasicCandidateArtifactWriteResult> {
-  let parentIdentity: readonly Identity[] | null = null;
-  let temporaryIdentity: Identity | null = null;
-  let cleanupPath: string | null = null;
+  let root: BasicCandidateHeldDirectory | null = null;
+  let data: BasicCandidateHeldDirectory | null = null;
+  let staging: BasicCandidateHeldDirectory | null = null;
+  let country: BasicCandidateHeldDirectory | null = null;
+  let temporary: BasicCandidateHeldDirectory | null = null;
+  let temporaryName: string | null = null;
+  let target: BasicCandidateHeldDirectory | null = null;
+  let published: BasicCandidateHeldDirectory | null = null;
+  let runId: string | null = null;
+  let temporaryOwned = false;
+  let targetReserved = false;
   let completed = false;
   try {
     const input = exactDataRecord(value, INPUT_KEYS);
-    const repoRoot = safeRoot(input.get("repoRoot"));
     const authenticated = authenticateCandidate(input.get("candidate"));
-    const parent = join(
-      repoRoot,
-      "data",
-      "staging",
-      authenticated.countryDirectory,
-    );
-    const target = join(parent, authenticated.runId);
-    const temporary = join(parent, `.candidate-${authenticated.runId}.tmp`);
-    parentIdentity = await prepareParent(repoRoot, parent);
-    await requireMissing(target);
-    await mkdir(temporary, { mode: 0o700 });
-    await chmod(temporary, 0o700);
-    temporaryIdentity = await snapshotDirectory(temporary);
-    cleanupPath = temporary;
-    await requireSameIdentities(parentIdentity);
+    runId = authenticated.runId;
+    root = await openBasicCandidateTrustedDirectory(input.get("repoRoot"));
+    data = await prepareDirectory(root, "data");
+    staging = await prepareDirectory(data, "staging");
+    country = await prepareDirectory(staging, authenticated.countryDirectory);
+    await requireWriterHierarchy(root, data, staging, country, authenticated.countryDirectory);
 
-    const fileIdentities = new Map<BasicCollectionAuditArtifactName, Identity>();
-    for (const name of ARTIFACT_NAMES) {
-      const identity = await writeSyncedFile(
-        join(temporary, name),
-        authenticated.serialized[name],
-      );
-      fileIdentities.set(name, identity);
-    }
-    await syncDirectoryIfSupported(temporary);
-    await verifyTemporary(
+    temporaryName = `.candidate-${authenticated.runId}-${randomUUID()}.tmp`;
+    temporary = await createBasicCandidateExclusiveDirectory(country, temporaryName, 0o700);
+    await setBasicCandidateDirectoryMode(temporary, 0o700);
+    await syncBasicCandidateDirectory(country);
+    await requireBasicCandidateHeldChild(country, temporaryName, temporary);
+    temporaryOwned = true;
+
+    const temporaryFiles = await writeAndVerifyArtifacts(
       temporary,
-      temporaryIdentity,
-      fileIdentities,
       authenticated.serialized,
+      async () => {
+        await requireWriterHierarchy(root!, data!, staging!, country!, authenticated.countryDirectory);
+        await requireBasicCandidateHeldChild(country!, temporaryName!, temporary!);
+      },
     );
-    await requireSameIdentities(parentIdentity);
-    await requireMissing(target);
-    await rename(temporary, target);
-    cleanupPath = target;
-    await requireSameIdentities(parentIdentity);
-    await requireIdentityAt(target, temporaryIdentity, DIRECTORY_TYPE, 0o700);
-    await verifyFiles(target, fileIdentities, authenticated.serialized);
-    await syncDirectoryIfSupported(parent);
+    await syncBasicCandidateDirectory(temporary);
+    await verifyArtifacts(temporary, temporaryFiles, authenticated.serialized);
+    await requireBasicCandidateHeldChild(country, temporaryName, temporary);
+    await requireWriterHierarchy(root, data, staging, country, authenticated.countryDirectory);
+
+    target = await createBasicCandidateExclusiveDirectory(country, authenticated.runId, 0o700);
+    await requireBasicCandidateHeldChild(country, authenticated.runId, target);
+    await requireBasicCandidateDirectoryEntries(target, []);
+    await setBasicCandidateDirectoryMode(target, 0o700);
+    targetReserved = true;
+    await syncBasicCandidateDirectory(country);
+    await requireBasicCandidateHeldChild(country, authenticated.runId, target);
+    await requireBasicCandidateHeldChild(country, temporaryName, temporary);
+    await requireWriterHierarchy(root, data, staging, country, authenticated.countryDirectory);
+
+    await renameBasicCandidateDirectoryChild(
+      country,
+      temporaryName,
+      authenticated.runId,
+    );
+    published = temporary;
+    temporary = null;
+    temporaryName = null;
+    await syncBasicCandidateDirectory(country);
+    await requireBasicCandidateHeldChild(country, authenticated.runId, published);
+    await verifyArtifacts(published, temporaryFiles, authenticated.serialized);
+    await requireWriterHierarchy(root, data, staging, country, authenticated.countryDirectory);
     completed = true;
     return WRITTEN_RESULT;
   } catch {
     throw new Error("basic candidate artifact write failed");
   } finally {
-    if (!completed && parentIdentity !== null && temporaryIdentity !== null && cleanupPath !== null) {
-      await cleanupOwnedDirectory(parentIdentity, temporaryIdentity, cleanupPath);
+    if (!completed && country !== null && runId !== null) {
+      if (published !== null) {
+        await cleanupBasicCandidateTemporaryDirectory(country, runId, published, ARTIFACT_NAMES);
+      } else if (target !== null && targetReserved) {
+        await cleanupBasicCandidateTemporaryDirectory(country, runId, target, []);
+      }
+      if (temporary !== null && temporaryName !== null && temporaryOwned) {
+        await cleanupBasicCandidateTemporaryDirectory(
+          country,
+          temporaryName,
+          temporary,
+          ARTIFACT_NAMES,
+        );
+      }
     }
+    await closeBasicCandidateHeldDirectories([
+      published,
+      target,
+      temporary,
+      country,
+      staging,
+      data,
+      root,
+    ]);
   }
 }
 
 function authenticateCandidate(value: unknown): AuthenticatedArtifacts {
+  if (!isBasicDeterministicCandidateResultFromCore(value)) invalid();
   const result = exactDataRecord(value, RESULT_KEYS);
   if (
     result.get("failedStage") !== null ||
@@ -147,13 +182,62 @@ function authenticateCandidate(value: unknown): AuthenticatedArtifacts {
     !validArtifacts(artifacts, validation.data)
   ) invalid();
   const { countryDirectory, runId } = validation.data;
-  if (
-    !SAFE_COUNTRY_DIRECTORY.test(countryDirectory) ||
-    !SAFE_RUN_ID.test(runId)
-  ) invalid();
+  if (!SAFE_COUNTRY_DIRECTORY.test(countryDirectory) || !SAFE_RUN_ID.test(runId)) invalid();
   const serialized = serializeBasicCollectionAuditArtifactsV2(artifacts);
   if (!sameStrings(Object.keys(serialized), ARTIFACT_NAMES)) invalid();
   return Object.freeze({ countryDirectory, runId, serialized });
+}
+
+async function prepareDirectory(
+  parent: BasicCandidateHeldDirectory,
+  name: string,
+): Promise<BasicCandidateHeldDirectory> {
+  const result = await ensureBasicCandidateDirectoryChild(parent, name, 0o700);
+  try {
+    if (result.created) await syncBasicCandidateDirectory(parent);
+    return result.directory;
+  } catch (error) {
+    await closeBasicCandidateHeldDirectories([result.directory]);
+    throw error;
+  }
+}
+
+async function requireWriterHierarchy(
+  root: BasicCandidateHeldDirectory,
+  data: BasicCandidateHeldDirectory,
+  staging: BasicCandidateHeldDirectory,
+  country: BasicCandidateHeldDirectory,
+  countryDirectory: string,
+): Promise<void> {
+  await requireBasicCandidateHeldChild(root, "data", data);
+  await requireBasicCandidateHeldChild(data, "staging", staging);
+  await requireBasicCandidateHeldChild(staging, countryDirectory, country);
+}
+
+async function writeAndVerifyArtifacts(
+  directory: BasicCandidateHeldDirectory,
+  serialized: Readonly<Record<BasicCollectionAuditArtifactName, Uint8Array>>,
+  beforeWrite: () => Promise<void>,
+): Promise<ReadonlyMap<BasicCollectionAuditArtifactName, BasicCandidateRegularFileIdentity>> {
+  const identities = new Map<BasicCollectionAuditArtifactName, BasicCandidateRegularFileIdentity>();
+  for (const name of ARTIFACT_NAMES) {
+    await beforeWrite();
+    identities.set(name, await writeBasicCandidateExclusiveFile(directory, name, serialized[name]));
+  }
+  return identities;
+}
+
+async function verifyArtifacts(
+  directory: BasicCandidateHeldDirectory,
+  identities: ReadonlyMap<BasicCollectionAuditArtifactName, BasicCandidateRegularFileIdentity>,
+  serialized: Readonly<Record<BasicCollectionAuditArtifactName, Uint8Array>>,
+): Promise<void> {
+  await requireBasicCandidateDirectoryEntries(directory, ARTIFACT_NAMES);
+  for (const name of ARTIFACT_NAMES) {
+    const identity = identities.get(name);
+    if (identity === undefined) invalid();
+    await verifyBasicCandidateRegularFile(directory, name, identity, serialized[name]);
+  }
 }
 
 function isPassingStages(value: unknown): boolean {
@@ -182,147 +266,6 @@ function isPassingBoundary(value: unknown): boolean {
     boundary.get("knowledgeChunkCount") === 0 &&
     boundary.get("aiUsableTrueCount") === 0 &&
     Array.isArray(eligible) && eligible.length === 0;
-}
-
-async function prepareParent(
-  repoRoot: string,
-  target: string,
-): Promise<readonly Identity[]> {
-  const root = await snapshotDirectory(repoRoot);
-  const identities: Identity[] = [root];
-  let current = repoRoot;
-  for (const segment of ["data", "staging", target.slice(
-    join(repoRoot, "data", "staging").length + 1,
-  )]) {
-    current = join(current, segment);
-    let details = await lstatBigInt(current);
-    if (details === null) {
-      try {
-        await mkdir(current, { mode: 0o700 });
-      } catch (error) {
-        if (errorCode(error) !== "EEXIST") throw error;
-      }
-      details = await lstatBigInt(current);
-      await syncDirectoryIfSupported(resolve(current, ".."));
-    }
-    if (details === null || details.isSymbolicLink() || !details.isDirectory()) invalid();
-    identities.push(identity(current, details));
-  }
-  return Object.freeze(identities);
-}
-
-async function writeSyncedFile(
-  pathname: string,
-  content: Uint8Array,
-): Promise<Identity> {
-  const file = await open(pathname, "wx", 0o600);
-  try {
-    await file.chmod(0o600);
-    await file.writeFile(content);
-    await file.sync();
-    const details = await file.stat({ bigint: true });
-    if (!details.isFile() || details.size !== BigInt(content.byteLength)) invalid();
-    return identity(pathname, details);
-  } finally {
-    await file.close().catch(() => undefined);
-  }
-}
-
-async function verifyTemporary(
-  pathname: string,
-  directoryIdentity: Identity,
-  fileIdentities: ReadonlyMap<BasicCollectionAuditArtifactName, Identity>,
-  content: Readonly<Record<BasicCollectionAuditArtifactName, Uint8Array>>,
-): Promise<void> {
-  await requireIdentityAt(pathname, directoryIdentity, DIRECTORY_TYPE, 0o700);
-  await verifyFiles(pathname, fileIdentities, content);
-}
-
-async function verifyFiles(
-  directory: string,
-  identities: ReadonlyMap<BasicCollectionAuditArtifactName, Identity>,
-  content: Readonly<Record<BasicCollectionAuditArtifactName, Uint8Array>>,
-): Promise<void> {
-  const entries = (await readdir(directory)).sort(compareText);
-  if (!sameStrings(entries, [...ARTIFACT_NAMES].sort(compareText))) invalid();
-  for (const name of ARTIFACT_NAMES) {
-    const expected = identities.get(name);
-    if (expected === undefined) invalid();
-    const pathname = join(directory, name);
-    await requireIdentityAt(pathname, expected, REGULAR_FILE_TYPE, 0o600);
-    const bytes = new Uint8Array(await readFile(pathname));
-    if (!sameBytes(bytes, content[name])) invalid();
-    await requireIdentityAt(pathname, expected, REGULAR_FILE_TYPE, 0o600);
-  }
-}
-
-async function requireMissing(pathname: string): Promise<void> {
-  try {
-    await lstat(pathname);
-  } catch (error) {
-    if (errorCode(error) === "ENOENT") return;
-    throw error;
-  }
-  invalid();
-}
-
-async function snapshotDirectory(pathname: string): Promise<Identity> {
-  const details = await lstat(pathname, { bigint: true });
-  if (details.isSymbolicLink() || !details.isDirectory()) invalid();
-  return identity(pathname, details);
-}
-
-async function requireIdentityAt(
-  pathname: string,
-  expected: Identity,
-  type: bigint,
-  mode: number,
-): Promise<void> {
-  const details = await lstat(pathname, { bigint: true });
-  if (
-    details.isSymbolicLink() || details.dev !== expected.dev ||
-    details.ino !== expected.ino || (details.mode & FILE_TYPE_MASK) !== type ||
-    Number(details.mode & 0o777n) !== mode
-  ) invalid();
-}
-
-async function requireSameIdentities(expected: readonly Identity[]): Promise<void> {
-  for (const item of expected) {
-    await requireIdentityAt(item.pathname, item, DIRECTORY_TYPE,
-      Number((await lstat(item.pathname, { bigint: true })).mode & 0o777n));
-  }
-}
-
-async function cleanupOwnedDirectory(
-  parentIdentity: readonly Identity[],
-  owned: Identity,
-  pathname: string,
-): Promise<void> {
-  try {
-    await requireSameIdentities(parentIdentity);
-    const details = await lstat(pathname, { bigint: true });
-    if (
-      details.isSymbolicLink() || !details.isDirectory() ||
-      details.dev !== owned.dev || details.ino !== owned.ino ||
-      (details.mode & FILE_TYPE_MASK) !== owned.type
-    ) return;
-    await rm(pathname, { recursive: true, force: true });
-    await syncDirectoryIfSupported(resolve(pathname, ".."));
-  } catch {
-    // Leaving an unverified path is safer than following a replaced identity.
-  }
-}
-
-async function syncDirectoryIfSupported(pathname: string): Promise<void> {
-  let directory: Awaited<ReturnType<typeof open>> | undefined;
-  try {
-    directory = await open(pathname, "r");
-    await directory.sync();
-  } catch (error) {
-    if (!isUnsupportedDirectorySync(error)) throw error;
-  } finally {
-    await directory?.close().catch(() => undefined);
-  }
 }
 
 function exactDataRecord(
@@ -361,54 +304,8 @@ function exactDataRecordOrNull(
   }
 }
 
-function safeRoot(value: unknown): string {
-  if (
-    typeof value !== "string" || !isAbsolute(value) || value.includes("\0") ||
-    resolve(value) !== value
-  ) invalid();
-  return value;
-}
-
-function identity(pathname: string, details: BigIntStats): Identity {
-  return Object.freeze({
-    pathname,
-    dev: details.dev,
-    ino: details.ino,
-    type: details.mode & FILE_TYPE_MASK,
-  });
-}
-
-async function lstatBigInt(pathname: string): Promise<BigIntStats | null> {
-  try {
-    return await lstat(pathname, { bigint: true });
-  } catch (error) {
-    if (errorCode(error) === "ENOENT") return null;
-    throw error;
-  }
-}
-
-function sameBytes(left: Uint8Array, right: Uint8Array): boolean {
-  return left.byteLength === right.byteLength &&
-    left.every((value, index) => value === right[index]);
-}
-
 function sameStrings(left: readonly string[], right: readonly string[]): boolean {
-  return left.length === right.length &&
-    left.every((value, index) => value === right[index]);
-}
-
-function compareText(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
-
-function errorCode(error: unknown): string | undefined {
-  return (error as NodeJS.ErrnoException | null)?.code;
-}
-
-function isUnsupportedDirectorySync(error: unknown): boolean {
-  return ["EBADF", "EINVAL", "EISDIR", "ENOTSUP", "EPERM"].includes(
-    errorCode(error) ?? "",
-  );
+  return left.length === right.length && left.every((value, index) => value === right[index]);
 }
 
 function invalid(): never {

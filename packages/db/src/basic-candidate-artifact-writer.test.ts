@@ -25,30 +25,136 @@ import {
 } from "./cli/basic-candidate-artifact-writer.js";
 
 const fsFailure = vi.hoisted(() => ({
-  mode: "none" as "none" | "partial" | "exdev" | "tamper",
+  mode: "none" as
+    | "none"
+    | "partial"
+    | "exdev"
+    | "target-nonempty-replacement"
+    | "target-empty-replacement",
+  directorySyncError: null as null | "EACCES" | "EPERM" | "ENOTSUP",
+  rejectDirectoryOpen: false,
+  rejectRecursiveRm: false,
+  rejectDescendantsOf: null as string | null,
+  ancestor: null as null | {
+    pathname: string;
+    outside: string;
+    moved: boolean;
+  },
+  targetReplacementDone: false,
+  renameCalls: 0,
+  openHandles: new Set<unknown>(),
 }));
 
 vi.mock("node:fs/promises", async (importOriginal) => {
   const actual = await importOriginal<typeof import("node:fs/promises")>();
+  const { constants } = await import("node:fs");
   return {
     ...actual,
-    async open(pathname: Parameters<typeof actual.open>[0], flags: Parameters<typeof actual.open>[1], mode?: number) {
+    async mkdir(
+      pathname: Parameters<typeof actual.mkdir>[0],
+      options?: Parameters<typeof actual.mkdir>[1],
+    ) {
+      const result = await actual.mkdir(pathname, options);
+      const candidate = String(pathname);
       if (
-        fsFailure.mode === "partial" && flags === "wx" &&
-        String(pathname).endsWith("extracted-facts.json")
+        fsFailure.mode === "target-nonempty-replacement" &&
+        !fsFailure.targetReplacementDone &&
+        candidate.endsWith("/run-001")
+      ) {
+        fsFailure.targetReplacementDone = true;
+        await actual.rename(candidate, `${candidate}.attacker`);
+        await actual.mkdir(candidate, { mode: 0o700 });
+        await actual.writeFile(`${candidate}/owner.txt`, "attacker", { mode: 0o600 });
+      }
+      return result;
+    },
+    async open(
+      pathname: Parameters<typeof actual.open>[0],
+      flags: Parameters<typeof actual.open>[1],
+      mode?: Parameters<typeof actual.open>[2],
+    ) {
+      const candidate = String(pathname);
+      if (
+        fsFailure.rejectDescendantsOf !== null &&
+        candidate.startsWith(fsFailure.rejectDescendantsOf) &&
+        candidate !== fsFailure.rejectDescendantsOf
+      ) {
+        throw new Error("SECRET direct descendant open");
+      }
+      const isExclusive = flags === "wx" ||
+        (typeof flags === "number" && (flags & constants.O_EXCL) !== 0);
+      const isDirectory = typeof flags === "number" &&
+        (flags & constants.O_DIRECTORY) !== 0;
+      if (fsFailure.rejectDirectoryOpen && isDirectory) {
+        const error = new Error("SECRET directory open failure") as NodeJS.ErrnoException;
+        error.code = "EPERM";
+        throw error;
+      }
+      if (
+        fsFailure.mode === "partial" && isExclusive &&
+        candidate.endsWith("extracted-facts.json")
       ) throw new Error("SECRET partial write failure");
-      return actual.open(pathname, flags, mode);
+      const handle = await actual.open(pathname, flags, mode);
+      const close = handle.close.bind(handle);
+      fsFailure.openHandles.add(handle);
+      Object.defineProperty(handle, "close", {
+        configurable: true,
+        value: async () => {
+          try {
+            await close();
+          } finally {
+            fsFailure.openHandles.delete(handle);
+          }
+        },
+      });
+      const ancestor = fsFailure.ancestor;
+      if (
+        ancestor !== null && !ancestor.moved && isDirectory &&
+        candidate.endsWith("/data")
+      ) {
+        ancestor.moved = true;
+        await actual.rename(ancestor.pathname, `${ancestor.pathname}.displaced`);
+        await actual.symlink(ancestor.outside, ancestor.pathname, "dir");
+      }
+      if (
+        fsFailure.mode === "target-empty-replacement" &&
+        !fsFailure.targetReplacementDone && isDirectory &&
+        candidate.endsWith("/run-001")
+      ) {
+        fsFailure.targetReplacementDone = true;
+        await actual.rename(candidate, `${candidate}.attacker`);
+        await actual.mkdir(candidate, { mode: 0o700 });
+      }
+      const directorySyncError = fsFailure.directorySyncError;
+      if (isDirectory && directorySyncError !== null) {
+        Object.defineProperty(handle, "sync", {
+          configurable: true,
+          value: async () => {
+            const error = new Error("SECRET directory sync failure") as NodeJS.ErrnoException;
+            error.code = directorySyncError;
+            throw error;
+          },
+        });
+      }
+      return handle;
     },
     async rename(oldPath: Parameters<typeof actual.rename>[0], newPath: Parameters<typeof actual.rename>[1]) {
+      fsFailure.renameCalls += 1;
       if (fsFailure.mode === "exdev") {
         const error = new Error("SECRET cross-device path") as NodeJS.ErrnoException;
         error.code = "EXDEV";
         throw error;
       }
-      if (fsFailure.mode === "tamper") {
-        await actual.writeFile(join(String(oldPath), "source-register.json"), "tampered");
-      }
       return actual.rename(oldPath, newPath);
+    },
+    async rm(
+      pathname: Parameters<typeof actual.rm>[0],
+      options?: Parameters<typeof actual.rm>[1],
+    ) {
+      if (fsFailure.rejectRecursiveRm) {
+        throw new Error("SECRET recursive cleanup is forbidden");
+      }
+      return actual.rm(pathname, options);
     },
   };
 });
@@ -57,11 +163,12 @@ const temporaryRoots: string[] = [];
 
 describe("Basic candidate atomic artifact writer", () => {
   beforeEach(() => {
-    fsFailure.mode = "none";
+    resetFilesystemProbe();
   });
 
   afterEach(async () => {
-    fsFailure.mode = "none";
+    expect(fsFailure.openHandles.size).toBe(0);
+    resetFilesystemProbe();
     await Promise.all(temporaryRoots.splice(0).map((pathname) =>
       rm(pathname, { recursive: true, force: true })
     ));
@@ -94,6 +201,7 @@ describe("Basic candidate atomic artifact writer", () => {
     expect((await readFile(join(target, "source-register.json"), "utf8"))).toMatch(
       /"schemaVersion":"basic-country-audit\/v2"/,
     );
+    expect(fsFailure.renameCalls).toBe(1);
   });
 
   test("rejects blocked and forged candidate results before creating staging", async () => {
@@ -109,8 +217,30 @@ describe("Basic candidate atomic artifact writer", () => {
     });
     await expect(writeBasicCandidateArtifacts({ repoRoot, candidate: forged }))
       .rejects.toThrow("basic candidate artifact write failed");
+    const handBuilt = Object.freeze({
+      stages: authentic.stages,
+      failedStage: authentic.failedStage,
+      validation: authentic.validation,
+      artifacts: authentic.artifacts,
+      boundaryVerdict: authentic.boundaryVerdict,
+    });
+    await expect(writeBasicCandidateArtifacts({ repoRoot, candidate: handBuilt }))
+      .rejects.toThrow("basic candidate artifact write failed");
     expect(await pathExists(join(repoRoot, "data", "staging", "example-land", "run-001")))
       .toBe(false);
+  });
+
+  test("rejects an existing empty target without claiming it", async () => {
+    const repoRoot = await createRepoRoot();
+    const target = join(repoRoot, "data", "staging", "example-land", "run-001");
+    await mkdir(target, { recursive: true, mode: 0o700 });
+
+    await expect(writeBasicCandidateArtifacts({
+      repoRoot,
+      candidate: await readyCandidate(),
+    })).rejects.toThrow("basic candidate artifact write failed");
+
+    expect(await readdir(target)).toEqual([]);
   });
 
   test("rejects an existing target without changing its content", async () => {
@@ -151,10 +281,29 @@ describe("Basic candidate atomic artifact writer", () => {
     })).rejects.toThrow("basic candidate artifact write failed");
   });
 
-  test("cleans only its owned temporary directory after a partial write", async () => {
+  test("rejects a pre-existing symlink target without following it", async () => {
+    const repoRoot = await createRepoRoot();
+    const outside = join(repoRoot, "outside");
+    const target = join(repoRoot, "data", "staging", "example-land", "run-001");
+    await mkdir(outside);
+    await mkdir(join(repoRoot, "data", "staging", "example-land"), {
+      recursive: true,
+    });
+    await symlink(outside, target, "dir");
+
+    await expect(writeBasicCandidateArtifacts({
+      repoRoot,
+      candidate: await readyCandidate(),
+    })).rejects.toThrow("basic candidate artifact write failed");
+
+    expect(await readdir(outside)).toEqual([]);
+  });
+
+  test("cleans fixed owned entries without recursive rm after a partial write", async () => {
     const repoRoot = await createRepoRoot();
     const candidate = await readyCandidate();
     fsFailure.mode = "partial";
+    fsFailure.rejectRecursiveRm = true;
 
     const error = await captureError(() => writeBasicCandidateArtifacts({
       repoRoot,
@@ -166,22 +315,10 @@ describe("Basic candidate atomic artifact writer", () => {
     expect(await readdir(parent)).toEqual([]);
   });
 
-  test("rejects tampering and removes the moved owned identity", async () => {
-    const repoRoot = await createRepoRoot();
-    fsFailure.mode = "tamper";
-
-    await expect(writeBasicCandidateArtifacts({
-      repoRoot,
-      candidate: await readyCandidate(),
-    })).rejects.toThrow("basic candidate artifact write failed");
-
-    expect(await readdir(join(repoRoot, "data", "staging", "example-land"))).toEqual([]);
-  });
-
   test("rejects EXDEV without a copy fallback or partial target", async () => {
     const repoRoot = await createRepoRoot();
-    const candidate = await readyCandidate();
     fsFailure.mode = "exdev";
+    const candidate = await readyCandidate();
 
     const error = await captureError(() => writeBasicCandidateArtifacts({
       repoRoot,
@@ -190,10 +327,99 @@ describe("Basic candidate atomic artifact writer", () => {
 
     expect(error.message).toBe("basic candidate artifact write failed");
     expect(error.message).not.toMatch(/SECRET|cross-device/);
+    expect(fsFailure.renameCalls).toBe(1);
     expect(await readdir(join(repoRoot, "data", "staging", "example-land"))).toEqual([]);
   });
 
-  test("allows only one concurrent writer for the same stable temp identity", async () => {
+  test("rejects a nonempty concurrent replacement after reserving the target name", async () => {
+    const repoRoot = await createRepoRoot();
+    const target = join(repoRoot, "data", "staging", "example-land", "run-001");
+    fsFailure.mode = "target-nonempty-replacement";
+
+    await expect(writeBasicCandidateArtifacts({
+      repoRoot,
+      candidate: await readyCandidate(),
+    })).rejects.toThrow("basic candidate artifact write failed");
+
+    expect(await readFile(join(target, "owner.txt"), "utf8")).toBe("attacker");
+    expect(await readdir(target)).toEqual(["owner.txt"]);
+  });
+
+  test("rejects an empty concurrent replacement after holding the target identity", async () => {
+    const repoRoot = await createRepoRoot();
+    const target = join(repoRoot, "data", "staging", "example-land", "run-001");
+    fsFailure.mode = "target-empty-replacement";
+
+    await expect(writeBasicCandidateArtifacts({
+      repoRoot,
+      candidate: await readyCandidate(),
+    })).rejects.toThrow("basic candidate artifact write failed");
+
+    expect(await readdir(target)).toEqual([]);
+  });
+
+  test("fails closed instead of writing through a swapped staging ancestor", async () => {
+    const repoRoot = await createRepoRoot();
+    const data = join(repoRoot, "data");
+    const outside = join(repoRoot, "outside");
+    await mkdir(data);
+    await mkdir(outside);
+    const ancestor = { pathname: data, outside, moved: false };
+    fsFailure.ancestor = ancestor;
+
+    await expect(writeBasicCandidateArtifacts({
+      repoRoot,
+      candidate: await readyCandidate(),
+    })).rejects.toThrow("basic candidate artifact write failed");
+
+    expect(ancestor.moved).toBe(true);
+    expect(await readdir(outside)).toEqual([]);
+  });
+
+  test("uses held descriptor-relative paths for all writer descendants", async () => {
+    const repoRoot = await createRepoRoot();
+    fsFailure.rejectDescendantsOf = repoRoot;
+
+    await expect(writeBasicCandidateArtifacts({
+      repoRoot,
+      candidate: await readyCandidate(),
+    })).resolves.toEqual({ status: "written" });
+  });
+
+  test.each(["EPERM", "EACCES"] as const)(
+    "rejects a %s directory sync failure",
+    async (code) => {
+      const repoRoot = await createRepoRoot();
+      fsFailure.directorySyncError = code;
+
+      await expect(writeBasicCandidateArtifacts({
+        repoRoot,
+        candidate: await readyCandidate(),
+      })).rejects.toThrow("basic candidate artifact write failed");
+    },
+  );
+
+  test("does not treat a directory-open EPERM as an unsupported sync", async () => {
+    const repoRoot = await createRepoRoot();
+    fsFailure.rejectDirectoryOpen = true;
+
+    await expect(writeBasicCandidateArtifacts({
+      repoRoot,
+      candidate: await readyCandidate(),
+    })).rejects.toThrow("basic candidate artifact write failed");
+  });
+
+  test("permits only an explicit unsupported directory sync errno", async () => {
+    const repoRoot = await createRepoRoot();
+    fsFailure.directorySyncError = "ENOTSUP";
+
+    await expect(writeBasicCandidateArtifacts({
+      repoRoot,
+      candidate: await readyCandidate(),
+    })).resolves.toEqual({ status: "written" });
+  });
+
+  test("allows only one concurrent writer to reserve the final target", async () => {
     const repoRoot = await createRepoRoot();
     const candidate = await readyCandidate();
 
@@ -275,4 +501,15 @@ async function captureError(operation: () => Promise<unknown>): Promise<Error> {
     if (error instanceof Error) return error;
   }
   throw new Error("expected operation to fail");
+}
+
+function resetFilesystemProbe(): void {
+  fsFailure.mode = "none";
+  fsFailure.directorySyncError = null;
+  fsFailure.rejectDirectoryOpen = false;
+  fsFailure.rejectRecursiveRm = false;
+  fsFailure.rejectDescendantsOf = null;
+  fsFailure.ancestor = null;
+  fsFailure.targetReplacementDone = false;
+  fsFailure.renameCalls = 0;
 }

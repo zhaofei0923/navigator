@@ -4,6 +4,7 @@ import {
   mkdir,
   mkdtemp,
   readFile,
+  rename,
   rm,
   symlink,
   writeFile,
@@ -11,20 +12,68 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
 import {
   BASIC_COUNTRY_CANDIDATE_CONFIG_SCHEMA_VERSION,
+  closeBasicCandidateConfig,
   loadBasicCandidateConfig,
   parseBasicCandidateConfig,
   readBasicCandidateCatalog,
   readBasicCandidateConfigInput,
+  type LoadedBasicCandidateConfig,
 } from "./cli/basic-candidate-config.js";
 
+const filesystemProbe = vi.hoisted(() => ({
+  rejectDescendantsOf: null as string | null,
+  swapBeforeOpen: null as null | Readonly<{
+    before: () => Promise<void>;
+    restore: () => Promise<void>;
+  }>,
+}));
+
+vi.mock("node:fs/promises", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:fs/promises")>();
+  return {
+    ...actual,
+    async open(
+      pathname: Parameters<typeof actual.open>[0],
+      flags: Parameters<typeof actual.open>[1],
+      mode?: Parameters<typeof actual.open>[2],
+    ) {
+      const candidate = String(pathname);
+      if (
+        filesystemProbe.rejectDescendantsOf !== null &&
+        candidate.startsWith(filesystemProbe.rejectDescendantsOf) &&
+        candidate !== filesystemProbe.rejectDescendantsOf
+      ) {
+        throw new Error("SECRET direct descendant open");
+      }
+      const swap = filesystemProbe.swapBeforeOpen;
+      if (swap !== null && candidate.endsWith("/reviews/structured.json")) {
+        filesystemProbe.swapBeforeOpen = null;
+        await swap.before();
+        try {
+          return await actual.open(pathname, flags, mode);
+        } finally {
+          await swap.restore();
+        }
+      }
+      return actual.open(pathname, flags, mode);
+    },
+  };
+});
+
 const temporaryRoots: string[] = [];
+const loadedConfigs: LoadedBasicCandidateConfig[] = [];
 
 describe("Basic candidate config", () => {
   afterEach(async () => {
+    filesystemProbe.rejectDescendantsOf = null;
+    filesystemProbe.swapBeforeOpen = null;
+    await Promise.all(loadedConfigs.splice(0).map((loaded) =>
+      closeBasicCandidateConfig(loaded)
+    ));
     await Promise.all(temporaryRoots.splice(0).map((pathname) =>
       rm(pathname, { recursive: true, force: true })
     ));
@@ -65,6 +114,11 @@ describe("Basic candidate config", () => {
     ["unsorted sources", { sourceIds: ["source-b", "source-a"] }],
     ["duplicate sources", { sourceIds: ["source-a", "source-a"] }],
     ["absolute input", { structuredReviewPath: "/tmp/review.json" }],
+    ["win32 slash absolute input", { editorialInputPath: "C:/tmp/editorial.json" }],
+    ["drive-qualified input", { editorialInputPath: "C:editorial.json" }],
+    ["win32 rooted input", { editorialInputPath: "\\\\editorial.json" }],
+    ["UNC input", { editorialInputPath: "\\\\server\\share\\editorial.json" }],
+    ["slash UNC input", { editorialInputPath: "//server/share/editorial.json" }],
     ["parent input", { manualReviewPath: "reviews/../manual.json" }],
     ["dot input", { editorialInputPath: "./editorial.json" }],
     ["NUL input", { editorialInputPath: "editorial.json\0outside" }],
@@ -87,7 +141,7 @@ describe("Basic candidate config", () => {
 
   test("loads only the exact run config and reads registered child inputs", async () => {
     const fixture = await createRunFixture();
-    const loaded = await loadBasicCandidateConfig(
+    const loaded = await loadConfig(
       fixture.repoRoot,
       ".cache/basic-country/ID/run-1/candidate-config.json",
     );
@@ -101,6 +155,85 @@ describe("Basic candidate config", () => {
       loaded,
       "unregistered.json",
     )).rejects.toThrow("basic candidate input is invalid");
+  });
+
+  test("opens config, input, and catalog descendants through held descriptors", async () => {
+    const fixture = await createRunFixture();
+    const catalogDirectory = join(fixture.repoRoot, "packages", "db", "catalog");
+    await mkdir(catalogDirectory, { recursive: true });
+    await writeFile(
+      join(catalogDirectory, "basic-source-catalog.json"),
+      JSON.stringify({ schemaVersion: "catalog" }),
+      { mode: 0o600 },
+    );
+    filesystemProbe.rejectDescendantsOf = fixture.repoRoot;
+
+    const loaded = await loadConfig(
+      fixture.repoRoot,
+      ".cache/basic-country/ID/run-1/candidate-config.json",
+    );
+
+    await expect(readBasicCandidateConfigInput(loaded, "reviews/structured.json"))
+      .resolves.toEqual({ kind: "structured" });
+    await expect(readBasicCandidateCatalog(fixture.repoRoot)).resolves.toEqual({
+      schemaVersion: "catalog",
+    });
+  });
+
+  test("rejects a repository root reached through a symlinked ancestor", async () => {
+    const fixture = await createRunFixture();
+    const container = await mkdtemp(join(tmpdir(), "basic-candidate-root-"));
+    temporaryRoots.push(container);
+    const realParent = join(container, "real");
+    const realRoot = join(realParent, "repo");
+    await mkdir(realParent);
+    await rename(fixture.repoRoot, realRoot);
+    const linkedParent = join(container, "linked");
+    await symlink(realParent, linkedParent, "dir");
+
+    let accepted: LoadedBasicCandidateConfig | null = null;
+    try {
+      accepted = await loadBasicCandidateConfig(
+        join(linkedParent, "repo"),
+        ".cache/basic-country/ID/run-1/candidate-config.json",
+      );
+    } catch {
+      // The stable public error is asserted by every other invalid-load case.
+    } finally {
+      if (accepted !== null) await closeBasicCandidateConfig(accepted);
+    }
+
+    expect(accepted).toBeNull();
+  });
+
+  test("keeps a config input confined when its named ancestor is swapped and restored", async () => {
+    const fixture = await createRunFixture();
+    const reviewDirectory = join(fixture.runDirectory, "reviews");
+    const displaced = join(fixture.runDirectory, "reviews-displaced");
+    const outside = join(fixture.repoRoot, "outside-reviews");
+    await mkdir(outside);
+    await writeFile(
+      join(outside, "structured.json"),
+      JSON.stringify({ kind: "outside" }),
+      { mode: 0o600 },
+    );
+    const loaded = await loadConfig(
+      fixture.repoRoot,
+      ".cache/basic-country/ID/run-1/candidate-config.json",
+    );
+    filesystemProbe.swapBeforeOpen = Object.freeze({
+      async before() {
+        await rename(reviewDirectory, displaced);
+        await symlink(outside, reviewDirectory, "dir");
+      },
+      async restore() {
+        await rm(reviewDirectory);
+        await rename(displaced, reviewDirectory);
+      },
+    });
+
+    await expect(readBasicCandidateConfigInput(loaded, "reviews/structured.json"))
+      .resolves.toEqual({ kind: "structured" });
   });
 
   test.each([
@@ -130,7 +263,7 @@ describe("Basic candidate config", () => {
     await writeFile(outside, "{}", { mode: 0o600 });
     await rm(join(fixture.runDirectory, "reviews", "structured.json"));
     await symlink(outside, join(fixture.runDirectory, "reviews", "structured.json"));
-    const loaded = await loadBasicCandidateConfig(
+    const loaded = await loadConfig(
       fixture.repoRoot,
       ".cache/basic-country/ID/run-1/candidate-config.json",
     );
@@ -154,7 +287,7 @@ describe("Basic candidate config", () => {
 
   test("rejects special files and oversized files without leaking filesystem text", async () => {
     const fixture = await createRunFixture();
-    const loaded = await loadBasicCandidateConfig(
+    const loaded = await loadConfig(
       fixture.repoRoot,
       ".cache/basic-country/ID/run-1/candidate-config.json",
     );
@@ -200,7 +333,7 @@ describe("Basic candidate config", () => {
     const fixture = await createRunFixture();
     await chmod(join(fixture.runDirectory, "editorial.json"), 0o400);
     const before = await readFile(join(fixture.runDirectory, "editorial.json"));
-    const loaded = await loadBasicCandidateConfig(
+    const loaded = await loadConfig(
       fixture.repoRoot,
       ".cache/basic-country/ID/run-1/candidate-config.json",
     );
@@ -260,6 +393,15 @@ async function createRunFixture(overrides: Record<string, unknown> = {}) {
   );
   await writeFile(join(repoRoot, "outside.json"), "{}", { mode: 0o600 });
   return { repoRoot, runDirectory };
+}
+
+async function loadConfig(
+  repoRoot: string,
+  configPath: string,
+): Promise<LoadedBasicCandidateConfig> {
+  const loaded = await loadBasicCandidateConfig(repoRoot, configPath);
+  loadedConfigs.push(loaded);
+  return loaded;
 }
 
 async function captureError(operation: () => Promise<unknown>): Promise<Error> {

@@ -1,15 +1,13 @@
-import { constants, type BigIntStats } from "node:fs";
-import { lstat, open } from "node:fs/promises";
-import {
-  isAbsolute,
-  join,
-  posix,
-  relative,
-  resolve,
-  sep,
-} from "node:path";
 import { isProxy } from "node:util/types";
 
+import {
+  closeBasicCandidateHeldDirectories,
+  openBasicCandidateDirectoryChild,
+  openBasicCandidateTrustedDirectory,
+  readBasicCandidateBoundedRegularFile,
+  type BasicCandidateHeldDirectory,
+} from "./basic-candidate-constrained-fs.js";
+import { parseBasicCandidateRelativePath } from "./basic-candidate-paths.js";
 import {
   SAFE_COUNTRY_DIRECTORY,
   SAFE_RUN_ID,
@@ -35,16 +33,8 @@ export interface LoadedBasicCandidateConfig {
   readonly config: BasicCountryCandidateConfig;
 }
 
-type FileIdentity = Readonly<{
-  pathname: string;
-  dev: bigint;
-  ino: bigint;
-  type: bigint;
-}>;
-
 type LoadedProvenance = Readonly<{
-  runDirectory: string;
-  runIdentity: readonly FileIdentity[];
+  runDirectory: BasicCandidateHeldDirectory;
   allowedPaths: ReadonlySet<string>;
 }>;
 
@@ -59,16 +49,13 @@ const CONFIG_KEYS = [
   "documentPlanPaths",
   "editorialInputPath",
 ] as const;
-const CONFIG_PATH =
-  /^\.cache\/basic-country\/([A-Z]{2})\/([A-Za-z0-9][A-Za-z0-9_-]*)\/candidate-config\.json$/;
 const SOURCE_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const ISO2 = /^[A-Z]{2}$/;
-const FILE_TYPE_MASK = 0o170000n;
 const MAX_ACTIVE_SOURCES = 64;
 const MAX_DOCUMENT_PLANS = 64;
 const MAX_INPUT_BYTES = 2 * 1024 * 1024;
-const CATALOG_CHILD = "packages/db/catalog/basic-source-catalog.json";
 const LOADED_PROVENANCE = new WeakMap<object, LoadedProvenance>();
+const CLOSED_CONFIGS = new WeakSet<object>();
 
 export function parseBasicCandidateConfig(
   value: unknown,
@@ -79,10 +66,8 @@ export function parseBasicCandidateConfig(
       record.schemaVersion !== BASIC_COUNTRY_CANDIDATE_CONFIG_SCHEMA_VERSION ||
       typeof record.countryDirectory !== "string" ||
       !SAFE_COUNTRY_DIRECTORY.test(record.countryDirectory) ||
-      typeof record.countryCode !== "string" ||
-      !ISO2.test(record.countryCode) ||
-      typeof record.runId !== "string" ||
-      !SAFE_RUN_ID.test(record.runId)
+      typeof record.countryCode !== "string" || !ISO2.test(record.countryCode) ||
+      typeof record.runId !== "string" || !SAFE_RUN_ID.test(record.runId)
     ) invalid();
     const sourceIds = sortedIds(record.sourceIds);
     const structuredReviewPath = nullableChildPath(record.structuredReviewPath);
@@ -116,20 +101,23 @@ export async function loadBasicCandidateConfig(
   repoRoot: string,
   configPath: string,
 ): Promise<LoadedBasicCandidateConfig> {
+  let root: BasicCandidateHeldDirectory | null = null;
+  let cache: BasicCandidateHeldDirectory | null = null;
+  let basicCountry: BasicCandidateHeldDirectory | null = null;
+  let country: BasicCandidateHeldDirectory | null = null;
+  let run: BasicCandidateHeldDirectory | null = null;
   try {
-    const root = trustedRoot(repoRoot);
-    if (typeof configPath !== "string" || configPath.includes("\0")) invalid();
-    const match = CONFIG_PATH.exec(configPath);
-    if (match === null || posix.normalize(configPath) !== configPath) invalid();
-    const value = await readBoundedJson(root, configPath);
-    const config = parseBasicCandidateConfig(value);
-    if (config.countryCode !== match[1] || config.runId !== match[2]) invalid();
-    const runDirectory = join(root, ".cache", "basic-country", config.countryCode, config.runId);
-    const runIdentity = await snapshotDirectories(root, runDirectory);
+    const location = configLocation(configPath);
+    root = await openBasicCandidateTrustedDirectory(repoRoot);
+    cache = await openBasicCandidateDirectoryChild(root, ".cache");
+    basicCountry = await openBasicCandidateDirectoryChild(cache, "basic-country");
+    country = await openBasicCandidateDirectoryChild(basicCountry, location.countryCode);
+    run = await openBasicCandidateDirectoryChild(country, location.runId);
+    const config = parseBasicCandidateConfig(await readJson(run, "candidate-config.json"));
+    if (config.countryCode !== location.countryCode || config.runId !== location.runId) invalid();
     const loaded = Object.freeze({ config });
     LOADED_PROVENANCE.set(loaded, Object.freeze({
-      runDirectory,
-      runIdentity,
+      runDirectory: run,
       allowedPaths: new Set([
         ...(config.structuredReviewPath === null ? [] : [config.structuredReviewPath]),
         ...(config.manualReviewPath === null ? [] : [config.manualReviewPath]),
@@ -137,9 +125,12 @@ export async function loadBasicCandidateConfig(
         config.editorialInputPath,
       ]),
     }));
+    run = null;
     return loaded;
   } catch {
     throw new Error("basic candidate config is invalid");
+  } finally {
+    await closeBasicCandidateHeldDirectories([country, basicCountry, cache, root, run]);
   }
 }
 
@@ -147,111 +138,80 @@ export async function readBasicCandidateConfigInput(
   loaded: LoadedBasicCandidateConfig,
   inputPath: string,
 ): Promise<unknown> {
+  const opened: BasicCandidateHeldDirectory[] = [];
   try {
     const provenance = typeof loaded === "object" && loaded !== null
       ? LOADED_PROVENANCE.get(loaded)
       : undefined;
     if (
-      provenance === undefined ||
-      typeof inputPath !== "string" ||
-      !provenance.allowedPaths.has(inputPath) ||
+      provenance === undefined || CLOSED_CONFIGS.has(loaded) ||
+      typeof inputPath !== "string" || !provenance.allowedPaths.has(inputPath) ||
       childPath(inputPath) !== inputPath
     ) invalid();
-    await requireSameDirectories(provenance.runIdentity);
-    const value = await readBoundedJson(provenance.runDirectory, inputPath);
-    await requireSameDirectories(provenance.runIdentity);
-    return value;
+    const segments = parseBasicCandidateRelativePath(inputPath);
+    let directory = provenance.runDirectory;
+    for (const segment of segments.slice(0, -1)) {
+      const child = await openBasicCandidateDirectoryChild(directory, segment);
+      opened.push(child);
+      directory = child;
+    }
+    return await readJson(directory, segments.at(-1)!);
   } catch {
     throw new Error("basic candidate input is invalid");
+  } finally {
+    await closeBasicCandidateHeldDirectories(opened);
   }
 }
 
 export async function readBasicCandidateCatalog(repoRoot: string): Promise<unknown> {
+  let root: BasicCandidateHeldDirectory | null = null;
+  let packages: BasicCandidateHeldDirectory | null = null;
+  let database: BasicCandidateHeldDirectory | null = null;
+  let catalog: BasicCandidateHeldDirectory | null = null;
   try {
-    return await readBoundedJson(trustedRoot(repoRoot), CATALOG_CHILD);
+    root = await openBasicCandidateTrustedDirectory(repoRoot);
+    packages = await openBasicCandidateDirectoryChild(root, "packages");
+    database = await openBasicCandidateDirectoryChild(packages, "db");
+    catalog = await openBasicCandidateDirectoryChild(database, "catalog");
+    return await readJson(catalog, "basic-source-catalog.json");
   } catch {
     throw new Error("basic candidate catalog is invalid");
-  }
-}
-
-async function readBoundedJson(root: string, child: string): Promise<unknown> {
-  const pathname = confinedChild(root, child);
-  const directories = await snapshotDirectories(root, resolve(pathname, ".."));
-  const before = await lstat(pathname, { bigint: true });
-  if (
-    before.isSymbolicLink() || !before.isFile() ||
-    before.size > BigInt(MAX_INPUT_BYTES)
-  ) invalid();
-  const handle = await open(pathname, constants.O_RDONLY | constants.O_NOFOLLOW);
-  try {
-    const opened = await handle.stat({ bigint: true });
-    if (!sameFile(before, opened)) invalid();
-    await requireSameDirectories(directories);
-    const bytes = await handle.readFile();
-    if (bytes.byteLength > MAX_INPUT_BYTES) invalid();
-    const afterRead = await handle.stat({ bigint: true });
-    if (!sameStableFile(opened, afterRead)) invalid();
-    const afterPath = await lstat(pathname, { bigint: true });
-    if (!sameStableFile(afterRead, afterPath)) invalid();
-    await requireSameDirectories(directories);
-    const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
-    return JSON.parse(text) as unknown;
   } finally {
-    await handle.close().catch(() => undefined);
+    await closeBasicCandidateHeldDirectories([catalog, database, packages, root]);
   }
 }
 
-async function snapshotDirectories(
-  root: string,
-  target: string,
-): Promise<readonly FileIdentity[]> {
-  const child = relative(root, target);
-  if (child === ".." || child.startsWith(`..${sep}`) || isAbsolute(child)) invalid();
-  const identities: FileIdentity[] = [];
-  let current = root;
-  identities.push(await directoryIdentity(current));
-  for (const segment of child.split(sep)) {
-    if (segment === "") continue;
-    current = join(current, segment);
-    identities.push(await directoryIdentity(current));
-  }
-  return Object.freeze(identities);
+export async function closeBasicCandidateConfig(
+  loaded: LoadedBasicCandidateConfig,
+): Promise<void> {
+  if (typeof loaded !== "object" || loaded === null) return;
+  const provenance = LOADED_PROVENANCE.get(loaded);
+  if (provenance === undefined || CLOSED_CONFIGS.has(loaded)) return;
+  CLOSED_CONFIGS.add(loaded);
+  await closeBasicCandidateHeldDirectories([provenance.runDirectory]);
 }
 
-async function directoryIdentity(pathname: string): Promise<FileIdentity> {
-  const details = await lstat(pathname, { bigint: true });
-  if (details.isSymbolicLink() || !details.isDirectory()) invalid();
-  return Object.freeze({
-    pathname,
-    dev: details.dev,
-    ino: details.ino,
-    type: details.mode & FILE_TYPE_MASK,
-  });
+async function readJson(
+  directory: BasicCandidateHeldDirectory,
+  name: string,
+): Promise<unknown> {
+  const bytes = await readBasicCandidateBoundedRegularFile(
+    directory,
+    name,
+    MAX_INPUT_BYTES,
+  );
+  const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  return JSON.parse(text) as unknown;
 }
 
-async function requireSameDirectories(values: readonly FileIdentity[]): Promise<void> {
-  for (const expected of values) {
-    const actual = await directoryIdentity(expected.pathname);
-    if (
-      actual.dev !== expected.dev || actual.ino !== expected.ino ||
-      actual.type !== expected.type
-    ) invalid();
-  }
-}
-
-function trustedRoot(value: unknown): string {
-  if (typeof value !== "string" || !isAbsolute(value) || value.includes("\0")) invalid();
-  const normalized = resolve(value);
-  if (normalized !== value) invalid();
-  return normalized;
-}
-
-function confinedChild(root: string, child: string): string {
-  if (childPath(child) !== child) invalid();
-  const pathname = resolve(root, ...child.split("/"));
-  const confined = relative(root, pathname);
-  if (confined === ".." || confined.startsWith(`..${sep}`) || isAbsolute(confined)) invalid();
-  return pathname;
+function configLocation(value: unknown): Readonly<{ countryCode: string; runId: string }> {
+  const segments = parseBasicCandidateRelativePath(value);
+  if (
+    segments.length !== 5 || segments[0] !== ".cache" ||
+    segments[1] !== "basic-country" || segments[4] !== "candidate-config.json" ||
+    !ISO2.test(segments[2]!) || !SAFE_RUN_ID.test(segments[3]!)
+  ) invalid();
+  return Object.freeze({ countryCode: segments[2]!, runId: segments[3]! });
 }
 
 function exactDataRecord<const Keys extends readonly string[]>(
@@ -280,7 +240,9 @@ function exactDataRecord<const Keys extends readonly string[]>(
 }
 
 function sortedIds(value: unknown): readonly string[] {
-  if (!Array.isArray(value) || value.length === 0 || value.length > MAX_ACTIVE_SOURCES) invalid();
+  if (!Array.isArray(value) || value.length === 0 || value.length > MAX_ACTIVE_SOURCES) {
+    invalid();
+  }
   const result = value.map((item) => {
     if (typeof item !== "string" || !SOURCE_ID.test(item)) invalid();
     return item;
@@ -301,28 +263,13 @@ function nullableChildPath(value: unknown): string | null {
 }
 
 function childPath(value: unknown): string {
-  if (
-    typeof value !== "string" || value === "" || value.includes("\0") ||
-    value.includes("\\") || isAbsolute(value) || posix.normalize(value) !== value ||
-    value.split("/").some((segment) => segment === "" || segment === "." || segment === "..")
-  ) invalid();
-  return value;
+  return parseBasicCandidateRelativePath(value).join("/");
 }
 
 function requireSortedUnique(values: readonly string[]): void {
   for (let index = 1; index < values.length; index += 1) {
     if (values[index - 1]! >= values[index]!) invalid();
   }
-}
-
-function sameFile(left: BigIntStats, right: BigIntStats): boolean {
-  return left.dev === right.dev && left.ino === right.ino &&
-    (left.mode & FILE_TYPE_MASK) === (right.mode & FILE_TYPE_MASK) && right.isFile();
-}
-
-function sameStableFile(left: BigIntStats, right: BigIntStats): boolean {
-  return sameFile(left, right) && left.size === right.size &&
-    left.mtimeNs === right.mtimeNs && left.ctimeNs === right.ctimeNs;
 }
 
 function deepFreeze<T>(value: T): T {
