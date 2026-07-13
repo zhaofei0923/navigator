@@ -23,15 +23,6 @@ const BOUNDARY_VERDICT: BasicDeterministicBoundaryVerdict = Object.freeze({
   aiUsableTrueCount: 0,
   aiEligibleKnowledgeIds: Object.freeze([] as const),
 });
-const CANDIDATE_RESULT_PROVENANCE = new WeakSet<object>();
-
-export function isBasicDeterministicCandidateResultFromCore(
-  value: unknown,
-): value is BasicDeterministicCandidateResult {
-  return typeof value === "object" && value !== null &&
-    CANDIDATE_RESULT_PROVENANCE.has(value);
-}
-
 export function createBasicDeterministicFailureResult(
   failedStage: BasicDeterministicStageName,
   validation: BasicCollectionAuditValidationResultV2 | null = null,
@@ -94,6 +85,5 @@ function createResult(
     artifacts,
     boundaryVerdict: BOUNDARY_VERDICT,
   });
-  CANDIDATE_RESULT_PROVENANCE.add(result);
   return result;
 }

@@ -23,9 +23,13 @@ import {
   readBasicCandidateConfigInput,
   type LoadedBasicCandidateConfig,
 } from "./basic-candidate-config.js";
+import {
+  getBasicCandidateWorkspaceDescriptorRoot,
+  type BasicCandidateWorkspace,
+} from "./basic-candidate-workspace.js";
 
 export interface BasicCandidateCompositionInput {
-  readonly repoRoot: string;
+  readonly workspace: BasicCandidateWorkspace;
   readonly configPath: string;
   readonly transport: BasicSourceTransportV2;
 }
@@ -49,6 +53,7 @@ export interface BasicCandidateCompositionDependencies {
   parseEditorial: typeof parseBasicCountryEditorialInput;
   materializeReviewed: typeof materializeBasicReviewedRunV2;
   runCandidate: typeof runBasicDeterministicCandidate;
+  getWorkspaceDescriptorRoot: typeof getBasicCandidateWorkspaceDescriptorRoot;
 }
 
 const DEFAULT_DEPENDENCIES: BasicCandidateCompositionDependencies = Object.freeze({
@@ -65,6 +70,7 @@ const DEFAULT_DEPENDENCIES: BasicCandidateCompositionDependencies = Object.freez
   parseEditorial: parseBasicCountryEditorialInput,
   materializeReviewed: materializeBasicReviewedRunV2,
   runCandidate: runBasicDeterministicCandidate,
+  getWorkspaceDescriptorRoot: getBasicCandidateWorkspaceDescriptorRoot,
 });
 
 const ERROR_RESULT: BasicCandidateCompositionResult = Object.freeze({
@@ -78,10 +84,10 @@ export async function composeBasicCountryCandidate(
 ): Promise<BasicCandidateCompositionResult> {
   let loaded: LoadedBasicCandidateConfig | null = null;
   try {
-    loaded = await dependencies.loadConfig(input.repoRoot, input.configPath);
+    loaded = await dependencies.loadConfig(input.workspace, input.configPath);
     const config = parseBasicCandidateConfig(readLoadedConfig(loaded));
     const catalog = dependencies.parseCatalog(
-      await dependencies.readCatalog(input.repoRoot),
+      await dependencies.readCatalog(input.workspace),
     );
     const plan = dependencies.createPlan({
       catalog,
@@ -92,7 +98,7 @@ export async function composeBasicCountryCandidate(
     requireReviewPathShape(config, sourceKinds);
 
     const preliminary = await dependencies.runPlan({
-      repoRoot: input.repoRoot,
+      repoRoot: dependencies.getWorkspaceDescriptorRoot(input.workspace),
       countryCode: config.countryCode,
       runId: config.runId,
       plan,

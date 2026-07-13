@@ -1,4 +1,4 @@
-import { lstat, readFile, realpath } from "node:fs/promises";
+import { realpath } from "node:fs/promises";
 import { registerHooks } from "node:module";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -13,9 +13,15 @@ import type {
   BasicCandidateCompositionInput,
   BasicCandidateCompositionResult,
 } from "./basic-candidate-composition.js";
+import {
+  closeBasicCandidateWorkspace,
+  openBasicCandidateWorkspace,
+  type BasicCandidateWorkspace,
+} from "./basic-candidate-workspace.js";
 
 export interface BasicCandidateCliDependencies {
-  resolveRepoRoot(): Promise<string>;
+  openWorkspace(): Promise<BasicCandidateWorkspace>;
+  closeWorkspace(workspace: BasicCandidateWorkspace): Promise<void>;
   createTransport(): BasicSourceTransportV2;
   compose(input: BasicCandidateCompositionInput): Promise<BasicCandidateCompositionResult>;
   write(input: BasicCandidateArtifactWriteInput): Promise<BasicCandidateArtifactWriteResult>;
@@ -48,51 +54,50 @@ export async function runCandidateBasicCountryCli(
     emit(dependencies?.writeStderr ?? writeProcessStderr, "basic candidate error\n");
     return 1;
   }
+  let workspace: BasicCandidateWorkspace | null = null;
+  let outcome: "written" | "blocked" | "error" = "error";
   try {
-    const repoRoot = await runtime.resolveRepoRoot();
+    workspace = await runtime.openWorkspace();
     const transport = runtime.createTransport();
     const composition = await runtime.compose({
-      repoRoot,
+      workspace,
       configPath,
       transport,
     });
     if (composition.status === "blocked") {
-      emit(runtime.writeStderr, "basic candidate blocked\n");
-      return 2;
+      outcome = "blocked";
+    } else if (composition.status === "ready" && composition.candidate !== null) {
+      await runtime.write({ workspace, candidate: composition.candidate });
+      outcome = "written";
     }
-    if (composition.status !== "ready" || composition.candidate === null) {
-      emit(runtime.writeStderr, "basic candidate error\n");
-      return 1;
-    }
-    await runtime.write({ repoRoot, candidate: composition.candidate });
-    emit(runtime.writeStdout, "basic candidate written\n");
-    return 0;
   } catch {
-    emit(runtime.writeStderr, "basic candidate error\n");
-    return 1;
+    outcome = "error";
+  } finally {
+    if (workspace !== null) {
+      try {
+        await runtime.closeWorkspace(workspace);
+      } catch {
+        outcome = "error";
+      }
+    }
   }
+  if (outcome === "written") emit(runtime.writeStdout, "basic candidate written\n");
+  else if (outcome === "blocked") emit(runtime.writeStderr, "basic candidate blocked\n");
+  else emit(runtime.writeStderr, "basic candidate error\n");
+  return outcome === "written" ? 0 : outcome === "blocked" ? 2 : 1;
 }
 
-export async function resolveProductionRepoRoot(): Promise<string> {
+export async function openProductionWorkspace(): Promise<BasicCandidateWorkspace> {
   try {
     const expected = resolve(fileURLToPath(new URL("../../../../", import.meta.url)));
-    const root = await realpath(expected);
-    if (root !== expected || !isAbsolute(root)) invalid();
-    const rootDetails = await lstat(root);
-    if (rootDetails.isSymbolicLink() || !rootDetails.isDirectory()) invalid();
+    if (!isAbsolute(expected)) invalid();
     const current = await realpath(process.cwd());
-    const fromRoot = relative(root, current);
+    const fromRoot = relative(expected, current);
     if (
       fromRoot === ".." || fromRoot.startsWith(`..${sep}`) ||
       isAbsolute(fromRoot)
     ) invalid();
-    await requireWorkspaceFile(root, "pnpm-workspace.yaml");
-    const packageJson = await readWorkspaceJson(root, "package.json");
-    const dbPackageJson = await readWorkspaceJson(root, "packages/db/package.json");
-    if (packageJson.name !== "navigator" || dbPackageJson.name !== "@navigator/db") {
-      invalid();
-    }
-    return root;
+    return await openBasicCandidateWorkspace(expected);
   } catch {
     throw new Error("basic candidate workspace is invalid");
   }
@@ -118,7 +123,8 @@ async function loadDefaultDependencies(): Promise<BasicCandidateCliDependencies>
     import("./basic-candidate-composition.js"),
     import("./basic-candidate-artifact-writer.js"),
   ]).then(([transportModule, compositionModule, writerModule]) => Object.freeze({
-    resolveRepoRoot: resolveProductionRepoRoot,
+    openWorkspace: openProductionWorkspace,
+    closeWorkspace: closeBasicCandidateWorkspace,
     createTransport() {
       return createProductionTransport(transportModule.createBasicSourceTransportV2);
     },
@@ -147,22 +153,6 @@ function registerLocalTypeScriptResolution(): void {
       return nextResolve(specifier, context);
     },
   });
-}
-
-async function requireWorkspaceFile(root: string, child: string): Promise<void> {
-  const pathname = resolve(root, child);
-  const details = await lstat(pathname);
-  if (details.isSymbolicLink() || !details.isFile()) invalid();
-}
-
-async function readWorkspaceJson(
-  root: string,
-  child: string,
-): Promise<{ readonly name?: unknown }> {
-  await requireWorkspaceFile(root, child);
-  const value: unknown = JSON.parse(await readFile(resolve(root, child), "utf8"));
-  if (typeof value !== "object" || value === null || Array.isArray(value)) invalid();
-  return value as { readonly name?: unknown };
 }
 
 function emit(writer: (value: string) => void, value: string): void {

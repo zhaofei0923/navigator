@@ -3,11 +3,14 @@ import { isProxy } from "node:util/types";
 import {
   closeBasicCandidateHeldDirectories,
   openBasicCandidateDirectoryChild,
-  openBasicCandidateTrustedDirectory,
   readBasicCandidateBoundedRegularFile,
   type BasicCandidateHeldDirectory,
 } from "./basic-candidate-constrained-fs.js";
 import { parseBasicCandidateRelativePath } from "./basic-candidate-paths.js";
+import {
+  getBasicCandidateWorkspaceRootDirectory,
+  type BasicCandidateWorkspace,
+} from "./basic-candidate-workspace.js";
 import {
   SAFE_COUNTRY_DIRECTORY,
   SAFE_RUN_ID,
@@ -98,17 +101,16 @@ export function parseBasicCandidateConfig(
 }
 
 export async function loadBasicCandidateConfig(
-  repoRoot: string,
+  workspace: BasicCandidateWorkspace,
   configPath: string,
 ): Promise<LoadedBasicCandidateConfig> {
-  let root: BasicCandidateHeldDirectory | null = null;
   let cache: BasicCandidateHeldDirectory | null = null;
   let basicCountry: BasicCandidateHeldDirectory | null = null;
   let country: BasicCandidateHeldDirectory | null = null;
   let run: BasicCandidateHeldDirectory | null = null;
   try {
     const location = configLocation(configPath);
-    root = await openBasicCandidateTrustedDirectory(repoRoot);
+    const root = getBasicCandidateWorkspaceRootDirectory(workspace);
     cache = await openBasicCandidateDirectoryChild(root, ".cache");
     basicCountry = await openBasicCandidateDirectoryChild(cache, "basic-country");
     country = await openBasicCandidateDirectoryChild(basicCountry, location.countryCode);
@@ -130,7 +132,7 @@ export async function loadBasicCandidateConfig(
   } catch {
     throw new Error("basic candidate config is invalid");
   } finally {
-    await closeBasicCandidateHeldDirectories([country, basicCountry, cache, root, run]);
+    await closeBasicCandidateHeldDirectories([country, basicCountry, cache, run]);
   }
 }
 
@@ -163,13 +165,14 @@ export async function readBasicCandidateConfigInput(
   }
 }
 
-export async function readBasicCandidateCatalog(repoRoot: string): Promise<unknown> {
-  let root: BasicCandidateHeldDirectory | null = null;
+export async function readBasicCandidateCatalog(
+  workspace: BasicCandidateWorkspace,
+): Promise<unknown> {
   let packages: BasicCandidateHeldDirectory | null = null;
   let database: BasicCandidateHeldDirectory | null = null;
   let catalog: BasicCandidateHeldDirectory | null = null;
   try {
-    root = await openBasicCandidateTrustedDirectory(repoRoot);
+    const root = getBasicCandidateWorkspaceRootDirectory(workspace);
     packages = await openBasicCandidateDirectoryChild(root, "packages");
     database = await openBasicCandidateDirectoryChild(packages, "db");
     catalog = await openBasicCandidateDirectoryChild(database, "catalog");
@@ -177,7 +180,7 @@ export async function readBasicCandidateCatalog(repoRoot: string): Promise<unkno
   } catch {
     throw new Error("basic candidate catalog is invalid");
   } finally {
-    await closeBasicCandidateHeldDirectories([catalog, database, packages, root]);
+    await closeBasicCandidateHeldDirectories([catalog, database, packages]);
   }
 }
 
@@ -240,10 +243,8 @@ function exactDataRecord<const Keys extends readonly string[]>(
 }
 
 function sortedIds(value: unknown): readonly string[] {
-  if (!Array.isArray(value) || value.length === 0 || value.length > MAX_ACTIVE_SOURCES) {
-    invalid();
-  }
-  const result = value.map((item) => {
+  const values = snapshotArray(value, MAX_ACTIVE_SOURCES, false);
+  const result = values.map((item) => {
     if (typeof item !== "string" || !SOURCE_ID.test(item)) invalid();
     return item;
   });
@@ -252,10 +253,39 @@ function sortedIds(value: unknown): readonly string[] {
 }
 
 function sortedPaths(value: unknown): readonly string[] {
-  if (!Array.isArray(value) || value.length > MAX_DOCUMENT_PLANS) invalid();
-  const result = value.map(childPath);
+  const result = snapshotArray(value, MAX_DOCUMENT_PLANS, true).map(childPath);
   requireSortedUnique(result);
   return Object.freeze(result);
+}
+
+function snapshotArray(
+  value: unknown,
+  maximumLength: number,
+  allowEmpty: boolean,
+): readonly unknown[] {
+  if (
+    typeof value !== "object" || value === null || isProxy(value) ||
+    !Array.isArray(value) || Object.getPrototypeOf(value) !== Array.prototype
+  ) invalid();
+  const lengthDescriptor = Object.getOwnPropertyDescriptor(value, "length");
+  if (
+    lengthDescriptor === undefined || !Object.hasOwn(lengthDescriptor, "value") ||
+    typeof lengthDescriptor.value !== "number" ||
+    !Number.isSafeInteger(lengthDescriptor.value) ||
+    lengthDescriptor.value > maximumLength ||
+    (!allowEmpty && lengthDescriptor.value === 0) ||
+    Reflect.ownKeys(value).length !== lengthDescriptor.value + 1
+  ) invalid();
+  const result: unknown[] = [];
+  for (let index = 0; index < lengthDescriptor.value; index += 1) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+    if (
+      descriptor === undefined || !descriptor.enumerable ||
+      !Object.hasOwn(descriptor, "value")
+    ) invalid();
+    result.push(descriptor.value);
+  }
+  return result;
 }
 
 function nullableChildPath(value: unknown): string | null {

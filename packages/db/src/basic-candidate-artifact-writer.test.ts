@@ -1,4 +1,9 @@
 import {
+  mkdirSync,
+  renameSync,
+  writeFileSync,
+} from "node:fs";
+import {
   lstat,
   mkdir,
   mkdtemp,
@@ -20,9 +25,71 @@ import {
 } from "./collection/basic-collection-v2-contracts.js";
 import { runBasicDeterministicCandidate } from "./collection/basic-deterministic-candidate.js";
 import { createBasicDeterministicFailureResult } from "./collection/basic-deterministic-candidate-result.js";
+import { createBasicDeterministicSuccessResult } from "./collection/basic-deterministic-candidate-result.js";
 import {
-  writeBasicCandidateArtifacts,
+  writeBasicCandidateArtifacts as writeBasicCandidateArtifactsWithWorkspace,
 } from "./cli/basic-candidate-artifact-writer.js";
+import {
+  closeBasicCandidateWorkspace,
+  openBasicCandidateWorkspace,
+  type BasicCandidateWorkspace,
+} from "./cli/basic-candidate-workspace.js";
+
+const nativePublishProbe = vi.hoisted(() => ({
+  calls: 0,
+  createCalls: 0,
+  createTargetBeforeCall: false,
+  replaceAfterCreate: false,
+}));
+
+vi.mock("./cli/basic-candidate-native-fs.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./cli/basic-candidate-native-fs.js")>();
+  return {
+    ...actual,
+    createBasicCandidateExclusiveDirectoryNative(
+      parentDirFd: unknown,
+      name: unknown,
+    ) {
+      nativePublishProbe.createCalls += 1;
+      const created = actual.createBasicCandidateExclusiveDirectoryNative(
+        parentDirFd,
+        name,
+      );
+      if (
+        nativePublishProbe.replaceAfterCreate &&
+        typeof parentDirFd === "number" && typeof name === "string"
+      ) {
+        const pathname = `/proc/self/fd/${parentDirFd}/${name}`;
+        renameSync(pathname, `${pathname}.held`);
+        mkdirSync(pathname, { mode: 0o700 });
+        writeFileSync(`${pathname}/owner.txt`, "foreign", { mode: 0o600 });
+      }
+      return created;
+    },
+    renameBasicCandidateDirectoryChildNoReplaceNative(
+      parentDirFd: unknown,
+      oldName: unknown,
+      newName: unknown,
+    ) {
+      nativePublishProbe.calls += 1;
+      if (fsFailure.mode === "exdev") {
+        throw new Error("SECRET native no-replace unsupported");
+      }
+      if (
+        nativePublishProbe.createTargetBeforeCall &&
+        typeof parentDirFd === "number" &&
+        typeof newName === "string"
+      ) {
+        mkdirSync(`/proc/self/fd/${parentDirFd}/${newName}`, { mode: 0o700 });
+      }
+      return actual.renameBasicCandidateDirectoryChildNoReplaceNative(
+        parentDirFd,
+        oldName,
+        newName,
+      );
+    },
+  };
+});
 
 const fsFailure = vi.hoisted(() => ({
   mode: "none" as
@@ -201,7 +268,20 @@ describe("Basic candidate atomic artifact writer", () => {
     expect((await readFile(join(target, "source-register.json"), "utf8"))).toMatch(
       /"schemaVersion":"basic-country-audit\/v2"/,
     );
-    expect(fsFailure.renameCalls).toBe(1);
+    expect(fsFailure.renameCalls).toBe(0);
+  });
+
+  test("writes only through an already verified workspace capability", async () => {
+    const repoRoot = await createRepoRoot();
+    const workspace = await openBasicCandidateWorkspace(repoRoot);
+    try {
+      await expect(writeBasicCandidateArtifacts({
+        workspace,
+        candidate: await readyCandidate(),
+      } as never)).resolves.toEqual({ status: "written" });
+    } finally {
+      await closeBasicCandidateWorkspace(workspace);
+    }
   });
 
   test("rejects blocked and forged candidate results before creating staging", async () => {
@@ -226,6 +306,14 @@ describe("Basic candidate atomic artifact writer", () => {
     });
     await expect(writeBasicCandidateArtifacts({ repoRoot, candidate: handBuilt }))
       .rejects.toThrow("basic candidate artifact write failed");
+    const directFactoryResult = createBasicDeterministicSuccessResult(
+      authentic.validation!,
+      authentic.artifacts!,
+    );
+    await expect(writeBasicCandidateArtifacts({
+      repoRoot,
+      candidate: directFactoryResult,
+    })).rejects.toThrow("basic candidate artifact write failed");
     expect(await pathExists(join(repoRoot, "data", "staging", "example-land", "run-001")))
       .toBe(false);
   });
@@ -299,7 +387,7 @@ describe("Basic candidate atomic artifact writer", () => {
     expect(await readdir(outside)).toEqual([]);
   });
 
-  test("cleans fixed owned entries without recursive rm after a partial write", async () => {
+  test("retains one private orphan without recursive rm after a partial write", async () => {
     const repoRoot = await createRepoRoot();
     const candidate = await readyCandidate();
     fsFailure.mode = "partial";
@@ -312,7 +400,11 @@ describe("Basic candidate atomic artifact writer", () => {
 
     expect(error.message).toBe("basic candidate artifact write failed");
     const parent = join(repoRoot, "data", "staging", "example-land");
-    expect(await readdir(parent)).toEqual([]);
+    const entries = await readdir(parent);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatch(/^\.candidate-run-001-.+\.tmp$/);
+    expect((await lstat(join(parent, entries[0]!))).mode & 0o777).toBe(0o700);
+    expect(await pathExists(join(parent, "run-001"))).toBe(false);
   });
 
   test("rejects EXDEV without a copy fallback or partial target", async () => {
@@ -327,34 +419,60 @@ describe("Basic candidate atomic artifact writer", () => {
 
     expect(error.message).toBe("basic candidate artifact write failed");
     expect(error.message).not.toMatch(/SECRET|cross-device/);
-    expect(fsFailure.renameCalls).toBe(1);
-    expect(await readdir(join(repoRoot, "data", "staging", "example-land"))).toEqual([]);
+    expect(fsFailure.renameCalls).toBe(0);
+    const entries = await readdir(join(repoRoot, "data", "staging", "example-land"));
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatch(/^\.candidate-run-001-.+\.tmp$/);
+    expect(await pathExists(join(
+      repoRoot,
+      "data",
+      "staging",
+      "example-land",
+      "run-001",
+    ))).toBe(false);
   });
 
-  test("rejects a nonempty concurrent replacement after reserving the target name", async () => {
+  test("calls native RENAME_NOREPLACE once only after the complete temp is ready", async () => {
     const repoRoot = await createRepoRoot();
-    const target = join(repoRoot, "data", "staging", "example-land", "run-001");
-    fsFailure.mode = "target-nonempty-replacement";
+
+    await expect(writeBasicCandidateArtifacts({
+      repoRoot,
+      candidate: await readyCandidate(),
+    })).resolves.toEqual({ status: "written" });
+
+    expect(nativePublishProbe.calls).toBe(1);
+    expect(nativePublishProbe.createCalls).toBe(1);
+  });
+
+  test("never chmods, cleans, or publishes a replacement inserted after native create", async () => {
+    const repoRoot = await createRepoRoot();
+    nativePublishProbe.replaceAfterCreate = true;
 
     await expect(writeBasicCandidateArtifacts({
       repoRoot,
       candidate: await readyCandidate(),
     })).rejects.toThrow("basic candidate artifact write failed");
 
-    expect(await readFile(join(target, "owner.txt"), "utf8")).toBe("attacker");
-    expect(await readdir(target)).toEqual(["owner.txt"]);
+    const parent = join(repoRoot, "data", "staging", "example-land");
+    const entries = await readdir(parent);
+    const foreign = entries.find((name) => !name.endsWith(".held"));
+    expect(nativePublishProbe.createCalls).toBe(1);
+    expect(await readFile(join(parent, foreign!, "owner.txt"), "utf8")).toBe("foreign");
+    expect((await lstat(join(parent, foreign!))).mode & 0o777).toBe(0o700);
+    expect(await pathExists(join(parent, "run-001"))).toBe(false);
   });
 
-  test("rejects an empty concurrent replacement after holding the target identity", async () => {
+  test("preserves an empty target created immediately before the native syscall", async () => {
     const repoRoot = await createRepoRoot();
     const target = join(repoRoot, "data", "staging", "example-land", "run-001");
-    fsFailure.mode = "target-empty-replacement";
+    nativePublishProbe.createTargetBeforeCall = true;
 
     await expect(writeBasicCandidateArtifacts({
       repoRoot,
       candidate: await readyCandidate(),
     })).rejects.toThrow("basic candidate artifact write failed");
 
+    expect(nativePublishProbe.calls).toBe(1);
     expect(await readdir(target)).toEqual([]);
   });
 
@@ -401,12 +519,16 @@ describe("Basic candidate atomic artifact writer", () => {
 
   test("does not treat a directory-open EPERM as an unsupported sync", async () => {
     const repoRoot = await createRepoRoot();
-    fsFailure.rejectDirectoryOpen = true;
-
-    await expect(writeBasicCandidateArtifacts({
-      repoRoot,
-      candidate: await readyCandidate(),
-    })).rejects.toThrow("basic candidate artifact write failed");
+    const workspace = await openBasicCandidateWorkspace(repoRoot);
+    try {
+      fsFailure.rejectDirectoryOpen = true;
+      await expect(writeBasicCandidateArtifacts({
+        workspace,
+        candidate: await readyCandidate(),
+      })).rejects.toThrow("basic candidate artifact write failed");
+    } finally {
+      await closeBasicCandidateWorkspace(workspace);
+    }
   });
 
   test("permits only an explicit unsupported directory sync errno", async () => {
@@ -419,7 +541,7 @@ describe("Basic candidate atomic artifact writer", () => {
     })).resolves.toEqual({ status: "written" });
   });
 
-  test("allows only one concurrent writer to reserve the final target", async () => {
+  test("allows only one concurrent writer to publish the final target", async () => {
     const repoRoot = await createRepoRoot();
     const candidate = await readyCandidate();
 
@@ -487,7 +609,37 @@ async function buildReadyCandidate() {
 async function createRepoRoot(): Promise<string> {
   const repoRoot = await mkdtemp(join("/tmp", "basic-candidate-writer-"));
   temporaryRoots.push(repoRoot);
+  await mkdir(join(repoRoot, "packages", "db"), { recursive: true });
+  await writeFile(join(repoRoot, "pnpm-workspace.yaml"), "packages:\n  - packages/*\n");
+  await writeFile(join(repoRoot, "package.json"), JSON.stringify({ name: "navigator" }));
+  await writeFile(
+    join(repoRoot, "packages", "db", "package.json"),
+    JSON.stringify({ name: "@navigator/db" }),
+  );
   return repoRoot;
+}
+
+async function writeBasicCandidateArtifacts(value: Readonly<{
+  repoRoot?: string;
+  workspace?: BasicCandidateWorkspace;
+  candidate: unknown;
+}>) {
+  if (value.workspace !== undefined) {
+    return writeBasicCandidateArtifactsWithWorkspace({
+      workspace: value.workspace,
+      candidate: value.candidate,
+    } as never);
+  }
+  if (value.repoRoot === undefined) throw new Error("missing test workspace root");
+  const workspace = await openBasicCandidateWorkspace(value.repoRoot);
+  try {
+    return await writeBasicCandidateArtifactsWithWorkspace({
+      workspace,
+      candidate: value.candidate,
+    } as never);
+  } finally {
+    await closeBasicCandidateWorkspace(workspace);
+  }
 }
 
 async function pathExists(pathname: string): Promise<boolean> {
@@ -504,6 +656,10 @@ async function captureError(operation: () => Promise<unknown>): Promise<Error> {
 }
 
 function resetFilesystemProbe(): void {
+  nativePublishProbe.calls = 0;
+  nativePublishProbe.createCalls = 0;
+  nativePublishProbe.createTargetBeforeCall = false;
+  nativePublishProbe.replaceAfterCreate = false;
   fsFailure.mode = "none";
   fsFailure.directorySyncError = null;
   fsFailure.rejectDirectoryOpen = false;

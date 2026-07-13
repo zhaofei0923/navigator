@@ -1,6 +1,8 @@
 import { constants } from "node:fs";
+import { execFileSync } from "node:child_process";
 import {
   chmod,
+  lstat,
   mkdir,
   mkdtemp,
   open,
@@ -17,6 +19,8 @@ import { Worker } from "node:worker_threads";
 import { afterEach, describe, expect, test } from "vitest";
 
 import {
+  closeBasicCandidateNativeDirectory,
+  createBasicCandidateExclusiveDirectoryNative,
   renameBasicCandidateDirectoryChildNoReplaceNative,
 } from "./cli/basic-candidate-native-fs.js";
 
@@ -49,18 +53,12 @@ describe("Basic candidate native no-replace publisher", () => {
     const heldBinary = `${NATIVE_BINARY}.held`;
     try {
       await rename(NATIVE_BINARY, heldBinary);
-      expect(() => renameBasicCandidateDirectoryChildNoReplaceNative(
-        parent.fd,
-        "source",
-        "target",
-      )).toThrow(FIXED_ERROR);
+      expect(runIsolatedNativeLoad("missing"))
+        .toEqual({ status: "failed", message: FIXED_ERROR });
 
       await writeFile(NATIVE_BINARY, "not a native addon", { mode: 0o500 });
-      expect(() => renameBasicCandidateDirectoryChildNoReplaceNative(
-        parent.fd,
-        "source",
-        "target",
-      )).toThrow(FIXED_ERROR);
+      expect(runIsolatedNativeLoad("invalid"))
+        .toEqual({ status: "failed", message: FIXED_ERROR });
     } finally {
       await rm(NATIVE_BINARY, { force: true });
       await rename(heldBinary, NATIVE_BINARY);
@@ -81,6 +79,46 @@ describe("Basic candidate native no-replace publisher", () => {
 
     expect(await readdir(root)).toEqual(["target"]);
     expect(await readFile(join(root, "target", "artifact.json"), "utf8")).toBe("complete");
+  });
+
+  test("creates and holds an exclusive sibling directory before returning", async () => {
+    const root = await createTemporaryRoot();
+    const parent = await openDirectory(root);
+    const created = createBasicCandidateExclusiveDirectoryNative(parent.fd, "private-temp");
+    try {
+      const details = await lstat(`/proc/self/fd/${created.fd}/`);
+      expect(details.isDirectory()).toBe(true);
+      expect(BigInt(details.dev)).toBe(created.dev);
+      expect(BigInt(details.ino)).toBe(created.ino);
+      await rename(join(root, "private-temp"), join(root, "private-temp-held"));
+      await mkdir(join(root, "private-temp"), { mode: 0o700 });
+      expect((await lstat(`/proc/self/fd/${created.fd}/`)).ino).toBe(details.ino);
+    } finally {
+      closeBasicCandidateNativeDirectory(created);
+      await parent.close();
+    }
+  });
+
+  test("keeps using the eagerly loaded addon after its source pathname is swapped", async () => {
+    const root = await createTemporaryRoot();
+    await mkdir(join(root, "source"), { mode: 0o700 });
+    const parent = await openDirectory(root);
+    const heldBinary = `${NATIVE_BINARY}.held`;
+    try {
+      await rename(NATIVE_BINARY, heldBinary);
+
+      expect(() => renameBasicCandidateDirectoryChildNoReplaceNative(
+        parent.fd,
+        "source",
+        "target",
+      )).not.toThrow();
+    } finally {
+      await rm(NATIVE_BINARY, { force: true });
+      await rename(heldBinary, NATIVE_BINARY);
+      await parent.close();
+    }
+
+    expect(await readdir(root)).toEqual(["target"]);
   });
 
   test("does not overwrite an existing empty target and preserves the source", async () => {
@@ -215,6 +253,38 @@ describe("Basic candidate native no-replace publisher", () => {
     expect(nativeSource).not.toMatch(/\b(?:system|popen|fork|execv|execve|execl|execlp)\s*\(/);
   });
 });
+
+function runIsolatedNativeLoad(
+  cacheKey: string,
+): Readonly<{ status: "failed"; message: string }> {
+  const output = execFileSync(process.execPath, [
+    "--input-type=module",
+    "--eval",
+    `
+      void import(${JSON.stringify(`${WRAPPER_URL}?${cacheKey}`)}).then((nativeFs) => {
+      try {
+        nativeFs.renameBasicCandidateDirectoryChildNoReplaceNative(
+          0,
+          "source",
+          "target",
+        );
+        process.stdout.write(JSON.stringify({ status: "unexpected-success", message: "" }));
+      } catch (error) {
+        process.stdout.write(JSON.stringify({
+          status: "failed",
+          message: error instanceof Error ? error.message : "non-error",
+        }));
+      }
+    }).catch((error) => {
+      process.stdout.write(JSON.stringify({
+        status: "failed",
+        message: error instanceof Error ? error.message : "non-error",
+      }));
+    });
+    `,
+  ], { encoding: "utf8" });
+  return JSON.parse(output) as Readonly<{ status: "failed"; message: string }>;
+}
 
 type WorkerResult = Readonly<
   | { status: "won"; source: string }

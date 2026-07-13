@@ -3,9 +3,6 @@ import {
   mkdir,
   open,
   readdir,
-  rename,
-  rmdir,
-  unlink,
   type FileHandle,
 } from "node:fs/promises";
 
@@ -13,6 +10,10 @@ import {
   parseBasicCandidatePathComponent,
   parseBasicCandidateRepositoryRoot,
 } from "./basic-candidate-paths.js";
+import {
+  closeBasicCandidateNativeDirectory,
+  createBasicCandidateExclusiveDirectoryNative,
+} from "./basic-candidate-native-fs.js";
 
 const FILE_TYPE_MASK = 0o170000n;
 const REGULAR_FILE_TYPE = 0o100000n;
@@ -91,9 +92,30 @@ export async function createBasicCandidateExclusiveDirectory(
   name: unknown,
   mode: number,
 ): Promise<BasicCandidateHeldDirectory> {
-  const pathname = childPath(parent, name);
-  await mkdir(pathname, { mode });
-  return openDirectory(pathname);
+  if (mode !== 0o700) invalid();
+  const component = parseBasicCandidatePathComponent(name);
+  const created = createBasicCandidateExclusiveDirectoryNative(
+    parent.handle.fd,
+    component,
+  );
+  let directory: BasicCandidateHeldDirectory | null = null;
+  try {
+    directory = await openDirectory(`/proc/self/fd/${created.fd}/`);
+    if (
+      directory.identity.dev !== created.dev ||
+      directory.identity.ino !== created.ino
+    ) invalid();
+  } catch (error) {
+    await closeBasicCandidateHeldDirectories([directory]);
+    throw error;
+  }
+  try {
+    closeBasicCandidateNativeDirectory(created);
+  } catch (error) {
+    await closeBasicCandidateHeldDirectories([directory]);
+    throw error;
+  }
+  return directory;
 }
 
 export async function setBasicCandidateDirectoryMode(
@@ -126,14 +148,6 @@ export async function requireBasicCandidateDirectoryEntries(
   const entries = (await readdir(directoryPath(directory))).sort(compareText);
   const sorted = [...expected].sort(compareText);
   if (!sameStrings(entries, sorted)) invalid();
-}
-
-export async function renameBasicCandidateDirectoryChild(
-  parent: BasicCandidateHeldDirectory,
-  oldName: unknown,
-  newName: unknown,
-): Promise<void> {
-  await rename(childPath(parent, oldName), childPath(parent, newName));
 }
 
 export async function writeBasicCandidateExclusiveFile(
@@ -208,35 +222,16 @@ export async function syncBasicCandidateDirectory(
   }
 }
 
-export async function clearBasicCandidateFixedEntries(
-  directory: BasicCandidateHeldDirectory,
-  names: readonly string[],
-): Promise<void> {
-  for (const name of names) {
-    try {
-      await unlink(childPath(directory, name));
-    } catch (error) {
-      if (errorCode(error) !== "ENOENT") throw error;
-    }
-  }
-}
-
 export async function cleanupBasicCandidateTemporaryDirectory(
   parent: BasicCandidateHeldDirectory,
   name: unknown,
   temporary: BasicCandidateHeldDirectory,
-  fixedEntries: readonly string[],
 ): Promise<void> {
   try {
     await requireBasicCandidateHeldChild(parent, name, temporary);
-    await clearBasicCandidateFixedEntries(temporary, fixedEntries);
     await syncBasicCandidateDirectory(temporary);
-    await requireBasicCandidateHeldChild(parent, name, temporary);
-    if ((await readdir(directoryPath(temporary))).length !== 0) return;
-    await rmdir(childPath(parent, name));
-    await syncBasicCandidateDirectory(parent);
   } catch {
-    // A retained private temporary directory is safer than broad cleanup.
+    // The private orphan is retained whenever the name no longer proves identity.
   }
 }
 

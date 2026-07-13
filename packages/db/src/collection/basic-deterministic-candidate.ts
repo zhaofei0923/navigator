@@ -32,6 +32,15 @@ import { preflightBasicDeterministicCollection } from "./basic-deterministic-sou
 import { assembleBasicMarketOverviewDraft } from "./basic-market-overview-draft-assembler.js";
 import { parseBasicMarketOverviewDraft } from "./basic-market-overview-draft-parser.js";
 
+const SUCCESSFUL_CANDIDATE_PROVENANCE = new WeakSet<object>();
+
+export function isBasicDeterministicCandidateResultFromCore(
+  value: unknown,
+): value is BasicDeterministicCandidateResult {
+  return typeof value === "object" && value !== null &&
+    SUCCESSFUL_CANDIDATE_PROVENANCE.has(value);
+}
+
 export async function runBasicDeterministicCandidate(
   input: BasicDeterministicCandidateInput,
 ): Promise<BasicDeterministicCandidateResult> {
@@ -139,5 +148,7 @@ export async function runBasicDeterministicCandidate(
     return createBasicDeterministicFailureResult("artifacts", validation);
   }
 
-  return createBasicDeterministicSuccessResult(validation, artifacts);
+  const result = createBasicDeterministicSuccessResult(validation, artifacts);
+  SUCCESSFUL_CANDIDATE_PROVENANCE.add(result);
+  return result;
 }

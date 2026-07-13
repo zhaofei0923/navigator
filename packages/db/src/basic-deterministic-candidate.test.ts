@@ -16,9 +16,11 @@ import {
 } from "./collection/basic-deterministic-candidate-contracts.js";
 import {
   createBasicDeterministicFailureResult,
-  isBasicDeterministicCandidateResultFromCore,
 } from "./collection/basic-deterministic-candidate-result.js";
-import { runBasicDeterministicCandidate } from "./collection/basic-deterministic-candidate.js";
+import {
+  isBasicDeterministicCandidateResultFromCore,
+  runBasicDeterministicCandidate,
+} from "./collection/basic-deterministic-candidate.js";
 
 const dependencyModes = vi.hoisted(() => ({
   preflight: "actual",

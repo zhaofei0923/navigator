@@ -49,6 +49,25 @@ describe("Basic candidate production composition", () => {
     expect(Object.isFrozen(result)).toBe(true);
   });
 
+  test("passes the held workspace descriptor root to the v2 runner", async () => {
+    const fixture = compositionFixture();
+    const workspace = Object.freeze({});
+    fixture.input = Object.freeze({
+      workspace,
+      configPath: fixture.input.configPath,
+      transport: fixture.input.transport,
+    }) as never;
+    (fixture.dependencies as unknown as Record<string, unknown>)
+      .getWorkspaceDescriptorRoot = () => "/proc/self/fd/91/";
+
+    const result = await composeBasicCountryCandidate(fixture.input, fixture.dependencies);
+
+    expect(result.status).toBe("ready");
+    expect(fixture.runPlanInput).toMatchObject({
+      repoRoot: "/proc/self/fd/91/",
+    });
+  });
+
   test("requires review paths exactly when the corresponding source kind is selected", async () => {
     for (const [name, configOverride] of [
       ["missing structured review", { structuredReviewPath: null }],
@@ -111,6 +130,7 @@ describe("Basic candidate production composition", () => {
     "parseEditorial",
     "materializeReviewed",
     "runCandidate",
+    "getWorkspaceDescriptorRoot",
   ] as const)("redacts a throwing or rejecting %s dependency", async (dependency) => {
     const fixture = compositionFixture();
     fixture.dependencies[dependency] = vi.fn(() => {
@@ -198,8 +218,12 @@ function compositionFixture(
   });
   let candidateInput: Record<string, unknown> | null = null;
   let reviewedInput: Record<string, unknown> | null = null;
+  let runPlanInput: Record<string, unknown> | null = null;
 
   const dependencies: BasicCandidateCompositionDependencies = {
+    getWorkspaceDescriptorRoot() {
+      return "/proc/self/fd/91/";
+    },
     async loadConfig() {
       calls.push("load-config");
       return loaded as never;
@@ -216,8 +240,9 @@ function compositionFixture(
       calls.push("create-plan");
       return plan as never;
     },
-    async runPlan() {
+    async runPlan(value) {
       calls.push("run-plan");
+      runPlanInput = value as unknown as Record<string, unknown>;
       return preliminary as never;
     },
     async readConfigInput(_loaded, path) {
@@ -262,7 +287,7 @@ function compositionFixture(
 
   return {
     input: {
-      repoRoot: "/trusted/repository",
+      workspace: Object.freeze({}),
       configPath: ".cache/basic-country/ID/run-1/candidate-config.json",
       transport: Object.freeze({ execute: vi.fn() }),
     },
@@ -271,5 +296,6 @@ function compositionFixture(
     readyCandidate,
     get candidateInput() { return candidateInput; },
     get reviewedInput() { return reviewedInput; },
+    get runPlanInput() { return runPlanInput; },
   };
 }

@@ -9,7 +9,7 @@ import {
   BASIC_DETERMINISTIC_STAGE_NAMES,
   type BasicDeterministicCandidateResult,
 } from "../collection/basic-deterministic-candidate-contracts.js";
-import { isBasicDeterministicCandidateResultFromCore } from "../collection/basic-deterministic-candidate-result.js";
+import { isBasicDeterministicCandidateResultFromCore } from "../collection/basic-deterministic-candidate.js";
 import {
   SAFE_COUNTRY_DIRECTORY,
   SAFE_RUN_ID,
@@ -19,8 +19,6 @@ import {
   closeBasicCandidateHeldDirectories,
   createBasicCandidateExclusiveDirectory,
   ensureBasicCandidateDirectoryChild,
-  openBasicCandidateTrustedDirectory,
-  renameBasicCandidateDirectoryChild,
   requireBasicCandidateDirectoryEntries,
   requireBasicCandidateHeldChild,
   setBasicCandidateDirectoryMode,
@@ -30,9 +28,14 @@ import {
   type BasicCandidateHeldDirectory,
   type BasicCandidateRegularFileIdentity,
 } from "./basic-candidate-constrained-fs.js";
+import { renameBasicCandidateDirectoryChildNoReplaceNative } from "./basic-candidate-native-fs.js";
+import {
+  getBasicCandidateWorkspaceRootDirectory,
+  type BasicCandidateWorkspace,
+} from "./basic-candidate-workspace.js";
 
 export interface BasicCandidateArtifactWriteInput {
-  readonly repoRoot: string;
+  readonly workspace: BasicCandidateWorkspace;
   readonly candidate: BasicDeterministicCandidateResult;
 }
 
@@ -52,7 +55,7 @@ const ARTIFACT_NAMES = Object.freeze([
   "market-overview.draft.json",
   "review-report.json",
 ] as const satisfies readonly BasicCollectionAuditArtifactName[]);
-const INPUT_KEYS = ["repoRoot", "candidate"] as const;
+const INPUT_KEYS = ["workspace", "candidate"] as const;
 const RESULT_KEYS = [
   "stages", "failedStage", "validation", "artifacts", "boundaryVerdict",
 ] as const;
@@ -75,17 +78,16 @@ export async function writeBasicCandidateArtifacts(
   let country: BasicCandidateHeldDirectory | null = null;
   let temporary: BasicCandidateHeldDirectory | null = null;
   let temporaryName: string | null = null;
-  let target: BasicCandidateHeldDirectory | null = null;
-  let published: BasicCandidateHeldDirectory | null = null;
   let runId: string | null = null;
   let temporaryOwned = false;
-  let targetReserved = false;
   let completed = false;
   try {
     const input = exactDataRecord(value, INPUT_KEYS);
     const authenticated = authenticateCandidate(input.get("candidate"));
     runId = authenticated.runId;
-    root = await openBasicCandidateTrustedDirectory(input.get("repoRoot"));
+    root = getBasicCandidateWorkspaceRootDirectory(
+      input.get("workspace") as BasicCandidateWorkspace,
+    );
     data = await prepareDirectory(root, "data");
     staging = await prepareDirectory(data, "staging");
     country = await prepareDirectory(staging, authenticated.countryDirectory);
@@ -111,56 +113,31 @@ export async function writeBasicCandidateArtifacts(
     await requireBasicCandidateHeldChild(country, temporaryName, temporary);
     await requireWriterHierarchy(root, data, staging, country, authenticated.countryDirectory);
 
-    target = await createBasicCandidateExclusiveDirectory(country, authenticated.runId, 0o700);
-    await requireBasicCandidateHeldChild(country, authenticated.runId, target);
-    await requireBasicCandidateDirectoryEntries(target, []);
-    await setBasicCandidateDirectoryMode(target, 0o700);
-    targetReserved = true;
-    await syncBasicCandidateDirectory(country);
-    await requireBasicCandidateHeldChild(country, authenticated.runId, target);
-    await requireBasicCandidateHeldChild(country, temporaryName, temporary);
-    await requireWriterHierarchy(root, data, staging, country, authenticated.countryDirectory);
-
-    await renameBasicCandidateDirectoryChild(
-      country,
+    renameBasicCandidateDirectoryChildNoReplaceNative(
+      country.handle.fd,
       temporaryName,
       authenticated.runId,
     );
-    published = temporary;
-    temporary = null;
     temporaryName = null;
-    await syncBasicCandidateDirectory(country);
-    await requireBasicCandidateHeldChild(country, authenticated.runId, published);
-    await verifyArtifacts(published, temporaryFiles, authenticated.serialized);
-    await requireWriterHierarchy(root, data, staging, country, authenticated.countryDirectory);
     completed = true;
     return WRITTEN_RESULT;
   } catch {
     throw new Error("basic candidate artifact write failed");
   } finally {
     if (!completed && country !== null && runId !== null) {
-      if (published !== null) {
-        await cleanupBasicCandidateTemporaryDirectory(country, runId, published, ARTIFACT_NAMES);
-      } else if (target !== null && targetReserved) {
-        await cleanupBasicCandidateTemporaryDirectory(country, runId, target, []);
-      }
       if (temporary !== null && temporaryName !== null && temporaryOwned) {
         await cleanupBasicCandidateTemporaryDirectory(
           country,
           temporaryName,
           temporary,
-          ARTIFACT_NAMES,
         );
       }
     }
     await closeBasicCandidateHeldDirectories([
-      published,
-      target,
       temporary,
       country,
       staging,
       data,
-      root,
     ]);
   }
 }

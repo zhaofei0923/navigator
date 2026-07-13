@@ -38,16 +38,42 @@ describe("candidate:basic-country CLI", () => {
 
     expect(exitCode).toBe(0);
     expect(fixture.compose).toHaveBeenCalledWith({
-      repoRoot: "/trusted/repository",
+      workspace: fixture.workspace,
       configPath: CONFIG_PATH,
       transport: fixture.transport,
     });
     expect(fixture.write).toHaveBeenCalledWith({
-      repoRoot: "/trusted/repository",
+      workspace: fixture.workspace,
       candidate: fixture.candidate,
     });
     expect(fixture.stdout).toEqual(["basic candidate written\n"]);
     expect(fixture.stderr).toEqual([]);
+  });
+
+  test("opens one workspace capability and closes it once in finally", async () => {
+    const fixture = cliFixture("ready");
+    const workspace = Object.freeze({});
+    const closeWorkspace = vi.fn(async () => undefined);
+    const dependencies = {
+      ...fixture.dependencies,
+      resolveRepoRoot: undefined,
+      openWorkspace: vi.fn(async () => workspace),
+      closeWorkspace,
+    } as unknown as BasicCandidateCliDependencies;
+
+    const exitCode = await runCandidateBasicCountryCli([CONFIG_PATH], dependencies);
+
+    expect(exitCode).toBe(0);
+    expect(fixture.compose).toHaveBeenCalledWith({
+      workspace,
+      configPath: CONFIG_PATH,
+      transport: fixture.transport,
+    });
+    expect(fixture.write).toHaveBeenCalledWith({
+      workspace,
+      candidate: fixture.candidate,
+    });
+    expect(closeWorkspace).toHaveBeenCalledTimes(1);
   });
 
   test("treats one pnpm separator as syntax rather than a positional argument", async () => {
@@ -60,7 +86,7 @@ describe("candidate:basic-country CLI", () => {
 
     expect(exitCode).toBe(0);
     expect(fixture.compose).toHaveBeenCalledWith({
-      repoRoot: "/trusted/repository",
+      workspace: fixture.workspace,
       configPath: CONFIG_PATH,
       transport: fixture.transport,
     });
@@ -94,7 +120,7 @@ describe("candidate:basic-country CLI", () => {
     expect(fixture.stderr).toEqual(["basic candidate error\n"]);
   });
 
-  test.each(["resolveRepoRoot", "createTransport", "compose", "write"] as const)(
+  test.each(["openWorkspace", "closeWorkspace", "createTransport", "compose", "write"] as const)(
     "redacts a failing %s dependency",
     async (dependency) => {
       const fixture = cliFixture("ready");
@@ -136,6 +162,7 @@ function cliFixture(status: "ready" | "blocked" | "error" = "error") {
   const stdout: string[] = [];
   const stderr: string[] = [];
   const transport = Object.freeze({ execute: vi.fn() });
+  const workspace = Object.freeze({});
   const candidate = Object.freeze({ artifacts: Object.freeze({}) });
   const composition = Object.freeze({
     status,
@@ -144,7 +171,8 @@ function cliFixture(status: "ready" | "blocked" | "error" = "error") {
   const compose = vi.fn(async () => composition);
   const write = vi.fn(async () => Object.freeze({ status: "written" as const }));
   const dependencies: BasicCandidateCliDependencies = {
-    async resolveRepoRoot() { return "/trusted/repository"; },
+    async openWorkspace() { return workspace; },
+    async closeWorkspace() { return undefined; },
     createTransport() { return transport as never; },
     compose: compose as never,
     write: write as never,
@@ -156,6 +184,7 @@ function cliFixture(status: "ready" | "blocked" | "error" = "error") {
     stdout,
     stderr,
     transport,
+    workspace,
     candidate,
     compose,
     write,

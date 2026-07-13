@@ -23,6 +23,11 @@ import {
   readBasicCandidateConfigInput,
   type LoadedBasicCandidateConfig,
 } from "./cli/basic-candidate-config.js";
+import {
+  closeBasicCandidateWorkspace,
+  openBasicCandidateWorkspace,
+  type BasicCandidateWorkspace,
+} from "./cli/basic-candidate-workspace.js";
 
 const filesystemProbe = vi.hoisted(() => ({
   rejectDescendantsOf: null as string | null,
@@ -30,6 +35,7 @@ const filesystemProbe = vi.hoisted(() => ({
     before: () => Promise<void>;
     restore: () => Promise<void>;
   }>,
+  ancestorSwapCount: 0,
 }));
 
 vi.mock("node:fs/promises", async (importOriginal) => {
@@ -50,7 +56,11 @@ vi.mock("node:fs/promises", async (importOriginal) => {
         throw new Error("SECRET direct descendant open");
       }
       const swap = filesystemProbe.swapBeforeOpen;
-      if (swap !== null && candidate.endsWith("/reviews/structured.json")) {
+      if (
+        swap !== null && candidate.startsWith("/proc/self/fd/") &&
+        candidate.endsWith("/structured.json")
+      ) {
+        filesystemProbe.ancestorSwapCount += 1;
         filesystemProbe.swapBeforeOpen = null;
         await swap.before();
         try {
@@ -66,13 +76,18 @@ vi.mock("node:fs/promises", async (importOriginal) => {
 
 const temporaryRoots: string[] = [];
 const loadedConfigs: LoadedBasicCandidateConfig[] = [];
+const workspaces: BasicCandidateWorkspace[] = [];
 
 describe("Basic candidate config", () => {
   afterEach(async () => {
     filesystemProbe.rejectDescendantsOf = null;
     filesystemProbe.swapBeforeOpen = null;
+    filesystemProbe.ancestorSwapCount = 0;
     await Promise.all(loadedConfigs.splice(0).map((loaded) =>
       closeBasicCandidateConfig(loaded)
+    ));
+    await Promise.all(workspaces.splice(0).map((workspace) =>
+      closeBasicCandidateWorkspace(workspace)
     ));
     await Promise.all(temporaryRoots.splice(0).map((pathname) =>
       rm(pathname, { recursive: true, force: true })
@@ -86,6 +101,55 @@ describe("Basic candidate config", () => {
     expect(Object.isFrozen(parsed)).toBe(true);
     expect(Object.isFrozen(parsed.sourceIds)).toBe(true);
     expect(Object.isFrozen(parsed.documentPlanPaths)).toBe(true);
+  });
+
+  test("rejects sparse, accessor, and proxy arrays without invoking getters", () => {
+    let getterCalls = 0;
+    const accessorArray = ["source-a", "source-b"];
+    Object.defineProperty(accessorArray, "1", {
+      enumerable: true,
+      get() {
+        getterCalls += 1;
+        return "source-b";
+      },
+    });
+    const proxiedArray = new Proxy(["source-a", "source-b"], {
+      get(target, property, receiver) {
+        getterCalls += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const sparseArray = ["source-a", , "source-b"];
+
+    for (const sourceIds of [accessorArray, proxiedArray, sparseArray]) {
+      expect(() => parseBasicCandidateConfig({
+        ...validConfig(),
+        sourceIds,
+      })).toThrow("basic candidate config is invalid");
+    }
+    expect(getterCalls).toBe(0);
+  });
+
+  test("loads config and catalog through an already verified workspace capability", async () => {
+    const fixture = await createRunFixture();
+    const catalogDirectory = join(fixture.repoRoot, "packages", "db", "catalog");
+    await mkdir(catalogDirectory, { recursive: true });
+    await writeFile(
+      join(catalogDirectory, "basic-source-catalog.json"),
+      JSON.stringify({ schemaVersion: "catalog" }),
+    );
+    const workspace = await openWorkspace(fixture.repoRoot);
+
+    const loaded = await loadBasicCandidateConfig(
+      workspace as never,
+      ".cache/basic-country/ID/run-1/candidate-config.json",
+    );
+    loadedConfigs.push(loaded);
+
+    expect(loaded.config).toEqual(validConfig());
+    await expect(readBasicCandidateCatalog(workspace as never)).resolves.toEqual({
+      schemaVersion: "catalog",
+    });
   });
 
   test.each([
@@ -175,7 +239,7 @@ describe("Basic candidate config", () => {
 
     await expect(readBasicCandidateConfigInput(loaded, "reviews/structured.json"))
       .resolves.toEqual({ kind: "structured" });
-    await expect(readBasicCandidateCatalog(fixture.repoRoot)).resolves.toEqual({
+    await expect(readCatalog(fixture.repoRoot)).resolves.toEqual({
       schemaVersion: "catalog",
     });
   });
@@ -191,22 +255,19 @@ describe("Basic candidate config", () => {
     const linkedParent = join(container, "linked");
     await symlink(realParent, linkedParent, "dir");
 
-    let accepted: LoadedBasicCandidateConfig | null = null;
+    let accepted: BasicCandidateWorkspace | null = null;
     try {
-      accepted = await loadBasicCandidateConfig(
-        join(linkedParent, "repo"),
-        ".cache/basic-country/ID/run-1/candidate-config.json",
-      );
+      accepted = await openBasicCandidateWorkspace(join(linkedParent, "repo"));
     } catch {
       // The stable public error is asserted by every other invalid-load case.
     } finally {
-      if (accepted !== null) await closeBasicCandidateConfig(accepted);
+      if (accepted !== null) await closeBasicCandidateWorkspace(accepted);
     }
 
     expect(accepted).toBeNull();
   });
 
-  test("keeps a config input confined when its named ancestor is swapped and restored", async () => {
+  test("fails closed when a config input ancestor is swapped and restored", async () => {
     const fixture = await createRunFixture();
     const reviewDirectory = join(fixture.runDirectory, "reviews");
     const displaced = join(fixture.runDirectory, "reviews-displaced");
@@ -233,7 +294,8 @@ describe("Basic candidate config", () => {
     });
 
     await expect(readBasicCandidateConfigInput(loaded, "reviews/structured.json"))
-      .resolves.toEqual({ kind: "structured" });
+      .rejects.toThrow("basic candidate input is invalid");
+    expect(filesystemProbe.ancestorSwapCount).toBe(1);
   });
 
   test.each([
@@ -319,13 +381,13 @@ describe("Basic candidate config", () => {
       mode: 0o600,
     });
 
-    await expect(readBasicCandidateCatalog(fixture.repoRoot)).resolves.toEqual({
+    await expect(readCatalog(fixture.repoRoot)).resolves.toEqual({
       schemaVersion: "catalog",
     });
 
     await rm(catalogPath);
     await symlink(join(fixture.repoRoot, "outside.json"), catalogPath);
-    await expect(readBasicCandidateCatalog(fixture.repoRoot))
+    await expect(readCatalog(fixture.repoRoot))
       .rejects.toThrow("basic candidate catalog is invalid");
   });
 
@@ -392,16 +454,34 @@ async function createRunFixture(overrides: Record<string, unknown> = {}) {
     { mode: 0o600 },
   );
   await writeFile(join(repoRoot, "outside.json"), "{}", { mode: 0o600 });
+  await mkdir(join(repoRoot, "packages", "db"), { recursive: true });
+  await writeFile(join(repoRoot, "pnpm-workspace.yaml"), "packages:\n  - packages/*\n");
+  await writeFile(join(repoRoot, "package.json"), JSON.stringify({ name: "navigator" }));
+  await writeFile(
+    join(repoRoot, "packages", "db", "package.json"),
+    JSON.stringify({ name: "@navigator/db" }),
+  );
   return { repoRoot, runDirectory };
+}
+
+async function openWorkspace(repoRoot: string): Promise<BasicCandidateWorkspace> {
+  const workspace = await openBasicCandidateWorkspace(repoRoot);
+  workspaces.push(workspace);
+  return workspace;
 }
 
 async function loadConfig(
   repoRoot: string,
   configPath: string,
 ): Promise<LoadedBasicCandidateConfig> {
-  const loaded = await loadBasicCandidateConfig(repoRoot, configPath);
+  const workspace = await openWorkspace(repoRoot);
+  const loaded = await loadBasicCandidateConfig(workspace, configPath);
   loadedConfigs.push(loaded);
   return loaded;
+}
+
+async function readCatalog(repoRoot: string): Promise<unknown> {
+  return readBasicCandidateCatalog(await openWorkspace(repoRoot));
 }
 
 async function captureError(operation: () => Promise<unknown>): Promise<Error> {
