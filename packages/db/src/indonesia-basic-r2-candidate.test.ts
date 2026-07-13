@@ -24,6 +24,60 @@ const SOURCE_IDS = [
   "world-bank-gdp-growth",
   "world-bank-population",
 ] as const;
+const SOURCE_BINDINGS = [
+  {
+    sourceId: "indonesia-esdm-2025-performance",
+    sourceUrl:
+      "https://www.esdm.go.id/en/media-center/news-archives/capaian-positif-tahun-2025-negara-hadir-penuhi-kebutuhan-energi-masyarakat",
+    contentSha256: "621598d366965b2cb43bacceb1a7347f10b7a2de597e10289b5c9dbde20b7f3e",
+    retrievedAt: "2026-07-13T14:00:56.951Z",
+    publishedAt: "2026-01-09T00:00:00.000Z",
+  },
+  {
+    sourceId: "indonesia-esdm-national-energy-policy-2025",
+    sourceUrl: "https://jdih.esdm.go.id/dokumen/download?id=2025pp40.pdf",
+    contentSha256: "86e731021827108eeff6323aa94075ddf8d822c424ff07c17cbdfac7b39f39ac",
+    retrievedAt: "2026-07-13T14:06:07.086Z",
+    publishedAt: "2025-09-15T00:00:00.000Z",
+  },
+  {
+    sourceId: "world-bank-country",
+    sourceUrl: "https://api.worldbank.org/v2/country/ID?format=json",
+    contentSha256: "f50a86f6cefbd35c9c6ebcef82e7c1c9db429d7290b2d49e16329dd55070f874",
+    retrievedAt: "2026-07-13T14:06:14.278Z",
+    publishedAt: null,
+  },
+  {
+    sourceId: "world-bank-gdp",
+    sourceUrl:
+      "https://api.worldbank.org/v2/country/ID/indicator/NY.GDP.MKTP.CD?source=2&format=json&mrv=1&per_page=1",
+    contentSha256: "9082b2da36cf9501865c0d3af8ba9d44180bb66185ad16bc9f8b650234ea89d7",
+    retrievedAt: "2026-07-13T14:07:02.706Z",
+    publishedAt: null,
+  },
+  {
+    sourceId: "world-bank-gdp-growth",
+    sourceUrl:
+      "https://api.worldbank.org/v2/country/ID/indicator/NY.GDP.MKTP.KD.ZG?source=2&format=json&mrv=1&per_page=1",
+    contentSha256: "a59d6670da3113c5e8e6da898a6e2c09e7ab5412a5b125927146beca5cc6248d",
+    retrievedAt: "2026-07-13T14:08:44.125Z",
+    publishedAt: null,
+  },
+  {
+    sourceId: "world-bank-population",
+    sourceUrl:
+      "https://api.worldbank.org/v2/country/ID/indicator/SP.POP.TOTL?source=2&format=json&mrv=1&per_page=1",
+    contentSha256: "956fe785a6d21bc41b15156cd741687ed75bc8d7bf0e22c1598245f3dfbaf532",
+    retrievedAt: "2026-07-13T14:09:07.223Z",
+    publishedAt: null,
+  },
+] as const;
+const RENEWABLE_TARGET = {
+  zh: "2025年《国家能源政策》将新能源和可再生能源占比目标设为2030年19%至23%、2040年36%至40%、2050年53%至55%、2060年70%至72%。能源矿产资源部报告2025年实际占比为15.75%。",
+  en: "The 2025 National Energy Policy sets new and renewable energy share targets of 19%-23% in 2030, 36%-40% in 2040, 53%-55% in 2050, and 70%-72% in 2060. The Ministry reported a 15.75% share in 2025.",
+} as const;
+const TECH_TAG_UNCERTAINTY =
+  "The reviewed government source reports only broad solar and wind categories and does not support any registered equipment-level technology tag.";
 const ARTIFACT_NAMES = [
   "extracted-facts.json",
   "market-overview.draft.json",
@@ -88,6 +142,14 @@ describe("Indonesia Basic r2 candidate", () => {
     expect(bundle.sourceRegister.sources.map(({ sourceId }) => sourceId)).toEqual(
       SOURCE_IDS,
     );
+    expect(bundle.sourceRegister.sources.map(({
+      sourceId,
+      sourceUrl,
+      contentSha256,
+      retrievedAt,
+      publishedAt,
+    }) => ({ sourceId, sourceUrl, contentSha256, retrievedAt, publishedAt })))
+      .toEqual(SOURCE_BINDINGS);
     expect(bundle.reviewReport.sourceChecks).toHaveLength(SOURCE_IDS.length);
     expect(bundle.reviewReport.sourceChecks.map(({ sourceId }) => sourceId)).toEqual(
       SOURCE_IDS,
@@ -126,7 +188,16 @@ describe("Indonesia Basic r2 candidate", () => {
       }],
     });
     expect(factsByPath.get("country.region")).toMatchObject({
-      evidence: [{ normalizedValue: "southeast-asia" }],
+      evidence: [{
+        sourceId: "indonesia-esdm-2025-performance",
+        locator: "html:press-release-002-pers-04-sji-2026#title",
+        rawValue:
+          "Capaian Positif Tahun 2025, Negara Hadir Penuhi Kebutuhan Energi Masyarakat",
+        normalizedValue: "southeast-asia",
+        unit: null,
+        year: null,
+      }],
+      uncertainty: null,
     });
     expect(factsByPath.get("country.summary")).toMatchObject({
       evidence: [
@@ -144,6 +215,46 @@ describe("Indonesia Basic r2 candidate", () => {
         },
       ],
     });
+    const renewableTargetFact = factsByPath.get("marketOverview.renewableTarget");
+    expect(renewableTargetFact?.extractionMethod).toBe("manual");
+    expect(renewableTargetFact?.uncertainty).toBeNull();
+    expect(renewableTargetFact?.evidence).toEqual([
+      {
+        sourceId: "indonesia-esdm-2025-performance",
+        locator: "html:press-release-002-pers-04-sji-2026#paragraph-129",
+        rawValue: { actualRenewableMixPercent: 15.75, year: 2025 },
+        normalizedValue: RENEWABLE_TARGET,
+        unit: null,
+        year: null,
+      },
+      {
+        sourceId: "indonesia-esdm-national-energy-policy-2025",
+        locator: "pdf:page=15#article-10-a-1-to-3",
+        rawValue: { "2030": [19, 23], "2040": [36, 40], "2050": [53, 55] },
+        normalizedValue: RENEWABLE_TARGET,
+        unit: null,
+        year: null,
+      },
+      {
+        sourceId: "indonesia-esdm-national-energy-policy-2025",
+        locator: "pdf:page=16#article-10-a-4",
+        rawValue: { "2060": [70, 72] },
+        normalizedValue: RENEWABLE_TARGET,
+        unit: null,
+        year: null,
+      },
+    ]);
+    const techTagsFact = factsByPath.get("marketOverview.techTags");
+    expect(techTagsFact?.extractionMethod).toBe("manual");
+    expect(techTagsFact?.uncertainty).toBe(TECH_TAG_UNCERTAINTY);
+    expect(techTagsFact?.evidence).toEqual([{
+      sourceId: "indonesia-esdm-2025-performance",
+      locator: "html:press-release-002-pers-04-sji-2026#paragraph-129",
+      rawValue: ["solar", "wind"],
+      normalizedValue: [],
+      unit: null,
+      year: null,
+    }]);
 
     expect(bundle.marketOverviewDraft).toMatchObject({
       overview: {
@@ -155,8 +266,7 @@ describe("Indonesia Basic r2 candidate", () => {
         en: "Electricity consumption per capita was 1,584 kWh in 2025, up from 1,411 kWh in 2024; installed generation capacity increased by 7 GW to 107.51 GW.",
       },
       renewableTarget: {
-        zh: "2025年《国家能源政策》将新能源和可再生能源占比目标设为2030年19%至23%、2040年36%至40%、2050年53%至55%、2060年70%至72%。能源矿产资源部报告2025年实际占比为15.75%。",
-        en: "The 2025 National Energy Policy sets new and renewable energy share targets of 19%-23% in 2030, 36%-40% in 2040, 53%-55% in 2050, and 70%-72% in 2060. The Ministry reported a 15.75% share in 2025.",
+        ...RENEWABLE_TARGET,
       },
       population: 285721236,
       gdp: 1445642584163.81,
