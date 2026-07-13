@@ -1,10 +1,16 @@
 import type {
+  BasicCollectionAuditSummary,
+  BasicCollectionBlockerCode,
   BasicCollectionJsonValue,
+  BasicCollectionReviewReport,
   BasicFactStatus,
   BasicInjectionRisk,
+  BasicMarketOverviewDraft,
+  BasicReviewConflict,
   BasicSourceCheck,
   BasicSourceRecord,
 } from "./basic-collection-contracts.js";
+import type { BasicCollectionAuditArtifactName } from "./basic-offline-audit-artifacts.js";
 import type { BasicDeterministicObservation } from "./basic-source-adapter-contracts.js";
 import type { BasicSourceCatalogSource } from "./basic-source-catalog.js";
 import type {
@@ -94,6 +100,94 @@ export interface BasicReviewedMaterializationV2 {
   readonly sourceChecks: readonly BasicSourceCheck[];
   readonly injectionRisks: readonly BasicInjectionRisk[];
 }
+
+export interface BasicCollectionReviewReportV2
+  extends Omit<
+    BasicCollectionReviewReport,
+    | "schemaVersion"
+    | "runId"
+    | "countryCode"
+    | "status"
+    | "missingFields"
+    | "conflicts"
+    | "sourceChecks"
+    | "injectionRisks"
+    | "publicationRecommendation"
+    | "humanDecision"
+  > {
+  readonly schemaVersion: typeof BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION;
+  readonly runId: string;
+  readonly countryCode: string;
+  readonly status: "ready-for-human-review" | "blocked";
+  readonly missingFields: readonly string[];
+  readonly conflicts: readonly ReadonlyDeep<BasicReviewConflict>[];
+  readonly sourceChecks: readonly ReadonlyDeep<BasicSourceCheck>[];
+  readonly injectionRisks: readonly ReadonlyDeep<BasicInjectionRisk>[];
+  readonly publicationRecommendation: "request-human-review" | "do-not-publish";
+  readonly humanDecision: null;
+}
+
+export interface BasicCollectionAuditBundleV2 {
+  readonly countryDirectory: string;
+  readonly runId: string;
+  readonly sourceRegister: BasicSourceRegisterV2;
+  readonly extractedFacts: BasicExtractedFactsV2;
+  readonly marketOverviewDraft: ReadonlyDeep<BasicMarketOverviewDraft>;
+  readonly reviewReport: BasicCollectionReviewReportV2;
+}
+
+export interface BasicCollectionAuditAssemblyInputV2 {
+  readonly countryDirectory: string;
+  readonly runId: string;
+  readonly catalogVersion: string;
+  readonly catalogSha256: string;
+  readonly sourceRegister: BasicSourceRegisterV2;
+  readonly extractedFacts: BasicExtractedFactsV2;
+  readonly marketOverviewDraft: ReadonlyDeep<BasicMarketOverviewDraft>;
+  readonly sourceChecks: readonly ReadonlyDeep<BasicSourceCheck>[];
+  readonly injectionRisks: readonly ReadonlyDeep<BasicInjectionRisk>[];
+}
+
+export interface BasicCollectionAuditParseResultV2 {
+  readonly data: BasicCollectionAuditBundleV2 | null;
+  readonly errors: readonly string[];
+  readonly summary: Readonly<BasicCollectionAuditSummary>;
+}
+
+export type BasicCollectionAuditValidationResultV2 =
+  | Readonly<{
+      valid: true;
+      data: BasicCollectionAuditBundleV2;
+      errors: readonly [];
+      readyForHumanReview: boolean;
+      blockers: readonly BasicCollectionBlockerCode[];
+      summary: Readonly<BasicCollectionAuditSummary>;
+    }>
+  | Readonly<{
+      valid: false;
+      data: null;
+      errors: readonly string[];
+      readyForHumanReview: false;
+      blockers: readonly BasicCollectionBlockerCode[];
+      summary: Readonly<BasicCollectionAuditSummary>;
+    }>;
+
+export type BasicCollectionAuditArtifactsV2 = Readonly<{
+  "source-register.json": ReadonlyDeep<BasicSourceRegisterV2>;
+  "extracted-facts.json": ReadonlyDeep<BasicExtractedFactsV2>;
+  "market-overview.draft.json": ReadonlyDeep<BasicMarketOverviewDraft>;
+  "review-report.json": ReadonlyDeep<BasicCollectionReviewReportV2>;
+}>;
+
+export type BasicCollectionAuditSerializedArtifactsV2 = Readonly<
+  Record<BasicCollectionAuditArtifactName, Uint8Array>
+>;
+
+export type ReadonlyDeep<T> = T extends readonly (infer U)[]
+  ? ReadonlyArray<ReadonlyDeep<U>>
+  : T extends object
+    ? { readonly [K in keyof T]: ReadonlyDeep<T[K]> }
+    : T;
 
 export type BasicV2FieldOwner =
   | "source-backed"
