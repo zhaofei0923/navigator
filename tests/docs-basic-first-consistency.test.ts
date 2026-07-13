@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 const BASIC_FIRST_RULE =
   "所有国家（包括 `ID`）的首次真实数据交付必须恰好为 `BASIC`。";
 
-const ACTIVE_POLICY_DOCUMENTS = [
+const BASIC_FIRST_POLICY_DOCUMENTS = [
   "AGENTS.md",
   "docs/roadmap.md",
   "docs/country-rollout.md",
@@ -15,6 +15,12 @@ const ACTIVE_POLICY_DOCUMENTS = [
   "docs/basic-country-collection.md",
 ] as const;
 
+const RETIRED_CLAIM_SCAN_DOCUMENTS = [
+  ...BASIC_FIRST_POLICY_DOCUMENTS,
+  "docs/data-schema.md",
+  "docs/testing.md",
+] as const;
+
 const RETIRED_CLAIMS = [
   "印尼是首个完整样板国家",
   "印尼是首个 Complete 样板国家",
@@ -22,6 +28,38 @@ const RETIRED_CLAIMS = [
   "`ID` 保持 Complete 参考样板",
   "印尼判定为 COMPLETE",
   "完整覆盖（印尼为样板）",
+  "fixture 参考印尼样板",
+] as const;
+
+const FIXTURE_BOUNDARY_DOCUMENTS = [
+  {
+    documentPath: "docs/indonesia-seed.md",
+    requirements: [
+      { description: "marks the fixture as synthetic", pattern: /synthetic regression fixture/i },
+      { description: "marks the fixture as non-real", pattern: /(?:不是|不得[^。\n]*视为)[^。\n]*真实/ },
+      { description: "marks the fixture as non-rollout", pattern: /不是[^。\n]*rollout/ },
+      { description: "forbids copying the fixture", pattern: /(?:不可|不得)复制/ },
+    ],
+  },
+  {
+    documentPath: "docs/testing.md",
+    requirements: [
+      { description: "marks the fixture as synthetic", pattern: /synthetic regression fixture/i },
+      { description: "marks the fixture as non-real", pattern: /不是[^。\n]*真实/ },
+      { description: "marks the fixture as non-rollout", pattern: /不是[^。\n]*rollout/ },
+      {
+        description: "forbids copying the fixture",
+        pattern: /(?:不可|不能|不得)复制|不是[^。\n]*可复制/,
+      },
+    ],
+  },
+  {
+    documentPath: "AGENTS.md",
+    requirements: [
+      { description: "marks the fixture as legacy synthetic", pattern: /legacy synthetic regression fixture/i },
+      { description: "marks the fixture as a non-real country delivery", pattern: /非真实国家交付/ },
+    ],
+  },
 ] as const;
 
 const OPERATIONAL_POLICY_DOCUMENTS = [
@@ -59,16 +97,33 @@ const readRootFile = (filePath: string) =>
 
 describe("Basic-first documentation policy", () => {
   it("states the Basic-first rule in every active policy document", () => {
-    for (const documentPath of ACTIVE_POLICY_DOCUMENTS) {
+    for (const documentPath of BASIC_FIRST_POLICY_DOCUMENTS) {
       expect(readRootFile(documentPath), documentPath).toContain(BASIC_FIRST_RULE);
     }
   });
 
   it("does not retain country-specific Indonesia-Complete rollout claims", () => {
-    const activePolicy = ACTIVE_POLICY_DOCUMENTS.map(readRootFile).join("\n");
+    for (const documentPath of RETIRED_CLAIM_SCAN_DOCUMENTS) {
+      const policy = readRootFile(documentPath);
 
-    for (const retiredClaim of RETIRED_CLAIMS) {
-      expect(activePolicy).not.toContain(retiredClaim);
+      for (const retiredClaim of RETIRED_CLAIMS) {
+        expect(policy, `${documentPath}: ${retiredClaim}`).not.toContain(
+          retiredClaim,
+        );
+      }
+    }
+  });
+
+  it("keeps every fixture boundary explicit in its owning document", () => {
+    for (const fixtureDocument of FIXTURE_BOUNDARY_DOCUMENTS) {
+      const policy = readRootFile(fixtureDocument.documentPath);
+
+      for (const requirement of fixtureDocument.requirements) {
+        expect(
+          policy,
+          `${fixtureDocument.documentPath}: ${requirement.description}`,
+        ).toMatch(requirement.pattern);
+      }
     }
   });
 
