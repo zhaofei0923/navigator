@@ -28,28 +28,50 @@ const EMPTY_SUMMARY: BasicCollectionAuditSummary = {
   sourceCount: 0,
   factCount: 0,
 };
+const VALIDATOR_RESULTS = new WeakSet<object>();
+
+// Package-private authentication boundary for consumers that must preserve errors.
+export function isBasicCollectionAuditValidationResultV2FromValidator(
+  value: unknown,
+): value is BasicCollectionAuditValidationResultV2 {
+  return typeof value === "object" && value !== null &&
+    VALIDATOR_RESULTS.has(value);
+}
 
 export function validateBasicCollectionAuditBundleV2(
   value: unknown,
 ): BasicCollectionAuditValidationResultV2 {
   try {
     const parsed = parseBasicCollectionAuditBundleV2(value);
-    if (parsed.data === null) return invalid(parsed.errors, parsed.summary);
+    if (parsed.data === null) {
+      return authenticateValidationResult(invalid(parsed.errors, parsed.summary));
+    }
     const classified = classify(parsed.data);
     if (classified.errors.length > 0) {
-      return invalid(classified.errors, parsed.summary, classified.blockers);
+      return authenticateValidationResult(
+        invalid(classified.errors, parsed.summary, classified.blockers),
+      );
     }
-    return deepFreezeBasicOfflineValue({
+    return authenticateValidationResult(deepFreezeBasicOfflineValue({
       valid: true,
       data: parsed.data,
       errors: [] as const,
       readyForHumanReview: classified.readyForHumanReview,
       blockers: classified.blockers,
       summary: parsed.summary,
-    });
+    }));
   } catch {
-    return invalid(["bundle must be a safely parseable v2 audit bundle"], EMPTY_SUMMARY);
+    return authenticateValidationResult(
+      invalid(["bundle must be a safely parseable v2 audit bundle"], EMPTY_SUMMARY),
+    );
   }
+}
+
+function authenticateValidationResult(
+  result: BasicCollectionAuditValidationResultV2,
+): BasicCollectionAuditValidationResultV2 {
+  VALIDATOR_RESULTS.add(result);
+  return result;
 }
 
 function classify(bundle: BasicCollectionAuditBundleV2): {

@@ -12,7 +12,10 @@ import {
   type BasicExtractedFactV2,
 } from "./collection/basic-collection-v2-contracts.js";
 import { validateBasicV2FactOwnership } from "./collection/basic-v2-fact-ownership.js";
-import { validateBasicCollectionAuditBundleV2 } from "./collection/basic-collection-v2-validator.js";
+import {
+  isBasicCollectionAuditValidationResultV2FromValidator,
+  validateBasicCollectionAuditBundleV2,
+} from "./collection/basic-collection-v2-validator.js";
 
 const INDICATOR_PATHS = [
   "marketOverview.keyIndicators[0].label",
@@ -39,6 +42,16 @@ describe("Basic collection audit v2 validation", () => {
     expect(result.data).not.toBe(bundle);
     expect(Object.isFrozen(result)).toBe(true);
     expectRecursivelyFrozen(result.data);
+  });
+
+  test("authenticates only canonical results from this validator instance", () => {
+    const canonical = validateBasicCollectionAuditBundleV2(createV2Bundle());
+    const spread = Object.freeze({ ...canonical });
+    const cloned = structuredClone(canonical);
+
+    expect(isBasicCollectionAuditValidationResultV2FromValidator(canonical)).toBe(true);
+    expect(isBasicCollectionAuditValidationResultV2FromValidator(spread)).toBe(false);
+    expect(isBasicCollectionAuditValidationResultV2FromValidator(cloned)).toBe(false);
   });
 
   test.each(ALL_PATHS)("rejects the wrong final extraction method for %s", (fieldPath) => {

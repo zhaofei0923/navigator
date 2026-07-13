@@ -23,8 +23,16 @@ const dependencyModes = vi.hoisted(() => ({
   preflight: "actual",
   draft: "actual",
   audit: "actual",
-  validate: "actual",
+  validate: "actual" as
+    | "actual"
+    | "throw"
+    | "malformed"
+    | "invalid"
+    | "forged-hand-built"
+    | "forged-spread"
+    | "forged-clone",
   validateCalls: 0,
+  lastValidation: null as BasicCollectionAuditValidationResultV2 | null,
   artifacts: "actual",
 }));
 
@@ -80,7 +88,40 @@ vi.mock("./collection/basic-collection-v2-validator.js", async (importOriginal) 
         return { valid: true, data: input, errors: [], readyForHumanReview: true, blockers: [], extra: "SECRET" };
       }
       if (dependencyModes.validate === "invalid") {
-        return actual.validateBasicCollectionAuditBundleV2({ token: "SECRET" });
+        const result = actual.validateBasicCollectionAuditBundleV2({ token: "SECRET" });
+        dependencyModes.lastValidation = result;
+        return result;
+      }
+      if (dependencyModes.validate.startsWith("forged-")) {
+        const canonical = actual.validateBasicCollectionAuditBundleV2({ token: "SECRET" });
+        if (canonical.valid) throw new Error("invalid fixture unexpectedly validated");
+        const externalText =
+          "https://external.invalid/?token=SECRET&cookie=SESSION raw external text";
+        const errors = Object.freeze([externalText]);
+        const summary = Object.freeze({ ...canonical.summary });
+        let forged: BasicCollectionAuditValidationResultV2;
+        if (dependencyModes.validate === "forged-hand-built") {
+          forged = Object.freeze({
+            valid: false,
+            data: null,
+            errors,
+            readyForHumanReview: false,
+            blockers: Object.freeze([...canonical.blockers]),
+            summary,
+          });
+        } else if (dependencyModes.validate === "forged-spread") {
+          forged = Object.freeze({ ...canonical, errors, summary });
+        } else {
+          const cloned = structuredClone(canonical);
+          forged = Object.freeze({
+            ...cloned,
+            errors,
+            blockers: Object.freeze([...cloned.blockers]),
+            summary,
+          });
+        }
+        dependencyModes.lastValidation = forged;
+        return forged;
       }
       return actual.validateBasicCollectionAuditBundleV2(input);
     },
@@ -106,6 +147,7 @@ describe("model-free Basic deterministic candidate", () => {
     dependencyModes.audit = "actual";
     dependencyModes.validate = "actual";
     dependencyModes.validateCalls = 0;
+    dependencyModes.lastValidation = null;
     dependencyModes.artifacts = "actual";
   });
 
@@ -244,6 +286,87 @@ describe("model-free Basic deterministic candidate", () => {
   });
 
   test.each([
+    ["own key", (pending: Promise<unknown>) => {
+      Object.defineProperty(pending, "pendingMutation", { value: true });
+    }],
+    ["prototype", (pending: Promise<unknown>) => {
+      Object.setPrototypeOf(pending, Object.create(Promise.prototype));
+    }],
+    ["then", (pending: Promise<unknown>) => {
+      Object.defineProperty(pending, "then", { value: Promise.prototype.then });
+    }],
+    ["constructor", (pending: Promise<unknown>) => {
+      Object.defineProperty(pending, "constructor", { value: Promise });
+    }],
+    ["model", (pending: Promise<unknown>) => {
+      Object.defineProperty(pending, "model", { value: "forbidden" });
+    }],
+  ] as const)(
+    "revalidates and blocks a pending native Promise %s mutation",
+    async (_name, mutatePending) => {
+      const fixture = candidateFixture();
+      let resolve!: (value: BasicDeterministicMaterializationResultV2) => void;
+      const pending = new Promise<BasicDeterministicMaterializationResultV2>(
+        (done) => { resolve = done; },
+      );
+      let runnerObserved!: () => void;
+      const runnerReturned = new Promise<void>((done) => { runnerObserved = done; });
+      let calls = 0;
+      let receiver: unknown;
+      const runner: BasicDeterministicRunnerPort = {
+        run() {
+          calls += 1;
+          receiver = this;
+          runnerObserved();
+          return pending;
+        },
+      };
+
+      const candidate = runBasicDeterministicCandidate({ ...fixture.input, runner });
+      await runnerReturned;
+      mutatePending(pending);
+      resolve(fixture.materialization);
+      const result = await candidate;
+
+      expect(calls).toBe(1);
+      expect(receiver).toBe(runner);
+      expectFailure(result, "runner", null);
+    },
+  );
+
+  test.each(["synchronous throw", "rejected native Promise"] as const)(
+    "redacts a runner %s after one stable-receiver call",
+    async (mode) => {
+      const fixture = candidateFixture();
+      let calls = 0;
+      let receiver: unknown;
+      const failure = new Error(
+        "https://runner.invalid/?token=SECRET&cookie=SESSION raw external text",
+      );
+      const runner: BasicDeterministicRunnerPort = {
+        run() {
+          calls += 1;
+          receiver = this;
+          if (mode === "synchronous throw") throw failure;
+          return Promise.reject(failure);
+        },
+      };
+
+      const result = await runBasicDeterministicCandidate({
+        ...fixture.input,
+        runner,
+      });
+
+      expect(calls).toBe(1);
+      expect(receiver).toBe(runner);
+      expectFailure(result, "runner", null);
+      expect(JSON.stringify(result)).not.toMatch(
+        /runner\.invalid|SECRET|SESSION|raw external text/,
+      );
+    },
+  );
+
+  test.each([
     ["extra result key", (value: Record<string, unknown>) => { value.token = "SECRET"; }],
     ["missing result key", (value: Record<string, unknown>) => { delete value.receipts; }],
     ["extra receipt key", (value: Record<string, unknown>) => {
@@ -347,6 +470,7 @@ describe("model-free Basic deterministic candidate", () => {
     const result = await runBasicDeterministicCandidate(candidateFixture().input);
 
     expectFailure(result, "validate", result.validation);
+    expect(result.validation).toBe(dependencyModes.lastValidation);
     expect(result.validation).toEqual({
       valid: false,
       data: null,
@@ -358,6 +482,23 @@ describe("model-free Basic deterministic candidate", () => {
     expect(Object.keys(result.validation ?? {})).toEqual([
       "valid", "data", "errors", "readyForHumanReview", "blockers", "summary",
     ]);
+  });
+
+  test.each([
+    "forged-hand-built",
+    "forged-spread",
+    "forged-clone",
+  ] as const)("redacts a frozen exact-shaped %s validation", async (mode) => {
+    dependencyModes.validate = mode;
+
+    const result = await runBasicDeterministicCandidate(candidateFixture().input);
+
+    expectFailure(result, "validate", result.validation);
+    expect(result.validation).toEqual(redactedValidation());
+    expect(result.validation).not.toBe(dependencyModes.lastValidation);
+    expect(JSON.stringify(result)).not.toMatch(
+      /external\.invalid|SECRET|SESSION|raw external text/,
+    );
   });
 
   test.each(BASIC_DETERMINISTIC_STAGE_NAMES)(
