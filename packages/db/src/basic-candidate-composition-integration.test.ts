@@ -251,7 +251,7 @@ describe("synthetic catalog-to-staging Basic candidate integration", () => {
         candidate: second.candidate!,
       })).resolves.toEqual({ status: "written" });
 
-      expect(await readdir(stagingTarget(repoRoot))).toEqual([
+      expect([...(await readdir(stagingTarget(repoRoot)))].sort(compareText)).toEqual([
         "extracted-facts.json",
         "market-overview.draft.json",
         "review-report.json",
