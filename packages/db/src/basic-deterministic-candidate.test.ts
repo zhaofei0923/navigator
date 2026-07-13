@@ -17,10 +17,7 @@ import {
 import {
   createBasicDeterministicFailureResult,
 } from "./collection/basic-deterministic-candidate-result.js";
-import {
-  isBasicDeterministicCandidateResultFromCore,
-  runBasicDeterministicCandidate,
-} from "./collection/basic-deterministic-candidate.js";
+import { runBasicDeterministicCandidate } from "./collection/basic-deterministic-candidate.js";
 
 const dependencyModes = vi.hoisted(() => ({
   preflight: "actual",
@@ -526,21 +523,6 @@ describe("model-free Basic deterministic candidate", () => {
       expectRecursivelyFrozen(result);
     },
   );
-
-  test("marks only results minted by the deterministic candidate core", async () => {
-    const authentic = await runBasicDeterministicCandidate(candidateFixture().input);
-    const handBuilt = Object.freeze({
-      stages: authentic.stages,
-      failedStage: authentic.failedStage,
-      validation: authentic.validation,
-      artifacts: authentic.artifacts,
-      boundaryVerdict: authentic.boundaryVerdict,
-    });
-
-    expect(isBasicDeterministicCandidateResultFromCore(authentic)).toBe(true);
-    expect(isBasicDeterministicCandidateResultFromCore(handBuilt)).toBe(false);
-    expect(isBasicDeterministicCandidateResultFromCore(structuredClone(authentic))).toBe(false);
-  });
 });
 
 type CandidateFixture = ReturnType<typeof candidateFixture>;

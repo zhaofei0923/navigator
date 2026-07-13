@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { isProxy } from "node:util/types";
 
 import { serializeBasicCollectionAuditArtifactsV2 } from "../collection/basic-audit-v2-artifacts.js";
 import { isBasicCollectionAuditValidationResultV2FromValidator } from "../collection/basic-collection-v2-validator.js";
@@ -9,7 +8,6 @@ import {
   BASIC_DETERMINISTIC_STAGE_NAMES,
   type BasicDeterministicCandidateResult,
 } from "../collection/basic-deterministic-candidate-contracts.js";
-import { isBasicDeterministicCandidateResultFromCore } from "../collection/basic-deterministic-candidate.js";
 import {
   SAFE_COUNTRY_DIRECTORY,
   SAFE_RUN_ID,
@@ -23,16 +21,19 @@ import {
   requireBasicCandidateHeldChild,
   setBasicCandidateDirectoryMode,
   syncBasicCandidateDirectory,
+  syncBasicCandidateParentDirectory,
   verifyBasicCandidateRegularFile,
   writeBasicCandidateExclusiveFile,
   type BasicCandidateHeldDirectory,
   type BasicCandidateRegularFileIdentity,
 } from "./basic-candidate-constrained-fs.js";
 import { renameBasicCandidateDirectoryChildNoReplaceNative } from "./basic-candidate-native-fs.js";
+import { isBasicCandidateProductionResult } from "./basic-candidate-production-runner.js";
 import {
   getBasicCandidateWorkspaceRootDirectory,
   type BasicCandidateWorkspace,
 } from "./basic-candidate-workspace.js";
+import { exactBasicCandidateMap } from "./basic-candidate-values.js";
 
 export interface BasicCandidateArtifactWriteInput {
   readonly workspace: BasicCandidateWorkspace;
@@ -80,6 +81,7 @@ export async function writeBasicCandidateArtifacts(
   let temporaryName: string | null = null;
   let runId: string | null = null;
   let temporaryOwned = false;
+  let published = false;
   let completed = false;
   try {
     const input = exactDataRecord(value, INPUT_KEYS);
@@ -96,7 +98,7 @@ export async function writeBasicCandidateArtifacts(
     temporaryName = `.candidate-${authenticated.runId}-${randomUUID()}.tmp`;
     temporary = await createBasicCandidateExclusiveDirectory(country, temporaryName, 0o700);
     await setBasicCandidateDirectoryMode(temporary, 0o700);
-    await syncBasicCandidateDirectory(country);
+    await syncBasicCandidateParentDirectory(country);
     await requireBasicCandidateHeldChild(country, temporaryName, temporary);
     temporaryOwned = true;
 
@@ -117,14 +119,20 @@ export async function writeBasicCandidateArtifacts(
       country.handle.fd,
       temporaryName,
       authenticated.runId,
+      temporary.identity.dev,
+      temporary.identity.ino,
     );
-    temporaryName = null;
+    published = true;
+    await requireBasicCandidateHeldChild(country, authenticated.runId, temporary);
+    await verifyArtifacts(temporary, temporaryFiles, authenticated.serialized);
+    await syncBasicCandidateParentDirectory(country);
+    await requireBasicCandidateHeldChild(country, authenticated.runId, temporary);
     completed = true;
     return WRITTEN_RESULT;
   } catch {
     throw new Error("basic candidate artifact write failed");
   } finally {
-    if (!completed && country !== null && runId !== null) {
+    if (!completed && !published && country !== null && runId !== null) {
       if (temporary !== null && temporaryName !== null && temporaryOwned) {
         await cleanupBasicCandidateTemporaryDirectory(
           country,
@@ -143,7 +151,7 @@ export async function writeBasicCandidateArtifacts(
 }
 
 function authenticateCandidate(value: unknown): AuthenticatedArtifacts {
-  if (!isBasicDeterministicCandidateResultFromCore(value)) invalid();
+  if (!isBasicCandidateProductionResult(value)) invalid();
   const result = exactDataRecord(value, RESULT_KEYS);
   if (
     result.get("failedStage") !== null ||
@@ -171,7 +179,7 @@ async function prepareDirectory(
 ): Promise<BasicCandidateHeldDirectory> {
   const result = await ensureBasicCandidateDirectoryChild(parent, name, 0o700);
   try {
-    if (result.created) await syncBasicCandidateDirectory(parent);
+    if (result.created) await syncBasicCandidateParentDirectory(parent);
     return result.directory;
   } catch (error) {
     await closeBasicCandidateHeldDirectories([result.directory]);
@@ -249,36 +257,14 @@ function exactDataRecord(
   value: unknown,
   keys: readonly string[],
 ): ReadonlyMap<string, unknown> {
-  return exactDataRecordOrNull(value, keys) ?? invalid();
+  return exactBasicCandidateMap(value, keys) ?? invalid();
 }
 
 function exactDataRecordOrNull(
   value: unknown,
   keys: readonly string[],
 ): ReadonlyMap<string, unknown> | null {
-  try {
-    if (
-      typeof value !== "object" || value === null || isProxy(value) ||
-      Object.getPrototypeOf(value) !== Object.prototype
-    ) return null;
-    const ownKeys = Reflect.ownKeys(value);
-    if (
-      ownKeys.length !== keys.length ||
-      ownKeys.some((key) => typeof key !== "string" || !keys.includes(key))
-    ) return null;
-    const result = new Map<string, unknown>();
-    for (const key of keys) {
-      const descriptor = Object.getOwnPropertyDescriptor(value, key);
-      if (
-        descriptor === undefined || !descriptor.enumerable ||
-        !Object.hasOwn(descriptor, "value")
-      ) return null;
-      result.set(key, descriptor.value);
-    }
-    return result;
-  } catch {
-    return null;
-  }
+  return exactBasicCandidateMap(value, keys);
 }
 
 function sameStrings(left: readonly string[], right: readonly string[]): boolean {

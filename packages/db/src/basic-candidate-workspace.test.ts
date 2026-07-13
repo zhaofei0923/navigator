@@ -9,9 +9,9 @@ import {
   classifyBasicV2FieldPath,
   type BasicDeterministicMaterializationResultV2,
 } from "./collection/basic-collection-v2-contracts.js";
-import { runBasicDeterministicCandidate } from "./collection/basic-deterministic-candidate.js";
 import { writeBasicCandidateArtifacts } from "./cli/basic-candidate-artifact-writer.js";
 import { composeBasicCountryCandidate } from "./cli/basic-candidate-composition.js";
+import { runBasicCandidateProduction } from "./cli/basic-candidate-production-runner.js";
 import {
   BASIC_COUNTRY_CANDIDATE_CONFIG_SCHEMA_VERSION,
   loadBasicCandidateConfig,
@@ -229,7 +229,7 @@ async function createReadyCandidate() {
     extractedFacts,
     receipts: [],
   } as unknown as BasicDeterministicMaterializationResultV2;
-  return runBasicDeterministicCandidate({
+  return runBasicCandidateProduction({
     countryDirectory: bundle.countryDirectory,
     countryCode: sourceRegister.countryCode,
     runId: sourceRegister.runId,

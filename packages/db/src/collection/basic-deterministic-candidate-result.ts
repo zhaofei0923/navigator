@@ -23,6 +23,7 @@ const BOUNDARY_VERDICT: BasicDeterministicBoundaryVerdict = Object.freeze({
   aiUsableTrueCount: 0,
   aiEligibleKnowledgeIds: Object.freeze([] as const),
 });
+
 export function createBasicDeterministicFailureResult(
   failedStage: BasicDeterministicStageName,
   validation: BasicCollectionAuditValidationResultV2 | null = null,
@@ -78,12 +79,11 @@ function createResult(
       outcome: outcomes[index] ?? "skipped",
     })),
   );
-  const result: BasicDeterministicCandidateResult = Object.freeze({
+  return Object.freeze({
     stages,
     failedStage,
     validation,
     artifacts,
     boundaryVerdict: BOUNDARY_VERDICT,
   });
-  return result;
 }

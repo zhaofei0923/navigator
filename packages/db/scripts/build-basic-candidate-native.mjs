@@ -1,45 +1,59 @@
 import { execFileSync } from "node:child_process";
 import {
-  chmod,
-  lstat,
-  mkdir,
-  mkdtemp,
-  open,
-  realpath,
-  rename,
-  rm,
-} from "node:fs/promises";
-import { dirname, join, relative, resolve } from "node:path";
+  chmodSync,
+  closeSync,
+  constants,
+  fstatSync,
+  fsyncSync,
+  mkdirSync,
+  mkdtempSync,
+  openSync,
+  realpathSync,
+  renameSync,
+  rmdirSync,
+  unlinkSync,
+} from "node:fs";
+import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const PACKAGE_DIRECTORY = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const SOURCE_PATH = join(PACKAGE_DIRECTORY, "native", "basic-candidate-fs.c");
-const OUTPUT_DIRECTORY = join(PACKAGE_DIRECTORY, ".cache", "native");
-const OUTPUT_PATH = join(OUTPUT_DIRECTORY, "basic-candidate-fs.node");
+const SOURCE_NAME = "basic-candidate-fs.c";
+const OUTPUT_NAME = "basic-candidate-fs.node";
+const DIRECTORY_FLAGS = constants.O_RDONLY | constants.O_DIRECTORY |
+  constants.O_NOFOLLOW | constants.O_CLOEXEC;
+const FILE_FLAGS = constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_CLOEXEC;
 
 if (process.platform !== "linux") {
   throw new Error("Basic candidate native helper build requires Linux");
 }
 
-const executablePath = await realpath(process.execPath);
-const installationPrefix = dirname(dirname(executablePath));
-const includePath = await realpath(join(installationPrefix, "include", "node"));
-const includeRelative = relative(installationPrefix, includePath);
-if (includeRelative === "" || includeRelative.startsWith("..") || resolve(
-  installationPrefix,
-  includeRelative,
-) !== includePath) {
-  throw new Error("Node include directory is outside the executable installation");
-}
-await requireRegularNonSymlink(join(includePath, "node_api.h"));
-await requireRegularNonSymlink(SOURCE_PATH);
-
-await mkdir(OUTPUT_DIRECTORY, { recursive: true, mode: 0o700 });
-await chmod(OUTPUT_DIRECTORY, 0o700);
-const temporaryDirectory = await mkdtemp(join(OUTPUT_DIRECTORY, ".basic-candidate-fs-"));
-const temporaryOutput = join(temporaryDirectory, "basic-candidate-fs.node");
-
+const descriptors = [];
+let temporaryDirectory = null;
+let temporaryFd = null;
+let temporaryOutput = null;
 try {
+  const packageFd = holdDirectory(PACKAGE_DIRECTORY);
+  const sourceDirectoryFd = holdDirectory(childPath(packageFd, "native"));
+  const sourcePath = childPath(sourceDirectoryFd, SOURCE_NAME);
+  requireRegularFile(sourcePath);
+
+  const executablePath = realpathSync(process.execPath);
+  const installationPrefix = dirname(dirname(executablePath));
+  const includePath = realpathSync(resolve(installationPrefix, "include", "node"));
+  const includeRelative = relative(installationPrefix, includePath);
+  if (
+    includeRelative === "" || includeRelative.startsWith("..") ||
+    resolve(installationPrefix, includeRelative) !== includePath
+  ) throw new Error("Node include directory is outside the executable installation");
+  const includeFd = holdDirectory(includePath);
+  requireRegularFile(childPath(includeFd, "node_api.h"));
+
+  const cacheFd = ensurePrivateDirectory(packageFd, ".cache");
+  const outputFd = ensurePrivateDirectory(cacheFd, "native");
+  temporaryDirectory = mkdtempSync(`${descriptorPath(outputFd)}/.basic-candidate-fs-`);
+  temporaryFd = holdDirectory(temporaryDirectory, 0o700);
+  temporaryOutput = childPath(temporaryFd, OUTPUT_NAME);
+
   const compilerArguments = Object.freeze([
     "-std=c11",
     "-O2",
@@ -56,39 +70,121 @@ try {
     "-shared",
     "-Wl,-z,relro,-z,now,-z,noexecstack",
     "-Wl,--build-id=none",
-    `-I${includePath}`,
+    "-I/proc/self/fd/4",
     "-o",
-    temporaryOutput,
-    SOURCE_PATH,
+    `/proc/self/fd/5/${OUTPUT_NAME}`,
+    `/proc/self/fd/3/${SOURCE_NAME}`,
   ]);
   execFileSync("cc", compilerArguments, {
     shell: false,
-    stdio: "inherit",
+    stdio: ["inherit", "inherit", "inherit", sourceDirectoryFd, includeFd, temporaryFd],
   });
-  await chmod(temporaryOutput, 0o500);
-  await requireRegularNonSymlink(temporaryOutput, 0o500);
-  await rename(temporaryOutput, OUTPUT_PATH);
-  await syncDirectory(OUTPUT_DIRECTORY);
-  await requireRegularNonSymlink(OUTPUT_PATH, 0o500);
+  chmodSync(temporaryOutput, 0o500);
+  requireRegularFile(temporaryOutput, 0o500);
+  renameSync(temporaryOutput, childPath(outputFd, OUTPUT_NAME));
+  temporaryOutput = null;
+  fsyncSync(outputFd);
+  requireRegularFile(childPath(outputFd, OUTPUT_NAME), 0o500);
 } finally {
-  await rm(temporaryDirectory, { recursive: true, force: true });
-}
-
-async function requireRegularNonSymlink(pathname, expectedMode) {
-  const details = await lstat(pathname);
-  if (details.isSymbolicLink() || !details.isFile()) {
-    throw new Error(`Expected a regular non-symlink file: ${pathname}`);
-  }
-  if (expectedMode !== undefined && (details.mode & 0o777) !== expectedMode) {
-    throw new Error(`Unexpected native helper mode: ${pathname}`);
-  }
-}
-
-async function syncDirectory(pathname) {
-  const handle = await open(pathname, "r");
+  let cleanupFailure = false;
   try {
-    await handle.sync();
-  } finally {
-    await handle.close();
+    if (temporaryOutput !== null) unlinkKnownFile(temporaryOutput);
+  } catch {
+    cleanupFailure = true;
   }
+  try {
+    if (temporaryFd !== null) closeHeldDescriptor(temporaryFd);
+  } catch {
+    cleanupFailure = true;
+  }
+  try {
+    if (temporaryDirectory !== null) rmdirSync(temporaryDirectory);
+  } catch {
+    cleanupFailure = true;
+  }
+  try {
+    closeAllDescriptors();
+  } catch {
+    cleanupFailure = true;
+  }
+  if (cleanupFailure) throw new Error("Native build cleanup failed");
+}
+
+function holdDirectory(pathname, expectedMode) {
+  const descriptor = openSync(pathname, DIRECTORY_FLAGS);
+  try {
+    const details = fstatSync(descriptor);
+    if (!details.isDirectory() || (
+      expectedMode !== undefined && (details.mode & 0o777) !== expectedMode
+    )) throw new Error("Native build directory is invalid");
+  } catch (error) {
+    try {
+      closeSync(descriptor);
+    } catch {
+      throw new Error("Native build descriptor close failed");
+    }
+    throw error;
+  }
+  descriptors.push(descriptor);
+  return descriptor;
+}
+
+function ensurePrivateDirectory(parentFd, name) {
+  const pathname = childPath(parentFd, name);
+  try {
+    mkdirSync(pathname, { mode: 0o700 });
+  } catch (error) {
+    if (errorCode(error) !== "EEXIST") throw error;
+  }
+  return holdDirectory(pathname, 0o700);
+}
+
+function requireRegularFile(pathname, expectedMode) {
+  const descriptor = openSync(pathname, FILE_FLAGS);
+  try {
+    const details = fstatSync(descriptor);
+    if (!details.isFile() || (
+      expectedMode !== undefined && (details.mode & 0o777) !== expectedMode
+    )) throw new Error("Native build file is invalid");
+  } finally {
+    closeSync(descriptor);
+  }
+}
+
+function unlinkKnownFile(pathname) {
+  try {
+    unlinkSync(pathname);
+  } catch (error) {
+    if (errorCode(error) !== "ENOENT") throw error;
+  }
+}
+
+function closeAllDescriptors() {
+  let failure = false;
+  for (const descriptor of descriptors.splice(0).reverse()) {
+    try {
+      closeSync(descriptor);
+    } catch {
+      failure = true;
+    }
+  }
+  if (failure) throw new Error("Native build descriptor close failed");
+}
+
+function closeHeldDescriptor(descriptor) {
+  closeSync(descriptor);
+  const index = descriptors.indexOf(descriptor);
+  if (index >= 0) descriptors.splice(index, 1);
+}
+
+function descriptorPath(descriptor) {
+  return `/proc/self/fd/${descriptor}`;
+}
+
+function childPath(parentFd, name) {
+  return `${descriptorPath(parentFd)}/${name}`;
+}
+
+function errorCode(error) {
+  return error?.code;
 }

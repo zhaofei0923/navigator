@@ -21,6 +21,7 @@ import { afterEach, describe, expect, test } from "vitest";
 import {
   closeBasicCandidateNativeDirectory,
   createBasicCandidateExclusiveDirectoryNative,
+  ensureBasicCandidateDirectoryNative,
   renameBasicCandidateDirectoryChildNoReplaceNative,
 } from "./cli/basic-candidate-native-fs.js";
 
@@ -71,8 +72,15 @@ describe("Basic candidate native no-replace publisher", () => {
     await mkdir(join(root, "source"), { mode: 0o700 });
     await writeFile(join(root, "source", "artifact.json"), "complete", { mode: 0o600 });
     const parent = await openDirectory(root);
+    const source = await directoryIdentity(root, "source");
     try {
-      renameBasicCandidateDirectoryChildNoReplaceNative(parent.fd, "source", "target");
+      renameBasicCandidateDirectoryChildNoReplaceNative(
+        parent.fd,
+        "source",
+        "target",
+        source.dev,
+        source.ino,
+      );
     } finally {
       await parent.close();
     }
@@ -80,6 +88,27 @@ describe("Basic candidate native no-replace publisher", () => {
     expect(await readdir(root)).toEqual(["target"]);
     expect(await readFile(join(root, "target", "artifact.json"), "utf8")).toBe("complete");
   });
+
+  test("allows cooperating creators to ensure one held directory identity", async () => {
+    const root = await createTemporaryRoot();
+    const parent = await openDirectory(root);
+    const barrier = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 2);
+    try {
+      const first = runEnsureWorker(parent.fd, "country", barrier);
+      const second = runEnsureWorker(parent.fd, "country", barrier);
+      const view = new Int32Array(barrier);
+      await waitForWorkers(view, 2);
+      Atomics.store(view, 1, 1);
+      Atomics.notify(view, 1, 2);
+
+      const results = await Promise.all([first, second]);
+      expect(results.map(({ created }) => created).sort()).toEqual([false, true]);
+      expect(new Set(results.map(({ dev, ino }) => `${dev}:${ino}`))).toHaveLength(1);
+      expect(await readdir(root)).toEqual(["country"]);
+    } finally {
+      await parent.close();
+    }
+  }, 15_000);
 
   test("creates and holds an exclusive sibling directory before returning", async () => {
     const root = await createTemporaryRoot();
@@ -99,10 +128,35 @@ describe("Basic candidate native no-replace publisher", () => {
     }
   });
 
+  test("does not leak raw descriptors across repeated create and ensure cycles", async () => {
+    const root = await createTemporaryRoot();
+    const parent = await openDirectory(root);
+    const before = (await readdir("/proc/self/fd")).length;
+    try {
+      for (let index = 0; index < 32; index += 1) {
+        const created = createBasicCandidateExclusiveDirectoryNative(
+          parent.fd,
+          `exclusive-${index}`,
+        );
+        closeBasicCandidateNativeDirectory(created);
+      }
+      for (let index = 0; index < 64; index += 1) {
+        const ensured = ensureBasicCandidateDirectoryNative(parent.fd, "ensured");
+        closeBasicCandidateNativeDirectory(ensured);
+      }
+    } finally {
+      await parent.close();
+    }
+    const after = (await readdir("/proc/self/fd")).length;
+
+    expect(after).toBe(before - 1);
+  });
+
   test("keeps using the eagerly loaded addon after its source pathname is swapped", async () => {
     const root = await createTemporaryRoot();
     await mkdir(join(root, "source"), { mode: 0o700 });
     const parent = await openDirectory(root);
+    const source = await directoryIdentity(root, "source");
     const heldBinary = `${NATIVE_BINARY}.held`;
     try {
       await rename(NATIVE_BINARY, heldBinary);
@@ -111,6 +165,8 @@ describe("Basic candidate native no-replace publisher", () => {
         parent.fd,
         "source",
         "target",
+        source.dev,
+        source.ino,
       )).not.toThrow();
     } finally {
       await rm(NATIVE_BINARY, { force: true });
@@ -121,17 +177,48 @@ describe("Basic candidate native no-replace publisher", () => {
     expect(await readdir(root)).toEqual(["target"]);
   });
 
-  test("does not overwrite an existing empty target and preserves the source", async () => {
+  test("loads bytes from the held addon fd when the exact pathname is replaced", () => {
+    expect(runIsolatedDlopenReplacement()).toEqual({ status: "loaded" });
+  });
+
+  test("rejects a source replacement detected immediately before publication", async () => {
     const root = await createTemporaryRoot();
-    await mkdir(join(root, "source"), { mode: 0o700 });
-    await mkdir(join(root, "target"), { mode: 0o700 });
-    await writeFile(join(root, "source", "artifact.json"), "source", { mode: 0o600 });
+    await createPayload(root, "source", "original");
+    const expected = await directoryIdentity(root, "source");
+    await rename(join(root, "source"), join(root, "held-original"));
+    await createPayload(root, "source", "replacement");
     const parent = await openDirectory(root);
     try {
       expect(() => renameBasicCandidateDirectoryChildNoReplaceNative(
         parent.fd,
         "source",
         "target",
+        expected.dev,
+        expected.ino,
+      )).toThrow(FIXED_ERROR);
+    } finally {
+      await parent.close();
+    }
+
+    expect(await readPayload(root, "source")).toEqual(["replacement", "replacement"]);
+    expect(await readPayload(root, "held-original")).toEqual(["original", "original"]);
+    await expect(readdir(join(root, "target"))).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  test("does not overwrite an existing empty target and preserves the source", async () => {
+    const root = await createTemporaryRoot();
+    await mkdir(join(root, "source"), { mode: 0o700 });
+    await mkdir(join(root, "target"), { mode: 0o700 });
+    await writeFile(join(root, "source", "artifact.json"), "source", { mode: 0o600 });
+    const parent = await openDirectory(root);
+    const source = await directoryIdentity(root, "source");
+    try {
+      expect(() => renameBasicCandidateDirectoryChildNoReplaceNative(
+        parent.fd,
+        "source",
+        "target",
+        source.dev,
+        source.ino,
       )).toThrow(FIXED_ERROR);
     } finally {
       await parent.close();
@@ -148,8 +235,8 @@ describe("Basic candidate native no-replace publisher", () => {
     const parent = await openDirectory(root);
     const barrier = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 2);
     try {
-      const first = runWorker(parent.fd, "source-a", barrier);
-      const second = runWorker(parent.fd, "source-b", barrier);
+      const first = runWorker(parent.fd, "source-a", await directoryIdentity(root, "source-a"), barrier);
+      const second = runWorker(parent.fd, "source-b", await directoryIdentity(root, "source-b"), barrier);
       const view = new Int32Array(barrier);
       await waitForWorkers(view, 2);
       Atomics.store(view, 1, 1);
@@ -198,6 +285,8 @@ describe("Basic candidate native no-replace publisher", () => {
           descriptor,
           "source",
           "target",
+          1n,
+          1n,
         )).toThrow(FIXED_ERROR);
       }
       for (const name of invalidNames) {
@@ -205,11 +294,15 @@ describe("Basic candidate native no-replace publisher", () => {
           parent.fd,
           name,
           "target",
+          1n,
+          1n,
         )).toThrow(FIXED_ERROR);
         expect(() => renameBasicCandidateDirectoryChildNoReplaceNative(
           parent.fd,
           "source",
           name,
+          1n,
+          1n,
         )).toThrow(FIXED_ERROR);
       }
 
@@ -224,8 +317,27 @@ describe("Basic candidate native no-replace publisher", () => {
         parent.fd,
         hostile,
         "target",
+        1n,
+        1n,
       )).toThrow(FIXED_ERROR);
       expect(accessed).toBe(false);
+
+      for (const identity of [-1n, 0x1_0000_0000_0000_0000n, 1, null]) {
+        expect(() => renameBasicCandidateDirectoryChildNoReplaceNative(
+          parent.fd,
+          "source",
+          "target",
+          identity,
+          1n,
+        )).toThrow(FIXED_ERROR);
+        expect(() => renameBasicCandidateDirectoryChildNoReplaceNative(
+          parent.fd,
+          "source",
+          "target",
+          1n,
+          identity,
+        )).toThrow(FIXED_ERROR);
+      }
     } finally {
       await regularFile.close();
       await parent.close();
@@ -243,14 +355,27 @@ describe("Basic candidate native no-replace publisher", () => {
       "native",
       "basic-candidate-fs.c",
     ), "utf8");
+    const buildSource = await readFile(join(
+      PACKAGE_DIRECTORY,
+      "scripts",
+      "build-basic-candidate-native.mjs",
+    ), "utf8");
 
     expect(wrapperSource).not.toMatch(/node:child_process|node:fs\/promises|copyFile|EXDEV/);
+    expect(wrapperSource).toContain("process.dlopen");
+    expect(wrapperSource).toContain("/proc/self/fd/");
+    expect(wrapperSource).not.toContain("require(NATIVE_PATH)");
     expect(nativeSource).toContain("SYS_renameat2");
     expect(nativeSource).toContain("RENAME_NOREPLACE");
     expect(nativeSource).toContain("fstat");
+    expect(nativeSource).toContain("fstatat");
     expect(nativeSource).toContain("S_ISDIR");
     expect(nativeSource).not.toMatch(/\b(?:rename|renameat|copy_file_range|sendfile)\s*\(/);
     expect(nativeSource).not.toMatch(/\b(?:system|popen|fork|execv|execve|execl|execlp)\s*\(/);
+    expect(buildSource).toContain("execFileSync");
+    expect(buildSource).toContain("/proc/self/fd/");
+    expect(buildSource).toContain("O_NOFOLLOW");
+    expect(buildSource).not.toMatch(/\brm\s*\(|recursive\s*:/);
   });
 });
 
@@ -284,6 +409,56 @@ function runIsolatedNativeLoad(
     `,
   ], { encoding: "utf8" });
   return JSON.parse(output) as Readonly<{ status: "failed"; message: string }>;
+}
+
+function runIsolatedDlopenReplacement(): Readonly<{ status: string }> {
+  const heldBinary = `${NATIVE_BINARY}.dlopen-held`;
+  const output = execFileSync(process.execPath, [
+    "--input-type=module",
+    "--eval",
+    `
+      import {
+        chmodSync, closeSync, constants, openSync, renameSync, rmSync,
+        rmdirSync, writeFileSync,
+      } from "node:fs";
+      const nativePath = ${JSON.stringify(NATIVE_BINARY)};
+      const heldPath = ${JSON.stringify(heldBinary)};
+      const originalDlopen = process.dlopen;
+      process.dlopen = function(module, filename, flags) {
+        renameSync(nativePath, heldPath);
+        writeFileSync(nativePath, "replacement", { mode: 0o500 });
+        chmodSync(nativePath, 0o500);
+        try {
+          return flags === undefined
+            ? originalDlopen.call(process, module, filename)
+            : originalDlopen.call(process, module, filename, flags);
+        } finally {
+          rmSync(nativePath, { force: true });
+          renameSync(heldPath, nativePath);
+        }
+      };
+      void import(${JSON.stringify(`${WRAPPER_URL}?descriptor-bound`)}).then((nativeFs) => {
+        const root = ${JSON.stringify("/tmp")};
+        const parent = openSync(root, constants.O_RDONLY | constants.O_DIRECTORY);
+        const name = "basic-candidate-dlopen-" + process.pid;
+        try {
+          const directory = nativeFs.ensureBasicCandidateDirectoryNative(parent, name);
+          nativeFs.closeBasicCandidateNativeDirectory(directory);
+          rmdirSync(root + "/" + name);
+          process.stdout.write(JSON.stringify({ status: "loaded" }));
+        } catch (error) {
+          process.stdout.write(JSON.stringify({
+            status: error instanceof Error ? error.message : "failed",
+          }));
+        } finally {
+          closeSync(parent);
+        }
+      }).catch((error) => process.stdout.write(JSON.stringify({
+        status: error instanceof Error ? error.message : "failed",
+      })));
+    `,
+  ], { encoding: "utf8" });
+  return JSON.parse(output) as Readonly<{ status: string }>;
 }
 
 type WorkerResult = Readonly<
@@ -321,6 +496,7 @@ async function readPayload(root: string, name: string): Promise<readonly string[
 function runWorker(
   parentDirFd: number,
   source: string,
+  expected: Readonly<{ dev: bigint; ino: bigint }>,
   barrier: SharedArrayBuffer,
 ): Promise<WorkerResult> {
   const worker = new Worker(`
@@ -335,6 +511,8 @@ function runWorker(
           workerData.parentDirFd,
           workerData.source,
           "target",
+          BigInt(workerData.dev),
+          BigInt(workerData.ino),
         );
         parentPort.postMessage({ status: "won", source: workerData.source });
       } catch (error) {
@@ -355,6 +533,8 @@ function runWorker(
       barrier,
       parentDirFd,
       source,
+      dev: expected.dev.toString(),
+      ino: expected.ino.toString(),
       wrapperUrl: WRAPPER_URL,
     },
   });
@@ -365,6 +545,60 @@ function runWorker(
       if (code !== 0) reject(new Error(`worker exited with code ${code}`));
     });
   });
+}
+
+function runEnsureWorker(
+  parentDirFd: number,
+  name: string,
+  barrier: SharedArrayBuffer,
+): Promise<Readonly<{ created: boolean; dev: string; ino: string }>> {
+  const worker = new Worker(`
+    const { parentPort, workerData } = require("node:worker_threads");
+    void import(workerData.wrapperUrl).then((nativeFs) => {
+      const view = new Int32Array(workerData.barrier);
+      Atomics.add(view, 0, 1);
+      Atomics.notify(view, 0, 1);
+      Atomics.wait(view, 1, 0);
+      const directory = nativeFs.ensureBasicCandidateDirectoryNative(
+        workerData.parentDirFd,
+        workerData.name,
+      );
+      try {
+        parentPort.postMessage({
+          created: directory.created,
+          dev: directory.dev.toString(),
+          ino: directory.ino.toString(),
+        });
+      } finally {
+        nativeFs.closeBasicCandidateNativeDirectory(directory);
+      }
+    }).catch((error) => parentPort.postMessage({
+      error: error instanceof Error ? error.message : "non-error",
+    }));
+  `, {
+    eval: true,
+    workerData: { barrier, name, parentDirFd, wrapperUrl: WRAPPER_URL },
+  });
+  return new Promise((resolveResult, reject) => {
+    worker.once("message", (value: unknown) => {
+      if (
+        typeof value === "object" && value !== null && "error" in value
+      ) reject(new Error(String(value.error)));
+      else resolveResult(value as Readonly<{ created: boolean; dev: string; ino: string }>);
+    });
+    worker.once("error", reject);
+    worker.once("exit", (code) => {
+      if (code !== 0) reject(new Error(`worker exited with code ${code}`));
+    });
+  });
+}
+
+async function directoryIdentity(
+  root: string,
+  name: string,
+): Promise<Readonly<{ dev: bigint; ino: bigint }>> {
+  const details = await lstat(join(root, name), { bigint: true });
+  return Object.freeze({ dev: details.dev, ino: details.ino });
 }
 
 async function waitForWorkers(view: Int32Array, expected: number): Promise<void> {

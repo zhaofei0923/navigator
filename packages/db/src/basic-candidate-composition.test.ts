@@ -7,6 +7,7 @@ import {
 import {
   BASIC_COUNTRY_CANDIDATE_CONFIG_SCHEMA_VERSION,
 } from "./cli/basic-candidate-config.js";
+import { isBasicCandidateProductionResult } from "./cli/basic-candidate-production-runner.js";
 
 const SECRET = "https://outside.invalid/?token=SECRET&cookie=SESSION raw content";
 
@@ -114,6 +115,15 @@ describe("Basic candidate production composition", () => {
     const result = await composeBasicCountryCandidate(fixture.input, fixture.dependencies);
 
     expect(result).toEqual({ status: "blocked", candidate: blocked });
+  });
+
+  test("does not grant publication provenance to an injected candidate runner", async () => {
+    const fixture = compositionFixture();
+
+    const result = await composeBasicCountryCandidate(fixture.input, fixture.dependencies);
+
+    expect(result.status).toBe("ready");
+    expect(isBasicCandidateProductionResult(result.candidate)).toBe(false);
   });
 
   test.each([

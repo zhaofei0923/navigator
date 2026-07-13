@@ -29,6 +29,7 @@ import { createBasicDeterministicSuccessResult } from "./collection/basic-determ
 import {
   writeBasicCandidateArtifacts as writeBasicCandidateArtifactsWithWorkspace,
 } from "./cli/basic-candidate-artifact-writer.js";
+import { runBasicCandidateProduction } from "./cli/basic-candidate-production-runner.js";
 import {
   closeBasicCandidateWorkspace,
   openBasicCandidateWorkspace,
@@ -38,14 +39,41 @@ import {
 const nativePublishProbe = vi.hoisted(() => ({
   calls: 0,
   createCalls: 0,
+  ensureCalls: [] as string[],
+  pendingEnsureName: null as string | null,
+  ensuredHandles: new Map<unknown, string>(),
   createTargetBeforeCall: false,
   replaceAfterCreate: false,
+  replaceAfterEnsure: null as string | null,
+  published: false,
+  expectedIdentity: null as Readonly<{ dev: bigint; ino: bigint }> | null,
+  postRenameArtifactReads: 0,
+  postRenameParentSyncs: 0,
+  postRenameTargetChecks: 0,
 }));
 
 vi.mock("./cli/basic-candidate-native-fs.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./cli/basic-candidate-native-fs.js")>();
   return {
     ...actual,
+    ensureBasicCandidateDirectoryNative(
+      parentDirFd: unknown,
+      name: unknown,
+    ) {
+      if (typeof name === "string") nativePublishProbe.ensureCalls.push(name);
+      const ensured = actual.ensureBasicCandidateDirectoryNative(parentDirFd, name);
+      if (
+        nativePublishProbe.replaceAfterEnsure === name &&
+        typeof parentDirFd === "number" && typeof name === "string"
+      ) {
+        const pathname = `/proc/self/fd/${parentDirFd}/${name}`;
+        renameSync(pathname, `${pathname}.held`);
+        mkdirSync(pathname, { mode: 0o700 });
+        writeFileSync(`${pathname}/owner.txt`, "foreign", { mode: 0o600 });
+      }
+      nativePublishProbe.pendingEnsureName = typeof name === "string" ? name : null;
+      return ensured;
+    },
     createBasicCandidateExclusiveDirectoryNative(
       parentDirFd: unknown,
       name: unknown,
@@ -70,6 +98,8 @@ vi.mock("./cli/basic-candidate-native-fs.js", async (importOriginal) => {
       parentDirFd: unknown,
       oldName: unknown,
       newName: unknown,
+      expectedDev: unknown,
+      expectedIno: unknown,
     ) {
       nativePublishProbe.calls += 1;
       if (fsFailure.mode === "exdev") {
@@ -82,11 +112,21 @@ vi.mock("./cli/basic-candidate-native-fs.js", async (importOriginal) => {
       ) {
         mkdirSync(`/proc/self/fd/${parentDirFd}/${newName}`, { mode: 0o700 });
       }
-      return actual.renameBasicCandidateDirectoryChildNoReplaceNative(
+      const result = actual.renameBasicCandidateDirectoryChildNoReplaceNative(
         parentDirFd,
         oldName,
         newName,
+        expectedDev,
+        expectedIno,
       );
+      nativePublishProbe.published = true;
+      if (typeof expectedDev === "bigint" && typeof expectedIno === "bigint") {
+        nativePublishProbe.expectedIdentity = Object.freeze({
+          dev: expectedDev,
+          ino: expectedIno,
+        });
+      }
+      return result;
     },
   };
 });
@@ -99,6 +139,7 @@ const fsFailure = vi.hoisted(() => ({
     | "target-nonempty-replacement"
     | "target-empty-replacement",
   directorySyncError: null as null | "EACCES" | "EPERM" | "ENOTSUP",
+  directorySyncParentOnly: false,
   rejectDirectoryOpen: false,
   rejectRecursiveRm: false,
   rejectDescendantsOf: null as string | null,
@@ -108,6 +149,8 @@ const fsFailure = vi.hoisted(() => ({
     moved: boolean;
   },
   targetReplacementDone: false,
+  failPostRenameVerification: false,
+  failPostRenameParentSync: false,
   renameCalls: 0,
   openHandles: new Set<unknown>(),
 }));
@@ -152,6 +195,12 @@ vi.mock("node:fs/promises", async (importOriginal) => {
         (typeof flags === "number" && (flags & constants.O_EXCL) !== 0);
       const isDirectory = typeof flags === "number" &&
         (flags & constants.O_DIRECTORY) !== 0;
+      if (nativePublishProbe.published && isDirectory && candidate.endsWith("/run-001")) {
+        nativePublishProbe.postRenameTargetChecks += 1;
+        if (fsFailure.failPostRenameVerification) {
+          throw new Error("SECRET post-rename target verification failure");
+        }
+      }
       if (fsFailure.rejectDirectoryOpen && isDirectory) {
         const error = new Error("SECRET directory open failure") as NodeJS.ErrnoException;
         error.code = "EPERM";
@@ -162,6 +211,13 @@ vi.mock("node:fs/promises", async (importOriginal) => {
         candidate.endsWith("extracted-facts.json")
       ) throw new Error("SECRET partial write failure");
       const handle = await actual.open(pathname, flags, mode);
+      if (isDirectory && nativePublishProbe.pendingEnsureName !== null) {
+        nativePublishProbe.ensuredHandles.set(handle, nativePublishProbe.pendingEnsureName);
+        nativePublishProbe.pendingEnsureName = null;
+      }
+      if (nativePublishProbe.published && candidate.endsWith(".json")) {
+        nativePublishProbe.postRenameArtifactReads += 1;
+      }
       const close = handle.close.bind(handle);
       fsFailure.openHandles.add(handle);
       Object.defineProperty(handle, "close", {
@@ -170,7 +226,8 @@ vi.mock("node:fs/promises", async (importOriginal) => {
           try {
             await close();
           } finally {
-            fsFailure.openHandles.delete(handle);
+              fsFailure.openHandles.delete(handle);
+              nativePublishProbe.ensuredHandles.delete(handle);
           }
         },
       });
@@ -193,13 +250,34 @@ vi.mock("node:fs/promises", async (importOriginal) => {
         await actual.mkdir(candidate, { mode: 0o700 });
       }
       const directorySyncError = fsFailure.directorySyncError;
-      if (isDirectory && directorySyncError !== null) {
+      if (
+        isDirectory && directorySyncError !== null &&
+        (!fsFailure.directorySyncParentOnly ||
+          nativePublishProbe.ensuredHandles.get(handle) === "example-land")
+      ) {
         Object.defineProperty(handle, "sync", {
           configurable: true,
           value: async () => {
             const error = new Error("SECRET directory sync failure") as NodeJS.ErrnoException;
             error.code = directorySyncError;
             throw error;
+          },
+        });
+      }
+      if (
+        isDirectory && nativePublishProbe.ensuredHandles.get(handle) === "example-land"
+      ) {
+        const sync = handle.sync.bind(handle);
+        Object.defineProperty(handle, "sync", {
+          configurable: true,
+          value: async () => {
+            if (nativePublishProbe.published) {
+              nativePublishProbe.postRenameParentSyncs += 1;
+              if (fsFailure.failPostRenameParentSync) {
+                throw new Error("SECRET post-rename parent sync failure");
+              }
+            }
+            await sync();
           },
         });
       }
@@ -313,6 +391,13 @@ describe("Basic candidate atomic artifact writer", () => {
     await expect(writeBasicCandidateArtifacts({
       repoRoot,
       candidate: directFactoryResult,
+    })).rejects.toThrow("basic candidate artifact write failed");
+    const directCoreResult = await runBasicDeterministicCandidate(
+      createReadyCandidateInput(),
+    );
+    await expect(writeBasicCandidateArtifacts({
+      repoRoot,
+      candidate: directCoreResult,
     })).rejects.toThrow("basic candidate artifact write failed");
     expect(await pathExists(join(repoRoot, "data", "staging", "example-land", "run-001")))
       .toBe(false);
@@ -442,6 +527,58 @@ describe("Basic candidate atomic artifact writer", () => {
 
     expect(nativePublishProbe.calls).toBe(1);
     expect(nativePublishProbe.createCalls).toBe(1);
+    expect(nativePublishProbe.ensureCalls).toEqual(["data", "staging", "example-land"]);
+    expect(nativePublishProbe.expectedIdentity).not.toBeNull();
+    expect(nativePublishProbe.postRenameTargetChecks).toBe(2);
+    expect(nativePublishProbe.postRenameArtifactReads).toBe(4);
+    expect(nativePublishProbe.postRenameParentSyncs).toBe(1);
+  });
+
+  test("fails closed on a hierarchy replacement immediately after native ensure", async () => {
+    const repoRoot = await createRepoRoot();
+    nativePublishProbe.replaceAfterEnsure = "staging";
+
+    await expect(writeBasicCandidateArtifacts({
+      repoRoot,
+      candidate: await readyCandidate(),
+    })).rejects.toThrow("basic candidate artifact write failed");
+
+    const replacement = join(repoRoot, "data", "staging");
+    expect(nativePublishProbe.ensureCalls).toEqual(["data", "staging", "example-land"]);
+    expect(await readFile(join(replacement, "owner.txt"), "utf8")).toBe("foreign");
+    expect(await readdir(replacement)).toEqual(["owner.txt"]);
+  });
+
+  test("retains a complete published target when post-rename verification fails", async () => {
+    const repoRoot = await createRepoRoot();
+    fsFailure.failPostRenameVerification = true;
+
+    await expect(writeBasicCandidateArtifacts({
+      repoRoot,
+      candidate: await readyCandidate(),
+    })).rejects.toThrow("basic candidate artifact write failed");
+
+    const target = join(repoRoot, "data", "staging", "example-land", "run-001");
+    expect(nativePublishProbe.published).toBe(true);
+    expect(await readdir(target)).toHaveLength(4);
+    expect((await readdir(join(repoRoot, "data", "staging", "example-land"))))
+      .toEqual(["run-001"]);
+  });
+
+  test("retains a complete published target when parent fsync fails", async () => {
+    const repoRoot = await createRepoRoot();
+    fsFailure.failPostRenameParentSync = true;
+
+    await expect(writeBasicCandidateArtifacts({
+      repoRoot,
+      candidate: await readyCandidate(),
+    })).rejects.toThrow("basic candidate artifact write failed");
+
+    const target = join(repoRoot, "data", "staging", "example-land", "run-001");
+    expect(nativePublishProbe.postRenameParentSyncs).toBe(1);
+    expect(await readdir(target)).toHaveLength(4);
+    expect((await readdir(join(repoRoot, "data", "staging", "example-land"))))
+      .toEqual(["run-001"]);
   });
 
   test("never chmods, cleans, or publishes a replacement inserted after native create", async () => {
@@ -534,6 +671,7 @@ describe("Basic candidate atomic artifact writer", () => {
   test("permits only an explicit unsupported directory sync errno", async () => {
     const repoRoot = await createRepoRoot();
     fsFailure.directorySyncError = "ENOTSUP";
+    fsFailure.directorySyncParentOnly = true;
 
     await expect(writeBasicCandidateArtifacts({
       repoRoot,
@@ -570,6 +708,10 @@ async function readyCandidate() {
 }
 
 async function buildReadyCandidate() {
+  return runBasicCandidateProduction(createReadyCandidateInput());
+}
+
+function createReadyCandidateInput() {
   const bundle = structuredClone(createBasicCollectionAuditFixture());
   const sourceRegister = {
     ...bundle.sourceRegister,
@@ -593,7 +735,7 @@ async function buildReadyCandidate() {
     extractedFacts,
     receipts: [],
   } as unknown as BasicDeterministicMaterializationResultV2;
-  return runBasicDeterministicCandidate({
+  return {
     countryDirectory: bundle.countryDirectory,
     countryCode: sourceRegister.countryCode,
     runId: sourceRegister.runId,
@@ -603,7 +745,7 @@ async function buildReadyCandidate() {
     sourceChecks: bundle.reviewReport.sourceChecks.sort((left, right) =>
       left.sourceId.localeCompare(right.sourceId)),
     injectionRisks: [],
-  });
+  };
 }
 
 async function createRepoRoot(): Promise<string> {
@@ -658,14 +800,26 @@ async function captureError(operation: () => Promise<unknown>): Promise<Error> {
 function resetFilesystemProbe(): void {
   nativePublishProbe.calls = 0;
   nativePublishProbe.createCalls = 0;
+  nativePublishProbe.ensureCalls = [];
+  nativePublishProbe.pendingEnsureName = null;
+  nativePublishProbe.ensuredHandles.clear();
   nativePublishProbe.createTargetBeforeCall = false;
   nativePublishProbe.replaceAfterCreate = false;
+  nativePublishProbe.replaceAfterEnsure = null;
+  nativePublishProbe.published = false;
+  nativePublishProbe.expectedIdentity = null;
+  nativePublishProbe.postRenameArtifactReads = 0;
+  nativePublishProbe.postRenameParentSyncs = 0;
+  nativePublishProbe.postRenameTargetChecks = 0;
   fsFailure.mode = "none";
   fsFailure.directorySyncError = null;
+  fsFailure.directorySyncParentOnly = false;
   fsFailure.rejectDirectoryOpen = false;
   fsFailure.rejectRecursiveRm = false;
   fsFailure.rejectDescendantsOf = null;
   fsFailure.ancestor = null;
   fsFailure.targetReplacementDone = false;
+  fsFailure.failPostRenameVerification = false;
+  fsFailure.failPostRenameParentSync = false;
   fsFailure.renameCalls = 0;
 }

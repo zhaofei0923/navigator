@@ -1,5 +1,3 @@
-import { isProxy } from "node:util/types";
-
 import {
   closeBasicCandidateHeldDirectories,
   openBasicCandidateDirectoryChild,
@@ -15,6 +13,10 @@ import {
   SAFE_COUNTRY_DIRECTORY,
   SAFE_RUN_ID,
 } from "../seed/basic-country-validation-utils.js";
+import {
+  exactBasicCandidateRecord,
+  snapshotBasicCandidateArray,
+} from "./basic-candidate-values.js";
 
 export const BASIC_COUNTRY_CANDIDATE_CONFIG_SCHEMA_VERSION =
   "basic-country-candidate-config/v1" as const;
@@ -64,7 +66,7 @@ export function parseBasicCandidateConfig(
   value: unknown,
 ): BasicCountryCandidateConfig {
   try {
-    const record = exactDataRecord(value, CONFIG_KEYS);
+    const record = exactBasicCandidateRecord(value, CONFIG_KEYS);
     if (
       record.schemaVersion !== BASIC_COUNTRY_CANDIDATE_CONFIG_SCHEMA_VERSION ||
       typeof record.countryDirectory !== "string" ||
@@ -217,33 +219,8 @@ function configLocation(value: unknown): Readonly<{ countryCode: string; runId: 
   return Object.freeze({ countryCode: segments[2]!, runId: segments[3]! });
 }
 
-function exactDataRecord<const Keys extends readonly string[]>(
-  value: unknown,
-  keys: Keys,
-): Record<Keys[number], unknown> {
-  if (
-    typeof value !== "object" || value === null || isProxy(value) ||
-    Object.getPrototypeOf(value) !== Object.prototype
-  ) invalid();
-  const ownKeys = Reflect.ownKeys(value);
-  if (
-    ownKeys.length !== keys.length ||
-    ownKeys.some((key) => typeof key !== "string" || !keys.includes(key))
-  ) invalid();
-  const result = {} as Record<Keys[number], unknown>;
-  for (const key of keys) {
-    const descriptor = Object.getOwnPropertyDescriptor(value, key);
-    if (
-      descriptor === undefined || !descriptor.enumerable ||
-      !Object.hasOwn(descriptor, "value")
-    ) invalid();
-    (result as Record<string, unknown>)[key] = descriptor.value;
-  }
-  return result;
-}
-
 function sortedIds(value: unknown): readonly string[] {
-  const values = snapshotArray(value, MAX_ACTIVE_SOURCES, false);
+  const values = snapshotBasicCandidateArray(value, MAX_ACTIVE_SOURCES, false);
   const result = values.map((item) => {
     if (typeof item !== "string" || !SOURCE_ID.test(item)) invalid();
     return item;
@@ -253,39 +230,9 @@ function sortedIds(value: unknown): readonly string[] {
 }
 
 function sortedPaths(value: unknown): readonly string[] {
-  const result = snapshotArray(value, MAX_DOCUMENT_PLANS, true).map(childPath);
+  const result = snapshotBasicCandidateArray(value, MAX_DOCUMENT_PLANS, true).map(childPath);
   requireSortedUnique(result);
   return Object.freeze(result);
-}
-
-function snapshotArray(
-  value: unknown,
-  maximumLength: number,
-  allowEmpty: boolean,
-): readonly unknown[] {
-  if (
-    typeof value !== "object" || value === null || isProxy(value) ||
-    !Array.isArray(value) || Object.getPrototypeOf(value) !== Array.prototype
-  ) invalid();
-  const lengthDescriptor = Object.getOwnPropertyDescriptor(value, "length");
-  if (
-    lengthDescriptor === undefined || !Object.hasOwn(lengthDescriptor, "value") ||
-    typeof lengthDescriptor.value !== "number" ||
-    !Number.isSafeInteger(lengthDescriptor.value) ||
-    lengthDescriptor.value > maximumLength ||
-    (!allowEmpty && lengthDescriptor.value === 0) ||
-    Reflect.ownKeys(value).length !== lengthDescriptor.value + 1
-  ) invalid();
-  const result: unknown[] = [];
-  for (let index = 0; index < lengthDescriptor.value; index += 1) {
-    const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
-    if (
-      descriptor === undefined || !descriptor.enumerable ||
-      !Object.hasOwn(descriptor, "value")
-    ) invalid();
-    result.push(descriptor.value);
-  }
-  return result;
 }
 
 function nullableChildPath(value: unknown): string | null {

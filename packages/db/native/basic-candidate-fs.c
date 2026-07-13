@@ -5,6 +5,7 @@
 #include <limits.h>
 #include <linux/fs.h>
 #include <node_api.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
@@ -36,6 +37,11 @@ static int read_directory_fd(napi_env env, napi_value value, int *result) {
   }
   *result = (int)raw_fd;
   return (double)*result == raw_fd;
+}
+
+static int read_identity(napi_env env, napi_value value, uint64_t *result) {
+  bool lossless = false;
+  return napi_get_value_bigint_uint64(env, value, result, &lossless) == napi_ok && lossless;
 }
 
 static int read_component(napi_env env, napi_value value, basic_component *result) {
@@ -110,15 +116,63 @@ static napi_value make_created_directory(
   return result;
 }
 
+static napi_value make_ensured_directory(
+  napi_env env,
+  int directory_fd,
+  const struct stat *details,
+  int created
+) {
+  napi_value result = NULL;
+  napi_value fd_value = NULL;
+  napi_value dev_value = NULL;
+  napi_value ino_value = NULL;
+  napi_value created_value = NULL;
+  if (napi_create_object(env, &result) != napi_ok ||
+      napi_create_int32(env, directory_fd, &fd_value) != napi_ok ||
+      napi_create_bigint_uint64(env, (uint64_t)details->st_dev, &dev_value) != napi_ok ||
+      napi_create_bigint_uint64(env, (uint64_t)details->st_ino, &ino_value) != napi_ok ||
+      napi_get_boolean(env, created != 0, &created_value) != napi_ok ||
+      napi_set_named_property(env, result, "fd", fd_value) != napi_ok ||
+      napi_set_named_property(env, result, "dev", dev_value) != napi_ok ||
+      napi_set_named_property(env, result, "ino", ino_value) != napi_ok ||
+      napi_set_named_property(env, result, "created", created_value) != napi_ok) {
+    close(directory_fd);
+    return make_status(env, "ERR_FAILED");
+  }
+  return result;
+}
+
+static napi_value open_directory_result(
+  napi_env env,
+  int parent_fd,
+  const basic_component *name,
+  int created
+) {
+  int directory_fd = openat(
+    parent_fd,
+    name->bytes,
+    O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC
+  );
+  struct stat opened_details;
+  struct stat named_details;
+  if (directory_fd < 0 || fstat(directory_fd, &opened_details) != 0 ||
+      fstatat(parent_fd, name->bytes, &named_details, AT_SYMLINK_NOFOLLOW) != 0 ||
+      !same_directory(&opened_details, &named_details)) {
+    int saved_error = errno;
+    if (directory_fd >= 0) close(directory_fd);
+    return make_status(env, failure_status(saved_error));
+  }
+  return created < 0
+    ? make_created_directory(env, directory_fd, &opened_details)
+    : make_ensured_directory(env, directory_fd, &opened_details, created);
+}
+
 static napi_value create_exclusive_directory(napi_env env, napi_callback_info info) {
   size_t argument_count = 3U;
   napi_value arguments[3] = {NULL, NULL, NULL};
   int parent_fd = -1;
-  int directory_fd = -1;
   basic_component name = {{0}};
   struct stat parent_details;
-  struct stat opened_details;
-  struct stat named_details;
 
   if (napi_get_cb_info(env, info, &argument_count, arguments, NULL, NULL) != napi_ok ||
       argument_count != 2U ||
@@ -135,34 +189,21 @@ static napi_value create_exclusive_directory(napi_env env, napi_callback_info in
   if (mkdirat(parent_fd, name.bytes, 0700) != 0) {
     return make_status(env, failure_status(errno));
   }
-  directory_fd = openat(
-    parent_fd,
-    name.bytes,
-    O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC
-  );
-  if (directory_fd < 0 || fstat(directory_fd, &opened_details) != 0 ||
-      fstatat(parent_fd, name.bytes, &named_details, AT_SYMLINK_NOFOLLOW) != 0 ||
-      !same_directory(&opened_details, &named_details)) {
-    int saved_error = errno;
-    if (directory_fd >= 0) close(directory_fd);
-    return make_status(env, failure_status(saved_error));
-  }
-  return make_created_directory(env, directory_fd, &opened_details);
+  return open_directory_result(env, parent_fd, &name, -1);
 }
 
-static napi_value rename_no_replace(napi_env env, napi_callback_info info) {
-  size_t argument_count = 4U;
-  napi_value arguments[4] = {NULL, NULL, NULL, NULL};
+static napi_value ensure_directory(napi_env env, napi_callback_info info) {
+  size_t argument_count = 2U;
+  napi_value arguments[2] = {NULL, NULL};
   int parent_fd = -1;
-  basic_component old_name = {{0}};
-  basic_component new_name = {{0}};
+  int created = 0;
+  basic_component name = {{0}};
   struct stat parent_details;
 
   if (napi_get_cb_info(env, info, &argument_count, arguments, NULL, NULL) != napi_ok ||
-      argument_count != 3U ||
+      argument_count != 2U ||
       !read_directory_fd(env, arguments[0], &parent_fd) ||
-      !read_component(env, arguments[1], &old_name) ||
-      !read_component(env, arguments[2], &new_name)) {
+      !read_component(env, arguments[1], &name)) {
     return make_status(env, "ERR_INVALID");
   }
   if (fstat(parent_fd, &parent_details) != 0) {
@@ -170,6 +211,61 @@ static napi_value rename_no_replace(napi_env env, napi_callback_info info) {
   }
   if (!S_ISDIR(parent_details.st_mode)) {
     return make_status(env, "ERR_INVALID");
+  }
+  if (mkdirat(parent_fd, name.bytes, 0700) == 0) {
+    created = 1;
+  } else if (errno != EEXIST) {
+    return make_status(env, failure_status(errno));
+  }
+  return open_directory_result(env, parent_fd, &name, created);
+}
+
+static napi_value close_directory(napi_env env, napi_callback_info info) {
+  size_t argument_count = 1U;
+  napi_value arguments[1] = {NULL};
+  int directory_fd = -1;
+  if (napi_get_cb_info(env, info, &argument_count, arguments, NULL, NULL) != napi_ok ||
+      argument_count != 1U ||
+      !read_directory_fd(env, arguments[0], &directory_fd)) {
+    return make_status(env, "ERR_INVALID");
+  }
+  return close(directory_fd) == 0
+    ? make_status(env, "OK")
+    : make_status(env, failure_status(errno));
+}
+
+static napi_value rename_no_replace(napi_env env, napi_callback_info info) {
+  size_t argument_count = 5U;
+  napi_value arguments[5] = {NULL, NULL, NULL, NULL, NULL};
+  int parent_fd = -1;
+  uint64_t expected_dev = 0U;
+  uint64_t expected_ino = 0U;
+  basic_component old_name = {{0}};
+  basic_component new_name = {{0}};
+  struct stat parent_details;
+  struct stat source_details;
+  struct stat target_details;
+
+  if (napi_get_cb_info(env, info, &argument_count, arguments, NULL, NULL) != napi_ok ||
+      argument_count != 5U ||
+      !read_directory_fd(env, arguments[0], &parent_fd) ||
+      !read_component(env, arguments[1], &old_name) ||
+      !read_component(env, arguments[2], &new_name) ||
+      !read_identity(env, arguments[3], &expected_dev) ||
+      !read_identity(env, arguments[4], &expected_ino)) {
+    return make_status(env, "ERR_INVALID");
+  }
+  if (fstat(parent_fd, &parent_details) != 0) {
+    return make_status(env, failure_status(errno));
+  }
+  if (!S_ISDIR(parent_details.st_mode)) {
+    return make_status(env, "ERR_INVALID");
+  }
+  if (fstatat(parent_fd, old_name.bytes, &source_details, AT_SYMLINK_NOFOLLOW) != 0 ||
+      !S_ISDIR(source_details.st_mode) ||
+      (uint64_t)source_details.st_dev != expected_dev ||
+      (uint64_t)source_details.st_ino != expected_ino) {
+    return make_status(env, "ERR_FAILED");
   }
 
 #ifdef SYS_renameat2
@@ -181,6 +277,12 @@ static napi_value rename_no_replace(napi_env env, napi_callback_info info) {
         new_name.bytes,
         RENAME_NOREPLACE
       ) == 0) {
+    if (fstatat(parent_fd, new_name.bytes, &target_details, AT_SYMLINK_NOFOLLOW) != 0 ||
+        !S_ISDIR(target_details.st_mode) ||
+        (uint64_t)target_details.st_dev != expected_dev ||
+        (uint64_t)target_details.st_ino != expected_ino) {
+      return make_status(env, "ERR_FAILED");
+    }
     return make_status(env, "OK");
   }
   return make_status(env, failure_status(errno));
@@ -191,6 +293,8 @@ static napi_value rename_no_replace(napi_env env, napi_callback_info info) {
 
 NAPI_MODULE_INIT() {
   napi_value create_operation = NULL;
+  napi_value ensure_operation = NULL;
+  napi_value close_operation = NULL;
   napi_value operation = NULL;
   if (napi_create_function(
         env,
@@ -206,6 +310,24 @@ NAPI_MODULE_INIT() {
         "createExclusiveDirectory",
         create_operation
       ) != napi_ok ||
+      napi_create_function(
+        env,
+        "ensureDirectory",
+        NAPI_AUTO_LENGTH,
+        ensure_directory,
+        NULL,
+        &ensure_operation
+      ) != napi_ok ||
+      napi_set_named_property(env, exports, "ensureDirectory", ensure_operation) != napi_ok ||
+      napi_create_function(
+        env,
+        "closeDirectory",
+        NAPI_AUTO_LENGTH,
+        close_directory,
+        NULL,
+        &close_operation
+      ) != napi_ok ||
+      napi_set_named_property(env, exports, "closeDirectory", close_operation) != napi_ok ||
       napi_create_function(
         env,
         "renameNoReplace",

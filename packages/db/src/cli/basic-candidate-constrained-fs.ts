@@ -1,6 +1,5 @@
-import { constants, type BigIntStats } from "node:fs";
+import { constants } from "node:fs";
 import {
-  mkdir,
   open,
   readdir,
   type FileHandle,
@@ -13,31 +12,42 @@ import {
 import {
   closeBasicCandidateNativeDirectory,
   createBasicCandidateExclusiveDirectoryNative,
+  ensureBasicCandidateDirectoryNative,
+  type BasicCandidateNativeDirectory,
 } from "./basic-candidate-native-fs.js";
+import {
+  basicCandidateDirectoryIdentity,
+  basicCandidateRegularFileIdentity,
+  isBoundedBasicCandidateRegularFile,
+  sameBasicCandidateDirectoryIdentity,
+  sameBasicCandidateRegularFileIdentity,
+  sameStableBasicCandidateRegularFile,
+  type BasicCandidateHeldDirectory,
+  type BasicCandidateRegularFileIdentity,
+} from "./basic-candidate-fs-identity.js";
+import {
+  closeBasicCandidateHandle,
+  closeBasicCandidateHeldDirectories,
+} from "./basic-candidate-fs-handles.js";
+import {
+  basicCandidateChildPath,
+  basicCandidateDirectoryFlags,
+  basicCandidateDirectoryPath,
+  basicCandidateReadFlags,
+  basicCandidateWriteFlags,
+} from "./basic-candidate-fs-paths.js";
+import {
+  compareBasicCandidateText,
+  sameBasicCandidateBytes,
+  sameBasicCandidateStrings,
+} from "./basic-candidate-values.js";
 
-const FILE_TYPE_MASK = 0o170000n;
-const REGULAR_FILE_TYPE = 0o100000n;
-
-export type BasicCandidateDirectoryIdentity = Readonly<{
-  dev: bigint;
-  ino: bigint;
-  type: bigint;
-}>;
-
-export type BasicCandidateRegularFileIdentity = Readonly<{
-  dev: bigint;
-  ino: bigint;
-  type: bigint;
-  mode: bigint;
-  size: bigint;
-  mtimeNs: bigint;
-  ctimeNs: bigint;
-}>;
-
-export type BasicCandidateHeldDirectory = Readonly<{
-  handle: FileHandle;
-  identity: BasicCandidateDirectoryIdentity;
-}>;
+export type {
+  BasicCandidateDirectoryIdentity,
+  BasicCandidateHeldDirectory,
+  BasicCandidateRegularFileIdentity,
+} from "./basic-candidate-fs-identity.js";
+export { closeBasicCandidateHeldDirectories } from "./basic-candidate-fs-handles.js";
 
 export async function openBasicCandidateTrustedDirectory(
   value: unknown,
@@ -48,9 +58,10 @@ export async function openBasicCandidateTrustedDirectory(
   try {
     directory = await openDirectory("/");
     for (const segment of pathname === "/" ? [] : pathname.split("/").slice(1)) {
-      const child = await openDirectory(childPath(directory, segment));
-      await closeBasicCandidateHeldDirectories([directory]);
+      const child = await openDirectory(basicCandidateChildPath(directory, segment));
+      const parent = directory;
       directory = child;
+      await closeBasicCandidateHeldDirectories([parent]);
     }
     return directory;
   } catch (error) {
@@ -63,7 +74,7 @@ export async function openBasicCandidateDirectoryChild(
   parent: BasicCandidateHeldDirectory,
   name: unknown,
 ): Promise<BasicCandidateHeldDirectory> {
-  return openDirectory(childPath(parent, name));
+  return openDirectory(basicCandidateChildPath(parent, name));
 }
 
 export async function ensureBasicCandidateDirectoryChild(
@@ -71,20 +82,13 @@ export async function ensureBasicCandidateDirectoryChild(
   name: unknown,
   mode: number,
 ): Promise<Readonly<{ directory: BasicCandidateHeldDirectory; created: boolean }>> {
-  const pathname = childPath(parent, name);
-  try {
-    return Object.freeze({ directory: await openDirectory(pathname), created: false });
-  } catch (error) {
-    if (errorCode(error) !== "ENOENT") throw error;
-  }
-  let created = false;
-  try {
-    await mkdir(pathname, { mode });
-    created = true;
-  } catch (error) {
-    if (errorCode(error) !== "EEXIST") throw error;
-  }
-  return Object.freeze({ directory: await openDirectory(pathname), created });
+  if (mode !== 0o700) invalid();
+  const ensured = ensureBasicCandidateDirectoryNative(
+    parent.handle.fd,
+    parseBasicCandidatePathComponent(name),
+  );
+  const directory = await duplicateNativeDirectory(ensured);
+  return Object.freeze({ directory, created: ensured.created });
 }
 
 export async function createBasicCandidateExclusiveDirectory(
@@ -98,6 +102,13 @@ export async function createBasicCandidateExclusiveDirectory(
     parent.handle.fd,
     component,
   );
+  return duplicateNativeDirectory(created);
+}
+
+async function duplicateNativeDirectory(
+  created: BasicCandidateNativeDirectory,
+): Promise<BasicCandidateHeldDirectory> {
+  let failed = false;
   let directory: BasicCandidateHeldDirectory | null = null;
   try {
     directory = await openDirectory(`/proc/self/fd/${created.fd}/`);
@@ -105,15 +116,21 @@ export async function createBasicCandidateExclusiveDirectory(
       directory.identity.dev !== created.dev ||
       directory.identity.ino !== created.ino
     ) invalid();
-  } catch (error) {
-    await closeBasicCandidateHeldDirectories([directory]);
-    throw error;
+  } catch {
+    failed = true;
   }
   try {
     closeBasicCandidateNativeDirectory(created);
-  } catch (error) {
-    await closeBasicCandidateHeldDirectories([directory]);
-    throw error;
+  } catch {
+    failed = true;
+  }
+  if (failed || directory === null) {
+    try {
+      await closeBasicCandidateHeldDirectories([directory]);
+    } catch {
+      // All close attempts already ran; expose only the fixed boundary error.
+    }
+    invalid();
   }
   return directory;
 }
@@ -135,7 +152,7 @@ export async function requireBasicCandidateHeldChild(
   let probe: BasicCandidateHeldDirectory | null = null;
   try {
     probe = await openBasicCandidateDirectoryChild(parent, name);
-    if (!sameDirectoryIdentity(probe.identity, expected.identity)) invalid();
+    if (!sameBasicCandidateDirectoryIdentity(probe.identity, expected.identity)) invalid();
   } finally {
     await closeBasicCandidateHeldDirectories([probe]);
   }
@@ -145,9 +162,10 @@ export async function requireBasicCandidateDirectoryEntries(
   directory: BasicCandidateHeldDirectory,
   expected: readonly string[],
 ): Promise<void> {
-  const entries = (await readdir(directoryPath(directory))).sort(compareText);
-  const sorted = [...expected].sort(compareText);
-  if (!sameStrings(entries, sorted)) invalid();
+  const entries = (await readdir(basicCandidateDirectoryPath(directory)))
+    .sort(compareBasicCandidateText);
+  const sorted = [...expected].sort(compareBasicCandidateText);
+  if (!sameBasicCandidateStrings(entries, sorted)) invalid();
 }
 
 export async function writeBasicCandidateExclusiveFile(
@@ -155,7 +173,7 @@ export async function writeBasicCandidateExclusiveFile(
   name: unknown,
   content: Uint8Array,
 ): Promise<BasicCandidateRegularFileIdentity> {
-  const handle = await open(childPath(directory, name), writeFlags(), 0o600);
+  const handle = await open(basicCandidateChildPath(directory, name), basicCandidateWriteFlags(), 0o600);
   try {
     await handle.chmod(0o600);
     await handle.writeFile(content);
@@ -165,9 +183,9 @@ export async function writeBasicCandidateExclusiveFile(
       !details.isFile() || Number(details.mode & 0o777n) !== 0o600 ||
       details.size !== BigInt(content.byteLength)
     ) invalid();
-    return regularFileIdentity(details);
+    return basicCandidateRegularFileIdentity(details);
   } finally {
-    await closeHandle(handle);
+    await closeBasicCandidateHandle(handle);
   }
 }
 
@@ -177,16 +195,16 @@ export async function verifyBasicCandidateRegularFile(
   expectedIdentity: BasicCandidateRegularFileIdentity,
   expectedContent: Uint8Array,
 ): Promise<void> {
-  const handle = await open(childPath(directory, name), readFlags());
+  const handle = await open(basicCandidateChildPath(directory, name), basicCandidateReadFlags());
   try {
     const before = await handle.stat({ bigint: true });
-    if (!sameRegularFileIdentity(before, expectedIdentity)) invalid();
+    if (!sameBasicCandidateRegularFileIdentity(before, expectedIdentity)) invalid();
     const content = new Uint8Array(await handle.readFile());
-    if (!sameBytes(content, expectedContent)) invalid();
+    if (!sameBasicCandidateBytes(content, expectedContent)) invalid();
     const after = await handle.stat({ bigint: true });
-    if (!sameRegularFileIdentity(after, expectedIdentity)) invalid();
+    if (!sameBasicCandidateRegularFileIdentity(after, expectedIdentity)) invalid();
   } finally {
-    await closeHandle(handle);
+    await closeBasicCandidateHandle(handle);
   }
 }
 
@@ -196,27 +214,36 @@ export async function readBasicCandidateBoundedRegularFile(
   maximumBytes: number,
 ): Promise<Uint8Array> {
   if (!Number.isSafeInteger(maximumBytes) || maximumBytes < 0) invalid();
-  const handle = await open(childPath(directory, name), readFlags());
+  const handle = await open(basicCandidateChildPath(directory, name), basicCandidateReadFlags());
   try {
     const before = await handle.stat({ bigint: true });
-    if (!isBoundedRegularFile(before, maximumBytes)) invalid();
+    if (!isBoundedBasicCandidateRegularFile(before, maximumBytes)) invalid();
     const content = new Uint8Array(await handle.readFile());
     if (content.byteLength > maximumBytes) invalid();
     const after = await handle.stat({ bigint: true });
-    if (!sameStableRegularFile(before, after) || !isBoundedRegularFile(after, maximumBytes)) {
+    if (
+      !sameStableBasicCandidateRegularFile(before, after) ||
+      !isBoundedBasicCandidateRegularFile(after, maximumBytes)
+    ) {
       invalid();
     }
     return content;
   } finally {
-    await closeHandle(handle);
+    await closeBasicCandidateHandle(handle);
   }
 }
 
 export async function syncBasicCandidateDirectory(
   directory: BasicCandidateHeldDirectory,
 ): Promise<void> {
+  await directory.handle.sync();
+}
+
+export async function syncBasicCandidateParentDirectory(
+  directory: BasicCandidateHeldDirectory,
+): Promise<void> {
   try {
-    await directory.handle.sync();
+    await syncBasicCandidateDirectory(directory);
   } catch (error) {
     if (!isExplicitUnsupportedDirectorySync(error)) throw error;
   }
@@ -235,17 +262,6 @@ export async function cleanupBasicCandidateTemporaryDirectory(
   }
 }
 
-export async function closeBasicCandidateHeldDirectories(
-  directories: readonly (BasicCandidateHeldDirectory | null | undefined)[],
-): Promise<void> {
-  const seen = new Set<FileHandle>();
-  for (const directory of [...directories].reverse()) {
-    if (directory === null || directory === undefined || seen.has(directory.handle)) continue;
-    seen.add(directory.handle);
-    await closeHandle(directory.handle);
-  }
-}
-
 async function requireDescriptorRelativeLinux(): Promise<void> {
   if (
     process.platform !== "linux" || typeof constants.O_NOFOLLOW !== "number" ||
@@ -254,107 +270,24 @@ async function requireDescriptorRelativeLinux(): Promise<void> {
   ) invalid();
   let descriptor: FileHandle | null = null;
   try {
-    descriptor = await open("/proc/self/fd", directoryFlags());
+    descriptor = await open("/proc/self/fd", basicCandidateDirectoryFlags());
     if (!(await descriptor.stat({ bigint: true })).isDirectory()) invalid();
   } finally {
-    await closeHandle(descriptor);
+    await closeBasicCandidateHandle(descriptor);
   }
 }
 
 async function openDirectory(pathname: string): Promise<BasicCandidateHeldDirectory> {
   let handle: FileHandle | null = null;
   try {
-    handle = await open(pathname, directoryFlags());
+    handle = await open(pathname, basicCandidateDirectoryFlags());
     const details = await handle.stat({ bigint: true });
     if (!details.isDirectory()) invalid();
-    return Object.freeze({ handle, identity: directoryIdentity(details) });
+    return Object.freeze({ handle, identity: basicCandidateDirectoryIdentity(details) });
   } catch (error) {
-    await closeHandle(handle);
+    await closeBasicCandidateHandle(handle);
     throw error;
   }
-}
-
-function directoryFlags(): number {
-  return constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW;
-}
-
-function readFlags(): number {
-  return constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK;
-}
-
-function writeFlags(): number {
-  return constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW;
-}
-
-function directoryPath(directory: BasicCandidateHeldDirectory): string {
-  return `/proc/self/fd/${directory.handle.fd}`;
-}
-
-function childPath(directory: BasicCandidateHeldDirectory, name: unknown): string {
-  return `${directoryPath(directory)}/${parseBasicCandidatePathComponent(name)}`;
-}
-
-function directoryIdentity(details: BigIntStats): BasicCandidateDirectoryIdentity {
-  if (!details.isDirectory()) invalid();
-  return Object.freeze({
-    dev: details.dev,
-    ino: details.ino,
-    type: details.mode & FILE_TYPE_MASK,
-  });
-}
-
-function regularFileIdentity(details: BigIntStats): BasicCandidateRegularFileIdentity {
-  if (!details.isFile()) invalid();
-  return Object.freeze({
-    dev: details.dev,
-    ino: details.ino,
-    type: details.mode & FILE_TYPE_MASK,
-    mode: details.mode & 0o777n,
-    size: details.size,
-    mtimeNs: details.mtimeNs,
-    ctimeNs: details.ctimeNs,
-  });
-}
-
-function sameDirectoryIdentity(
-  left: BasicCandidateDirectoryIdentity,
-  right: BasicCandidateDirectoryIdentity,
-): boolean {
-  return left.dev === right.dev && left.ino === right.ino && left.type === right.type;
-}
-
-function sameRegularFileIdentity(
-  details: BigIntStats,
-  expected: BasicCandidateRegularFileIdentity,
-): boolean {
-  return details.isFile() && details.dev === expected.dev && details.ino === expected.ino &&
-    (details.mode & FILE_TYPE_MASK) === REGULAR_FILE_TYPE &&
-    (details.mode & 0o777n) === expected.mode && details.size === expected.size &&
-    details.mtimeNs === expected.mtimeNs && details.ctimeNs === expected.ctimeNs;
-}
-
-function sameStableRegularFile(left: BigIntStats, right: BigIntStats): boolean {
-  return left.isFile() && right.isFile() && left.dev === right.dev &&
-    left.ino === right.ino && (left.mode & FILE_TYPE_MASK) === REGULAR_FILE_TYPE &&
-    (right.mode & FILE_TYPE_MASK) === REGULAR_FILE_TYPE && left.size === right.size &&
-    left.mtimeNs === right.mtimeNs && left.ctimeNs === right.ctimeNs;
-}
-
-function isBoundedRegularFile(details: BigIntStats, maximumBytes: number): boolean {
-  return details.isFile() && details.size >= 0n && details.size <= BigInt(maximumBytes);
-}
-
-function sameBytes(left: Uint8Array, right: Uint8Array): boolean {
-  return left.byteLength === right.byteLength &&
-    left.every((value, index) => value === right[index]);
-}
-
-function sameStrings(left: readonly string[], right: readonly string[]): boolean {
-  return left.length === right.length && left.every((value, index) => value === right[index]);
-}
-
-function compareText(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
 }
 
 function errorCode(error: unknown): string | undefined {
@@ -363,10 +296,6 @@ function errorCode(error: unknown): string | undefined {
 
 function isExplicitUnsupportedDirectorySync(error: unknown): boolean {
   return ["ENOTSUP", "EOPNOTSUPP"].includes(errorCode(error) ?? "");
-}
-
-async function closeHandle(handle: FileHandle | null): Promise<void> {
-  await handle?.close().catch(() => undefined);
 }
 
 function invalid(): never {

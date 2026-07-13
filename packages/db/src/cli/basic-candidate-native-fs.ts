@@ -1,5 +1,4 @@
-import { closeSync, lstatSync } from "node:fs";
-import { createRequire } from "node:module";
+import { closeSync, constants, fstatSync, openSync, type BigIntStats } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isProxy } from "node:util/types";
@@ -10,17 +9,28 @@ const NATIVE_PATH = resolve(
   dirname(fileURLToPath(import.meta.url)),
   "../../.cache/native/basic-candidate-fs.node",
 );
-const require = createRequire(import.meta.url);
 
 type NativeOperations = Readonly<{
   createExclusiveDirectory(parentDirFd: number, name: string): unknown;
-  renameNoReplace(parentDirFd: number, oldName: string, newName: string): unknown;
+  ensureDirectory(parentDirFd: number, name: string): unknown;
+  closeDirectory(directoryFd: number): unknown;
+  renameNoReplace(
+    parentDirFd: number,
+    oldName: string,
+    newName: string,
+    expectedDev: bigint,
+    expectedIno: bigint,
+  ): unknown;
 }>;
 
 export type BasicCandidateNativeDirectory = Readonly<{
   fd: number;
   dev: bigint;
   ino: bigint;
+}>;
+
+export type BasicCandidateEnsuredNativeDirectory = BasicCandidateNativeDirectory & Readonly<{
+  created: boolean;
 }>;
 
 const nativeOperations = loadNativeOperations();
@@ -44,6 +54,23 @@ export function createBasicCandidateExclusiveDirectoryNative(
   }
 }
 
+export function ensureBasicCandidateDirectoryNative(
+  parentDirFd: unknown,
+  name: unknown,
+): BasicCandidateEnsuredNativeDirectory {
+  try {
+    if (nativeOperations === null) invalid();
+    const ensured = parseEnsuredDirectory(nativeOperations.ensureDirectory(
+      parseDirectoryFd(parentDirFd),
+      parseComponent(name),
+    ));
+    NATIVE_DIRECTORIES.add(ensured);
+    return ensured;
+  } catch {
+    invalid();
+  }
+}
+
 export function closeBasicCandidateNativeDirectory(
   directory: BasicCandidateNativeDirectory,
 ): void {
@@ -53,7 +80,9 @@ export function closeBasicCandidateNativeDirectory(
       !NATIVE_DIRECTORIES.has(directory)
     ) invalid();
     if (CLOSED_NATIVE_DIRECTORIES.has(directory)) return;
-    closeSync(directory.fd);
+    if (nativeOperations === null || nativeOperations.closeDirectory(directory.fd) !== "OK") {
+      invalid();
+    }
     CLOSED_NATIVE_DIRECTORIES.add(directory);
   } catch {
     invalid();
@@ -64,12 +93,16 @@ export function renameBasicCandidateDirectoryChildNoReplaceNative(
   parentDirFd: unknown,
   oldName: unknown,
   newName: unknown,
+  expectedDev: unknown,
+  expectedIno: unknown,
 ): void {
   try {
     if (nativeOperations === null || nativeOperations.renameNoReplace(
       parseDirectoryFd(parentDirFd),
       parseComponent(oldName),
       parseComponent(newName),
+      parseIdentity(expectedDev),
+      parseIdentity(expectedIno),
     ) !== "OK") invalid();
   } catch {
     invalid();
@@ -77,32 +110,86 @@ export function renameBasicCandidateDirectoryChildNoReplaceNative(
 }
 
 function loadNativeOperations(): NativeOperations | null {
+  let descriptor = -1;
+  let result: NativeOperations | null = null;
   try {
-    const details = lstatSync(NATIVE_PATH);
-    if (
-      details.isSymbolicLink() || !details.isFile() ||
-      (details.mode & 0o777) !== 0o500
-    ) return null;
-    const binding: unknown = require(NATIVE_PATH);
-    if (
-      typeof binding !== "object" || binding === null || isProxy(binding) ||
-      Object.getPrototypeOf(binding) !== Object.prototype
-    ) return null;
-    const ownKeys = Reflect.ownKeys(binding);
-    if (
-      ownKeys.length !== 2 || ownKeys[0] !== "createExclusiveDirectory" ||
-      ownKeys[1] !== "renameNoReplace"
-    ) return null;
-    const create = readFunction(binding, "createExclusiveDirectory");
-    const rename = readFunction(binding, "renameNoReplace");
-    if (create === null || rename === null) return null;
-    return Object.freeze({
-      createExclusiveDirectory: create as NativeOperations["createExclusiveDirectory"],
-      renameNoReplace: rename as NativeOperations["renameNoReplace"],
-    });
+    descriptor = openSync(
+      NATIVE_PATH,
+      constants.O_RDONLY | constants.O_NOFOLLOW,
+    );
+    const before = fstatSync(descriptor, { bigint: true });
+    if (!validNativeFile(before)) return null;
+    const holder = { exports: {} } as unknown as NodeModule;
+    process.dlopen(holder, `/proc/self/fd/${descriptor}`);
+    const after = fstatSync(descriptor, { bigint: true });
+    if (!sameNativeFile(before, after)) return null;
+    result = parseNativeOperations(holder.exports);
   } catch {
-    return null;
+    result = null;
+  } finally {
+    if (descriptor >= 0) {
+      try {
+        closeSync(descriptor);
+      } catch {
+        result = null;
+      }
+    }
   }
+  return result;
+}
+
+function parseNativeOperations(binding: unknown): NativeOperations | null {
+  if (
+    typeof binding !== "object" || binding === null || isProxy(binding) ||
+    Object.getPrototypeOf(binding) !== Object.prototype
+  ) return null;
+  const ownKeys = Reflect.ownKeys(binding);
+  if (
+    ownKeys.length !== 4 || ownKeys[0] !== "createExclusiveDirectory" ||
+    ownKeys[1] !== "ensureDirectory" || ownKeys[2] !== "closeDirectory" ||
+    ownKeys[3] !== "renameNoReplace"
+  ) return null;
+  const create = readFunction(binding, "createExclusiveDirectory");
+  const ensure = readFunction(binding, "ensureDirectory");
+  const close = readFunction(binding, "closeDirectory");
+  const rename = readFunction(binding, "renameNoReplace");
+  if (create === null || ensure === null || close === null || rename === null) return null;
+  return Object.freeze({
+    createExclusiveDirectory: create as NativeOperations["createExclusiveDirectory"],
+    ensureDirectory: ensure as NativeOperations["ensureDirectory"],
+    closeDirectory: close as NativeOperations["closeDirectory"],
+    renameNoReplace: rename as NativeOperations["renameNoReplace"],
+  });
+}
+
+function validNativeFile(details: BigIntStats): boolean {
+  return details.isFile() && (details.mode & 0o777n) === 0o500n;
+}
+
+function sameNativeFile(left: BigIntStats, right: BigIntStats): boolean {
+  return validNativeFile(left) && validNativeFile(right) &&
+    left.dev === right.dev && left.ino === right.ino && left.mode === right.mode &&
+    left.size === right.size && left.mtimeNs === right.mtimeNs;
+}
+
+function parseEnsuredDirectory(value: unknown): BasicCandidateEnsuredNativeDirectory {
+  if (
+    typeof value !== "object" || value === null || isProxy(value) ||
+    Object.getPrototypeOf(value) !== Object.prototype
+  ) invalid();
+  const ownKeys = Reflect.ownKeys(value);
+  if (
+    ownKeys.length !== 4 || ownKeys[0] !== "fd" || ownKeys[1] !== "dev" ||
+    ownKeys[2] !== "ino" || ownKeys[3] !== "created"
+  ) invalid();
+  const directory = parseCreatedDirectory(Object.freeze({
+    fd: readDataProperty(value, "fd"),
+    dev: readDataProperty(value, "dev"),
+    ino: readDataProperty(value, "ino"),
+  }));
+  const created = readDataProperty(value, "created");
+  if (typeof created !== "boolean") invalid();
+  return Object.freeze({ ...directory, created });
 }
 
 function readFunction(value: object, name: string): ((...args: never[]) => unknown) | null {
@@ -143,6 +230,14 @@ function parseDirectoryFd(value: unknown): number {
   if (
     typeof value !== "number" || !Number.isInteger(value) ||
     value < 0 || value > 0x7fff_ffff
+  ) invalid();
+  return value;
+}
+
+function parseIdentity(value: unknown): bigint {
+  if (
+    typeof value !== "bigint" || value < 0n ||
+    value > 0xffff_ffff_ffff_ffffn
   ) invalid();
   return value;
 }

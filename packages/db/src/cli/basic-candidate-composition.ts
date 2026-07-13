@@ -1,5 +1,4 @@
 import type { BasicDeterministicCandidateResult } from "../collection/basic-deterministic-candidate-contracts.js";
-import { runBasicDeterministicCandidate } from "../collection/basic-deterministic-candidate.js";
 import { materializeBasicDocumentEvidence } from "../collection/basic-document-observation-materializer.js";
 import { parseBasicDocumentObservationPlan } from "../collection/basic-document-observation-parser.js";
 import { parseBasicCountryEditorialInput } from "../collection/basic-editorial-input-parser.js";
@@ -27,6 +26,7 @@ import {
   getBasicCandidateWorkspaceDescriptorRoot,
   type BasicCandidateWorkspace,
 } from "./basic-candidate-workspace.js";
+import { runBasicCandidateProduction } from "./basic-candidate-production-runner.js";
 
 export interface BasicCandidateCompositionInput {
   readonly workspace: BasicCandidateWorkspace;
@@ -52,7 +52,7 @@ export interface BasicCandidateCompositionDependencies {
   materializeDocument: typeof materializeBasicDocumentEvidence;
   parseEditorial: typeof parseBasicCountryEditorialInput;
   materializeReviewed: typeof materializeBasicReviewedRunV2;
-  runCandidate: typeof runBasicDeterministicCandidate;
+  runCandidate: typeof runBasicCandidateProduction;
   getWorkspaceDescriptorRoot: typeof getBasicCandidateWorkspaceDescriptorRoot;
 }
 
@@ -69,7 +69,7 @@ const DEFAULT_DEPENDENCIES: BasicCandidateCompositionDependencies = Object.freez
   materializeDocument: materializeBasicDocumentEvidence,
   parseEditorial: parseBasicCountryEditorialInput,
   materializeReviewed: materializeBasicReviewedRunV2,
-  runCandidate: runBasicDeterministicCandidate,
+  runCandidate: runBasicCandidateProduction,
   getWorkspaceDescriptorRoot: getBasicCandidateWorkspaceDescriptorRoot,
 });
 
