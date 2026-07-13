@@ -20,6 +20,8 @@ import type {
 
 export const BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION =
   "basic-country-audit/v2" as const;
+// Package-private boundary shared by v2 artifact creation and filesystem loading.
+export const BASIC_COLLECTION_AUDIT_ARTIFACT_MAX_BYTES_V2 = 2 * 1024 * 1024;
 
 export type BasicExtractionMethodV2 = "deterministic" | "manual";
 

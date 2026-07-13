@@ -21,6 +21,8 @@ const INDICATOR_PATHS = [
   "marketOverview.keyIndicators[0].year",
 ] as const;
 const ALL_PATHS = [...BASIC_COLLECTION_REQUIRED_STATIC_FACT_PATHS, ...INDICATOR_PATHS];
+const SOURCE_BACKED_PATHS = ALL_PATHS.filter((fieldPath) =>
+  classifyBasicV2FieldPath(fieldPath) === "source-backed");
 
 describe("Basic collection audit v2 validation", () => {
   test("validates complete ready v2 material as a frozen detached snapshot", () => {
@@ -65,9 +67,59 @@ describe("Basic collection audit v2 validation", () => {
     const duplicate = structuredClone(factAt(bundle, "marketOverview.population"));
     duplicate.factId = "manual-collision";
     duplicate.extractionMethod = "manual";
-    bundle.extractedFacts.facts.push(duplicate);
+    const originalIndex = bundle.extractedFacts.facts.findIndex(
+      ({ fieldPath }) => fieldPath === duplicate.fieldPath,
+    );
+    bundle.extractedFacts.facts.splice(originalIndex + 1, 0, duplicate);
 
     expectInvalid(bundle, "deterministic and manual");
+  });
+
+  test.each(SOURCE_BACKED_PATHS)(
+    "accepts reviewed document-backed manual evidence for %s",
+    (fieldPath) => {
+      const bundle = createV2Bundle();
+      const fact = factAt(bundle, fieldPath);
+      fact.extractionMethod = "manual";
+      setEvidenceLocator(bundle, fact, "html:section=reviewed-value");
+
+      expect(validateBasicCollectionAuditBundleV2(bundle)).toMatchObject({
+        valid: true,
+        blockers: [],
+        readyForHumanReview: true,
+      });
+    },
+  );
+
+  test.each([
+    "/results/0/value",
+    "csv:row=2;column=value",
+    "table 1",
+    "html:https://search.example/?token=SECRET",
+    "html:search=population",
+    "html:section=population ",
+    "html:section=pop\u001fulation",
+    "html:section=pop\ud800ulation",
+    "pdf:page=0#population",
+    "pdf:page=2#population ",
+  ])("rejects source-backed manual evidence with non-document locator %s", (locator) => {
+    const bundle = createV2Bundle();
+    const fact = factAt(bundle, "marketOverview.population");
+    fact.extractionMethod = "manual";
+    setEvidenceLocator(bundle, fact, locator);
+
+    expectInvalid(bundle, "reviewed HTML/PDF document locator");
+  });
+
+  test("preserves hybrid-name and editorial manual ownership", () => {
+    const bundle = createV2Bundle();
+    expect(factAt(bundle, "country.name").extractionMethod).toBe("manual");
+    expect(factAt(bundle, "country.summary").extractionMethod).toBe("manual");
+    expect(validateBasicCollectionAuditBundleV2(bundle)).toMatchObject({
+      valid: true,
+      blockers: [],
+      readyForHumanReview: true,
+    });
   });
 
   test.each([
@@ -147,6 +199,56 @@ describe("Basic collection audit v2 validation", () => {
     }
   });
 
+  test.each([
+    ["used source", "source-1"],
+    ["unused source", "source-2"],
+  ] as const)("blocks when a registered %s has no passed source check", (_name, sourceId) => {
+    const bundle = createV2Bundle();
+    bundle.reviewReport.sourceChecks = bundle.reviewReport.sourceChecks.filter(
+      (check) => check.sourceId !== sourceId,
+    );
+    blockReport(bundle);
+
+    expect(validateBasicCollectionAuditBundleV2(bundle)).toMatchObject({
+      valid: true,
+      blockers: ["UNTRUSTED_INPUT"],
+      readyForHumanReview: false,
+    });
+  });
+
+  test("rejects duplicate source-check coverage while retaining its blocker", () => {
+    const bundle = createV2Bundle();
+    bundle.reviewReport.sourceChecks.splice(1, 0, {
+      sourceId: "source-1",
+      status: "passed",
+      notes: "duplicate reviewed claim",
+    });
+    blockReport(bundle);
+
+    const result = validateBasicCollectionAuditBundleV2(bundle);
+    expect(result).toMatchObject({
+      valid: false,
+      blockers: ["UNTRUSTED_INPUT"],
+      readyForHumanReview: false,
+    });
+    expect(result.errors.join("\n")).toMatch(
+      /sourceChecks\[1\]\.sourceId duplicates reviewReport\.sourceChecks\[0\]\.sourceId/,
+    );
+    expect(result.errors.join("\n")).not.toContain("source-1");
+  });
+
+  test("blocks a failed check for a registered source even when that source is unused", () => {
+    const bundle = createV2Bundle();
+    bundle.reviewReport.sourceChecks[1]!.status = "failed";
+    blockReport(bundle);
+
+    expect(validateBasicCollectionAuditBundleV2(bundle)).toMatchObject({
+      valid: true,
+      blockers: ["UNTRUSTED_INPUT"],
+      readyForHumanReview: false,
+    });
+  });
+
   test("derives blockers and rejects review state that contradicts material", () => {
     const bundle = createV2Bundle();
     const missing = factAt(bundle, "marketOverview.gdp");
@@ -177,6 +279,96 @@ describe("Basic collection audit v2 validation", () => {
       notes: "approved",
     };
     expectInvalid(decided, "humanDecision must be null");
+  });
+
+  test.each([
+    ["source IDs", (bundle: MutableV2Bundle) => {
+      bundle.sourceRegister.sources.reverse();
+    }, "sourceRegister.sources must be unique and sorted by sourceId"],
+    ["fact paths", (bundle: MutableV2Bundle) => {
+      bundle.extractedFacts.facts.reverse();
+    }, "extractedFacts.facts must be unique and sorted by fieldPath"],
+    ["evidence locators", (bundle: MutableV2Bundle) => {
+      bundle.sourceRegister.sources[0]!.evidenceLocators.reverse();
+    }, "evidenceLocators must be unique and sorted"],
+    ["fact evidence", (bundle: MutableV2Bundle) => {
+      const fact = factAt(bundle, "marketOverview.population");
+      addSecondEvidence(fact);
+      fact.evidence.reverse();
+    }, "evidence must be unique and sorted"],
+  ] as const)("rejects non-canonical %s", (_name, mutate, error) => {
+    const bundle = createV2Bundle();
+    mutate(bundle);
+    expectInvalid(bundle, error);
+  });
+
+  test.each([
+    ["evidence locator", (bundle: MutableV2Bundle) => {
+      bundle.sourceRegister.sources[0]!.evidenceLocators = ["table 1", "table 1"];
+    }, "sourceRegister.sources[0].evidenceLocators[1] duplicates"],
+    ["fact evidence", (bundle: MutableV2Bundle) => {
+      const fact = factAt(bundle, "marketOverview.population");
+      fact.evidence.push(structuredClone(fact.evidence[0]!));
+    }, ".evidence[1] duplicates"],
+  ] as const)("reports duplicate %s by index", (_name, mutate, error) => {
+    const bundle = createV2Bundle();
+    mutate(bundle);
+    expectInvalid(bundle, error);
+  });
+
+  test.each(["reversed", "duplicate"] as const)(
+    "rejects %s injection-risk ordering with index-only errors",
+    (kind) => {
+      const bundle = createV2Bundle();
+      bundle.reviewReport.injectionRisks = [
+        {
+          sourceId: "source-1",
+          locator: "page 1",
+          severity: "suspected",
+          details: "first reviewed risk",
+        },
+        {
+          sourceId: "source-2",
+          locator: "table 1",
+          severity: "confirmed",
+          details: "second reviewed risk",
+        },
+      ];
+      if (kind === "reversed") bundle.reviewReport.injectionRisks.reverse();
+      else bundle.reviewReport.injectionRisks.push(
+        structuredClone(bundle.reviewReport.injectionRisks[1]!),
+      );
+      blockReport(bundle);
+
+      const result = validateBasicCollectionAuditBundleV2(bundle);
+      expect(result.valid).toBe(false);
+      expect(result.errors.join("\n")).toMatch(
+        kind === "reversed" ? /injectionRisks must be sorted/ : /injectionRisks\[2\] duplicates reviewReport\.injectionRisks\[1\]/,
+      );
+      expect(result.errors.join("\n")).not.toMatch(/first reviewed risk|second reviewed risk/);
+    },
+  );
+
+  test("redacts source IDs, URLs, tokens, cookies, and raw values from validator errors", () => {
+    const bundle = createV2Bundle();
+    const secret = "aaa-token-cookie-url-raw-secret";
+    bundle.sourceRegister.sources[0]!.sourceId = secret;
+    bundle.sourceRegister.sources[0]!.sourceUrl =
+      `https://example.com/?token=${secret}&cookie=${secret}`;
+    for (const fact of bundle.extractedFacts.facts) {
+      for (const evidence of fact.evidence) {
+        if (evidence.sourceId === "source-1") evidence.sourceId = secret;
+      }
+    }
+    bundle.reviewReport.sourceChecks[0]!.sourceId = secret;
+    const evidence = factAt(bundle, "marketOverview.population").evidence[0]!;
+    evidence.locator = "missing-secret-locator";
+    evidence.rawValue = `raw-${secret}`;
+
+    const result = validateBasicCollectionAuditBundleV2(bundle);
+    expect(result.valid).toBe(false);
+    expect(result.errors.join("\n")).not.toContain(secret);
+    expect(result.errors.join("\n")).not.toContain("https://example.com/");
   });
 
   test("rejects mixed v1 and v2 envelopes in every in-memory permutation", () => {
@@ -226,6 +418,8 @@ function createMutableV2Bundle() {
       ? "deterministic"
       : "manual";
   }
+  bundle.extractedFacts.facts.sort((left, right) =>
+    compareText(left.fieldPath, right.fieldPath));
   return bundle;
 }
 
@@ -258,6 +452,32 @@ function addIndicator(bundle: MutableV2Bundle, index: number): void {
       uncertainty: null,
     });
   }
+  bundle.extractedFacts.facts.sort((left, right) =>
+    compareText(left.fieldPath, right.fieldPath));
+}
+
+function setEvidenceLocator(
+  bundle: MutableV2Bundle,
+  fact: MutableV2Bundle["extractedFacts"]["facts"][number],
+  locator: string,
+): void {
+  fact.evidence[0]!.locator = locator;
+  const source = bundle.sourceRegister.sources.find(
+    ({ sourceId }) => sourceId === fact.evidence[0]!.sourceId,
+  );
+  if (source === undefined) throw new Error("fixture source is missing");
+  source.evidenceLocators = [
+    ...new Set([...source.evidenceLocators, locator]),
+  ].sort(compareText);
+}
+
+function addSecondEvidence(
+  fact: MutableV2Bundle["extractedFacts"]["facts"][number],
+): void {
+  fact.evidence.push({
+    ...structuredClone(fact.evidence[0]!),
+    sourceId: "source-2",
+  });
 }
 
 function blockReport(bundle: MutableV2Bundle): void {
@@ -278,4 +498,8 @@ function expectRecursivelyFrozen(value: unknown): void {
   if (value === null || typeof value !== "object") return;
   expect(Object.isFrozen(value)).toBe(true);
   for (const child of Object.values(value)) expectRecursivelyFrozen(child);
+}
+
+function compareText(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
 }

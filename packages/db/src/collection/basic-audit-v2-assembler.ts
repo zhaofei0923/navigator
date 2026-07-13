@@ -23,12 +23,20 @@ const INPUT_KEYS = [
 const INPUT_KEY_SET = new Set<string>(INPUT_KEYS);
 const INDICATOR_KEYS = ["label", "value", "unit", "year"] as const;
 const ERROR = "Basic audit v2 assembly failed";
+const V2_SNAPSHOT_BUDGETS = Object.freeze({
+  maximumObjectProperties: 256,
+  maximumTotalNodes: 65_536,
+});
 
 export function assembleBasicCollectionAuditBundleV2(
   input: BasicCollectionAuditAssemblyInputV2,
 ): BasicCollectionAuditBundleV2 {
   try {
-    const snapshot = snapshotBasicBoundedJsonValue(input);
+    const snapshot = snapshotBasicBoundedJsonValue(
+      input,
+      () => undefined,
+      V2_SNAPSHOT_BUDGETS,
+    );
     if (!snapshot.valid || !hasExactInputKeys(snapshot.data)) invalid();
     const material = snapshot.data as unknown as BasicCollectionAuditAssemblyInputV2;
     if (

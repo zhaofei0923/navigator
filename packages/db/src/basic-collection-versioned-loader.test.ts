@@ -1,8 +1,42 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  renameSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
+
+const fsProbe = vi.hoisted(() => ({
+  legacyReadFileCalls: 0,
+  onRead: null as (() => void) | null,
+  readHookCalls: 0,
+}));
+
+vi.mock("node:fs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:fs")>();
+  return {
+    ...actual,
+    readFileSync(...args: Parameters<typeof actual.readFileSync>) {
+      fsProbe.legacyReadFileCalls += 1;
+      return Reflect.apply(actual.readFileSync, undefined, args) as ReturnType<
+        typeof actual.readFileSync
+      >;
+    },
+    readSync(...args: Parameters<typeof actual.readSync>) {
+      const result = Reflect.apply(actual.readSync, undefined, args) as number;
+      fsProbe.readHookCalls += 1;
+      const hook = fsProbe.onRead;
+      fsProbe.onRead = null;
+      hook?.();
+      return result;
+    },
+  };
+});
 
 import { createBasicCollectionAuditFixture } from "./basic-collection-test-fixture.js";
 import type { BasicCollectionAuditBundle } from "./collection/basic-collection-contracts.js";
@@ -13,8 +47,12 @@ import {
 import { loadBasicCollectionAuditBundleVersioned } from "./collection/basic-collection-versioned-loader.js";
 
 const roots = new Set<string>();
+const MAX_ARTIFACT_BYTES = 2 * 1024 * 1024;
 
 afterEach(() => {
+  fsProbe.legacyReadFileCalls = 0;
+  fsProbe.onRead = null;
+  fsProbe.readHookCalls = 0;
   for (const root of roots) rmSync(root, { recursive: true, force: true });
   roots.clear();
 });
@@ -134,6 +172,102 @@ describe("versioned Basic collection audit loader", () => {
     expect(() => loadBasicCollectionAuditBundleVersioned(root, "country", "../run"))
       .toThrowError(/^runId must be a safe run id$/);
   });
+
+  test.each(["repo root", "staging ancestor", "artifact target"] as const)(
+    "rejects a symlinked %s without exposing filesystem details",
+    (kind) => {
+      const bundle = createV2Bundle();
+      const root = writeBundle(bundle);
+      let loadRoot = root;
+
+      if (kind === "repo root") {
+        const container = mkdtempSync(join(tmpdir(), "basic-versioned-link-"));
+        roots.add(container);
+        loadRoot = join(container, "repo-link");
+        symlinkSync(root, loadRoot, "dir");
+      } else if (kind === "staging ancestor") {
+        const directory = stagingDirectory(root, bundle);
+        const displaced = `${directory}-real`;
+        renameSync(directory, displaced);
+        symlinkSync(displaced, directory, "dir");
+      } else {
+        const pathname = join(
+          stagingDirectory(root, bundle),
+          "source-register.json",
+        );
+        const displaced = `${pathname}.real`;
+        renameSync(pathname, displaced);
+        symlinkSync(displaced, pathname, "file");
+      }
+
+      const message = thrownMessage(() => loadBasicCollectionAuditBundleVersioned(
+        loadRoot,
+        bundle.countryDirectory,
+        bundle.runId,
+      ));
+      expect(message).toBe("Basic collection audit artifacts could not be read");
+      expect(message).not.toMatch(/symlink|ELOOP|source-register|basic-versioned/);
+    },
+  );
+
+  test("rejects an oversized artifact before attempting to read its bytes", () => {
+    const bundle = createV2Bundle();
+    const root = writeBundle(bundle);
+    writeFileSync(
+      join(stagingDirectory(root, bundle), "source-register.json"),
+      Buffer.alloc(MAX_ARTIFACT_BYTES + 1, 0x20),
+    );
+
+    const message = thrownMessage(() => loadBasicCollectionAuditBundleVersioned(
+      root,
+      bundle.countryDirectory,
+      bundle.runId,
+    ));
+    expect(message).toBe("Basic collection audit artifacts could not be read");
+    expect(fsProbe.legacyReadFileCalls).toBe(0);
+    expect(fsProbe.readHookCalls).toBe(0);
+  });
+
+  test("rejects special-file artifact targets before opening them", () => {
+    const bundle = createV2Bundle();
+    const root = writeBundle(bundle);
+    const pathname = join(
+      stagingDirectory(root, bundle),
+      "source-register.json",
+    );
+    rmSync(pathname);
+    mkdirSync(pathname);
+
+    const message = thrownMessage(() => loadBasicCollectionAuditBundleVersioned(
+      root,
+      bundle.countryDirectory,
+      bundle.runId,
+    ));
+    expect(message).toBe("Basic collection audit artifacts could not be read");
+    expect(fsProbe.legacyReadFileCalls).toBe(0);
+    expect(fsProbe.readHookCalls).toBe(0);
+  });
+
+  test("rejects an artifact pathname replaced while its descriptor is read", () => {
+    const bundle = createV2Bundle();
+    const root = writeBundle(bundle);
+    const pathname = join(
+      stagingDirectory(root, bundle),
+      "source-register.json",
+    );
+    const replacement = `${pathname}.replacement`;
+    writeJson(replacement, bundle.sourceRegister);
+    fsProbe.onRead = () => renameSync(replacement, pathname);
+
+    const message = thrownMessage(() => loadBasicCollectionAuditBundleVersioned(
+      root,
+      bundle.countryDirectory,
+      bundle.runId,
+    ));
+    expect(fsProbe.readHookCalls).toBeGreaterThan(0);
+    expect(message).toBe("Basic collection audit artifacts could not be read");
+    expect(message).not.toMatch(/replacement|source-register|basic-versioned/);
+  });
 });
 
 function createV2Bundle() {
@@ -165,6 +299,8 @@ function createV2Bundle() {
       ? "deterministic"
       : "manual";
   }
+  bundle.extractedFacts.facts.sort((left, right) =>
+    left.fieldPath.localeCompare(right.fieldPath));
   return bundle;
 }
 

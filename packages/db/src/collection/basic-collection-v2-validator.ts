@@ -10,6 +10,7 @@ import {
   type BasicCollectionAuditValidationResultV2,
   type BasicCollectionReviewReportV2,
   type BasicExtractedFactV2,
+  type BasicFactEvidenceV2,
 } from "./basic-collection-v2-contracts.js";
 import { parseBasicCollectionAuditBundleV2 } from "./basic-collection-v2-parser.js";
 import { validateBasicV2FactOwnership } from "./basic-v2-fact-ownership.js";
@@ -65,12 +66,6 @@ function classify(bundle: BasicCollectionAuditBundleV2): {
   const factIds = new Set(bundle.extractedFacts.facts.map(({ factId }) => factId));
   const factPaths = new Set<string>();
   const firstFactIndex = new Map<string, number>();
-  const evidenceSourceIds = new Set<string>();
-  const passedSourceIds = new Set(
-    bundle.reviewReport.sourceChecks
-      .filter(({ status }) => status === "passed")
-      .map(({ sourceId }) => sourceId),
-  );
 
   for (const [index, fact] of bundle.extractedFacts.facts.entries()) {
     const prior = firstFactIndex.get(fact.fieldPath);
@@ -79,13 +74,13 @@ function classify(bundle: BasicCollectionAuditBundleV2): {
       `extractedFacts.facts[${index}].fieldPath duplicates extractedFacts.facts[${prior}].fieldPath`,
     );
     factPaths.add(fact.fieldPath);
+    validateEvidenceOrder(fact, index, errors);
     for (const [evidenceIndex, evidence] of fact.evidence.entries()) {
-      evidenceSourceIds.add(evidence.sourceId);
       const source = sourcesById.get(evidence.sourceId);
       if (source === undefined) {
         errors.push(`extractedFacts.facts[${index}].evidence[${evidenceIndex}].sourceId must reference a registered sourceId`);
       } else if (!source.evidenceLocators.includes(evidence.locator)) {
-        errors.push(`extractedFacts.facts[${index}].evidence[${evidenceIndex}].locator must match a registered evidenceLocator for ${evidence.sourceId}`);
+        errors.push(`extractedFacts.facts[${index}].evidence[${evidenceIndex}].locator must match a registered evidenceLocator`);
       }
     }
     validateCandidateValues(bundle, fact, index, errors);
@@ -101,9 +96,6 @@ function classify(bundle: BasicCollectionAuditBundleV2): {
   }
   validateIndicatorCoverage(bundle, errors);
 
-  for (const sourceId of evidenceSourceIds) {
-    if (!passedSourceIds.has(sourceId)) blockerSet.add("UNTRUSTED_INPUT");
-  }
   validateConflicts(bundle, factIds, errors);
   validateSourceChecks(bundle, sourceIds, blockerSet, errors);
   validateInjectionRisks(bundle, sourcesById, blockerSet, errors);
@@ -235,14 +227,34 @@ function validateSourceChecks(
   blockers: Set<BasicCollectionBlockerCode>,
   errors: string[],
 ): void {
-  if (!isUniqueSorted(bundle.reviewReport.sourceChecks, compareSourceChecks, ({ sourceId }) => sourceId)) {
-    errors.push("reviewReport.sourceChecks must be sorted and unique by sourceId");
+  if (!isSorted(bundle.reviewReport.sourceChecks, (left, right) =>
+    compareText(left.sourceId, right.sourceId))) {
+    errors.push("reviewReport.sourceChecks must be sorted by sourceId");
   }
+  const coverage = new Map<string, BasicCollectionReviewReportV2["sourceChecks"][number][]>();
+  const firstIndex = new Map<string, number>();
   for (const [index, check] of bundle.reviewReport.sourceChecks.entries()) {
+    const prior = firstIndex.get(check.sourceId);
+    if (prior !== undefined) {
+      errors.push(
+        `reviewReport.sourceChecks[${index}].sourceId duplicates reviewReport.sourceChecks[${prior}].sourceId`,
+      );
+    } else {
+      firstIndex.set(check.sourceId, index);
+    }
     if (!sourceIds.has(check.sourceId)) {
       errors.push(`reviewReport.sourceChecks[${index}].sourceId must reference a registered sourceId`);
     }
+    const checks = coverage.get(check.sourceId) ?? [];
+    checks.push(check);
+    coverage.set(check.sourceId, checks);
     if (check.status === "failed") blockers.add("UNTRUSTED_INPUT");
+  }
+  for (const sourceId of sourceIds) {
+    const checks = coverage.get(sourceId) ?? [];
+    if (checks.length !== 1 || checks[0]?.status !== "passed") {
+      blockers.add("UNTRUSTED_INPUT");
+    }
   }
 }
 
@@ -252,10 +264,18 @@ function validateInjectionRisks(
   blockers: Set<BasicCollectionBlockerCode>,
   errors: string[],
 ): void {
-  if (!isUniqueSorted(bundle.reviewReport.injectionRisks, compareRisks)) {
-    errors.push("reviewReport.injectionRisks must be sorted and unique");
+  if (!isSorted(bundle.reviewReport.injectionRisks, compareRisks)) {
+    errors.push("reviewReport.injectionRisks must be sorted");
   }
   for (const [index, risk] of bundle.reviewReport.injectionRisks.entries()) {
+    for (let prior = 0; prior < index; prior += 1) {
+      if (compareRisks(bundle.reviewReport.injectionRisks[prior]!, risk) === 0) {
+        errors.push(
+          `reviewReport.injectionRisks[${index}] duplicates reviewReport.injectionRisks[${prior}]`,
+        );
+        break;
+      }
+    }
     const source = sourcesById.get(risk.sourceId);
     if (source === undefined) {
       errors.push(`reviewReport.injectionRisks[${index}].sourceId must reference a registered sourceId`);
@@ -263,6 +283,29 @@ function validateInjectionRisks(
       errors.push(`reviewReport.injectionRisks[${index}].locator must match a registered evidenceLocator`);
     }
     blockers.add("UNTRUSTED_INPUT");
+  }
+}
+
+function validateEvidenceOrder(
+  fact: BasicExtractedFactV2,
+  factIndex: number,
+  errors: string[],
+): void {
+  const label = `extractedFacts.facts[${factIndex}].evidence`;
+  for (let index = 0; index < fact.evidence.length; index += 1) {
+    const evidence = fact.evidence[index]!;
+    if (
+      index > 0 &&
+      compareEvidence(fact.evidence[index - 1]!, evidence) > 0
+    ) {
+      errors.push(`${label} must be unique and sorted`);
+    }
+    for (let prior = 0; prior < index; prior += 1) {
+      if (compareEvidence(fact.evidence[prior]!, evidence) === 0) {
+        errors.push(`${label}[${index}] duplicates ${label}[${prior}]`);
+        break;
+      }
+    }
   }
 }
 
@@ -347,6 +390,50 @@ function compareRisks(
 ): number {
   return compareText(left.sourceId, right.sourceId) || compareText(left.locator, right.locator) ||
     compareText(left.severity, right.severity) || compareText(left.details, right.details);
+}
+
+function compareEvidence(
+  left: BasicFactEvidenceV2,
+  right: BasicFactEvidenceV2,
+): number {
+  return compareText(left.sourceId, right.sourceId) ||
+    compareText(left.locator, right.locator) ||
+    compareText(canonicalJson(left.rawValue), canonicalJson(right.rawValue)) ||
+    compareText(
+      canonicalJson(left.normalizedValue),
+      canonicalJson(right.normalizedValue),
+    ) ||
+    compareNullableText(left.unit, right.unit) ||
+    compareNullableNumber(left.year, right.year);
+}
+
+function canonicalJson(value: BasicCollectionJsonValue): string {
+  if (value === null) return "null";
+  if (typeof value === "number") {
+    return Object.is(value, -0) ? "-0" : JSON.stringify(value);
+  }
+  if (typeof value === "string" || typeof value === "boolean") {
+    return JSON.stringify(value);
+  }
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  return `{${Object.keys(value)
+    .sort(compareText)
+    .map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key]!)}`)
+    .join(",")}}`;
+}
+
+function compareNullableText(left: string | null, right: string | null): number {
+  if (left === null) return right === null ? 0 : -1;
+  return right === null ? 1 : compareText(left, right);
+}
+
+function compareNullableNumber(left: number | null, right: number | null): number {
+  if (left === null) return right === null ? 0 : -1;
+  if (right === null) return 1;
+  if (Object.is(left, right)) return 0;
+  if (Object.is(left, -0)) return -1;
+  if (Object.is(right, -0)) return 1;
+  return left - right;
 }
 
 function isSorted<T>(values: readonly T[], compare: (left: T, right: T) => number): boolean {

@@ -91,6 +91,41 @@ describe("Basic audit v2 assembler", () => {
   });
 
   test.each([
+    ["sources", (input: MutableAssemblyInput) => {
+      input.sourceRegister.sources.reverse();
+    }],
+    ["facts", (input: MutableAssemblyInput) => {
+      input.extractedFacts.facts.reverse();
+    }],
+    ["evidence locators", (input: MutableAssemblyInput) => {
+      input.sourceRegister.sources[0]!.evidenceLocators.reverse();
+    }],
+  ] as const)("rejects non-canonical trusted %s instead of normalizing it", (_name, mutate) => {
+    const input = assemblyInput();
+    mutate(input);
+    expectFixedError(input);
+  });
+
+  test("sorts semantic-free checks while preserving byte-equivalent bundle material", () => {
+    const first = assemblyInput();
+    const second = assemblyInput();
+    second.sourceChecks.reverse();
+
+    expect(assemble(first)).toEqual(assemble(second));
+  });
+
+  test("rejects duplicate source-check coverage instead of normalizing it", () => {
+    const input = assemblyInput();
+    input.sourceChecks.splice(1, 0, {
+      sourceId: "source-1",
+      status: "passed",
+      notes: "duplicate reviewed claim",
+    });
+
+    expectFixedError(input);
+  });
+
+  test.each([
     ["extra key", (input: MutableAssemblyInput) => Object.assign(input, { token: "secret" })],
     ["wrong run", (input: MutableAssemblyInput) => { input.runId = "run-other"; }],
     ["unsafe ownership", (input: MutableAssemblyInput) => {
@@ -158,6 +193,8 @@ function assemblyInput(): MutableAssemblyInput {
       ? "deterministic"
       : "manual";
   }
+  extractedFacts.facts.sort((left, right) =>
+    compareText(left.fieldPath, right.fieldPath));
   return {
     countryDirectory: bundle.countryDirectory,
     runId: bundle.runId,
@@ -193,4 +230,8 @@ function expectRecursivelyFrozen(value: unknown): void {
   if (value === null || typeof value !== "object") return;
   expect(Object.isFrozen(value)).toBe(true);
   for (const child of Object.values(value)) expectRecursivelyFrozen(child);
+}
+
+function compareText(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
 }

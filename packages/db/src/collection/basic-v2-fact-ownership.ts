@@ -5,6 +5,11 @@ import {
   type BasicV2FieldOwner,
 } from "./basic-collection-v2-contracts.js";
 
+const PDF_DOCUMENT_LOCATOR = /^pdf:page=(?:[1-9]\d*)#([\s\S]*)$/;
+const RESERVED_DOCUMENT_LOCATION =
+  /^(?:https?:\/\/|url(?:[:=\/])|search(?:[:=\/])|metadata(?:[:=\/])|capture(?:[:=\/]))/i;
+const CONTROL_CHARACTER = /[\u0000-\u001F\u007F]/;
+
 export function validateBasicV2FactOwnership(
   facts: readonly BasicExtractedFactV2[],
 ): readonly string[] {
@@ -19,6 +24,15 @@ export function validateBasicV2FactOwnership(
         `extractedFacts.facts[${index}].extractionMethod is not allowed for ${fact.fieldPath}`,
       );
     }
+    if (owner === "source-backed" && method === "manual") {
+      for (const [evidenceIndex, evidence] of fact.evidence.entries()) {
+        if (!isReviewedDocumentLocator(evidence.locator)) {
+          errors.push(
+            `extractedFacts.facts[${index}].evidence[${evidenceIndex}].locator must be a reviewed HTML/PDF document locator`,
+          );
+        }
+      }
+    }
     const methods = methodsByPath.get(fact.fieldPath) ?? new Set<string>();
     methods.add(method);
     methodsByPath.set(fact.fieldPath, methods);
@@ -32,6 +46,34 @@ export function validateBasicV2FactOwnership(
     }
   }
   return Object.freeze(errors.sort(compareText));
+}
+
+function isReviewedDocumentLocator(value: string): boolean {
+  const location = value.startsWith("html:")
+    ? value.slice("html:".length)
+    : PDF_DOCUMENT_LOCATOR.exec(value)?.[1];
+  return location !== undefined &&
+    isWellFormedUnicode(value) &&
+    location.trim() !== "" &&
+    location.trim() === location &&
+    !CONTROL_CHARACTER.test(location) &&
+    !RESERVED_DOCUMENT_LOCATION.test(location);
+}
+
+function isWellFormedUnicode(value: string): boolean {
+  for (let index = 0; index < value.length; index += 1) {
+    const codeUnit = value.charCodeAt(index);
+    if (codeUnit >= 0xD800 && codeUnit <= 0xDBFF) {
+      const next = value.charCodeAt(index + 1);
+      if (!Number.isInteger(next) || next < 0xDC00 || next > 0xDFFF) {
+        return false;
+      }
+      index += 1;
+    } else if (codeUnit >= 0xDC00 && codeUnit <= 0xDFFF) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function ownsMethod(

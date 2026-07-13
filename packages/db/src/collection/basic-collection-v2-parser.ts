@@ -50,11 +50,19 @@ const SOURCE_FAMILIES = ["international-organization", "official-statistics", "g
 const STATIC_PATHS = new Set<string>(BASIC_COLLECTION_REQUIRED_STATIC_FACT_PATHS);
 const INDICATOR_PATH = /^marketOverview\.keyIndicators\[(?:0|[1-9]\d*)\]\.(?:label|value|unit|year)$/;
 const SAFE_VERSION = /^[a-z0-9]+(?:[._-][a-z0-9]+)*$/;
+const V2_SNAPSHOT_BUDGETS = Object.freeze({
+  maximumObjectProperties: 256,
+  maximumTotalNodes: 65_536,
+});
 
 export function parseBasicCollectionAuditBundleV2(
   value: unknown,
 ): BasicCollectionAuditParseResultV2 {
-  const snapshot = snapshotBasicBoundedJsonValue(value);
+  const snapshot = snapshotBasicBoundedJsonValue(
+    value,
+    () => undefined,
+    V2_SNAPSHOT_BUDGETS,
+  );
   if (!snapshot.valid) {
     return frozenResult(null, ["bundle must be a bounded JSON value"], emptySummary());
   }
@@ -91,11 +99,10 @@ export function parseBasicCollectionAuditBundleV2(
     marketOverviewDraft: parsedDraft.data,
     reviewReport,
   };
-  return frozenResult(
-    errors.length === 0 ? data : null,
-    errors,
-    summaryFor(data),
-  );
+  const valid = errors.length === 0;
+  return frozenResult(valid ? data : null, errors, valid
+    ? summaryFor(data)
+    : countSummary(data));
 }
 
 function parseSourceRegister(
@@ -105,7 +112,19 @@ function parseSourceRegister(
   const record = exactRecord(value, SOURCE_REGISTER_KEYS, "sourceRegister", errors);
   if (record === null) return null;
   const sources = values(record.sources, "sourceRegister.sources", errors, parseSource);
-  unique(sources, ({ sourceId }) => sourceId, "sourceRegister.sources", errors);
+  validateUniqueBy(
+    sources,
+    ({ sourceId }) => sourceId,
+    "sourceRegister.sources",
+    "sourceId",
+    errors,
+  );
+  validateSortedBy(
+    sources,
+    ({ sourceId }) => sourceId,
+    "sourceRegister.sources must be unique and sorted by sourceId",
+    errors,
+  );
   return {
     schemaVersion: schema(record.schemaVersion, "sourceRegister.schemaVersion", errors),
     runId: run(record.runId, "sourceRegister.runId", errors),
@@ -123,6 +142,17 @@ function parseSource(
 ): BasicSourceRecord | null {
   const record = exactRecord(value, SOURCE_KEYS, label, errors);
   if (record === null) return null;
+  const evidenceLocators = strings(
+    record.evidenceLocators,
+    `${label}.evidenceLocators`,
+    errors,
+    true,
+  );
+  validateUniqueSortedStrings(
+    evidenceLocators,
+    `${label}.evidenceLocators`,
+    errors,
+  );
   return {
     sourceId: text(record.sourceId, `${label}.sourceId`, errors),
     sourceName: text(record.sourceName, `${label}.sourceName`, errors),
@@ -130,7 +160,7 @@ function parseSource(
     retrievedAt: timestamp(record.retrievedAt, `${label}.retrievedAt`, errors),
     publishedAt: nullableTimestamp(record.publishedAt, `${label}.publishedAt`, errors),
     contentSha256: sha256(record.contentSha256, `${label}.contentSha256`, errors),
-    evidenceLocators: strings(record.evidenceLocators, `${label}.evidenceLocators`, errors, true),
+    evidenceLocators,
     sourceFamily: enumValue(record.sourceFamily, SOURCE_FAMILIES, `${label}.sourceFamily`, errors),
     accessStatus: enumValue(record.accessStatus, ["open", "restricted", "unknown"], `${label}.accessStatus`, errors),
     accessNotes: nullableText(record.accessNotes, `${label}.accessNotes`, errors),
@@ -147,7 +177,19 @@ function parseExtractedFacts(
   const record = exactRecord(value, FACTS_KEYS, "extractedFacts", errors);
   if (record === null) return null;
   const facts = values(record.facts, "extractedFacts.facts", errors, parseFact);
-  unique(facts, ({ factId }) => factId, "extractedFacts.facts", errors);
+  validateUniqueBy(
+    facts,
+    ({ factId }) => factId,
+    "extractedFacts.facts",
+    "factId",
+    errors,
+  );
+  validateSortedBy(
+    facts,
+    ({ fieldPath }) => fieldPath,
+    "extractedFacts.facts must be unique and sorted by fieldPath",
+    errors,
+  );
   return {
     schemaVersion: schema(record.schemaVersion, "extractedFacts.schemaVersion", errors),
     runId: run(record.runId, "extractedFacts.runId", errors),
@@ -391,12 +433,63 @@ function fieldPath(value: BasicCollectionJsonValue, label: string, errors: strin
   return result;
 }
 
-function unique<T>(valuesToCheck: readonly T[], key: (value: T) => string, label: string, errors: string[]): void {
-  const seen = new Set<string>();
-  for (const value of valuesToCheck) {
+function validateUniqueBy<T>(
+  valuesToCheck: readonly T[],
+  key: (value: T) => string,
+  label: string,
+  keyLabel: string,
+  errors: string[],
+): void {
+  const seen = new Map<string, number>();
+  for (const [index, value] of valuesToCheck.entries()) {
     const itemKey = key(value);
-    if (seen.has(itemKey)) errors.push(`${label} contains duplicate ${itemKey}`);
-    seen.add(itemKey);
+    const prior = seen.get(itemKey);
+    if (prior !== undefined) {
+      errors.push(
+        `${label}[${index}].${keyLabel} duplicates ${label}[${prior}].${keyLabel}`,
+      );
+    } else {
+      seen.set(itemKey, index);
+    }
+  }
+}
+
+function validateSortedBy<T>(
+  valuesToCheck: readonly T[],
+  key: (value: T) => string,
+  message: string,
+  errors: string[],
+): void {
+  for (let index = 1; index < valuesToCheck.length; index += 1) {
+    if (compareText(key(valuesToCheck[index - 1]!), key(valuesToCheck[index]!)) > 0) {
+      errors.push(message);
+      return;
+    }
+  }
+}
+
+function validateUniqueSortedStrings(
+  valuesToCheck: readonly string[],
+  label: string,
+  errors: string[],
+): void {
+  const firstIndex = new Map<string, number>();
+  let orderReported = false;
+  for (const [index, value] of valuesToCheck.entries()) {
+    const prior = firstIndex.get(value);
+    if (prior !== undefined) {
+      errors.push(`${label}[${index}] duplicates ${label}[${prior}]`);
+    } else {
+      firstIndex.set(value, index);
+    }
+    if (
+      !orderReported &&
+      index > 0 &&
+      compareText(valuesToCheck[index - 1]!, value) > 0
+    ) {
+      errors.push(`${label} must be unique and sorted`);
+      orderReported = true;
+    }
   }
 }
 
@@ -439,13 +532,22 @@ function summaryFor(data: BasicCollectionAuditBundleV2): BasicCollectionAuditSum
   };
 }
 
+function countSummary(data: BasicCollectionAuditBundleV2): BasicCollectionAuditSummary {
+  return {
+    countryCode: "",
+    runId: "",
+    sourceCount: data.sourceRegister.sources.length,
+    factCount: data.extractedFacts.facts.length,
+  };
+}
+
 function buildSummary(value: BasicCollectionJsonValue): BasicCollectionAuditSummary {
   if (typeof value !== "object" || value === null || Array.isArray(value)) return emptySummary();
   const register = value.sourceRegister;
   const facts = value.extractedFacts;
   return {
-    countryCode: isRecord(register) && typeof register.countryCode === "string" ? register.countryCode : "",
-    runId: typeof value.runId === "string" ? value.runId : "",
+    countryCode: "",
+    runId: "",
     sourceCount: isRecord(register) && Array.isArray(register.sources) ? register.sources.length : 0,
     factCount: isRecord(facts) && Array.isArray(facts.facts) ? facts.facts.length : 0,
   };
@@ -463,4 +565,8 @@ function keyList(keys: readonly string[]): string {
   return keys.length === 1
     ? keys[0]!
     : `${keys.slice(0, -1).join(", ")}, and ${keys.at(-1)}`;
+}
+
+function compareText(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
 }

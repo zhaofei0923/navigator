@@ -8,6 +8,22 @@ import {
   type BasicCollectionAuditBundleV2,
 } from "./collection/basic-collection-v2-contracts.js";
 import { parseBasicCollectionAuditBundleV2 } from "./collection/basic-collection-v2-parser.js";
+import {
+  snapshotBasicBoundedJsonValue,
+  type BasicBoundedArrayLimit,
+  type BasicBoundedJsonSnapshot,
+} from "./collection/basic-bounded-json.js";
+
+type BudgetedSnapshot = (
+  value: unknown,
+  arrayLimit: BasicBoundedArrayLimit | undefined,
+  budgets: Readonly<{
+    maximumObjectProperties?: number;
+    maximumTotalNodes?: number;
+  }>,
+) => BasicBoundedJsonSnapshot;
+
+const snapshotWithBudgets = snapshotBasicBoundedJsonValue as BudgetedSnapshot;
 
 describe("Basic collection audit v2 parser", () => {
   test("reconstructs an exact detached v2 bundle", () => {
@@ -105,6 +121,94 @@ describe("Basic collection audit v2 parser", () => {
       "marketOverviewDraft.sourceUrl must be an HTTP(S) URL",
     ]));
   });
+
+  test("exposes run and country identity only after successful validation", () => {
+    const run = createV2Bundle();
+    run.runId = "SECRET-token-cookie-url";
+    const runResult = parseBasicCollectionAuditBundleV2(run);
+    expect(runResult.data).toBeNull();
+    expect(runResult.summary.runId).toBe("");
+    expect(runResult.summary.countryCode).toBe("");
+
+    const country = createV2Bundle();
+    country.sourceRegister.countryCode = "https://secret.example/?token=COOKIE";
+    const countryResult = parseBasicCollectionAuditBundleV2(country);
+    expect(countryResult.data).toBeNull();
+    expect(countryResult.summary.runId).toBe("");
+    expect(countryResult.summary.countryCode).toBe("");
+  });
+
+  test.each(["sourceId", "factId"] as const)(
+    "reports duplicate %s values by index without echoing the raw ID",
+    (kind) => {
+      const bundle = createV2Bundle();
+      const secret = "SECRET-token-cookie-url-duplicate";
+      if (kind === "sourceId") {
+        bundle.sourceRegister.sources[0]!.sourceId = secret;
+        bundle.sourceRegister.sources[1]!.sourceId = secret;
+      } else {
+        bundle.extractedFacts.facts[0]!.factId = secret;
+        bundle.extractedFacts.facts[1]!.factId = secret;
+      }
+
+      const result = parseBasicCollectionAuditBundleV2(bundle);
+      expect(result.data).toBeNull();
+      expect(result.errors.join("\n")).toMatch(/\[1\].*duplicates.*\[0\]/);
+      expect(result.errors.join("\n")).not.toContain(secret);
+    },
+  );
+
+  test("redacts URL, token, cookie, and raw-value text from parser failures", () => {
+    const bundle = createV2Bundle();
+    const secret = "SECRET-token-cookie-raw-value";
+    bundle.sourceRegister.sources[0]!.sourceUrl =
+      `https://example.com/?token=${secret}&cookie=${secret}`;
+    Object.defineProperty(bundle.extractedFacts.facts[0]!.evidence[0]!, "rawValue", {
+      enumerable: true,
+      get() {
+        throw new Error(`https://example.com/?token=${secret}`);
+      },
+    });
+
+    const result = parseBasicCollectionAuditBundleV2(bundle);
+    expect(result.data).toBeNull();
+    expect(result.errors).toEqual(["bundle must be a bounded JSON value"]);
+    expect(result.errors.join("\n")).not.toContain(secret);
+    expect(result.errors.join("\n")).not.toContain("https://example.com/");
+  });
+
+  test("applies exact object-property and total-node budgets", () => {
+    const exactObject = { first: null, second: null };
+    expect(snapshotWithBudgets(exactObject, undefined, {
+      maximumObjectProperties: 2,
+      maximumTotalNodes: 3,
+    }).valid).toBe(true);
+    expect(snapshotWithBudgets({ ...exactObject, third: null }, undefined, {
+      maximumObjectProperties: 2,
+      maximumTotalNodes: 4,
+    }).valid).toBe(false);
+
+    const fourNodes = { values: [null, null] };
+    expect(snapshotWithBudgets(fourNodes, undefined, {
+      maximumObjectProperties: 2,
+      maximumTotalNodes: 4,
+    }).valid).toBe(true);
+    expect(snapshotWithBudgets(fourNodes, undefined, {
+      maximumObjectProperties: 2,
+      maximumTotalNodes: 3,
+    }).valid).toBe(false);
+  });
+
+  test("preserves default helper behavior while v2 rejects over-wide JSON objects", () => {
+    const wide = Object.fromEntries(
+      Array.from({ length: 257 }, (_, index) => [`key-${index}`, null]),
+    );
+    expect(snapshotBasicBoundedJsonValue(wide).valid).toBe(true);
+
+    const bundle = createV2Bundle();
+    bundle.extractedFacts.facts[0]!.evidence[0]!.rawValue = wide;
+    expectInvalid(bundle, "bounded JSON value");
+  });
 });
 
 type MutableV2Bundle = Omit<
@@ -138,6 +242,8 @@ function createV2Bundle(): MutableV2Bundle {
       ? "deterministic"
       : "manual";
   }
+  bundle.extractedFacts.facts.sort((left, right) =>
+    compareText(left.fieldPath, right.fieldPath));
   return bundle;
 }
 
@@ -151,3 +257,7 @@ function expectInvalid(value: unknown, expectedError: string): void {
 }
 
 void (null as BasicCollectionAuditBundleV2 | null);
+
+function compareText(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
