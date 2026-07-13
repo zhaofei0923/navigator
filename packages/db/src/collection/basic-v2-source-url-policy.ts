@@ -1,7 +1,7 @@
 export function isBasicV2ReviewedSourceUrl(value: unknown): value is string {
   if (
     typeof value !== "string" || value.trim().length === 0 ||
-    value.trim() !== value
+    value.trim() !== value || value.includes("#")
   ) return false;
   try {
     const parsed = new URL(value);

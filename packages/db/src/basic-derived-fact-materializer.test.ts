@@ -168,6 +168,7 @@ describe("Basic derived fact materialization", () => {
     ["HTTP", "http://data.example/source-a"],
     ["credentials", "https://user:secret@data.example/source-a"],
     ["fragment", "https://data.example/source-a#reviewed"],
+    ["empty fragment delimiter", "https://data.example/source-a#"],
     ["surrounding whitespace", "https://data.example/source-a "],
   ] as const)("rejects a source URL with %s", (_name, sourceUrl) => {
     expectInvalid(withSource(completeInput(), "source-a", { sourceUrl }));

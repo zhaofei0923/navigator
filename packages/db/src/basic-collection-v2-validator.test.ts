@@ -211,6 +211,7 @@ describe("Basic collection audit v2 validation", () => {
     ["HTTP", "http://example.com/source-1"],
     ["credentials", "https://user:secret@example.com/source-1"],
     ["fragment", "https://example.com/source-1#reviewed"],
+    ["empty fragment delimiter", "https://example.com/source-1#"],
   ] as const)(
     "rejects a consistently drifted v2 source URL with %s",
     (_name, sourceUrl) => {

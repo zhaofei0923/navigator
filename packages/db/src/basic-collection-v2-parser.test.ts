@@ -57,6 +57,7 @@ describe("Basic collection audit v2 parser", () => {
     ["HTTP", "http://example.com/source-1"],
     ["credentials", "https://user:secret@example.com/source-1"],
     ["fragment", "https://example.com/source-1#reviewed"],
+    ["empty fragment delimiter", "https://example.com/source-1#"],
     ["surrounding whitespace", " https://example.com/source-1"],
   ] as const)("rejects a v2 source URL with %s", (_name, sourceUrl) => {
     const bundle = createV2Bundle();
@@ -69,6 +70,14 @@ describe("Basic collection audit v2 parser", () => {
     const bundle = createV2Bundle();
     bundle.sourceRegister.sources[0]!.sourceUrl =
       "https://example.com/source-1?year=2026&format=json";
+
+    expect(parseBasicCollectionAuditBundleV2(bundle).data).not.toBeNull();
+  });
+
+  test("allows percent-encoded hash data in a v2 source URL", () => {
+    const bundle = createV2Bundle();
+    bundle.sourceRegister.sources[0]!.sourceUrl =
+      "https://example.com/source-%23?marker=%23";
 
     expect(parseBasicCollectionAuditBundleV2(bundle).data).not.toBeNull();
   });
