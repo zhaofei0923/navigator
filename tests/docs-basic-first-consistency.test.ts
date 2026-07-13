@@ -24,6 +24,36 @@ const RETIRED_CLAIMS = [
   "完整覆盖（印尼为样板）",
 ] as const;
 
+const OPERATIONAL_POLICY_DOCUMENTS = [
+  "docs/basic-country-collection.md",
+  "docs/indonesia-seed.md",
+  "docs/country-rollout.md",
+] as const;
+
+const OPERATIONAL_REQUIREMENTS = [
+  {
+    description: "keeps the other nine modules at BUILDING",
+    pattern: /其余九个模块(?:必须)?均为 `BUILDING`/,
+  },
+  {
+    description: "keeps the other nine modules free of published records",
+    pattern: /其余九个模块[\s\S]{0,180}(?:没有|无)(?:任何)?\s*`?published`?\s*记录/,
+  },
+  {
+    description: "keeps Basic records ineligible for AI",
+    pattern: /`aiUsable\s*=\s*false`/,
+  },
+  {
+    description: "forbids Basic knowledge chunks",
+    pattern: /(?:不产生|不创建|不得创建|没有)知识片段/,
+  },
+  {
+    description: "requires a separate human-approved upgrade after Basic acceptance",
+    pattern:
+      /(?:`?STANDARD`?[\s\S]{0,40}`?COMPLETE`?[\s\S]{0,180}Basic 验收后[\s\S]{0,180}(?:单独|独立)[\s\S]{0,40}经人工批准[\s\S]{0,80}升级任务|(?:Basic 验收后|先按 Basic 交付，再在)[\s\S]{0,220}(?:单独|独立)[\s\S]{0,40}经人工批准[\s\S]{0,80}升级任务[\s\S]{0,160}`?STANDARD`?[\s\S]{0,40}`?COMPLETE`?)/i,
+  },
+] as const;
+
 const readRootFile = (filePath: string) =>
   readFileSync(join(process.cwd(), filePath), "utf8");
 
@@ -43,16 +73,16 @@ describe("Basic-first documentation policy", () => {
   });
 
   it("keeps the Basic collection boundary and approved upgrade gate", () => {
-    const collectionPolicy = [
-      readRootFile("docs/basic-country-collection.md"),
-      readRootFile("docs/indonesia-seed.md"),
-      readRootFile("docs/country-rollout.md"),
-    ].join("\n");
+    for (const documentPath of OPERATIONAL_POLICY_DOCUMENTS) {
+      const policy = readRootFile(documentPath);
 
-    expect(collectionPolicy).toContain("其余九个模块均为 `BUILDING`");
-    expect(collectionPolicy).toContain("`aiUsable = false`");
-    expect(collectionPolicy).toContain("不产生知识片段");
-    expect(collectionPolicy).toContain("经人工批准的升级任务");
+      for (const requirement of OPERATIONAL_REQUIREMENTS) {
+        expect(
+          policy,
+          `${documentPath}: ${requirement.description}`,
+        ).toMatch(requirement.pattern);
+      }
+    }
   });
 
   it("keeps the DATA-BASIC-ID source-boundary run explicitly Basic", () => {
