@@ -53,6 +53,26 @@ describe("Basic collection audit v2 parser", () => {
     expectInvalid(bundle, error);
   });
 
+  test.each([
+    ["HTTP", "http://example.com/source-1"],
+    ["credentials", "https://user:secret@example.com/source-1"],
+    ["fragment", "https://example.com/source-1#reviewed"],
+    ["surrounding whitespace", " https://example.com/source-1"],
+  ] as const)("rejects a v2 source URL with %s", (_name, sourceUrl) => {
+    const bundle = createV2Bundle();
+    bundle.sourceRegister.sources[0]!.sourceUrl = sourceUrl;
+
+    expectInvalid(bundle, "sourceRegister.sources[0].sourceUrl");
+  });
+
+  test("allows a query string in a v2 source URL", () => {
+    const bundle = createV2Bundle();
+    bundle.sourceRegister.sources[0]!.sourceUrl =
+      "https://example.com/source-1?year=2026&format=json";
+
+    expect(parseBasicCollectionAuditBundleV2(bundle).data).not.toBeNull();
+  });
+
   test("rejects legacy schemas and legacy-only extraction methods", () => {
     const legacy = createV2Bundle();
     legacy.extractedFacts.schemaVersion = "basic-country-audit/v1" as never;

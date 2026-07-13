@@ -165,6 +165,34 @@ describe("Basic derived fact materialization", () => {
   });
 
   test.each([
+    ["HTTP", "http://data.example/source-a"],
+    ["credentials", "https://user:secret@data.example/source-a"],
+    ["fragment", "https://data.example/source-a#reviewed"],
+    ["surrounding whitespace", "https://data.example/source-a "],
+  ] as const)("rejects a source URL with %s", (_name, sourceUrl) => {
+    expectInvalid(withSource(completeInput(), "source-a", { sourceUrl }));
+  });
+
+  test("retains a reviewed query string in the derived primary source URL", () => {
+    const sourceUrl = "https://data.example/source-b?year=2026&format=json";
+    const result = materializeBasicDerivedFacts(
+      withSource(completeInput(), "source-b", { sourceUrl }),
+    );
+
+    expect(valueAt(result.facts, "marketOverview.sourceUrl")).toBe(sourceUrl);
+  });
+
+  test.each([
+    ["discovery-only", { discoveryOnly: true }],
+    ["restricted access", { accessStatus: "restricted" as const }],
+    ["unknown access", { accessStatus: "unknown" as const }],
+    ["suspected prompt risk", { promptInjectionRisk: "suspected" as const }],
+    ["confirmed prompt risk", { promptInjectionRisk: "confirmed" as const }],
+  ])("retains production trust rejection for %s sources", (_name, overrides) => {
+    expectInvalid(withSource(completeInput(), "source-a", overrides));
+  });
+
+  test.each([
     ["no active source", (input: DerivedInput) => ({ ...input, candidateFacts: [] })],
     ["noncandidate country code", (input: DerivedInput) => ({
       ...input,

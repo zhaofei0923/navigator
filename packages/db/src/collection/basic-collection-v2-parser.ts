@@ -5,7 +5,6 @@ import {
   SAFE_RUN_ID,
   expectUtcRfc3339Timestamp,
   isEnumValue,
-  isHttpUrl,
 } from "../seed/basic-country-validation-utils.js";
 import {
   BASIC_COLLECTION_REQUIRED_STATIC_FACT_PATHS,
@@ -30,6 +29,7 @@ import {
 import { snapshotBasicBoundedJsonValue } from "./basic-bounded-json.js";
 import { deepFreezeBasicOfflineValue } from "./basic-offline-value.js";
 import { parseBasicMarketOverviewDraftForAudit } from "./basic-market-overview-draft-parser.js";
+import { isBasicV2ReviewedSourceUrl } from "./basic-v2-source-url-policy.js";
 
 type JsonRecord = Record<string, BasicCollectionJsonValue>;
 type ExactJsonRecord<Keys extends readonly string[]> = {
@@ -385,7 +385,9 @@ function nullableTimestamp(value: BasicCollectionJsonValue, label: string, error
 
 function url(value: BasicCollectionJsonValue, label: string, errors: string[]): string {
   const result = text(value, label, errors);
-  if (!isHttpUrl(result)) errors.push(`${label} must be an HTTP(S) URL`);
+  if (!isBasicV2ReviewedSourceUrl(result)) {
+    errors.push(`${label} must be an HTTPS URL without credentials or fragment`);
+  }
   return result;
 }
 

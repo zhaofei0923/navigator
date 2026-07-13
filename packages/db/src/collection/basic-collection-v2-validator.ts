@@ -17,7 +17,7 @@ import {
   classifyBasicV2FieldPath,
 } from "./basic-collection-v2-contracts.js";
 import { parseBasicCollectionAuditBundleV2 } from "./basic-collection-v2-parser.js";
-import { materializeBasicDerivedFacts } from "./basic-derived-fact-materializer.js";
+import { recomputeBasicDerivedFactsForValidation } from "./basic-derived-fact-materializer.js";
 import { validateBasicV2FactOwnership } from "./basic-v2-fact-ownership.js";
 import {
   deepFreezeBasicOfflineValue,
@@ -110,6 +110,7 @@ function classify(bundle: BasicCollectionAuditBundleV2): {
         errors.push(`extractedFacts.facts[${index}].evidence[${evidenceIndex}].locator must match a registered evidenceLocator`);
       }
     }
+    validateFinalLocalizedEvidence(fact, index, errors);
     validateCandidateValues(bundle, fact, index, errors);
     if (fact.status === "missing") blockerSet.add("MISSING_REQUIRED_FACT");
     if (fact.status === "conflict") blockerSet.add("UNRESOLVED_CONFLICT");
@@ -203,9 +204,6 @@ function validateCandidateValues(
     return;
   }
   if (fact.fieldPath === "country.name" || fact.fieldPath === "country.summary") {
-    if (!isFinalLocalizedText(first)) {
-      errors.push(`extractedFacts.facts[${factIndex}].normalizedValue must be exact nonblank bilingual text for ${fact.fieldPath}`);
-    }
     return;
   }
   if (fact.fieldPath === "country.region") {
@@ -258,7 +256,7 @@ function validateDerivedBinding(
     return;
   }
   try {
-    const rebuilt = materializeBasicDerivedFacts({
+    const rebuilt = recomputeBasicDerivedFactsForValidation({
       countryCode: bundle.sourceRegister.countryCode,
       primarySourceId,
       sourceRegister: bundle.sourceRegister,
@@ -274,6 +272,21 @@ function validateDerivedBinding(
     }
   } catch {
     errors.push("deterministic derived facts must exactly match reviewed source metadata");
+  }
+}
+
+function validateFinalLocalizedEvidence(
+  fact: BasicExtractedFactV2,
+  factIndex: number,
+  errors: string[],
+): void {
+  if (fact.fieldPath !== "country.name" && fact.fieldPath !== "country.summary") return;
+  for (const [evidenceIndex, evidence] of fact.evidence.entries()) {
+    if (!isFinalLocalizedText(evidence.normalizedValue)) {
+      errors.push(
+        `extractedFacts.facts[${factIndex}].evidence[${evidenceIndex}].normalizedValue must be exact nonblank bilingual text for ${fact.fieldPath}`,
+      );
+    }
   }
 }
 

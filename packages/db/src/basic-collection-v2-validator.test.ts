@@ -151,6 +151,46 @@ describe("Basic collection audit v2 validation", () => {
   });
 
   test.each([
+    ["country.name conflict", "country.name", "conflict", { zh: "", en: "Other name" }],
+    ["country.summary conflict", "country.summary", "conflict", { zh: "其他摘要" }],
+    ["country.name untrusted", "country.name", "untrusted", { zh: "未核验名称", en: "" }],
+    ["country.summary untrusted", "country.summary", "untrusted", "not localized"],
+  ] as const)(
+    "rejects malformed final bilingual evidence for %s",
+    (_name, fieldPath, status, malformed) => {
+      const bundle = createV2Bundle();
+      const fact = factAt(bundle, fieldPath);
+      fact.status = status;
+      if (status === "conflict") {
+        addSecondEvidence(fact);
+        fact.evidence[1]!.normalizedValue = malformed;
+        setConflictReport(bundle, fact);
+      } else {
+        fact.evidence[0]!.normalizedValue = malformed;
+      }
+      blockReport(bundle);
+
+      expectInvalid(bundle, "exact nonblank bilingual text");
+    },
+  );
+
+  test("allows differing bilingual values in a structurally valid country.summary conflict", () => {
+    const bundle = createV2Bundle();
+    const fact = factAt(bundle, "country.summary");
+    fact.status = "conflict";
+    addSecondEvidence(fact);
+    fact.evidence[1]!.normalizedValue = { zh: "另一份摘要", en: "Another summary" };
+    setConflictReport(bundle, fact);
+    blockReport(bundle);
+
+    expect(validateBasicCollectionAuditBundleV2(bundle)).toMatchObject({
+      valid: true,
+      readyForHumanReview: false,
+      blockers: ["UNRESOLVED_CONFLICT"],
+    });
+  });
+
+  test.each([
     ["flag", "country.flagEmoji", "XX"],
     ["country timestamp", "country.updatedAt", "2026-07-11T00:00:00.000Z"],
     ["collected timestamp", "marketOverview.collectedAt", "2026-07-11T00:00:00.000Z"],
@@ -165,6 +205,31 @@ describe("Basic collection audit v2 validation", () => {
     setDraftValue(bundle, fieldPath, value);
 
     expectInvalid(bundle, "derived");
+  });
+
+  test.each([
+    ["HTTP", "http://example.com/source-1"],
+    ["credentials", "https://user:secret@example.com/source-1"],
+    ["fragment", "https://example.com/source-1#reviewed"],
+  ] as const)(
+    "rejects a consistently drifted v2 source URL with %s",
+    (_name, sourceUrl) => {
+      const bundle = createV2Bundle();
+      setPrimarySourceUrl(bundle, sourceUrl);
+
+      expectInvalid(bundle, "sourceUrl");
+    },
+  );
+
+  test("allows a consistently bound v2 source URL query string", () => {
+    const bundle = createV2Bundle();
+    setPrimarySourceUrl(bundle, "https://example.com/source-1?year=2026&format=json");
+
+    expect(validateBasicCollectionAuditBundleV2(bundle)).toMatchObject({
+      valid: true,
+      readyForHumanReview: true,
+      blockers: [],
+    });
   });
 
   test("rejects country-code derivation whose reviewed raw identity drifted", () => {
@@ -218,6 +283,12 @@ describe("Basic collection audit v2 validation", () => {
     ["missing derived locator", (bundle: MutableV2Bundle) => {
       factAt(bundle, "marketOverview.source").evidence[0]!.locator = "metadata:/missing";
     }, "registered evidenceLocator"],
+    ["derived fact ID drift", (bundle: MutableV2Bundle) => {
+      factAt(bundle, "marketOverview.source").factId = "fact-drifted";
+    }, "derived"],
+    ["malformed source metadata", (bundle: MutableV2Bundle) => {
+      bundle.sourceRegister.sources[0]!.retrievedAt = "not-a-timestamp";
+    }, "retrievedAt"],
     ["draft mismatch", (bundle: MutableV2Bundle) => {
       factAt(bundle, "marketOverview.gdp").evidence[0]!.normalizedValue = 1;
     }, "deeply equal"],
@@ -228,10 +299,6 @@ describe("Basic collection audit v2 validation", () => {
       bundle.reviewReport.sourceChecks = [];
       blockReport(bundle);
     }, ""],
-    ["unsafe source", (bundle: MutableV2Bundle) => {
-      bundle.sourceRegister.sources[0]!.promptInjectionRisk = "suspected";
-      blockReport(bundle);
-    }, "derived"],
     ["injection risk", (bundle: MutableV2Bundle) => {
       bundle.reviewReport.injectionRisks = [{
         sourceId: "source-1",
@@ -254,6 +321,45 @@ describe("Basic collection audit v2 validation", () => {
     } else {
       expectInvalid(bundle, error);
     }
+  });
+
+  test.each([
+    ["discovery-only source", (bundle: MutableV2Bundle) => {
+      bundle.sourceRegister.sources[0]!.discoveryOnly = true;
+    }],
+    ["restricted source", (bundle: MutableV2Bundle) => {
+      bundle.sourceRegister.sources[0]!.accessStatus = "restricted";
+    }],
+    ["unknown-access source", (bundle: MutableV2Bundle) => {
+      bundle.sourceRegister.sources[0]!.accessStatus = "unknown";
+    }],
+    ["suspected prompt risk", (bundle: MutableV2Bundle) => {
+      setPromptRisk(bundle, "suspected");
+    }],
+    ["confirmed prompt risk", (bundle: MutableV2Bundle) => {
+      setPromptRisk(bundle, "confirmed");
+    }],
+    ["UNVERIFIED credibility", (bundle: MutableV2Bundle) => {
+      bundle.sourceRegister.sources[0]!.credibility = "UNVERIFIED";
+      const credibility = factAt(bundle, "marketOverview.credibility");
+      credibility.evidence[0]!.rawValue = "UNVERIFIED";
+      credibility.evidence[0]!.normalizedValue = "UNVERIFIED";
+      bundle.marketOverviewDraft.credibility = "UNVERIFIED";
+    }],
+    ["failed source check", (bundle: MutableV2Bundle) => {
+      bundle.reviewReport.sourceChecks[0]!.status = "failed";
+    }],
+  ] as const)("keeps structurally valid blocked semantics for %s", (_name, mutate) => {
+    const bundle = createV2Bundle();
+    mutate(bundle);
+    blockReport(bundle);
+
+    expect(validateBasicCollectionAuditBundleV2(bundle)).toMatchObject({
+      valid: true,
+      readyForHumanReview: false,
+      blockers: ["UNTRUSTED_INPUT"],
+      errors: [],
+    });
   });
 
   test.each([
@@ -562,6 +668,45 @@ function setDraftValue(
   if (!fieldPath.startsWith("marketOverview.")) return;
   const key = fieldPath.slice("marketOverview.".length) as keyof MutableV2Bundle["marketOverviewDraft"];
   (bundle.marketOverviewDraft as unknown as Record<string, BasicCollectionJsonValue>)[key] = value;
+}
+
+function setConflictReport(
+  bundle: MutableV2Bundle,
+  fact: MutableV2Bundle["extractedFacts"]["facts"][number],
+): void {
+  bundle.reviewReport.conflicts = [{
+    fieldPath: fact.fieldPath,
+    factIds: [fact.factId],
+    resolution: "unresolved",
+    notes: "review required",
+  }];
+}
+
+function setPrimarySourceUrl(bundle: MutableV2Bundle, sourceUrl: string): void {
+  const fact = factAt(bundle, "marketOverview.sourceUrl");
+  const sourceId = fact.evidence[0]!.sourceId;
+  const source = bundle.sourceRegister.sources.find((item) => item.sourceId === sourceId);
+  if (source === undefined) throw new Error("fixture primary source is missing");
+  source.sourceUrl = sourceUrl;
+  for (const evidence of fact.evidence) {
+    evidence.rawValue = sourceUrl;
+    evidence.normalizedValue = sourceUrl;
+  }
+  bundle.marketOverviewDraft.sourceUrl = sourceUrl;
+}
+
+function setPromptRisk(
+  bundle: MutableV2Bundle,
+  severity: "suspected" | "confirmed",
+): void {
+  const source = bundle.sourceRegister.sources[0]!;
+  source.promptInjectionRisk = severity;
+  bundle.reviewReport.injectionRisks = [{
+    sourceId: source.sourceId,
+    locator: source.evidenceLocators[0]!,
+    severity,
+    details: "review required",
+  }];
 }
 
 function rematerializeDerived(bundle: MutableV2Bundle): void {

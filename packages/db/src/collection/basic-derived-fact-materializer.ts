@@ -21,6 +21,7 @@ import {
 import {
   deepFreezeBasicOfflineValue,
 } from "./basic-offline-value.js";
+import { isBasicV2ReviewedSourceUrl } from "./basic-v2-source-url-policy.js";
 
 const ERROR = "basic derived fact materialization is invalid";
 const INPUT_KEYS = [
@@ -61,11 +62,21 @@ type Input = Readonly<{
   sourceRegister: BasicSourceRegisterV2;
   candidateFacts: readonly BasicExtractedFactV2[];
 }>;
-
-export function materializeBasicDerivedFacts(input: Input): Readonly<{
+type DerivedFacts = Readonly<{
   sourceRegister: BasicSourceRegisterV2;
   facts: readonly BasicExtractedFactV2[];
-}> {
+}>;
+
+export function materializeBasicDerivedFacts(input: Input): DerivedFacts {
+  return deriveBasicFacts(input, true);
+}
+
+// Package-private validation path: structural recomputation must not turn trust blockers into errors.
+export function recomputeBasicDerivedFactsForValidation(input: Input): DerivedFacts {
+  return deriveBasicFacts(input, false);
+}
+
+function deriveBasicFacts(input: Input, enforceReadinessTrust: boolean): DerivedFacts {
   try {
     const snapshot = jsonRecord(input, INPUT_KEYS, (path) =>
       path.length === 2 && path[0] === "sourceRegister" && path[1] === "sources"
@@ -98,8 +109,10 @@ export function materializeBasicDerivedFacts(input: Input): Readonly<{
     const activeSources = [...activeIds].sort(compareText).map((sourceId) => {
       const source = sourceById.get(sourceId);
       if (
-        source === undefined || source.discoveryOnly || source.accessStatus !== "open" ||
-        source.promptInjectionRisk !== "none"
+        source === undefined || enforceReadinessTrust && (
+          source.discoveryOnly || source.accessStatus !== "open" ||
+          source.promptInjectionRisk !== "none"
+        )
       ) invalid();
       return source;
     });
@@ -217,7 +230,7 @@ function snapshotSource(value: BasicCollectionJsonValue): BasicSourceRecord {
   const record = exactRecord(value, SOURCE_KEYS);
   if (
     !nonblank(record.sourceId) || !nonblank(record.sourceName) ||
-    !validUrl(record.sourceUrl) || !timestamp(record.retrievedAt) ||
+    !isBasicV2ReviewedSourceUrl(record.sourceUrl) || !timestamp(record.retrievedAt) ||
     !(record.publishedAt === null || timestamp(record.publishedAt)) ||
     typeof record.contentSha256 !== "string" || !SHA256.test(record.contentSha256) ||
     !includes(SOURCE_FAMILIES, record.sourceFamily) ||
@@ -399,15 +412,6 @@ function timestamp(value: BasicCollectionJsonValue): value is string {
   const errors: string[] = [];
   expectUtcRfc3339Timestamp(value, "timestamp", errors);
   return errors.length === 0;
-}
-
-function validUrl(value: BasicCollectionJsonValue): value is string {
-  if (typeof value !== "string" || value.trim() !== value) return false;
-  try {
-    return ["http:", "https:"].includes(new URL(value).protocol);
-  } catch {
-    return false;
-  }
 }
 
 function includes<const Values extends readonly string[]>(
