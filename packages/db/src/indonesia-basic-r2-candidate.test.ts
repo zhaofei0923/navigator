@@ -190,14 +190,15 @@ describe("Indonesia Basic r2 candidate", () => {
     expect(factsByPath.get("country.region")).toMatchObject({
       evidence: [{
         sourceId: "indonesia-esdm-2025-performance",
-        locator: "html:press-release-002-pers-04-sji-2026#title",
-        rawValue:
-          "Capaian Positif Tahun 2025, Negara Hadir Penuhi Kebutuhan Energi Masyarakat",
+        locator: "html:press-release-002-pers-04-sji-2026#masthead-country",
+        rawValue: "REPUBLIK INDONESIA",
         normalizedValue: "southeast-asia",
         unit: null,
         year: null,
       }],
-      uncertainty: null,
+      extractionMethod: "manual",
+      uncertainty:
+        "The source establishes the Indonesia country identity; southeast-asia is a manual mapping to the project's region taxonomy.",
     });
     expect(factsByPath.get("country.summary")).toMatchObject({
       evidence: [
@@ -229,7 +230,7 @@ describe("Indonesia Basic r2 candidate", () => {
       },
       {
         sourceId: "indonesia-esdm-national-energy-policy-2025",
-        locator: "pdf:page=15#article-10-a-1-to-3",
+        locator: "pdf:page=16#article-10-a-1-to-3",
         rawValue: { "2030": [19, 23], "2040": [36, 40], "2050": [53, 55] },
         normalizedValue: RENEWABLE_TARGET,
         unit: null,
@@ -237,7 +238,7 @@ describe("Indonesia Basic r2 candidate", () => {
       },
       {
         sourceId: "indonesia-esdm-national-energy-policy-2025",
-        locator: "pdf:page=16#article-10-a-4",
+        locator: "pdf:page=17#article-10-a-4",
         rawValue: { "2060": [70, 72] },
         normalizedValue: RENEWABLE_TARGET,
         unit: null,
