@@ -72,6 +72,7 @@
 - 数据库：用独立测试库（`.env.test` 的 `DATABASE_URL`）或事务回滚/内存替身，禁止连生产库。
 - LLM / embedding：mock `AI_PROVIDER` 调用，断言**过滤发生在检索层**而非依赖模型。
 - 测试 fixture 参考印尼样板（[indonesia-seed.md](./indonesia-seed.md)），但用最小化数据集，避免为单国写特例。
+- Deterministic Basic candidate 的 `ID` fixture 只能验证 ISO2/coverage shape；名称、URL、来源内容、值和时间必须明确标为 synthetic fixture-only，不能复制或声称任何真实印度尼西亚事实。
 
 ---
 
@@ -86,6 +87,20 @@
 
 - 三项（lint / typecheck / test）**本地必须通过**方可提交；E2E 至少在 CI 关键流程通过。
 - 覆盖率不设唯一硬指标，但 §1–§4 列出的对象/流程**必须有对应用例**，缺失视为不达标。
+
+### 6.1 Deterministic Basic candidate
+
+candidate writer 测试必须先在 Linux filesystem clean-build native helper，再运行 core/composition/index integration：
+
+```bash
+rm -f packages/db/.cache/native/basic-candidate-fs.node
+pnpm --filter @navigator/db run build:basic-candidate-native
+pnpm --filter @navigator/db exec vitest run src/basic-deterministic-candidate-integration.test.ts src/basic-candidate-composition-integration.test.ts src/index.test.ts
+```
+
+composition integration 在 Linux `/tmp` 建立真实临时 workspace，使用 fake transport 填充真实 `raw-v2` cache；第二阶段 transport 必须在任何网络调用时抛错。测试必须使用生产 catalog/review/document/editorial/composition/native writer 模块，验证 object-key permutation 的 byte identity、unsorted array 拒绝、blocked 不写 final staging、ready 只写四文件，以及无 manifest/canonical/Prisma/KnowledgeChunk/AI side effect。每次测试都必须关闭 workspace handles 并删除临时目录。
+
+native helper 需要 `/proc/self/fd` 与 `renameat2(RENAME_NOREPLACE)`。不得在 DrvFS（如 `/mnt/c`）执行 writer 验证；不支持该 syscall/flag 时必须 fail closed，禁止 JavaScript rename/copy fallback。本卡没有 Web 行为，定向验收不要求 E2E；完整 branch gate 仍为 `pnpm lint`、`pnpm typecheck`、`pnpm test` 和 `pnpm turbo run lint typecheck test --force`。
 
 ---
 

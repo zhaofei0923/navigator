@@ -1,6 +1,6 @@
 # basic-country-collection.md — Basic 国家采集与发布标准
 
-> 本文件是 `P1-5`、`P1-6` 和 `DATA-BASIC-<ISO2>` 任务卡的规范性采集流程。字段与覆盖判定以 [data-schema.md](./data-schema.md) 和 [coverage-levels.md](./coverage-levels.md) 为唯一事实来源；数据治理与发布规则以 [data-governance.md](./data-governance.md) 为准。新 Basic 流水线的来源政策与结构化请求以 [basic-source-catalog.md](./basic-source-catalog.md) 为准，v2 多格式传输、raw capture 和 CSV 边界以 [basic-source-formats.md](./basic-source-formats.md) 为准；P1-6B 的确定性 source adapters、raw capture 与 provenance boundary 以 [basic-country-source-adapters.md](./basic-country-source-adapters.md) 为准；P1-6C 的 Hermes discovery 与本地模型草稿桥接边界以 [basic-country-hermes-llama-bridge.md](./basic-country-hermes-llama-bridge.md) 为准；P1-6D 的离线、无发布编排与跨边界验证以 [basic-country-offline-dry-run.md](./basic-country-offline-dry-run.md) 为准。本文件不新增数据模型字段，不改变 AI 检索边界。
+> 本文件是 `P1-5`、`P1-6` 和 `DATA-BASIC-<ISO2>` 任务卡的规范性采集流程。字段与覆盖判定以 [data-schema.md](./data-schema.md) 和 [coverage-levels.md](./coverage-levels.md) 为唯一事实来源；数据治理与发布规则以 [data-governance.md](./data-governance.md) 为准。新 Basic 流水线的来源政策与结构化请求以 [basic-source-catalog.md](./basic-source-catalog.md) 为准，v2 多格式传输、raw capture 和 CSV 边界以 [basic-source-formats.md](./basic-source-formats.md) 为准；P1-6B 的确定性 source adapters、raw capture 与 provenance boundary 以 [basic-country-source-adapters.md](./basic-country-source-adapters.md) 为准；确定性 v2 candidate、CLI 与四文件 writer 以 [basic-deterministic-candidate.md](./basic-deterministic-candidate.md) 为准；P1-6C 的 legacy bridge 边界以 [basic-country-hermes-llama-bridge.md](./basic-country-hermes-llama-bridge.md) 为准；P1-6D 的离线、无发布编排与跨边界验证以 [basic-country-offline-dry-run.md](./basic-country-offline-dry-run.md) 为准。本文件不新增数据模型字段，不改变 AI 检索边界。
 
 ## 1. 范围与完成定义
 
@@ -32,7 +32,7 @@
 
 采集运行在已批准的 Windows `llama.cpp` 与 WSL Hermes Agent 架构中。P1-6B 的确定性来源适配器和 raw capture 运行时边界见 [basic-country-source-adapters.md](./basic-country-source-adapters.md)；各参与方职责固定，自动化不能代替人工发布决定。
 
-已批准的确定性 Basic 迁移采用并行 v2 路径：source catalog 固定来源、许可、请求、字段归属和 adapter identity；`DATA-BASIC-FORMATS-1` 已交付隔离的 raw-capture/v2、四 MIME transport 和 strict CSV parser/locator；`DATA-BASIC-DOCUMENTS-1` 已交付 generic HTML/PDF capture、人工 review、capture-hash-bound document plan 与 manual preliminary evidence，详见 [basic-country-document-evidence.md](./basic-country-document-evidence.md)。`DATA-BASIC-EDITORIAL-1` 已将 exact 双语 operator input、reviewed-source union、primary source、`country.name` enrichment、mixed-method rejection 与 derived metadata 收束为冻结的 in-memory materialization，详见 [basic-country-editorial-input.md](./basic-country-editorial-input.md)。HTML/PDF bytes 仍不自动解析，且该结果不是 draft 或 candidate artifact。`DATA-BASIC-DETERMINISTIC-1` 仍负责 draft assembler 与 model-free candidate preflight。完整 v2 normal path 不依赖 Hermes、SearXNG 或本地模型；这些工具保留给后续 AI 交互、报告制作和不进入发布流水线的来源研究。本节后续 P1-6A/B/C/D 描述保留既有 v1 历史与兼容边界，不得被解释为 catalog 已接入 v1 runner。
+已批准的确定性 Basic 迁移采用并行 v2 路径：source catalog 固定来源、许可、请求、字段归属和 adapter identity；`DATA-BASIC-FORMATS-1` 已交付隔离的 raw-capture/v2、四 MIME transport 和 strict CSV parser/locator；`DATA-BASIC-DOCUMENTS-1` 已交付 generic HTML/PDF capture、人工 review、capture-hash-bound document plan 与 manual preliminary evidence，详见 [basic-country-document-evidence.md](./basic-country-document-evidence.md)。`DATA-BASIC-EDITORIAL-1` 已将 exact 双语 operator input、reviewed-source union、primary source、`country.name` enrichment、mixed-method rejection 与 derived metadata 收束为冻结的 in-memory materialization，详见 [basic-country-editorial-input.md](./basic-country-editorial-input.md)。HTML/PDF bytes 仍不自动解析。`DATA-BASIC-DETERMINISTIC-1` 已交付 model-free draft assembler、trust/completeness preflight、v2 candidate、versioned loader 与 constrained staging CLI，详见 [basic-deterministic-candidate.md](./basic-deterministic-candidate.md)。完整 v2 normal path 不依赖 Hermes、SearXNG 或本地模型；P1-6C 只保留 `legacy collection compatibility`，不供新 CLI、AI 顾问或报告能力使用。本节后续 P1-6A/B/C/D 描述保留既有 v1 历史与兼容边界，不得被解释为 catalog 已接入 v1 runner。
 
 P1-6A 提供 [basic-country-audit-contract.md](./basic-country-audit-contract.md) 中机器可读的 TypeScript 审计契约和确定性离线 fixtures。离线 fixtures 不调用也不 mock Windows `llama.cpp`；运行时或模型失败处理属于 P1-6C。冲突值绝不自动选择，未解决冲突必须保留并阻断人工审核就绪状态。以下材料均为不可信输入并阻断就绪：仅用于发现的搜索材料、`UNVERIFIED`、访问受限或访问状态未知的来源，以及疑似或确认的 prompt injection。审计契约中的 `sourceUrl` 完整表示字段存在；非 `null` 值必须为 HTTP(S) URL，该字段可为 `null`，但 `source` 必须包含字面量 `sourceUrl null` 说明无链接原因。
 
@@ -58,7 +58,7 @@ P1-6D 只在内存中编排和验证 P1-6A/B/C 既有边界，不创建 raw cach
 1. **raw cache**：v1 compatibility 使用 `.cache/basic-country/<ISO2>/<runId>/raw/`；v2 reviewed catalog capture 只使用 `.cache/basic-country/<ISO2>/<runId>/raw-v2/`。两个 namespace 不互相复用，均存放原始响应、文件或页面快照，记录获取方式与时间，且**永不提交**。v2 HTML/PDF 可由 Documents 的 generic executor capture，并只能通过与 manifest 精确绑定的人工 evidence plan 晋升；raw bytes 本身从不被自动解析。
 2. **source register**：`data/staging/<country>/<runId>/source-register.json`，为每个 `sourceId` 保留来源身份、原始 URL、检索时间、已知时的发布时间、内容 SHA-256、证据定位符、来源族、许可或访问限制与可信度。
 3. **extracted facts**：`data/staging/<country>/<runId>/extracted-facts.json`，完整覆盖固定 country/market overview 路径及草稿中每个关键指标的四个子路径，将每个路径映射到一个或多个 `sourceId`，并逐项保存精确原始值、与草稿深度一致的 candidate 标准化值、适用的单位和年份，以及证据定位符；同时记录提取方法与不确定性说明。
-4. **bilingual draft**：`data/staging/<country>/<runId>/market-overview.draft.json`，仅由后续 `DATA-BASIC-DETERMINISTIC-1` 的 model-free assembler 基于完整 reviewed material 形成 schema-constrained `{ zh, en }` 草稿；所有记录保持 `draft` 且 `aiUsable = false`。v2 normal path 不调用模型。
+4. **bilingual draft**：`data/staging/<country>/<runId>/market-overview.draft.json`，由 `DATA-BASIC-DETERMINISTIC-1` 的 model-free assembler 基于完整 reviewed material 形成 schema-constrained `{ zh, en }` 草稿；所有记录保持 `draft` 且 `aiUsable = false`。v2 normal path 不调用模型。
 5. **review report**：`data/staging/<country>/<runId>/review-report.json`，记录审核结论、待解决冲突、缺失字段、来源抽检、注入风险、发布建议以及人工决定。
 
 人工批准后，canonical data 与同一 `<runId>` 的非 raw 审计包必须一并提交：`data/staging/<country>/<runId>/` 必须包含 `source-register.json`、`extracted-facts.json`、`market-overview.draft.json` 与 `review-report.json`。该已提交审计包不可变；任何修正必须创建新的 `<runId>`，不得改写已批准批次。
@@ -76,6 +76,8 @@ P1-6D 只在内存中编排和验证 P1-6A/B/C 既有边界，不创建 raw cach
 P1-5 只接受当前已登记的地区和行业/技术标签枚举。未登记值会阻断校验，必须通过单独、经批准的数据模型变更处理，绝不得被强制映射到相近枚举。P1-5 同时校验国家代码为两个大写字母；由于当前模型没有完整 ISO 注册表，实际 ISO 成员资格仍须由来源和人工审核确认。
 
 暂存区、`collection-manifest.json` 和 raw cache 不是产品数据，不能被 seed 记录、C 端响应、覆盖计数或 AI 检索使用。
+
+`pnpm candidate:basic-country -- .cache/basic-country/<ISO2>/<runId>/candidate-config.json` 只在 candidate 通过全部八个 stage、v2 validation、零 blocker 与 `readyForHumanReview` 后，原子写入上述四文件。blocked/error 不写 staging final directory；成功也不创建 canonical country directory 或 `collection-manifest.json`。该命令结束后必须停在人工审核，不得把“written”解释为批准或发布。
 
 ## 5. 审核与发布闸门
 
