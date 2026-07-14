@@ -13,7 +13,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterEach, describe, expect, test } from "vitest";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const cacheRoot = join(repositoryRoot, "packages/db/.cache");
+const cacheRoot = join(repositoryRoot, "tests/.cache/node-ts-source-hook");
 const hookPath = join(repositoryRoot, "scripts/node-ts-source-hook.mjs");
 const temporaryRoots: string[] = [];
 
@@ -24,6 +24,17 @@ afterEach(async () => {
 });
 
 describe("repository TypeScript source hook", () => {
+  test("keeps hook fixtures in test-owned cache space", async () => {
+    const root = await createRepositoryFixture();
+
+    expect(relative(join(repositoryRoot, "tests/.cache"), root)).toMatch(
+      /^node-ts-source-hook[/\\]/,
+    );
+    expect(relative(join(repositoryRoot, "packages/db/.cache"), root)).toMatch(
+      /^\.\.[/\\]/,
+    );
+  });
+
   test("maps one missing relative .js import to a regular .ts source", async () => {
     const root = await createRepositoryFixture();
     await writeFile(join(root, "target.ts"), "export const marker = 'typescript';\n");
