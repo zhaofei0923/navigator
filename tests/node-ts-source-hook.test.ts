@@ -15,7 +15,6 @@ import { afterEach, describe, expect, test } from "vitest";
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const cacheRoot = join(repositoryRoot, "packages/db/.cache");
 const hookPath = join(repositoryRoot, "scripts/node-ts-source-hook.mjs");
-const nodePath = "/home/kevin/.nvm/versions/node/v24.18.0/bin/node";
 const temporaryRoots: string[] = [];
 
 afterEach(async () => {
@@ -75,7 +74,7 @@ describe("repository TypeScript source hook", () => {
 
   test("loads the current candidate composition graph", () => {
     const result = spawnSync(
-      nodePath,
+      process.execPath,
       [
         "--import",
         hookPath,
@@ -142,7 +141,7 @@ async function runImport(root: string, specifier: string) {
     entrypoint,
     `import { marker } from ${JSON.stringify(specifier)}; process.stdout.write(marker);\n`,
   );
-  return spawnSync(nodePath, ["--import", hookPath, entrypoint], {
+  return spawnSync(process.execPath, ["--import", hookPath, entrypoint], {
     cwd: repositoryRoot,
     encoding: "utf8",
   });

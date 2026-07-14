@@ -6,8 +6,6 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, test } from "vitest";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const runtimePath =
-  "/home/kevin/.nvm/versions/node/v24.18.0/bin:/usr/local/bin:/usr/bin:/bin";
 
 describe("tracked TypeScript command hook", () => {
   test("wires both DB source commands through the tracked node --import hook", () => {
@@ -54,7 +52,6 @@ function runPnpm(args: readonly string[]) {
     cwd: repositoryRoot,
     env: {
       ...process.env,
-      PATH: runtimePath,
       DATABASE_URL: "postgresql://invalid:invalid@127.0.0.1:1/navigator",
     },
     encoding: "utf8",
