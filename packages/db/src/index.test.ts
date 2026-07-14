@@ -62,6 +62,11 @@ import type {
   BasicCollectionAuditArtifactsV2,
   BasicCollectionAuditBundleV2,
   BasicDeterministicCandidateResult,
+  BasicApprovedCountryPublicationV2,
+  BasicCountryPublicationApprovalReceipt,
+  BasicCountryPublicationBlockerCode,
+  BasicCountryPublicationManifestV2,
+  BasicCountryPublicationValidationResult,
 } from "./index.js";
 
 // @ts-expect-error BasicHermesSourcedObservation is package-private.
@@ -145,6 +150,30 @@ import type { BasicDeterministicCandidateStage } from "./index.js";
 import type { BasicDeterministicStageName } from "./index.js";
 // @ts-expect-error BasicDeterministicStageOutcome is package-private.
 import type { BasicDeterministicStageOutcome } from "./index.js";
+// @ts-expect-error parseBasicCountryPublicationApproval is package-private.
+type ParseBasicCountryPublicationApprovalLeak = typeof import("./index.js")["parseBasicCountryPublicationApproval"];
+// @ts-expect-error parseBasicCountryPublicationManifestV2 is package-private.
+type ParseBasicCountryPublicationManifestV2Leak = typeof import("./index.js")["parseBasicCountryPublicationManifestV2"];
+// @ts-expect-error sha256Hex is package-private.
+type Sha256HexLeak = typeof import("./index.js")["sha256Hex"];
+// @ts-expect-error equalSha256Hex is package-private.
+type EqualSha256HexLeak = typeof import("./index.js")["equalSha256Hex"];
+// @ts-expect-error readBasicStableJsonFileSet is package-private.
+type ReadBasicStableJsonFileSetLeak = typeof import("./index.js")["readBasicStableJsonFileSet"];
+// @ts-expect-error materializeBasicCanonicalFromApprovedCandidateV2 is package-private.
+type MaterializeBasicCanonicalFromApprovedCandidateV2Leak = typeof import("./index.js")["materializeBasicCanonicalFromApprovedCandidateV2"];
+// @ts-expect-error createBasicCountryPublicationFixture is package-private.
+type CreateBasicCountryPublicationFixtureLeak = typeof import("./index.js")["createBasicCountryPublicationFixture"];
+// @ts-expect-error createBasicCountryPublicationFailure is package-private.
+type CreateBasicCountryPublicationFailureLeak = typeof import("./index.js")["createBasicCountryPublicationFailure"];
+// @ts-expect-error validateBasicCollectionAuditArtifactValuesVersioned is package-private.
+type ValidateBasicCollectionAuditArtifactValuesVersionedLeak = typeof import("./index.js")["validateBasicCollectionAuditArtifactValuesVersioned"];
+// @ts-expect-error parseBasicStrictJsonText is package-private.
+type ParseBasicStrictJsonTextLeak = typeof import("./index.js")["parseBasicStrictJsonText"];
+// @ts-expect-error hasOnlyUnicodeScalarJsonStrings is package-private.
+type HasOnlyUnicodeScalarJsonStringsLeak = typeof import("./index.js")["hasOnlyUnicodeScalarJsonStrings"];
+// @ts-expect-error isBasicStrictJsonUnicodeScalarError is package-private.
+type IsBasicStrictJsonUnicodeScalarErrorLeak = typeof import("./index.js")["isBasicStrictJsonUnicodeScalarError"];
 
 import * as database from "./index.js";
 import { createBasicCollectionAuditFixture } from "./basic-collection-test-fixture.js";
@@ -164,6 +193,10 @@ import {
   BASIC_COLLECTION_AUDIT_SCHEMA_VERSION,
   BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION,
   BASIC_COLLECTION_BLOCKER_CODES,
+  BASIC_COUNTRY_CANONICAL_MAPPING_VERSION,
+  BASIC_COUNTRY_PUBLICATION_APPROVAL_SCHEMA_VERSION,
+  BASIC_COUNTRY_PUBLICATION_BLOCKER_CODES,
+  BASIC_COUNTRY_PUBLICATION_MANIFEST_SCHEMA_VERSION,
   BASIC_DETERMINISTIC_STAGE_NAMES,
   WORLD_BANK_CORE_INDICATOR_ADAPTERS,
   buildBasicCountryImportPlan,
@@ -174,6 +207,7 @@ import {
   createBasicCountryBundle,
   loadBasicCollectionAuditBundle,
   loadBasicCollectionAuditBundleVersioned,
+  loadApprovedBasicCountryPublicationV2,
   loadBasicCountryBundle,
   preflightBasicCountryActivation,
   runBasicDeterministicCandidate,
@@ -182,6 +216,7 @@ import {
   promoteBasicHermesJsonEvidence,
   validateBasicCountryBundle,
   validateBasicCollectionAuditBundle,
+  validateApprovedBasicCountryPublicationV2,
   worldBankCountryAdapter,
   workspaceName,
 } from "./index.js";
@@ -251,6 +286,81 @@ describe("@navigator/db", () => {
       "loadBasicCollectionAuditBundleVersioned",
       "runBasicDeterministicCandidate",
     ]);
+  });
+
+  test("exports exactly the approved Basic v2 publication runtime surface", () => {
+    expect(BASIC_COUNTRY_PUBLICATION_APPROVAL_SCHEMA_VERSION).toBe(
+      "basic-country-publication-approval/v1",
+    );
+    expect(BASIC_COUNTRY_PUBLICATION_MANIFEST_SCHEMA_VERSION).toBe(
+      "basic-country-publication-manifest/v2",
+    );
+    expect(BASIC_COUNTRY_CANONICAL_MAPPING_VERSION).toBe(
+      "basic-country-canonical/v2",
+    );
+    expect(BASIC_COUNTRY_PUBLICATION_BLOCKER_CODES).toEqual([
+      "MANIFEST_INVALID",
+      "APPROVAL_RECEIPT_INVALID",
+      "APPROVAL_RECEIPT_HASH_MISMATCH",
+      "CANDIDATE_ARTIFACT_HASH_MISMATCH",
+      "PUBLICATION_IDENTITY_MISMATCH",
+      "CANDIDATE_NOT_READY",
+      "APPROVAL_TIMESTAMP_INVALID",
+      "CANONICAL_MAPPING_DRIFT",
+      "BASIC_COVERAGE_VIOLATION",
+      "AI_BOUNDARY_VIOLATION",
+      "PUBLICATION_READ_FAILED",
+    ]);
+    expect(validateApprovedBasicCountryPublicationV2).toBeTypeOf("function");
+    expect(loadApprovedBasicCountryPublicationV2).toBeTypeOf("function");
+
+    const publicationRuntimeExports = Object.keys(database)
+      .filter((name) =>
+        name.startsWith("BASIC_COUNTRY_PUBLICATION_") ||
+        name === "BASIC_COUNTRY_CANONICAL_MAPPING_VERSION" ||
+        name === "validateApprovedBasicCountryPublicationV2" ||
+        name === "loadApprovedBasicCountryPublicationV2"
+      )
+      .sort();
+    expect(publicationRuntimeExports).toEqual([
+      "BASIC_COUNTRY_CANONICAL_MAPPING_VERSION",
+      "BASIC_COUNTRY_PUBLICATION_APPROVAL_SCHEMA_VERSION",
+      "BASIC_COUNTRY_PUBLICATION_BLOCKER_CODES",
+      "BASIC_COUNTRY_PUBLICATION_MANIFEST_SCHEMA_VERSION",
+      "loadApprovedBasicCountryPublicationV2",
+      "validateApprovedBasicCountryPublicationV2",
+    ]);
+  });
+
+  test("exports only the consumer-facing Basic v2 publication types", () => {
+    const publicPublicationTypeWitness: [
+      BasicCountryPublicationApprovalReceipt,
+      BasicCountryPublicationManifestV2,
+      BasicCountryPublicationBlockerCode,
+      BasicApprovedCountryPublicationV2,
+      BasicCountryPublicationValidationResult,
+    ] | null = null;
+
+    expect(publicPublicationTypeWitness).toBeNull();
+  });
+
+  test("keeps Basic v2 publication implementation helpers package-private", () => {
+    for (const internalName of [
+      "parseBasicCountryPublicationApproval",
+      "parseBasicCountryPublicationManifestV2",
+      "sha256Hex",
+      "equalSha256Hex",
+      "readBasicStableJsonFileSet",
+      "materializeBasicCanonicalFromApprovedCandidateV2",
+      "createBasicCountryPublicationFixture",
+      "createBasicCountryPublicationFailure",
+      "validateBasicCollectionAuditArtifactValuesVersioned",
+      "parseBasicStrictJsonText",
+      "hasOnlyUnicodeScalarJsonStrings",
+      "isBasicStrictJsonUnicodeScalarError",
+    ]) {
+      expect(database).not.toHaveProperty(internalName);
+    }
   });
 
   test("keeps deterministic v2 composition internals package-private", () => {

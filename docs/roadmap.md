@@ -151,6 +151,19 @@ graph LR
 - 完成边界：本卡只完成可供人工审核的 `draft`、`aiUsable = false` staging candidate 能力；未执行真实 `ID` 数据采集、canonical mapping、人工批准或发布。
 - 人工确认：否（candidate 仍为 `draft`、`aiUsable = false`；真实国家启动、canonical 发布和覆盖升级另经人工审核）。
 
+#### DATA-BASIC-PUBLISH-V2-1 Basic v2 publication gate（已完成）
+- 目标：按 [basic-country-publication.md](./basic-country-publication.md) 建立 country-generic、read-only、fail-closed 发布边界，以独立批准回执和六字段 manifest v2 将 immutable 四文件 candidate、人工决定与 canonical Basic mapping 绑定到同一 country/run identity。
+- 验收：candidate 保持 `reviewStatus = draft`、`aiUsable = false`、`humanDecision = null` 且恰好四文件；回执记录 `draft -> pending -> published` 并绑定四个 artifact bytes，manifest 绑定回执 bytes；ordered validator 只接受恰好 `BASIC`、published market overview、其余九模块 `BUILDING`、无 deeper-module data、无 KnowledgeChunk、无 AI eligibility 的 canonical bundle。loader 不写文件，不调用 Prisma/API/AI，也不导入 coverage 数据。
+- 完成边界：本卡只交付通用 contracts、validator、read-only loader、public package surface 与规范文档，**不创建真实批准回执，不修改 canonical data，不发布任何国家数据**。
+- 模型边界：批准回执与 manifest 是 non-product sidecars，不进入 seed、API、coverage counts 或 AI retrieval；本卡及下一张 `DATA-BASIC-ID-PUBLISH` 均不修改 `docs/data-schema.md` 或 Prisma schema。
+- 人工确认：发布方法已按项目所有者批准的 independent receipt 设计实现；本卡不替代任何单国发布决定。
+
+#### DATA-BASIC-ID-PUBLISH Indonesia Basic atomic publication（下一任务，需明确人工批准）
+- 目标：作为下一张 explicit human-approved atomic task，仅针对已确认的 `ID` candidate identity 创建独立回执、确定性 canonical Basic mapping 与 manifest v2，并通过通用只读发布闸门后原子提交。
+- 验收：重新稳定读取并核对已确认的四个 candidate SHA-256；candidate 与回执保持不可变，任何 correction 创建新 run 和新回执；首次真实交付恰好为 `BASIC`，market overview 为 `published` 且 `aiUsable = false`，其余九模块为 `BUILDING`，无 knowledge/deeper modules；补齐 DB import、Web、i18n 和 Playwright 验收，但不修改 Prisma schema。
+- 完成边界：不得把本通用 gate 的完成视为 `ID` 已发布；外部 datastore 的 legacy Complete 清理仍由单独批准的 `OPS-DATA-ID-BASIC-CLEANUP` 处理。
+- 人工确认：是（必须由项目所有者对精确 country/run/hash identity 和原子发布 diff 再次明确批准）。
+
 #### DATA-BASIC-<ISO2> 单国 Basic 数据任务卡
 - 目标：每张任务卡只采集一个 ISO 3166-1 alpha-2 国家，使用固定 10 模块模型完成 Basic 国家骨架和市场基础画像。
 - 验收：一国一任务卡、一分支、一审核周期，且仅合并一次到 `main`；合并后的 `main` 验证通过后，仅推送一次到 `origin/main`。数据先为 `draft`，仅在人工审核后发布；首次真实交付恰好为 `BASIC`，`market-overview` 外九个模块均为 `BUILDING`；Basic 数据保持 `aiUsable = false` 且不产生知识片段；通过仓库校验和代表性 Web 检查，确认基础画像正常渲染、`BUILDING` 模块显示占位。
