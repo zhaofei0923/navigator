@@ -1,6 +1,6 @@
 # basic-country-collection.md — Basic 国家采集与发布标准
 
-> 本文件是 `P1-5`、`P1-6` 和 `DATA-BASIC-<ISO2>` 任务卡的规范性采集流程。字段与覆盖判定以 [data-schema.md](./data-schema.md) 和 [coverage-levels.md](./coverage-levels.md) 为唯一事实来源；数据治理与发布规则以 [data-governance.md](./data-governance.md) 为准。新 Basic 流水线的来源政策与结构化请求以 [basic-source-catalog.md](./basic-source-catalog.md) 为准，v2 多格式传输、raw capture 和 CSV 边界以 [basic-source-formats.md](./basic-source-formats.md) 为准；P1-6B 的确定性 source adapters、raw capture 与 provenance boundary 以 [basic-country-source-adapters.md](./basic-country-source-adapters.md) 为准；确定性 v2 candidate、CLI 与四文件 writer 以 [basic-deterministic-candidate.md](./basic-deterministic-candidate.md) 为准；P1-6C 的 legacy bridge 边界以 [basic-country-hermes-llama-bridge.md](./basic-country-hermes-llama-bridge.md) 为准；P1-6D 的离线、无发布编排与跨边界验证以 [basic-country-offline-dry-run.md](./basic-country-offline-dry-run.md) 为准。本文件不新增数据模型字段，不改变 AI 检索边界。
+> 本文件是 `P1-5`、`P1-6` 和 `DATA-BASIC-<ISO2>` 任务卡的规范性采集流程。字段与覆盖判定以 [data-schema.md](./data-schema.md) 和 [coverage-levels.md](./coverage-levels.md) 为唯一事实来源；数据治理与发布规则以 [data-governance.md](./data-governance.md) 为准。新 Basic 流水线的来源政策与结构化请求以 [basic-source-catalog.md](./basic-source-catalog.md) 为准，v2 多格式传输、raw capture 和 CSV 边界以 [basic-source-formats.md](./basic-source-formats.md) 为准；P1-6B 的确定性 source adapters、raw capture 与 provenance boundary 以 [basic-country-source-adapters.md](./basic-country-source-adapters.md) 为准；确定性 v2 candidate、CLI 与四文件 writer 以 [basic-deterministic-candidate.md](./basic-deterministic-candidate.md) 为准；独立批准回执、manifest v2、hash binding 与只读发布闸门以 [basic-country-publication.md](./basic-country-publication.md) 为准；P1-6C 的 legacy bridge 边界以 [basic-country-hermes-llama-bridge.md](./basic-country-hermes-llama-bridge.md) 为准；P1-6D 的离线、无发布编排与跨边界验证以 [basic-country-offline-dry-run.md](./basic-country-offline-dry-run.md) 为准。本文件不新增数据模型字段，不改变 AI 检索边界。
 
 所有国家（包括 `ID`）的首次真实数据交付必须恰好为 `BASIC`。`STANDARD` 与 `COMPLETE` 只可在该国 Basic 验收后，通过单独、经人工批准的升级任务启动。
 
@@ -61,35 +61,40 @@ P1-6D 只在内存中编排和验证 P1-6A/B/C 既有边界，不创建 raw cach
 2. **source register**：`data/staging/<country>/<runId>/source-register.json`，为每个 `sourceId` 保留来源身份、原始 URL、检索时间、已知时的发布时间、内容 SHA-256、证据定位符、来源族、许可或访问限制与可信度。
 3. **extracted facts**：`data/staging/<country>/<runId>/extracted-facts.json`，完整覆盖固定 country/market overview 路径及草稿中每个关键指标的四个子路径，将每个路径映射到一个或多个 `sourceId`，并逐项保存精确原始值、与草稿深度一致的 candidate 标准化值、适用的单位和年份，以及证据定位符；同时记录提取方法与不确定性说明。
 4. **bilingual draft**：`data/staging/<country>/<runId>/market-overview.draft.json`，由 `DATA-BASIC-DETERMINISTIC-1` 的 model-free assembler 基于完整 reviewed material 形成 schema-constrained `{ zh, en }` 草稿；所有记录保持 `draft` 且 `aiUsable = false`。v2 normal path 不调用模型。
-5. **review report**：`data/staging/<country>/<runId>/review-report.json`，记录审核结论、待解决冲突、缺失字段、来源抽检、注入风险、发布建议以及人工决定。
+5. **review report**：`data/staging/<country>/<runId>/review-report.json`，记录机器侧审核结论、待解决冲突、缺失字段、来源抽检、注入风险和发布建议。v2 candidate 的 `humanDecision` 固定保持 `null`；人工批准不写入此文件。
 
-人工批准后，canonical data 与同一 `<runId>` 的非 raw 审计包必须一并提交：`data/staging/<country>/<runId>/` 必须包含 `source-register.json`、`extracted-facts.json`、`market-overview.draft.json` 与 `review-report.json`。该已提交审计包不可变；任何修正必须创建新的 `<runId>`，不得改写已批准批次。
+candidate 写入后，`data/staging/<country>/<runId>/` 必须且只能包含 `source-register.json`、`extracted-facts.json`、`market-overview.draft.json` 与 `review-report.json`。该四文件审计包不可变；任何修正必须创建新的 `<runId>`，不得增加第五个文件或改写已有批次。人工批准单独存放在 `data/approvals/<country>/<runId>.json`；修正后的新 run 必须取得新的回执，旧 candidate 和回执均不得修改。
 
-每个 `data/<country>/` 必须同时提交一个不被导入的 canonical sidecar：`collection-manifest.json`。它只包含 `activeRunId`、`mappingVersion` 及指向已提交审计包的引用，用于证明当前 canonical data 的出处；它是审计元数据，不是 Prisma 或 `data-schema.md` 字段。文件必须显式包含以下三个字段，且 `auditBundlePath` 固定为 `data/staging/<country>/<activeRunId>`：
+每个已发布 `data/<country>/` 必须同时提交一个不被导入的 canonical sidecar：`collection-manifest.json`。v2 manifest 是 strict JSON，必须恰好包含以下六个字段；`auditBundlePath` 与 `approvalReceiptPath` 由已验证的 `<country>` 和 `activeRunId` 确定性派生，`approvalReceiptSha256` 绑定回执的精确文件 bytes：
 
 ```json
 {
+  "schemaVersion": "basic-country-publication-manifest/v2",
   "activeRunId": "<runId>",
-  "mappingVersion": "<mappingVersion>",
-  "auditBundlePath": "data/staging/<country>/<activeRunId>"
+  "mappingVersion": "basic-country-canonical/v2",
+  "auditBundlePath": "data/staging/<country>/<activeRunId>",
+  "approvalReceiptPath": "data/approvals/<country>/<activeRunId>.json",
+  "approvalReceiptSha256": "<lowercase SHA-256>"
 }
 ```
 
+批准回执使用独立 strict schema `basic-country-publication-approval/v1`，记录同一 country/run、`draft -> pending -> published` 生命周期和四个 candidate artifact 的 byte-level SHA-256。manifest、回执、candidate 和 canonical mapping 必须由 [basic-country-publication.md](./basic-country-publication.md) 的只读 loader/validator 一并验证；路径是 identity assertions，不是任意读取能力。
+
 P1-5 只接受当前已登记的地区和行业/技术标签枚举。未登记值会阻断校验，必须通过单独、经批准的数据模型变更处理，绝不得被强制映射到相近枚举。P1-5 同时校验国家代码为两个大写字母；由于当前模型没有完整 ISO 注册表，实际 ISO 成员资格仍须由来源和人工审核确认。
 
-暂存区、`collection-manifest.json` 和 raw cache 不是产品数据，不能被 seed 记录、C 端响应、覆盖计数或 AI 检索使用。
+暂存区、批准回执、`collection-manifest.json` 和 raw cache 都不是产品数据，不能被 seed 记录、C 端响应、覆盖计数或 AI 检索使用。因此回执和 manifest sidecar 不改变 `docs/data-schema.md` 或 Prisma schema。
 
 `pnpm candidate:basic-country -- .cache/basic-country/<ISO2>/<runId>/candidate-config.json` 只在 candidate 通过全部八个 stage、v2 validation、零 blocker 与 `readyForHumanReview` 后，原子写入上述四文件。blocked/error 不写 staging final directory；成功也不创建 canonical country directory 或 `collection-manifest.json`。该命令结束后必须停在人工审核，不得把“written”解释为批准或发布。
 
 ## 5. 审核与发布闸门
 
-状态必须按 `draft -> pending -> published` 单向通过，回退或修订时按 [data-governance.md §3](./data-governance.md) 重新审核。
+状态必须按 `draft -> pending -> published` 单向通过。v2 candidate 保持 immutable `draft`；独立回执记录 submission 的 `draft -> pending` 和人工授权的 `pending -> published`，只有 canonical market overview 变为 `published`。回退或修订时按 [data-governance.md §3](./data-governance.md) 创建新 run 并重新审核。
 
 | 闸门 | 必须满足 | 允许的动作 |
 |---|---|---|
 | `draft` | 暂存产物可追溯；草稿通过结构和基础字段校验；未确认项明确标注 | 继续采集、提取、翻译和修订 |
-| `pending` | 来源登记、extracted facts、双语草稿和 review report 齐全；冲突与缺失已处理或有明确阻断结论 | 提交给人工审核者 |
-| `published` | 人工审核者确认事实、元字段、双语展示、可信度、覆盖派生、审计包与 `collection-manifest.json` 的对应关系，以及 C 端占位行为 | 将 canonical seed、不可变非 raw 审计包和 sidecar 一并提交，并可用于 C 端 Basic 展示 |
+| `pending` | 来源登记、extracted facts、双语草稿和 review report 齐全；candidate valid、ready、zero blockers；独立回执 submission 时间不早于最新 evidence/draft 时间 | 提交给人工审核者，不修改四文件 candidate |
+| `published` | 人工审核者确认事实、元字段、双语展示、可信度、覆盖派生、四个 candidate hashes、回执及六字段 manifest 与同一 country/run 的对应关系，以及 C 端占位行为 | 仅在单国原子任务中提交 canonical seed、不可变 candidate、独立回执和 manifest v2，并可用于 C 端 Basic 展示 |
 
 Basic 的 `published` 仅代表可展示，不代表可检索：所有 Basic 记录必须保持 `aiUsable = false`，并且不得创建知识片段。任何将 Basic 数据用于 AI 的提议均属于覆盖升级和人工决策，必须在单独任务卡中处理。
 
@@ -111,12 +116,13 @@ Basic 的 `published` 仅代表可展示，不代表可检索：所有 Basic 记
 - [ ] `market-overview.json` 是唯一对象记录，达到 `PARTIAL` 或 `COMPLETE`；其余九个模块均为 `BUILDING`、`dataCount = 0`，且没有 `published` 记录。
 - [ ] `coverageLevel` 经既有规则派生为恰好 `BASIC`，未手工覆盖；交付不满足 `STANDARD` 判定，`BUILDING` 模块没有虚构记录。
 - [ ] `market-overview.json` 具备 `source`、`sourceUrl`、`collectedAt`、`updatedAt`、`credibility`、`reviewStatus`、`aiUsable`、`countryCode`、`industryTags`、`techTags`；标签仅使用已登记枚举，仅无适用标签时为空；`sourceUrl` 为 HTTP(S) URL 或 `null`，为 `null` 时 `source` 包含字面量 `sourceUrl null`；`aiUsable = false`。
-- [ ] 已提交的 `data/staging/<country>/<runId>/` 包含 source register、extracted facts、bilingual draft 和 review report；v1 `raw/` 与 v2 `raw-v2/` cache 都保持本地且未提交、不能互相复用。`source-register.json` 保留来源身份、原始 URL、检索时间、已知发布时间、内容 SHA-256、证据定位符和可信度；`extracted-facts.json` 为每个 canonical 字段路径保留 source ID、精确原始值、标准化值、适用单位/年份和证据定位符。
+- [ ] 已提交的 `data/staging/<country>/<runId>/` 恰好包含 source register、extracted facts、bilingual draft 和 review report，`humanDecision = null`；v1 `raw/` 与 v2 `raw-v2/` cache 都保持本地且未提交、不能互相复用。`source-register.json` 保留来源身份、原始 URL、检索时间、已知发布时间、内容 SHA-256、证据定位符和可信度；`extracted-facts.json` 为每个 canonical 字段路径保留 source ID、精确原始值、标准化值、适用单位/年份和证据定位符。
 - [ ] 审计事实覆盖全部 20 个静态必需路径及每个 `keyIndicators[i]` 的四个子路径；market overview candidate normalized value 与草稿深度一致，country candidate 有 evidence，且每个 evidence 来源至少有一条 passed source check。
 - [ ] readiness 配对符合单向安全约束：有 blocker 仅允许 `blocked/do-not-publish`；无 blocker 允许 ready/request 或保守 blocked/do-not-publish，拒绝交叉配对。
-- [ ] `data/<country>/collection-manifest.json` 以 `activeRunId` 和 `mappingVersion` 指向已提交审计包，且仅作为非导入审计元数据。
+- [ ] `data/approvals/<country>/<runId>.json` 使用独立 exact receipt schema，记录 `draft -> pending -> published`、四个 candidate artifact SHA-256 和 Basic-only、`aiUsable = false` 授权；回执 bytes 与六字段 manifest v2 的 `approvalReceiptSha256` 一致。
+- [ ] `data/<country>/collection-manifest.json` 恰好包含 schema、active run、mapping version、派生 audit/receipt paths 和 receipt SHA-256，且只作为非导入审计元数据。
 - [ ] 每个发布事实均由打开的原始来源支持；SearXNG 仅用于发现，未作为证据。
-- [ ] 本地模型输出保持草稿属性；人工审核者已完成 `pending -> published` 决定。
+- [ ] 本地模型输出和 immutable candidate 保持草稿属性；人工审核者已通过独立回执完成 `pending -> published` 决定。
 - [ ] 全部 Basic 记录为 `aiUsable = false`，没有知识片段或 AI 检索入口的数据依赖。
 - [ ] 仓库校验和代表性 Web 检查通过，`BUILDING` 模块显示占位且不报错。
 

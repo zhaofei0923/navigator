@@ -110,13 +110,15 @@ candidate 命令的 package `precandidate` 也会执行 native build。writer �
 CLI 成功只创建 isolated staging 四文件并停止。它不执行以下任何动作：
 
 - 不创建或修改 canonical `data/<countryDirectory>/`；
-- 不创建 `collection-manifest.json`；
+- 不创建独立批准回执或 `collection-manifest.json`；
 - 不调用 Prisma，不创建 `KnowledgeChunk`，不改变 coverage；
 - 不设置 `published`，不执行 publish action；
 - 不把记录设为 `aiUsable = true`，不写 AI index；
 - 不供 AI 顾问或报告能力直接消费。
 
-项目所有者必须逐项审核来源、事实、冲突、双语内容、taxonomy、元字段和风险。之后的 canonical mapping、manifest、`pending -> published` 和任何覆盖升级属于单独人工批准任务。现有 llama bridge 标记为 `legacy collection compatibility`，新 CLI 不使用它。
+成功 candidate 必须永久保持恰好四个文件：草稿 `reviewStatus = draft`、`aiUsable = false`，审核报告 `humanDecision = null`。项目所有者必须逐项审核来源、事实、冲突、双语内容、taxonomy、元字段和风险。之后的单独、经人工批准的原子任务才可按 [basic-country-publication.md](./basic-country-publication.md) 创建 candidate 目录之外的独立回执，以 byte-level SHA-256 绑定同一 country/run 的四个 artifacts，记录 `draft -> pending -> published`，并创建 canonical mapping 与六字段 manifest v2。任何 correction 都创建新 run 和新回执，绝不改写 candidate 或既有回执。
+
+独立回执不是 reviewer 的 cryptographic signature；显式人工决定、protected Git review 和不可改写的提交历史仍是授权信任边界。publication loader 只读 repository files 并 fail closed，不执行 Prisma/API/AI/coverage import。现有 llama bridge 标记为 `legacy collection compatibility`，新 CLI 不使用它。
 
 ## 6. v1/v2 loader 行为
 
