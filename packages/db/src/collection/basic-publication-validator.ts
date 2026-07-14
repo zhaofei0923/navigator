@@ -2,13 +2,14 @@ import { isProxy } from "node:util/types";
 
 import { validateBasicCountryBundle } from "../seed/basic-country-validator.js";
 import type { BasicCanonicalData, JsonRecord } from "../seed/basic-country-types.js";
+import type { BasicCollectionJsonValue } from "./basic-collection-contracts.js";
 import { validateBasicCollectionAuditBundleV2 } from "./basic-collection-v2-validator.js";
 import type { BasicCollectionAuditArtifactName } from "./basic-offline-audit-artifacts.js";
+import { snapshotBasicBoundedJsonValue } from "./basic-bounded-json.js";
 import {
   deepFreezeBasicOfflineValue,
   deeplyEqualBasicOfflineValue,
   isRecord,
-  snapshotBasicOfflineValue,
 } from "./basic-offline-value.js";
 import {
   BASIC_COUNTRY_PUBLICATION_JSON_MAX_BYTES,
@@ -62,6 +63,21 @@ const CANONICAL_KEYS = Object.freeze([
   ...COVERAGE_MODULE_KEYS,
   "knowledge",
 ] as const);
+const PUBLICATION_SNAPSHOT_BUDGETS = Object.freeze({
+  maximumObjectProperties: 256,
+  maximumTotalNodes: 65_536,
+});
+const TYPED_ARRAY_PROTOTYPE = Object.getPrototypeOf(
+  Uint8Array.prototype,
+) as object;
+const TYPED_ARRAY_BUFFER_GETTER = Object.getOwnPropertyDescriptor(
+  TYPED_ARRAY_PROTOTYPE,
+  "buffer",
+)?.get;
+const TYPED_ARRAY_BYTE_LENGTH_GETTER = Object.getOwnPropertyDescriptor(
+  TYPED_ARRAY_PROTOTYPE,
+  "byteLength",
+)?.get;
 
 export function createBasicCountryPublicationFailure(
   blockerCode: BasicCountryPublicationBlockerCode,
@@ -74,26 +90,36 @@ export function validateApprovedBasicCountryPublicationV2(
 ): BasicCountryPublicationValidationResult {
   try {
     const manifestInput = readInputValue(input, "manifest");
-    if (!manifestInput.valid) {
+    const manifestSnapshot = manifestInput.valid
+      ? snapshotPublicationJson(manifestInput.value)
+      : { valid: false } as const;
+    if (!manifestSnapshot.valid) {
       return createBasicCountryPublicationFailure("MANIFEST_INVALID");
     }
-    const manifestResult = parseBasicCountryPublicationManifestV2(manifestInput.value);
+    const manifestResult = parseBasicCountryPublicationManifestV2(
+      manifestSnapshot.data,
+    );
     if (manifestResult.data === null) {
       return createBasicCountryPublicationFailure("MANIFEST_INVALID");
     }
     const approvalInput = readInputValue(input, "approvalReceipt");
-    if (!approvalInput.valid) {
+    const approvalSnapshot = approvalInput.valid
+      ? snapshotPublicationJson(approvalInput.value)
+      : { valid: false } as const;
+    if (!approvalSnapshot.valid) {
       return createBasicCountryPublicationFailure("APPROVAL_RECEIPT_INVALID");
     }
-    const approvalResult = parseBasicCountryPublicationApproval(approvalInput.value);
+    const approvalResult = parseBasicCountryPublicationApproval(
+      approvalSnapshot.data,
+    );
     if (approvalResult.data === null) {
       return createBasicCountryPublicationFailure("APPROVAL_RECEIPT_INVALID");
     }
     const manifest = manifestResult.data;
-    const approvalReceipt = approvalResult.data;
+    const suppliedApprovalReceipt = approvalResult.data;
     const candidateInput = readInputValue(input, "candidate");
     const candidateSnapshot = candidateInput.valid
-      ? snapshotBasicOfflineValue(candidateInput.value)
+      ? snapshotPublicationJson(candidateInput.value)
       : { valid: false } as const;
     const countryDirectory = readInputValue(input, "countryDirectory");
 
@@ -102,7 +128,7 @@ export function validateApprovedBasicCountryPublicationV2(
       hasPublicationIdentityMismatch(
         countryDirectory.value,
         manifest,
-        approvalReceipt,
+        suppliedApprovalReceipt,
         candidateSnapshot.valid ? candidateSnapshot.data : null,
       )
     ) {
@@ -122,6 +148,21 @@ export function validateApprovedBasicCountryPublicationV2(
     ) {
       return createBasicCountryPublicationFailure("APPROVAL_RECEIPT_HASH_MISMATCH");
     }
+    const approvalJson = decodePublicationJson(approvalReceiptBytes);
+    if (!approvalJson.valid) {
+      return createBasicCountryPublicationFailure("APPROVAL_RECEIPT_INVALID");
+    }
+    const byteApprovalResult = parseBasicCountryPublicationApproval(
+      approvalJson.data,
+    );
+    if (byteApprovalResult.data === null) {
+      return createBasicCountryPublicationFailure("APPROVAL_RECEIPT_INVALID");
+    }
+    const approvalReceipt = byteApprovalResult.data;
+    if (!deeplyEqualBasicOfflineValue(approvalReceipt, suppliedApprovalReceipt)) {
+      return createBasicCountryPublicationFailure("APPROVAL_RECEIPT_HASH_MISMATCH");
+    }
+
     const candidateBytesInput = readInputValue(input, "candidateArtifactBytes");
     const candidateArtifactBytes = candidateBytesInput.valid
       ? snapshotCandidateArtifactBytes(candidateBytesInput.value)
@@ -137,9 +178,41 @@ export function validateApprovedBasicCountryPublicationV2(
       return createBasicCountryPublicationFailure("CANDIDATE_ARTIFACT_HASH_MISMATCH");
     }
 
+    const byteCandidateSnapshot = reconstructCandidateFromArtifactBytes(
+      candidateArtifactBytes,
+      approvalReceipt,
+    );
+    if (!byteCandidateSnapshot.valid) {
+      return createBasicCountryPublicationFailure("CANDIDATE_NOT_READY");
+    }
+    if (
+      hasPublicationIdentityMismatch(
+        countryDirectory.value,
+        manifest,
+        approvalReceipt,
+        byteCandidateSnapshot.data,
+      )
+    ) {
+      return createBasicCountryPublicationFailure("PUBLICATION_IDENTITY_MISMATCH");
+    }
     const candidateValidation = validateBasicCollectionAuditBundleV2(
+      byteCandidateSnapshot.data,
+    );
+    if (!candidateValidation.valid) {
+      return createBasicCountryPublicationFailure("CANDIDATE_NOT_READY");
+    }
+    const suppliedCandidateValidation = validateBasicCollectionAuditBundleV2(
       candidateSnapshot.valid ? candidateSnapshot.data : null,
     );
+    if (
+      !suppliedCandidateValidation.valid ||
+      !deeplyEqualBasicOfflineValue(
+        candidateValidation.data,
+        suppliedCandidateValidation.data,
+      )
+    ) {
+      return createBasicCountryPublicationFailure("CANDIDATE_ARTIFACT_HASH_MISMATCH");
+    }
     if (!isReadyCandidate(candidateValidation)) {
       return createBasicCountryPublicationFailure("CANDIDATE_NOT_READY");
     }
@@ -159,7 +232,7 @@ export function validateApprovedBasicCountryPublicationV2(
     }
     const canonicalInput = readInputValue(input, "canonical");
     const canonicalSnapshot = canonicalInput.valid
-      ? snapshotBasicOfflineValue(canonicalInput.value)
+      ? snapshotPublicationJson(canonicalInput.value)
       : { valid: false } as const;
     if (
       !canonicalSnapshot.valid ||
@@ -216,6 +289,51 @@ export function validateApprovedBasicCountryPublicationV2(
   } catch {
     return createBasicCountryPublicationFailure("PUBLICATION_READ_FAILED");
   }
+}
+
+function snapshotPublicationJson(
+  value: unknown,
+): ReturnType<typeof snapshotBasicBoundedJsonValue> {
+  return snapshotBasicBoundedJsonValue(
+    value,
+    () => undefined,
+    PUBLICATION_SNAPSHOT_BUDGETS,
+  );
+}
+
+function decodePublicationJson(
+  bytes: Uint8Array,
+): ReturnType<typeof snapshotBasicBoundedJsonValue> {
+  try {
+    const decoded = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    const value: unknown = JSON.parse(decoded);
+    return snapshotPublicationJson(value);
+  } catch {
+    return { valid: false };
+  }
+}
+
+function reconstructCandidateFromArtifactBytes(
+  artifacts: Readonly<Record<BasicCollectionAuditArtifactName, Uint8Array>>,
+  receipt: BasicCountryPublicationApprovalReceipt,
+): ReturnType<typeof snapshotBasicBoundedJsonValue> {
+  const values = {} as Record<
+    BasicCollectionAuditArtifactName,
+    BasicCollectionJsonValue
+  >;
+  for (const name of CANDIDATE_ARTIFACT_NAMES) {
+    const decoded = decodePublicationJson(artifacts[name]);
+    if (!decoded.valid) return { valid: false };
+    values[name] = decoded.data;
+  }
+  return snapshotPublicationJson({
+    countryDirectory: receipt.countryDirectory,
+    runId: receipt.runId,
+    sourceRegister: values["source-register.json"],
+    extractedFacts: values["extracted-facts.json"],
+    marketOverviewDraft: values["market-overview.draft.json"],
+    reviewReport: values["review-report.json"],
+  });
 }
 
 function readInputValue(
@@ -278,15 +396,27 @@ function snapshotBytes(value: unknown): Uint8Array | null {
       typeof value !== "object" ||
       value === null ||
       isProxy(value) ||
-      Object.getPrototypeOf(value) !== Uint8Array.prototype
+      Object.getPrototypeOf(value) !== Uint8Array.prototype ||
+      TYPED_ARRAY_BUFFER_GETTER === undefined ||
+      TYPED_ARRAY_BYTE_LENGTH_GETTER === undefined
     ) return null;
     const bytes = value as Uint8Array;
+    const buffer: unknown = Reflect.apply(TYPED_ARRAY_BUFFER_GETTER, bytes, []);
+    const byteLength: unknown = Reflect.apply(
+      TYPED_ARRAY_BYTE_LENGTH_GETTER,
+      bytes,
+      [],
+    );
     if (
-      bytes.byteLength === 0 ||
-      bytes.byteLength > BASIC_COUNTRY_PUBLICATION_JSON_MAX_BYTES ||
-      typeof SharedArrayBuffer !== "undefined" && bytes.buffer instanceof SharedArrayBuffer
+      typeof byteLength !== "number" ||
+      !Number.isSafeInteger(byteLength) ||
+      byteLength < 0 ||
+      byteLength > BASIC_COUNTRY_PUBLICATION_JSON_MAX_BYTES ||
+      typeof SharedArrayBuffer !== "undefined" && buffer instanceof SharedArrayBuffer ||
+      !(buffer instanceof ArrayBuffer)
     ) return null;
-    return new Uint8Array(bytes);
+    const copy = Uint8Array.prototype.slice.call(bytes) as Uint8Array;
+    return copy.byteLength === byteLength ? copy : null;
   } catch {
     return null;
   }
@@ -417,7 +547,7 @@ function createProjectedBundle(
 }
 
 function hasExactCanonicalArtifactNames(value: unknown): boolean {
-  const snapshot = snapshotBasicOfflineValue(value);
+  const snapshot = snapshotPublicationJson(value);
   return snapshot.valid &&
     Array.isArray(snapshot.data) &&
     deeplyEqualBasicOfflineValue(snapshot.data, CANONICAL_ARTIFACT_NAMES);
