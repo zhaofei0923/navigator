@@ -493,15 +493,20 @@ describe("approved Basic publication repository loader", () => {
     )));
     expect(closure.has(sharedSchema)).toBe(true);
     const violations: string[] = [];
+    const nodeModules = new Set<string>();
     let nodeFsOwnerCount = 0;
+    let nodeUtilTypesOwnerCount = 0;
     for (const [pathname, source] of closure) {
       const sourceFile = parseTypeScript(pathname, source);
       const specifiers = staticProductionDependencies(sourceFile);
       violations.push(...productionCapabilityViolations(sourceFile, specifiers));
+      for (const specifier of specifiers) {
+        if (specifier.startsWith("node:")) nodeModules.add(specifier);
+      }
       if (specifiers.includes("node:fs")) {
         nodeFsOwnerCount += 1;
         expect(basename(pathname)).toBe("basic-stable-json-file-set.ts");
-        expect(nodeFsImports(sourceFile)).toEqual([
+        expect(nodeModuleImports(sourceFile, "node:fs")).toEqual([
           "BigIntStats",
           "closeSync",
           "constants",
@@ -517,8 +522,21 @@ describe("approved Basic publication repository loader", () => {
           "O_RDONLY",
         ]]);
       }
+      if (specifiers.includes("node:util/types")) {
+        nodeUtilTypesOwnerCount += 1;
+        expect(nodeModuleImports(sourceFile, "node:util/types")).toEqual([
+          "isProxy",
+        ]);
+      }
     }
+    expect([...nodeModules].sort()).toEqual([
+      "node:crypto",
+      "node:fs",
+      "node:path",
+      "node:util/types",
+    ]);
     expect(nodeFsOwnerCount).toBe(1);
+    expect(nodeUtilTypesOwnerCount).toBe(4);
     expect(violations).toEqual([]);
   });
 
@@ -543,6 +561,10 @@ describe("approved Basic publication repository loader", () => {
     ["filesystem stream alias", "const writer = createWriteStream; void writer;"],
     ["process environment alias", "const runtime = process; void runtime.env;"],
     ["performance alias", "const clock = performance; void clock.now();"],
+    ["aliased performance module", 'import { performance as clock } from "node:perf_hooks"; clock.now();'],
+    ["aliased timer module", 'import { setTimeout as sleep } from "node:timers/promises"; sleep(1);'],
+    ["aliased HTTP/2 module", 'import { connect as dial } from "node:http2"; dial("https://example.test");'],
+    ["unknown external runtime package", 'import { execute } from "runtime-package-not-approved"; execute();'],
     ["hrtime alias", "const clock = hrtime; void clock;"],
     ["Date alias", "const Clock = Date; void Clock.now();"],
   ])("rejects a %s capability reference or module", (_case, source) => {
@@ -829,7 +851,10 @@ function resolveProductionDependency(
   containingFile: string,
   workspaceRoot: string,
 ): string | null {
-  if (specifier.startsWith("node:")) return null;
+  if (APPROVED_PRODUCTION_NODE_MODULES.has(specifier)) return null;
+  if (!isProductionSourceSpecifier(specifier)) {
+    throw new Error(`Production dependency is not allowlisted: ${specifier}`);
+  }
   const result = ts.resolveModuleName(
     specifier,
     containingFile,
@@ -841,10 +866,7 @@ function resolveProductionDependency(
     ts.sys,
   ).resolvedModule;
   if (result === undefined) {
-    if (specifier.startsWith(".") || specifier.startsWith("@navigator/")) {
-      throw new Error(`Production dependency could not be resolved: ${specifier}`);
-    }
-    return null;
+    throw new Error(`Production dependency could not be resolved: ${specifier}`);
   }
   const resolvedFile = ts.sys.realpath?.(result.resolvedFileName) ??
     result.resolvedFileName;
@@ -855,13 +877,21 @@ function resolveProductionDependency(
     !workspaceRelative.startsWith(`..${sep}`) &&
     !isAbsolute(workspaceRelative) &&
     !workspaceRelative.split(sep).includes("node_modules");
-  if (specifier.startsWith(".") || isWorkspaceDependency) {
-    if (!isWorkspaceDependency || !dependency.endsWith(".ts")) {
-      throw new Error(`Production source dependency escaped workspace: ${specifier}`);
-    }
-    return dependency;
+  if (!isWorkspaceDependency || !dependency.endsWith(".ts")) {
+    throw new Error(`Production source dependency escaped workspace: ${specifier}`);
   }
-  return null;
+  return dependency;
+}
+
+const APPROVED_PRODUCTION_NODE_MODULES = new Set([
+  "node:crypto",
+  "node:fs",
+  "node:path",
+  "node:util/types",
+]);
+
+function isProductionSourceSpecifier(specifier: string): boolean {
+  return specifier.startsWith(".") || specifier.startsWith("@navigator/");
 }
 
 const DANGEROUS_RUNTIME_IDENTIFIERS = new Map<string, string>([
@@ -899,13 +929,8 @@ function productionCapabilityViolations(
   const violations = new Set<string>();
   for (const specifier of specifiers) {
     if (
-      specifier === "fs" ||
-      specifier.startsWith("fs/") ||
-      specifier.startsWith("node:fs/") ||
-      specifier === "@prisma/client" ||
-      specifier.startsWith("@prisma/client/") ||
-      /^(?:node:)?(?:child_process|worker_threads|cluster|process|module|vm|inspector|async_hooks|http|https|net|tls|dgram|dns)(?:\/|$)/u.test(specifier) ||
-      /^(?:undici|node-fetch)(?:\/|$)/u.test(specifier)
+      !isProductionSourceSpecifier(specifier) &&
+      !APPROVED_PRODUCTION_NODE_MODULES.has(specifier)
     ) violations.add(`forbidden module: ${specifier}`);
     if (
       specifier === "node:fs" &&
@@ -946,12 +971,15 @@ function productionCapabilityViolations(
   return [...violations].sort();
 }
 
-function nodeFsImports(sourceFile: ts.SourceFile): readonly string[] {
+function nodeModuleImports(
+  sourceFile: ts.SourceFile,
+  moduleSpecifier: string,
+): readonly string[] {
   const names: string[] = [];
   for (const statement of sourceFile.statements) {
     if (
       !ts.isImportDeclaration(statement) ||
-      literalModuleSpecifier(statement.moduleSpecifier) !== "node:fs"
+      literalModuleSpecifier(statement.moduleSpecifier) !== moduleSpecifier
     ) continue;
     const clause = statement.importClause;
     if (clause?.name !== undefined) names.push(`default:${clause.name.text}`);
