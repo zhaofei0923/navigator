@@ -168,6 +168,12 @@ type CreateBasicCountryPublicationFixtureLeak = typeof import("./index.js")["cre
 type CreateBasicCountryPublicationFailureLeak = typeof import("./index.js")["createBasicCountryPublicationFailure"];
 // @ts-expect-error validateBasicCollectionAuditArtifactValuesVersioned is package-private.
 type ValidateBasicCollectionAuditArtifactValuesVersionedLeak = typeof import("./index.js")["validateBasicCollectionAuditArtifactValuesVersioned"];
+// @ts-expect-error parseBasicStrictJsonText is package-private.
+type ParseBasicStrictJsonTextLeak = typeof import("./index.js")["parseBasicStrictJsonText"];
+// @ts-expect-error hasOnlyUnicodeScalarJsonStrings is package-private.
+type HasOnlyUnicodeScalarJsonStringsLeak = typeof import("./index.js")["hasOnlyUnicodeScalarJsonStrings"];
+// @ts-expect-error isBasicStrictJsonUnicodeScalarError is package-private.
+type IsBasicStrictJsonUnicodeScalarErrorLeak = typeof import("./index.js")["isBasicStrictJsonUnicodeScalarError"];
 
 import * as database from "./index.js";
 import { createBasicCollectionAuditFixture } from "./basic-collection-test-fixture.js";
@@ -292,7 +298,19 @@ describe("@navigator/db", () => {
     expect(BASIC_COUNTRY_CANONICAL_MAPPING_VERSION).toBe(
       "basic-country-canonical/v2",
     );
-    expect(BASIC_COUNTRY_PUBLICATION_BLOCKER_CODES).toHaveLength(11);
+    expect(BASIC_COUNTRY_PUBLICATION_BLOCKER_CODES).toEqual([
+      "MANIFEST_INVALID",
+      "APPROVAL_RECEIPT_INVALID",
+      "APPROVAL_RECEIPT_HASH_MISMATCH",
+      "CANDIDATE_ARTIFACT_HASH_MISMATCH",
+      "PUBLICATION_IDENTITY_MISMATCH",
+      "CANDIDATE_NOT_READY",
+      "APPROVAL_TIMESTAMP_INVALID",
+      "CANONICAL_MAPPING_DRIFT",
+      "BASIC_COVERAGE_VIOLATION",
+      "AI_BOUNDARY_VIOLATION",
+      "PUBLICATION_READ_FAILED",
+    ]);
     expect(validateApprovedBasicCountryPublicationV2).toBeTypeOf("function");
     expect(loadApprovedBasicCountryPublicationV2).toBeTypeOf("function");
 
@@ -337,6 +355,9 @@ describe("@navigator/db", () => {
       "createBasicCountryPublicationFixture",
       "createBasicCountryPublicationFailure",
       "validateBasicCollectionAuditArtifactValuesVersioned",
+      "parseBasicStrictJsonText",
+      "hasOnlyUnicodeScalarJsonStrings",
+      "isBasicStrictJsonUnicodeScalarError",
     ]) {
       expect(database).not.toHaveProperty(internalName);
     }

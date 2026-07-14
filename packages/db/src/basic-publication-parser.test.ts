@@ -12,6 +12,8 @@ type TestCase = readonly [string, Mutation, string];
 describe("Basic publication parsers", () => {
   test("parses exact frozen approval and manifest contracts", () => {
     const fixture = createBasicCountryPublicationFixture();
+    const approvalBefore = structuredClone(fixture.approvalReceipt);
+    const manifestBefore = structuredClone(fixture.manifest);
 
     const approval = parseBasicCountryPublicationApproval(fixture.approvalReceipt);
     expect(approval.errors).toEqual([]);
@@ -23,6 +25,75 @@ describe("Basic publication parsers", () => {
     expect(manifest.errors).toEqual([]);
     expect(manifest.data).toEqual(fixture.manifest);
     expect(Object.isFrozen(manifest.data)).toBe(true);
+    expect(fixture.approvalReceipt).toEqual(approvalBefore);
+    expect(fixture.manifest).toEqual(manifestBefore);
+  });
+
+  test.each([
+    ["approval", parseBasicCountryPublicationApproval, "reviewerId"],
+    ["manifest", parseBasicCountryPublicationManifestV2, "activeRunId"],
+  ] as const)("rejects lone surrogates in %s values and keys", (
+    label,
+    parse,
+    valueKey,
+  ) => {
+    const fixture = createBasicCountryPublicationFixture();
+    const source = label === "approval"
+      ? fixture.approvalReceipt
+      : fixture.manifest;
+    for (const surrogate of ["\uD800", "\uDC00"]) {
+      const withValue = structuredClone(source) as unknown as Record<string, unknown>;
+      withValue[valueKey] = surrogate;
+      expect(parse(withValue).errors).toEqual([
+        expect.stringContaining("bounded JSON value"),
+      ]);
+
+      const withKey = structuredClone(source) as unknown as Record<string, unknown>;
+      withKey[surrogate] = null;
+      expect(parse(withKey).errors).toEqual([
+        expect.stringContaining("bounded JSON value"),
+      ]);
+    }
+  });
+
+  test("accepts valid supplementary text in both direct parsers", () => {
+    const fixture = createBasicCountryPublicationFixture();
+    const receipt = {
+      ...structuredClone(fixture.approvalReceipt),
+      reviewerId: `reviewer-\u{1F600}`,
+    };
+    const manifest = structuredClone(fixture.manifest) as unknown as Record<string, unknown>;
+    manifest["\u{1F600}"] = null;
+
+    expect(parseBasicCountryPublicationApproval(receipt).data?.reviewerId)
+      .toBe("reviewer-\u{1F600}");
+    expect(parseBasicCountryPublicationManifestV2(manifest).errors.join("\n"))
+      .not.toContain("bounded JSON value");
+  });
+
+  test.each([
+    ["approval", parseBasicCountryPublicationApproval],
+    ["manifest", parseBasicCountryPublicationManifestV2],
+  ] as const)("enforces the %s parser property budget at 256", (_label, parse) => {
+    expect(parse(recordWithProperties(256)).errors.join("\n"))
+      .not.toContain("bounded JSON value");
+    expect(parse(recordWithProperties(257)).errors).toEqual([
+      expect.stringContaining("bounded JSON value"),
+    ]);
+  });
+
+  test.each([
+    ["approval", parseBasicCountryPublicationApproval],
+    ["manifest", parseBasicCountryPublicationManifestV2],
+  ] as const)("enforces the %s parser total-node budget at 65,536", (
+    _label,
+    parse,
+  ) => {
+    expect(parse(nodeBudgetTree(false)).errors.join("\n"))
+      .not.toContain("bounded JSON value");
+    expect(parse(nodeBudgetTree(true)).errors).toEqual([
+      expect.stringContaining("bounded JSON value"),
+    ]);
   });
 
   test("exposes a candidate with the approval receipt country identity", () => {
@@ -111,4 +182,18 @@ function expectInvalid(
   expect(result.data).toBeNull();
   expect(result.errors).toEqual(expect.arrayContaining([expect.stringContaining(label)]));
   expect(result.errors.join("\n")).not.toContain(secret);
+}
+
+function recordWithProperties(count: number): Record<string, null> {
+  return Object.fromEntries(Array.from(
+    { length: count },
+    (_, index) => [`key-${index}`, null],
+  ));
+}
+
+function nodeBudgetTree(overBudget: boolean): unknown[] {
+  const fullBranch = (): null[] => Array.from({ length: 256 }, () => null);
+  const tree = Array.from({ length: 255 }, fullBranch) as unknown[];
+  if (overBudget) tree.push([]);
+  return tree;
 }

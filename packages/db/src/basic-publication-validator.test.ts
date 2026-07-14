@@ -54,6 +54,11 @@ const LONE_SURROGATE_CASES = [
   ["low", "\uDC00"],
 ] as const;
 const SMILING_FACE = "\uD83D\uDE00";
+const DUPLICATE_MEMBER_KINDS = [
+  "top-level",
+  "nested",
+  "escaped-equivalent",
+] as const;
 
 describe("approved Basic v2 publication validator", () => {
   test("returns exact frozen canonical data without byte arrays or parser errors", () => {
@@ -293,6 +298,59 @@ describe("approved Basic v2 publication validator", () => {
     expectBlocker("APPROVAL_RECEIPT_INVALID", (input) => {
       input.approvalReceiptBytes = malformed;
       record(input, "manifest").approvalReceiptSha256 = sha256Hex(malformed);
+    });
+  });
+
+  test.each(DUPLICATE_MEMBER_KINDS)(
+    "maps manifest-bound receipt bytes with %s duplicates to receipt invalid after coherent hashing",
+    (kind) => {
+      expectBlocker("APPROVAL_RECEIPT_INVALID", (input) => {
+        const duplicateBytes = withDuplicateJsonMembers(
+          bytes(input.approvalReceiptBytes, "receipt"),
+          kind,
+        );
+        input.approvalReceiptBytes = duplicateBytes;
+        record(input, "manifest").approvalReceiptSha256 = sha256Hex(
+          duplicateBytes,
+        );
+      });
+    },
+  );
+
+  test.each(CANDIDATE_ARTIFACT_NAMES.flatMap((name) =>
+    DUPLICATE_MEMBER_KINDS.map((kind) => [name, kind] as const)))(
+    "maps receipt-bound %s bytes with %s duplicates to candidate not ready after coherent hashing",
+    (name, kind) => {
+      expectBlocker("CANDIDATE_NOT_READY", (input) => {
+        setCandidateArtifactBytes(
+          input,
+          name,
+          withDuplicateJsonMembers(candidateBytes(input, name), kind),
+        );
+        refreshApprovalForCandidateBytes(input);
+      });
+    },
+  );
+
+  test("gives malformed receipt scalar syntax precedence over a stale receipt hash", () => {
+    expectBlocker("APPROVAL_RECEIPT_INVALID", (input) => {
+      const receipt = structuredClone(input.approvalReceipt) as MutableRecord;
+      receipt.reviewerId = "\uD800";
+      input.approvalReceiptBytes = encodeJson(receipt);
+    });
+  });
+
+  test("maps a malformed manifest scalar path before later hash failures", () => {
+    expectBlocker("MANIFEST_INVALID", (input) => {
+      record(input, "manifest").auditBundlePath = "\uD800";
+      flipFirstByte(input, "approvalReceiptBytes");
+    });
+  });
+
+  test("gives publication identity drift precedence over receipt hash mismatch", () => {
+    expectBlocker("PUBLICATION_IDENTITY_MISMATCH", (input) => {
+      input.countryDirectory = "other-land";
+      flipFirstByte(input, "approvalReceiptBytes");
     });
   });
 
@@ -761,6 +819,35 @@ function encodeJson(value: unknown): Uint8Array {
   const serialized = JSON.stringify(value);
   if (serialized === undefined) throw new Error("fixture JSON is not serializable");
   return new TextEncoder().encode(`${serialized}\n`);
+}
+
+function withDuplicateJsonMembers(
+  bytes: Uint8Array,
+  kind: typeof DUPLICATE_MEMBER_KINDS[number],
+): Uint8Array {
+  const text = new TextDecoder().decode(bytes);
+  const parsed = JSON.parse(text) as Record<string, unknown>;
+  const key = Object.keys(parsed)[0];
+  if (key === undefined) throw new Error("fixture JSON object is empty");
+  const memberName = kind === "escaped-equivalent"
+    ? escapedEquivalentMemberName(key)
+    : JSON.stringify(key);
+  const memberValue = kind === "nested"
+    ? '{"nested":1,"nested":2}'
+    : JSON.stringify(parsed[key]);
+  if (memberValue === undefined) throw new Error("fixture JSON member is invalid");
+  return new TextEncoder().encode(
+    text.replace(/^\s*\{/u, (opening) =>
+      `${opening}${memberName}:${memberValue},`),
+  );
+}
+
+function escapedEquivalentMemberName(key: string): string {
+  const first = key.codePointAt(0);
+  if (first === undefined || first > 0x7f) {
+    throw new Error("fixture JSON key must start with ASCII");
+  }
+  return `"\\u${first.toString(16).padStart(4, "0")}${key.slice(1)}"`;
 }
 
 function candidateBytes(

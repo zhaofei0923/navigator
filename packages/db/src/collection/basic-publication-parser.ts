@@ -6,6 +6,7 @@ import {
 import type { BasicCollectionJsonValue } from "./basic-collection-contracts.js";
 import type { BasicCollectionAuditArtifactName } from "./basic-offline-audit-artifacts.js";
 import { snapshotBasicBoundedJsonValue } from "./basic-bounded-json.js";
+import { hasOnlyUnicodeScalarJsonStrings } from "./basic-strict-json.js";
 import {
   BASIC_COUNTRY_CANONICAL_MAPPING_VERSION,
   BASIC_COUNTRY_PUBLICATION_APPROVAL_SCHEMA_VERSION,
@@ -54,11 +55,15 @@ const ARTIFACT_NAMES = [
 ] as const satisfies readonly BasicCollectionAuditArtifactName[];
 const SHA256 = /^[a-f0-9]{64}$/;
 const MAX_STRING_BYTES = 65_536;
+const PUBLICATION_PARSER_BUDGETS = Object.freeze({
+  maximumObjectProperties: 256,
+  maximumTotalNodes: 65_536,
+});
 
 export function parseBasicCountryPublicationApproval(
   value: unknown,
 ): ParseResult<BasicCountryPublicationApprovalReceipt> {
-  const snapshot = snapshotBasicBoundedJsonValue(value);
+  const snapshot = snapshotPublicationParserValue(value);
   if (!snapshot.valid) return frozenResult(null, ["approvalReceipt must be a bounded JSON value"]);
   const errors: string[] = [];
   const receipt = exactRecord(snapshot.data, APPROVAL_KEYS, "approvalReceipt", errors);
@@ -90,7 +95,7 @@ export function parseBasicCountryPublicationApproval(
 export function parseBasicCountryPublicationManifestV2(
   value: unknown,
 ): ParseResult<BasicCountryPublicationManifestV2> {
-  const snapshot = snapshotBasicBoundedJsonValue(value);
+  const snapshot = snapshotPublicationParserValue(value);
   if (!snapshot.valid) return frozenResult(null, ["manifest must be a bounded JSON value"]);
   const errors: string[] = [];
   const manifest = exactRecord(snapshot.data, MANIFEST_KEYS, "manifest", errors);
@@ -119,6 +124,19 @@ export function parseBasicCountryPublicationManifestV2(
     approvalReceiptSha256: sha256(manifest.approvalReceiptSha256, "approvalReceiptSha256", errors),
   };
   return frozenResult(errors.length === 0 ? data : null, errors);
+}
+
+function snapshotPublicationParserValue(
+  value: unknown,
+): ReturnType<typeof snapshotBasicBoundedJsonValue> {
+  const snapshot = snapshotBasicBoundedJsonValue(
+    value,
+    () => undefined,
+    PUBLICATION_PARSER_BUDGETS,
+  );
+  return snapshot.valid && hasOnlyUnicodeScalarJsonStrings(snapshot.data)
+    ? snapshot
+    : { valid: false };
 }
 
 function parseSubmission(

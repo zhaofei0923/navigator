@@ -19,6 +19,8 @@ import {
   sep,
 } from "node:path";
 
+import { parseBasicStrictJsonText } from "./basic-strict-json.js";
+
 export interface BasicStableJsonArtifact {
   readonly bytes: Uint8Array;
   readonly value: unknown;
@@ -92,7 +94,11 @@ export function readBasicStableJsonFileSet<Key extends string>(
     const reads = files.map(({ key, identity }) => {
       const bytes = readRegularFile(identity);
       const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
-      return Object.freeze({ key, bytes, value: JSON.parse(text) as unknown });
+      return Object.freeze({
+        key,
+        bytes,
+        value: parseBasicStrictJsonText(text),
+      });
     });
 
     for (const { identity } of files) requireUnchangedFile(identity);

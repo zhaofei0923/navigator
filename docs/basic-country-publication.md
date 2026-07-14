@@ -28,7 +28,7 @@ data/staging/<countryDirectory>/<runId>/
 data/approvals/<countryDirectory>/<runId>.json
 ```
 
-回执是 strict JSON，必须恰好具有以下结构和 keys，不允许扩展字段：
+回执是 strict JSON，必须恰好具有以下结构和 keys，不允许扩展字段。任何层级的 object member name 都必须唯一；解码后相同的 escaped-equivalent name（例如 `a` 与 `\u0061`）也视为重复并 fail closed：
 
 ```json
 {
@@ -65,7 +65,7 @@ data/approvals/<countryDirectory>/<runId>.json
 
 ## 3. Publication manifest v2
 
-每个已发布 canonical country 目录必须且只能包含 `country.json`、`market-overview.json` 和 `collection-manifest.json`。其中 manifest 是 strict JSON，必须恰好具有以下六个字段：
+每个已发布 canonical country 目录必须且只能包含 `country.json`、`market-overview.json` 和 `collection-manifest.json`。其中 manifest 是 strict JSON，必须恰好具有以下六个字段，并遵守与回执相同的全层级 member-name 唯一性规则：
 
 ```json
 {
@@ -95,7 +95,7 @@ hash 始终针对稳定读取到的原始文件 bytes，而不是重新序列化
 2. `approvalReceiptSha256` 绑定独立批准回执的精确 bytes。
 3. manifest、回执、candidate 和 canonical mapping 共同形成一个 country/run publication identity。
 
-空白、换行或 object-key 顺序的任何字节变化都会改变 digest，即使解析后的 JSON 语义相同。digest 在严格解码小写 hex 后使用 constant-time byte comparison。loader 只从已派生的 repository path 读取 regular files，拒绝 symlink 和 special file，执行大小上限、held-descriptor identity checks、读取前后 identity checks，并要求 phase-two manifest bytes 与 phase-one 完全相同。
+空白、换行或 object-key 顺序的任何字节变化都会改变 digest，即使解析后的 JSON 语义相同。digest 在严格解码小写 hex 后使用 constant-time byte comparison。loader 只从已派生的 repository path 读取 regular files，拒绝 symlink 和 special file，执行大小上限、held-descriptor identity checks、读取前后 identity checks，并要求 phase-two manifest bytes 与 phase-one 完全相同。manifest、回执、四个 candidate artifact 以及 canonical country/market bytes 都必须先通过 bounded strict JSON text scan；scan 拒绝任意层级重复 members、非 Unicode scalar 文本、畸形语法和超限结构，之后才允许把语义值交给 validator。
 
 ## 5. 审核生命周期
 
@@ -124,7 +124,7 @@ hash 始终针对稳定读取到的原始文件 bytes，而不是重新序列化
 10. 按既有通用规则派生 coverage 并要求恰好为 `BASIC`：market overview 已发布，其余九个模块全部为 `BUILDING` 且 `dataCount = 0`。
 11. 要求没有 deep-module records、KnowledgeChunk、AI-eligible IDs 或未预期的 canonical artifacts。
 
-稳定 blocker codes 的顺序和全集恰好为：
+稳定 blocker category enumeration 的全集及公开 array 顺序恰好为：
 
 ```text
 MANIFEST_INVALID
@@ -139,6 +139,8 @@ BASIC_COVERAGE_VIOLATION
 AI_BOUNDARY_VIOLATION
 PUBLICATION_READ_FAILED
 ```
+
+这段 array 顺序是稳定的 category-set contract，不定义 validator 的 first-failure precedence。first-failure precedence 仅以上述编号 1-11 的 validator sequence 为准；因此 identity 在回执 hash 和 candidate hash 之前判定，即使公开 category array 中两个 hash category 排在 `PUBLICATION_IDENTITY_MISMATCH` 之前，也不得据此重排 validator。
 
 错误结果不包含 raw source content、绝对路径、reviewer notes、parser details 或底层 filesystem message。
 

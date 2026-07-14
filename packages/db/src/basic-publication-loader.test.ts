@@ -120,6 +120,7 @@ import { createBasicCountryPublicationFixture } from "./basic-publication-test-f
 import type { BasicCollectionAuditArtifactName } from "./collection/basic-offline-audit-artifacts.js";
 import type { BasicCountryPublicationManifestV2 } from "./collection/basic-publication-contracts.js";
 import { BASIC_COUNTRY_PUBLICATION_JSON_MAX_BYTES } from "./collection/basic-publication-contracts.js";
+import { sha256Hex } from "./collection/basic-publication-digests.js";
 import { loadApprovedBasicCountryPublicationV2 } from "./collection/basic-publication-loader.js";
 import { validateApprovedBasicCountryPublicationV2 } from "./collection/basic-publication-validator.js";
 
@@ -141,6 +142,11 @@ const PHASE_TWO_KEYS = [
   "marketOverview",
   "approvalReceipt",
   ...CANDIDATE_NAMES,
+] as const;
+const DUPLICATE_MEMBER_KINDS = [
+  "top-level",
+  "nested",
+  "escaped-equivalent",
 ] as const;
 
 type PhaseTwoKey = typeof PHASE_TWO_KEYS[number];
@@ -257,6 +263,22 @@ describe("approved Basic publication repository loader", () => {
     expect(Object.isFrozen(result)).toBe(true);
     expect(readerProbe.requests).toHaveLength(1);
   });
+
+  test.each(PHASE_TWO_KEYS.flatMap((key) =>
+    DUPLICATE_MEMBER_KINDS.map((kind) => [key, kind] as const)))(
+    "fails closed on %s repository bytes with %s duplicate members",
+    (key, kind) => {
+      const fixture = writePublicationRepository();
+      writeRepositoryDuplicate(fixture, key, kind);
+
+      const result = loadPublication(fixture);
+      const exposed = JSON.stringify(result);
+
+      expect(result).toEqual(publicationFailure("PUBLICATION_READ_FAILED"));
+      expect(exposed).not.toContain(fixture.root);
+      expect(exposed).not.toMatch(/duplicate|schemaVersion|nested|position/i);
+    },
+  );
 
   test.each([
     ["audit bundle", { auditBundlePath: "data/staging/example-land/run-002" }],
@@ -683,6 +705,71 @@ function writeManifest(
 
 function writeJson(pathname: string, value: unknown): void {
   writeFileSync(pathname, `${JSON.stringify(value)}\n`, "utf8");
+}
+
+function writeRepositoryDuplicate(
+  fixture: RepositoryFixture,
+  key: PhaseTwoKey,
+  kind: typeof DUPLICATE_MEMBER_KINDS[number],
+): void {
+  const duplicateBytes = withDuplicateJsonMembers(
+    readFileSync(fixture.paths[key]),
+    kind,
+  );
+  writeFileSync(fixture.paths[key], duplicateBytes);
+  if (key === "manifest" || key === "country" || key === "marketOverview") {
+    return;
+  }
+  if (key === "approvalReceipt") {
+    writeManifest(fixture, {
+      ...fixture.publication.manifest,
+      approvalReceiptSha256: sha256Hex(duplicateBytes),
+    });
+    return;
+  }
+
+  const receipt = structuredClone(fixture.publication.approvalReceipt);
+  const receiptBytes = new TextEncoder().encode(`${JSON.stringify({
+    ...receipt,
+    artifactSha256: {
+      ...receipt.artifactSha256,
+      [key]: sha256Hex(duplicateBytes),
+    },
+  })}\n`);
+  writeFileSync(fixture.paths.approvalReceipt, receiptBytes);
+  writeManifest(fixture, {
+    ...fixture.publication.manifest,
+    approvalReceiptSha256: sha256Hex(receiptBytes),
+  });
+}
+
+function withDuplicateJsonMembers(
+  bytes: Uint8Array,
+  kind: typeof DUPLICATE_MEMBER_KINDS[number],
+): Uint8Array {
+  const text = new TextDecoder().decode(bytes);
+  const parsed = JSON.parse(text) as Record<string, unknown>;
+  const key = Object.keys(parsed)[0];
+  if (key === undefined) throw new Error("fixture JSON object is empty");
+  const memberName = kind === "escaped-equivalent"
+    ? escapedEquivalentMemberName(key)
+    : JSON.stringify(key);
+  const memberValue = kind === "nested"
+    ? '{"nested":1,"nested":2}'
+    : JSON.stringify(parsed[key]);
+  if (memberValue === undefined) throw new Error("fixture JSON member is invalid");
+  return new TextEncoder().encode(
+    text.replace(/^\s*\{/u, (opening) =>
+      `${opening}${memberName}:${memberValue},`),
+  );
+}
+
+function escapedEquivalentMemberName(key: string): string {
+  const first = key.codePointAt(0);
+  if (first === undefined || first > 0x7f) {
+    throw new Error("fixture JSON key must start with ASCII");
+  }
+  return `"\\u${first.toString(16).padStart(4, "0")}${key.slice(1)}"`;
 }
 
 function createRoot(prefix: string): string {

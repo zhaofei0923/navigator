@@ -198,6 +198,41 @@ describe("stable JSON file-set reader", () => {
   });
 
   test.each([
+    ["top-level", '{"value":1,"value":2}'],
+    ["nested", '{"nested":{"value":1,"value":2}}'],
+    ["escaped-equivalent", '{"a":1,"\\u0061":2}'],
+  ])("rejects %s duplicate JSON members", (_label, json) => {
+    const { directory } = createDirectory();
+    writeFileSync(join(directory, "first.json"), json, "utf8");
+
+    expect(() => readBasicStableJsonFileSet({
+      files: { first: join(directory, "first.json") },
+      exactDirectories: [{ pathname: directory, entries: ["first.json"] }],
+      maximumBytes: BASIC_COUNTRY_PUBLICATION_JSON_MAX_BYTES,
+    })).toThrowError(READ_ERROR);
+  });
+
+  test("allows the same JSON member name in sibling objects", () => {
+    const { directory } = createDirectory();
+    writeFileSync(
+      join(directory, "first.json"),
+      '{"left":{"value":1},"right":{"value":2}}',
+      "utf8",
+    );
+
+    const result = readBasicStableJsonFileSet({
+      files: { first: join(directory, "first.json") },
+      exactDirectories: [{ pathname: directory, entries: ["first.json"] }],
+      maximumBytes: BASIC_COUNTRY_PUBLICATION_JSON_MAX_BYTES,
+    });
+
+    expect(result.first.value).toEqual({
+      left: { value: 1 },
+      right: { value: 2 },
+    });
+  });
+
+  test.each([
     ["non-absolute", "first.json"],
     ["unnormalized", "nested/../first.json"],
     ["NUL-containing", "first.json\0"],

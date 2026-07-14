@@ -202,7 +202,9 @@ The first failed stage returns a stable blocker code and no validated publicatio
 
 ## Stable Blocker Categories
 
-The public result distinguishes only actionable categories:
+The public result distinguishes only the following actionable categories. This
+list is the stable public category enumeration, and its array order is not the
+validator's first-failure precedence:
 
 - `MANIFEST_INVALID`
 - `APPROVAL_RECEIPT_INVALID`
@@ -215,6 +217,11 @@ The public result distinguishes only actionable categories:
 - `BASIC_COVERAGE_VIOLATION`
 - `AI_BOUNDARY_VIOLATION`
 - `PUBLICATION_READ_FAILED`
+
+The numbered **Validation Sequence** above is the sole authority for
+first-failure precedence. In particular, publication identity is checked before
+receipt and candidate hashes even though the stable public category array lists
+the two hash categories before `PUBLICATION_IDENTITY_MISMATCH`.
 
 Detailed internal parser errors may be used in unit tests, but production callers receive only these categories and a boolean validity result.
 
