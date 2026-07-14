@@ -25,6 +25,34 @@ describe("Basic publication parsers", () => {
     expect(Object.isFrozen(manifest.data)).toBe(true);
   });
 
+  test("exposes a candidate with the approval receipt country identity", () => {
+    const fixture = createBasicCountryPublicationFixture();
+    const { candidate, approvalReceipt } = fixture;
+    const countryCodeFact = candidate.extractedFacts.facts.find(
+      ({ fieldPath }) => fieldPath === "country.code",
+    );
+    const marketOverviewCountryCodeFact = candidate.extractedFacts.facts.find(
+      ({ fieldPath }) => fieldPath === "marketOverview.countryCode",
+    );
+    const flagFact = candidate.extractedFacts.facts.find(
+      ({ fieldPath }) => fieldPath === "country.flagEmoji",
+    );
+
+    expect(candidate.sourceRegister.countryCode).toBe(approvalReceipt.countryCode);
+    expect(candidate.extractedFacts.countryCode).toBe(approvalReceipt.countryCode);
+    expect(candidate.reviewReport.countryCode).toBe(approvalReceipt.countryCode);
+    expect(candidate.marketOverviewDraft.countryCode).toBe(approvalReceipt.countryCode);
+    expect(countryCodeFact?.evidence.map(({ rawValue, normalizedValue }) => [rawValue, normalizedValue])).toEqual([
+      [approvalReceipt.countryCode, approvalReceipt.countryCode],
+    ]);
+    expect(marketOverviewCountryCodeFact?.evidence.map(({ rawValue, normalizedValue }) => [rawValue, normalizedValue])).toEqual([
+      [approvalReceipt.countryCode, approvalReceipt.countryCode],
+    ]);
+    expect(flagFact?.evidence.map(({ rawValue, normalizedValue }) => [rawValue, normalizedValue])).toEqual([
+      [approvalReceipt.countryCode, "\uD83C\uDDEA\uD83C\uDDFD"],
+    ]);
+  });
+
   test.each([
     ...["schemaVersion", "countryDirectory", "countryCode", "runId", "submission", "decision", "reviewerId", "decidedAt", "authorizedPublication", "artifactSha256"].map((key) => [
       `missing approval ${key}`,
