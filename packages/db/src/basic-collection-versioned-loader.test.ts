@@ -43,14 +43,18 @@ import {
   createBasicCollectionAuditV2Fixture,
 } from "./basic-collection-test-fixture.js";
 import type { BasicCollectionAuditBundle } from "./collection/basic-collection-contracts.js";
+import type { BasicCollectionAuditArtifactName } from "./collection/basic-offline-audit-artifacts.js";
+import { BASIC_COUNTRY_PUBLICATION_JSON_MAX_BYTES } from "./collection/basic-publication-contracts.js";
 import {
   BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION,
   type BasicCollectionAuditBundleV2,
 } from "./collection/basic-collection-v2-contracts.js";
-import { loadBasicCollectionAuditBundleVersioned } from "./collection/basic-collection-versioned-loader.js";
+import {
+  loadBasicCollectionAuditBundleVersioned,
+  validateBasicCollectionAuditArtifactValuesVersioned,
+} from "./collection/basic-collection-versioned-loader.js";
 
 const roots = new Set<string>();
-const MAX_ARTIFACT_BYTES = 2 * 1024 * 1024;
 
 afterEach(() => {
   fsProbe.legacyReadFileCalls = 0;
@@ -61,6 +65,24 @@ afterEach(() => {
 });
 
 describe("versioned Basic collection audit loader", () => {
+  test("dispatches pure v1 and v2 artifact values without filesystem reads", () => {
+    const v1 = createBasicCollectionAuditFixture();
+    expect(validateBasicCollectionAuditArtifactValuesVersioned(
+      v1.countryDirectory,
+      v1.runId,
+      artifactValues(v1),
+    )).toEqual(v1);
+
+    const v2 = createV2Bundle();
+    expect(validateBasicCollectionAuditArtifactValuesVersioned(
+      v2.countryDirectory,
+      v2.runId,
+      artifactValues(v2),
+    )).toEqual(v2);
+    expect(fsProbe.readHookCalls).toBe(0);
+    expect(fsProbe.legacyReadFileCalls).toBe(0);
+  });
+
   test("loads pure v1 and pure v2 directories", () => {
     const v1 = createBasicCollectionAuditFixture();
     const v1Root = writeBundle(v1);
@@ -218,7 +240,7 @@ describe("versioned Basic collection audit loader", () => {
     const root = writeBundle(bundle);
     writeFileSync(
       join(stagingDirectory(root, bundle), "source-register.json"),
-      Buffer.alloc(MAX_ARTIFACT_BYTES + 1, 0x20),
+      Buffer.alloc(BASIC_COUNTRY_PUBLICATION_JSON_MAX_BYTES + 1, 0x20),
     );
 
     const message = thrownMessage(() => loadBasicCollectionAuditBundleVersioned(
@@ -251,6 +273,24 @@ describe("versioned Basic collection audit loader", () => {
     expect(fsProbe.readHookCalls).toBe(0);
   });
 
+  test("rejects an extra staging entry outside the four-file allowlist", () => {
+    const bundle = createV2Bundle();
+    const root = writeBundle(bundle);
+    writeFileSync(
+      join(stagingDirectory(root, bundle), "unexpected.json"),
+      "{}",
+      "utf8",
+    );
+
+    const message = thrownMessage(() => loadBasicCollectionAuditBundleVersioned(
+      root,
+      bundle.countryDirectory,
+      bundle.runId,
+    ));
+    expect(message).toBe("Basic collection audit artifacts could not be read");
+    expect(message).not.toMatch(/unexpected|basic-versioned/);
+  });
+
   test("rejects an artifact pathname replaced while its descriptor is read", () => {
     const bundle = createV2Bundle();
     const root = writeBundle(bundle);
@@ -258,7 +298,7 @@ describe("versioned Basic collection audit loader", () => {
       stagingDirectory(root, bundle),
       "source-register.json",
     );
-    const replacement = `${pathname}.replacement`;
+    const replacement = join(root, "replacement.json");
     writeJson(replacement, bundle.sourceRegister);
     fsProbe.onRead = () => renameSync(replacement, pathname);
 
@@ -292,6 +332,17 @@ interface StagingBundle {
   readonly extractedFacts: unknown;
   readonly marketOverviewDraft: unknown;
   readonly reviewReport: unknown;
+}
+
+function artifactValues(
+  bundle: StagingBundle,
+): Readonly<Record<BasicCollectionAuditArtifactName, unknown>> {
+  return {
+    "source-register.json": bundle.sourceRegister,
+    "extracted-facts.json": bundle.extractedFacts,
+    "market-overview.draft.json": bundle.marketOverviewDraft,
+    "review-report.json": bundle.reviewReport,
+  };
 }
 
 function writeBundle(bundle: StagingBundle): string {
