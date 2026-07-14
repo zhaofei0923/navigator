@@ -245,6 +245,21 @@ describe("stable JSON file-set reader", () => {
     expect(fsProbe.readCalls).toBe(0);
   });
 
+  test("rejects one requested file hard-linked outside its exact directory", () => {
+    const { directory, root } = createDirectory();
+    const requested = join(directory, "first.json");
+    const external = join(root, "external.json");
+    writeFileSync(requested, "{}", "utf8");
+    linkSync(requested, external);
+
+    expect(() => readBasicStableJsonFileSet({
+      files: { first: requested },
+      exactDirectories: [{ pathname: directory, entries: ["first.json"] }],
+      maximumBytes: BASIC_COUNTRY_PUBLICATION_JSON_MAX_BYTES,
+    })).toThrowError(READ_ERROR);
+    expect(fsProbe.readCalls).toBe(0);
+  });
+
   test("rejects non-root trailing-separator exact directory aliases", () => {
     const { directory } = createDirectory();
     const pathname = join(directory, "first.json");

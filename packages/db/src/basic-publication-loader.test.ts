@@ -522,6 +522,51 @@ describe("approved Basic publication repository loader", () => {
     expect(violations).toEqual([]);
   });
 
+  test.each([
+    ["fetch alias", 'const send = fetch; send("https://example.test");'],
+    ["eval alias", 'const execute = eval; execute("1 + 1");'],
+    ["Function alias", "const Constructor = Function; void Constructor;"],
+    ["globalThis process route", "void globalThis.process;"],
+    ["globalThis clock route", "globalThis.Date.now();"],
+    ["global element route", 'void global["process"];'],
+    ["WebSocket construction", 'new WebSocket("wss://example.test");'],
+    ["XMLHttpRequest alias", "const Request = XMLHttpRequest; void Request;"],
+    ["EventSource alias", "const Events = EventSource; void Events;"],
+    ["timeout alias", "const later = setTimeout; void later;"],
+    ["interval alias", "const repeat = setInterval; void repeat;"],
+    ["createRequire alias", "const requireFactory = createRequire; void requireFactory;"],
+    ["createRequire module", 'import { createRequire } from "node:module";'],
+    ["vm module", 'import type { Context } from "vm"; type Probe = Context;'],
+    ["inspector module", 'import "node:inspector";'],
+    ["async hooks module", 'export { executionAsyncId } from "async_hooks";'],
+    ["network module", 'import type { Agent } from "node:http"; type Probe = Agent;'],
+    ["filesystem stream alias", "const writer = createWriteStream; void writer;"],
+    ["process environment alias", "const runtime = process; void runtime.env;"],
+    ["performance alias", "const clock = performance; void clock.now();"],
+    ["hrtime alias", "const clock = hrtime; void clock;"],
+    ["Date alias", "const Clock = Date; void Clock.now();"],
+  ])("rejects a %s capability reference or module", (_case, source) => {
+    const sourceFile = parseTypeScript("capability-probe.ts", source);
+    const specifiers = staticProductionDependencies(sourceFile);
+
+    expect(productionCapabilityViolations(sourceFile, specifiers)).not.toEqual([]);
+  });
+
+  test("allows direct Date.parse without matching capability words in comments or strings", () => {
+    const sourceFile = parseTypeScript("lexical-probe.ts", `
+      // fetch process writeFile must remain lexical text only.
+      const words = "fetch process writeFile globalThis WebSocket";
+      const parsed = Date.parse("2026-07-14T00:00:00Z");
+      void words;
+      void parsed;
+    `);
+
+    expect(productionCapabilityViolations(
+      sourceFile,
+      staticProductionDependencies(sourceFile),
+    )).toEqual([]);
+  });
+
   test("production dependency parsing includes normal, type, side-effect, and export-from edges", () => {
     const sourceFile = parseTypeScript("dependency-probe.ts", `
       import { value } from "./normal.js";
@@ -819,6 +864,34 @@ function resolveProductionDependency(
   return null;
 }
 
+const DANGEROUS_RUNTIME_IDENTIFIERS = new Map<string, string>([
+  ["EventSource", "network API: EventSource"],
+  ["Function", "runtime code execution: Function"],
+  ["WebSocket", "network API: WebSocket"],
+  ["XMLHttpRequest", "network API: XMLHttpRequest"],
+  ["createRequire", "runtime module loading: createRequire"],
+  ["eval", "runtime code execution: eval"],
+  ["fetch", "network API: fetch"],
+  ["global", "global capability API: global"],
+  ["globalThis", "global capability API: globalThis"],
+  ["hrtime", "clock API: hrtime"],
+  ["performance", "clock API: performance"],
+  ["process", "environment/process API"],
+  ["setInterval", "timer API: setInterval"],
+  ["setTimeout", "timer API: setTimeout"],
+]);
+
+const FILESYSTEM_WRITE_APIS = new Set([
+  "appendFile", "appendFileSync", "chmod", "chmodSync", "chown", "chownSync",
+  "copyFile", "copyFileSync", "cp", "cpSync", "createWriteStream", "fchmod",
+  "fchmodSync", "fchown", "fchownSync", "ftruncate", "ftruncateSync", "futimes",
+  "futimesSync", "lchown", "lchownSync", "link", "linkSync", "lutimes",
+  "lutimesSync", "mkdir", "mkdirSync", "mkdtemp", "mkdtempSync", "rename",
+  "renameSync", "rm", "rmSync", "rmdir", "rmdirSync", "symlink", "symlinkSync",
+  "truncate", "truncateSync", "unlink", "unlinkSync", "utimes", "utimesSync",
+  "write", "writeFile", "writeFileSync", "writeSync",
+]);
+
 function productionCapabilityViolations(
   sourceFile: ts.SourceFile,
   specifiers: readonly string[],
@@ -831,7 +904,7 @@ function productionCapabilityViolations(
       specifier.startsWith("node:fs/") ||
       specifier === "@prisma/client" ||
       specifier.startsWith("@prisma/client/") ||
-      /^(?:node:)?(?:child_process|worker_threads|cluster|process|http|https|net|tls|dgram|dns)(?:\/|$)/u.test(specifier) ||
+      /^(?:node:)?(?:child_process|worker_threads|cluster|process|module|vm|inspector|async_hooks|http|https|net|tls|dgram|dns)(?:\/|$)/u.test(specifier) ||
       /^(?:undici|node-fetch)(?:\/|$)/u.test(specifier)
     ) violations.add(`forbidden module: ${specifier}`);
     if (
@@ -840,20 +913,10 @@ function productionCapabilityViolations(
     ) violations.add(`node:fs outside stable reader: ${sourceFile.fileName}`);
   }
 
-  const writeApis = new Set([
-    "appendFile", "appendFileSync", "chmod", "chmodSync", "chown", "chownSync",
-    "copyFile", "copyFileSync", "cp", "cpSync", "createWriteStream", "fchmod",
-    "fchmodSync", "fchown", "fchownSync", "ftruncate", "ftruncateSync", "futimes",
-    "futimesSync", "lchown", "lchownSync", "link", "linkSync", "lutimes",
-    "lutimesSync", "mkdir", "mkdirSync", "mkdtemp", "mkdtempSync", "rename",
-    "renameSync", "rm", "rmSync", "rmdir", "rmdirSync", "symlink", "symlinkSync",
-    "truncate", "truncateSync", "unlink", "unlinkSync", "utimes", "utimesSync",
-    "write", "writeFile", "writeFileSync", "writeSync",
-  ]);
   visitNodes(sourceFile, (node) => {
     if (ts.isCallExpression(node) || ts.isNewExpression(node)) {
       const name = calledExpressionName(node.expression);
-      if (name !== null && writeApis.has(name)) {
+      if (name !== null && FILESYSTEM_WRITE_APIS.has(name)) {
         violations.add(`filesystem write API: ${name}`);
       }
       if (name === "fetch") violations.add("network API: fetch");
@@ -863,9 +926,12 @@ function productionCapabilityViolations(
       if (name === "Date") violations.add("clock API: Date");
     }
     if (ts.isIdentifier(node) && isRuntimeIdentifierReference(node)) {
-      if (node.text === "process") violations.add("environment/process API");
-      if (node.text === "performance" || node.text === "hrtime") {
-        violations.add(`clock API: ${node.text}`);
+      const dangerousCapability = DANGEROUS_RUNTIME_IDENTIFIERS.get(node.text);
+      if (dangerousCapability !== undefined) {
+        violations.add(dangerousCapability);
+      }
+      if (FILESYSTEM_WRITE_APIS.has(node.text)) {
+        violations.add(`filesystem write API: ${node.text}`);
       }
       if (
         node.text === "Date" &&

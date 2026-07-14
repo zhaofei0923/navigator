@@ -53,6 +53,7 @@ type FileIdentity = Readonly<{
   pathname: string;
   dev: bigint;
   ino: bigint;
+  nlink: bigint;
   type: bigint;
   size: bigint;
   mtimeNs: bigint;
@@ -248,6 +249,7 @@ function snapshotRegularFile(pathname: string, maximumBytes: number): FileIdenti
   if (
     details.isSymbolicLink() ||
     !details.isFile() ||
+    details.nlink !== 1n ||
     details.size > BigInt(maximumBytes)
   ) throw new Error(READ_ERROR);
   return fileIdentity(pathname, details);
@@ -360,6 +362,7 @@ function fileIdentity(pathname: string, details: BigIntStats): FileIdentity {
     pathname,
     dev: details.dev,
     ino: details.ino,
+    nlink: details.nlink,
     type: details.mode & FILE_TYPE_MASK,
     size: details.size,
     mtimeNs: details.mtimeNs,
@@ -370,6 +373,7 @@ function fileIdentity(pathname: string, details: BigIntStats): FileIdentity {
 function sameFileSnapshot(expected: FileIdentity, actual: BigIntStats): boolean {
   return actual.dev === expected.dev &&
     actual.ino === expected.ino &&
+    actual.nlink === expected.nlink &&
     (actual.mode & FILE_TYPE_MASK) === expected.type &&
     actual.size === expected.size &&
     actual.mtimeNs === expected.mtimeNs &&
