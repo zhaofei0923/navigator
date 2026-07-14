@@ -45,6 +45,9 @@ type DirectoryIdentity = Readonly<{
   dev: bigint;
   ino: bigint;
   type: bigint;
+  mtimeNs: bigint;
+  ctimeNs: bigint;
+  strictMetadata: boolean;
 }>;
 type FileIdentity = Readonly<{
   pathname: string;
@@ -197,22 +200,34 @@ function snapshotDirectoryChains<Key extends string>(
     ...request.exactDirectories.map(({ pathname }) => pathname),
     ...request.files.map(({ pathname }) => dirname(pathname)),
   ]);
+  const strictMetadataRoot = commonDirectory([...targets]);
   for (const pathname of targets) {
     const root = parse(pathname).root;
     let current = root;
-    if (!identities.has(current)) identities.set(current, snapshotDirectory(current));
+    if (!identities.has(current)) {
+      identities.set(current, snapshotDirectory(
+        current,
+        isPathAtOrBelow(strictMetadataRoot, current),
+      ));
+    }
     for (const segment of relative(root, pathname).split(sep)) {
       if (segment === "") continue;
       current = join(current, segment);
       if (!identities.has(current)) {
-        identities.set(current, snapshotDirectory(current));
+        identities.set(current, snapshotDirectory(
+          current,
+          isPathAtOrBelow(strictMetadataRoot, current),
+        ));
       }
     }
   }
   return Object.freeze([...identities.values()]);
 }
 
-function snapshotDirectory(pathname: string): DirectoryIdentity {
+function snapshotDirectory(
+  pathname: string,
+  strictMetadata: boolean,
+): DirectoryIdentity {
   const details = lstatBigInt(pathname);
   if (details.isSymbolicLink() || !details.isDirectory()) {
     throw new Error(READ_ERROR);
@@ -222,6 +237,9 @@ function snapshotDirectory(pathname: string): DirectoryIdentity {
     dev: details.dev,
     ino: details.ino,
     type: details.mode & FILE_TYPE_MASK,
+    mtimeNs: details.mtimeNs,
+    ctimeNs: details.ctimeNs,
+    strictMetadata,
   });
 }
 
@@ -281,9 +299,23 @@ function requireUnchangedDirectories(
       !details.isDirectory() ||
       details.dev !== identity.dev ||
       details.ino !== identity.ino ||
-      (details.mode & FILE_TYPE_MASK) !== identity.type
+      (details.mode & FILE_TYPE_MASK) !== identity.type ||
+      directoryMetadataChanged(identity, details)
     ) throw new Error(READ_ERROR);
   }
+}
+
+function directoryMetadataChanged(
+  expected: DirectoryIdentity,
+  actual: BigIntStats,
+): boolean {
+  const mtimeChanged = actual.mtimeNs !== expected.mtimeNs;
+  const ctimeChanged = actual.ctimeNs !== expected.ctimeNs;
+  if (expected.strictMetadata) return mtimeChanged || ctimeChanged;
+
+  // Shared ancestors may gain unrelated siblings; rename of the held inode
+  // changes ctime without changing its directory-entry content timestamp.
+  return ctimeChanged && !mtimeChanged;
 }
 
 function requireUnchangedFile(expected: FileIdentity): void {
@@ -301,6 +333,26 @@ function requireExactDirectoryEntries(expected: DirectoryExpectation): void {
     actual.length !== expected.entries.length ||
     actual.some((entry, index) => entry !== expected.entries[index])
   ) throw new Error(READ_ERROR);
+}
+
+function commonDirectory(pathnames: readonly string[]): string {
+  const first = pathnames[0];
+  if (first === undefined) throw new Error(READ_ERROR);
+  let common = first;
+  while (pathnames.some((pathname) => !isPathAtOrBelow(common, pathname))) {
+    const parent = dirname(common);
+    if (parent === common) throw new Error(READ_ERROR);
+    common = parent;
+  }
+  return common;
+}
+
+function isPathAtOrBelow(parent: string, pathname: string): boolean {
+  const difference = relative(parent, pathname);
+  return difference === "" ||
+    difference !== ".." &&
+      !difference.startsWith(`..${sep}`) &&
+      !isAbsolute(difference);
 }
 
 function fileIdentity(pathname: string, details: BigIntStats): FileIdentity {

@@ -13,6 +13,9 @@ import { join } from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 const fsProbe = vi.hoisted(() => ({
+  beforeLstatPathname: null as string | null,
+  matchedLstats: 0,
+  onBeforeLstat: null as (() => void) | null,
   onReadCall: null as Readonly<{
     callIndex: number;
     run: () => void;
@@ -25,6 +28,21 @@ vi.mock("node:fs", async (importOriginal) => {
   const actual = await importOriginal<typeof import("node:fs")>();
   return {
     ...actual,
+    lstatSync(...args: Parameters<typeof actual.lstatSync>) {
+      const pathname: unknown = args[0];
+      if (
+        pathname === fsProbe.beforeLstatPathname &&
+        fsProbe.onBeforeLstat !== null
+      ) {
+        fsProbe.matchedLstats += 1;
+        const hook = fsProbe.onBeforeLstat;
+        fsProbe.onBeforeLstat = null;
+        hook();
+      }
+      return Reflect.apply(actual.lstatSync, undefined, args) as ReturnType<
+        typeof actual.lstatSync
+      >;
+    },
     readSync(...args: Parameters<typeof actual.readSync>) {
       const result = Reflect.apply(actual.readSync, undefined, args) as number;
       const callIndex = fsProbe.readCalls;
@@ -48,6 +66,9 @@ const roots = new Set<string>();
 const READ_ERROR = /^Stable JSON artifacts could not be read$/;
 
 afterEach(() => {
+  fsProbe.beforeLstatPathname = null;
+  fsProbe.matchedLstats = 0;
+  fsProbe.onBeforeLstat = null;
   fsProbe.onReadCall = null;
   fsProbe.readCalls = 0;
   fsProbe.readTargets.length = 0;
@@ -345,6 +366,46 @@ describe("stable JSON file-set reader", () => {
     expect(message).not.toMatch(/UTF-8|Unexpected|position|first\.json/);
   });
 
+  test("rejects a same-name replacement before the target file baseline", () => {
+    const { directory, root } = createDirectory();
+    const pathname = join(directory, "first.json");
+    const replacement = join(root, "replacement.json");
+    const bytes = '{"value":1}\n';
+    writeFileSync(pathname, bytes, "utf8");
+    writeFileSync(replacement, bytes, "utf8");
+    armBeforeLstat(pathname, () => renameSync(replacement, pathname));
+
+    expect(() => readBasicStableJsonFileSet({
+      files: { first: pathname },
+      exactDirectories: [{ pathname: directory, entries: ["first.json"] }],
+      maximumBytes: BASIC_COUNTRY_PUBLICATION_JSON_MAX_BYTES,
+    })).toThrowError(READ_ERROR);
+    expect(fsProbe.matchedLstats).toBe(1);
+    expect(fsProbe.readCalls).toBeGreaterThan(0);
+  });
+
+  test("rejects an ancestor directory renamed out and back before the file baseline", () => {
+    const root = createRoot();
+    const ancestor = join(root, "ancestor");
+    const directory = join(ancestor, "artifacts");
+    const displaced = join(root, "displaced");
+    const pathname = join(directory, "first.json");
+    mkdirSync(directory, { recursive: true });
+    writeFileSync(pathname, '{"value":1}\n', "utf8");
+    armBeforeLstat(pathname, () => {
+      renameSync(ancestor, displaced);
+      renameSync(displaced, ancestor);
+    });
+
+    expect(() => readBasicStableJsonFileSet({
+      files: { first: pathname },
+      exactDirectories: [{ pathname: directory, entries: ["first.json"] }],
+      maximumBytes: BASIC_COUNTRY_PUBLICATION_JSON_MAX_BYTES,
+    })).toThrowError(READ_ERROR);
+    expect(fsProbe.matchedLstats).toBe(1);
+    expect(fsProbe.readCalls).toBeGreaterThan(0);
+  });
+
   test("rejects a target pathname replaced during its descriptor read", () => {
     const { directory, root } = createDirectory();
     const pathname = join(directory, "first.json");
@@ -459,6 +520,11 @@ function writeTwoFileDirectory(directory: string, value: number): void {
   mkdirSync(directory);
   writeFileSync(join(directory, "first.json"), JSON.stringify({ value }), "utf8");
   writeFileSync(join(directory, "second.json"), JSON.stringify({ value }), "utf8");
+}
+
+function armBeforeLstat(pathname: string, mutate: () => void): void {
+  fsProbe.beforeLstatPathname = pathname;
+  fsProbe.onBeforeLstat = mutate;
 }
 
 function thrownMessage(operation: () => unknown): string {

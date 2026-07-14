@@ -5,6 +5,7 @@ import {
   mkdtempSync,
   openSync,
   readFileSync,
+  readdirSync,
   readSync,
   renameSync,
   rmSync,
@@ -12,9 +13,17 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, dirname, join, resolve } from "node:path";
+import {
+  basename,
+  isAbsolute,
+  join,
+  relative,
+  resolve,
+  sep,
+} from "node:path";
 import { fileURLToPath } from "node:url";
 
+import ts from "typescript";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 const readerProbe = vi.hoisted(() => ({
@@ -23,8 +32,11 @@ const readerProbe = vi.hoisted(() => ({
 }));
 
 const fsProbe = vi.hoisted(() => ({
+  beforeLstatPathname: null as string | null,
   fileByDescriptor: new Map<number, string>(),
+  matchedLstats: 0,
   matchedReads: 0,
+  onBeforeLstat: null as (() => void) | null,
   onMatchedRead: null as (() => void) | null,
   pathname: null as string | null,
   readCalls: 0,
@@ -34,6 +46,21 @@ vi.mock("node:fs", async (importOriginal) => {
   const actual = await importOriginal<typeof import("node:fs")>();
   return {
     ...actual,
+    lstatSync(...args: Parameters<typeof actual.lstatSync>) {
+      const pathname: unknown = args[0];
+      if (
+        pathname === fsProbe.beforeLstatPathname &&
+        fsProbe.onBeforeLstat !== null
+      ) {
+        fsProbe.matchedLstats += 1;
+        const hook = fsProbe.onBeforeLstat;
+        fsProbe.onBeforeLstat = null;
+        hook();
+      }
+      return Reflect.apply(actual.lstatSync, undefined, args) as ReturnType<
+        typeof actual.lstatSync
+      >;
+    },
     openSync(...args: Parameters<typeof actual.openSync>) {
       const descriptor = Reflect.apply(actual.openSync, undefined, args) as number;
       const pathname: unknown = args[0];
@@ -121,8 +148,11 @@ type PhaseTwoKey = typeof PHASE_TWO_KEYS[number];
 afterEach(() => {
   readerProbe.afterRead = null;
   readerProbe.requests.length = 0;
+  fsProbe.beforeLstatPathname = null;
   fsProbe.fileByDescriptor.clear();
+  fsProbe.matchedLstats = 0;
   fsProbe.matchedReads = 0;
+  fsProbe.onBeforeLstat = null;
   fsProbe.onMatchedRead = null;
   fsProbe.pathname = null;
   fsProbe.readCalls = 0;
@@ -289,7 +319,7 @@ describe("approved Basic publication repository loader", () => {
     expect(readerProbe.requests).toHaveLength(2);
   });
 
-  test.each(["root", "canonical", "staging", "approval", "file"] as const)(
+  test.each(["root", "canonical", "staging", "approval"] as const)(
     "rejects a symlinked %s path without leaking its target",
     (kind) => {
       const fixture = writePublicationRepository();
@@ -304,8 +334,6 @@ describe("approved Basic publication repository loader", () => {
         replaceDirectoryWithSymlink(join(fixture.root, "data", "staging"));
       } else if (kind === "approval") {
         replaceDirectoryWithSymlink(join(fixture.root, "data", "approvals"));
-      } else {
-        replaceFileWithSymlink(fixture.paths["source-register.json"]);
       }
 
       const result = loadApprovedBasicCountryPublicationV2(
@@ -315,6 +343,21 @@ describe("approved Basic publication repository loader", () => {
       const exposed = JSON.stringify(result);
       expect(result).toEqual(publicationFailure("PUBLICATION_READ_FAILED"));
       expect(exposed).not.toMatch(/symlink|ELOOP|\.real|basic-publication-link/);
+    },
+  );
+
+  test.each(PHASE_TWO_KEYS)(
+    "rejects a direct-file symlink for phase-two target %s with exact allowlists",
+    (key) => {
+      const fixture = writePublicationRepository();
+      const displaced = join(fixture.root, `displaced-${safeFilename(key)}.json`);
+      replaceFileWithSymlink(fixture.paths[key], displaced);
+
+      expectExactDirectoryEntries(fixture);
+      const result = loadPublication(fixture);
+      const exposed = JSON.stringify(result);
+      expect(result).toEqual(publicationFailure("PUBLICATION_READ_FAILED"));
+      expect(exposed).not.toMatch(/symlink|ELOOP|displaced-|basic-publication-loader/);
     },
   );
 
@@ -344,6 +387,26 @@ describe("approved Basic publication repository loader", () => {
     expect(readerProbe.requests).toHaveLength(2);
     expect(Object.keys(requestAt(1).files)).toHaveLength(8);
   });
+
+  test.each(PHASE_TWO_KEYS)(
+    "rejects early phase-two same-name replacement of %s before its file baseline",
+    (key) => {
+      const fixture = writePublicationRepository();
+      const pathname = fixture.paths[key];
+      const replacement = join(fixture.root, `replacement-${safeFilename(key)}`);
+      writeFileSync(replacement, readFileSync(pathname));
+      readerProbe.afterRead = () => armLstatMutation(
+        pathname,
+        () => renameSync(replacement, pathname),
+      );
+
+      expect(loadPublication(fixture)).toEqual(
+        publicationFailure("PUBLICATION_READ_FAILED"),
+      );
+      expect(readerProbe.requests).toHaveLength(2);
+      expect(fsProbe.matchedLstats).toBe(1);
+    },
+  );
 
   test.each(PHASE_TWO_KEYS)(
     "rejects phase-two replacement of %s while its held descriptor is read",
@@ -424,19 +487,21 @@ describe("approved Basic publication repository loader", () => {
       import.meta.url,
     ));
     const closure = readProductionDependencyClosure(entry);
-    const forbidden = [
-      /@prisma\/client/u,
-      /(?:node:)?child_process/u,
-      /\bfetch\s*\(/u,
-      /\b(?:writeFile|appendFile|rename|unlink|rm|mkdir)(?:Sync)?\s*\(/u,
-      /process\.env/u,
-    ];
-
+    const sharedSchema = resolve(fileURLToPath(new URL(
+      "../../../packages/shared-types/src/schema.ts",
+      import.meta.url,
+    )));
+    expect(closure.has(sharedSchema)).toBe(true);
+    const violations: string[] = [];
+    let nodeFsOwnerCount = 0;
     for (const [pathname, source] of closure) {
-      for (const pattern of forbidden) expect(source, pathname).not.toMatch(pattern);
-      if (source.includes('from "node:fs"')) {
+      const sourceFile = parseTypeScript(pathname, source);
+      const specifiers = staticProductionDependencies(sourceFile);
+      violations.push(...productionCapabilityViolations(sourceFile, specifiers));
+      if (specifiers.includes("node:fs")) {
+        nodeFsOwnerCount += 1;
         expect(basename(pathname)).toBe("basic-stable-json-file-set.ts");
-        expect(nodeFsImports(source)).toEqual([
+        expect(nodeFsImports(sourceFile)).toEqual([
           "BigIntStats",
           "closeSync",
           "constants",
@@ -446,8 +511,44 @@ describe("approved Basic publication repository loader", () => {
           "readSync",
           "readdirSync",
         ]);
+        expect(openSyncFlagSets(sourceFile)).toEqual([[
+          "O_NOFOLLOW",
+          "O_NONBLOCK",
+          "O_RDONLY",
+        ]]);
       }
     }
+    expect(nodeFsOwnerCount).toBe(1);
+    expect(violations).toEqual([]);
+  });
+
+  test("production dependency parsing includes normal, type, side-effect, and export-from edges", () => {
+    const sourceFile = parseTypeScript("dependency-probe.ts", `
+      import { value } from "./normal.js";
+      import type { Shape } from "./type.js";
+      import "./side-effect.js";
+      export { forwarded } from "./exported.js";
+      void value;
+      type Probe = Shape;
+    `);
+
+    expect(staticProductionDependencies(sourceFile)).toEqual([
+      "./normal.js",
+      "./type.js",
+      "./side-effect.js",
+      "./exported.js",
+    ]);
+  });
+
+  test.each([
+    ["dynamic import", 'void import("./dynamic.js");'],
+    ["require call", 'require("./required.js");'],
+  ])("production dependency parsing rejects a %s edge", (_case, source) => {
+    const sourceFile = parseTypeScript("dependency-probe.ts", source);
+
+    expect(() => staticProductionDependencies(sourceFile)).toThrowError(
+      /^Dynamic import and require calls are forbidden in production closure$/,
+    );
   });
 });
 
@@ -529,10 +630,23 @@ function replaceDirectoryWithSymlink(pathname: string): void {
   symlinkSync(displaced, pathname, "dir");
 }
 
-function replaceFileWithSymlink(pathname: string): void {
-  const displaced = `${pathname}.real`;
+function replaceFileWithSymlink(pathname: string, displaced: string): void {
   renameSync(pathname, displaced);
   symlinkSync(displaced, pathname, "file");
+}
+
+function expectExactDirectoryEntries(fixture: RepositoryFixture): void {
+  expect(readdirSync(fixture.canonicalDirectory).sort()).toEqual(
+    [...CANONICAL_NAMES].sort(),
+  );
+  expect(readdirSync(fixture.candidateDirectory).sort()).toEqual(
+    [...CANDIDATE_NAMES].sort(),
+  );
+}
+
+function armLstatMutation(pathname: string, mutate: () => void): void {
+  fsProbe.beforeLstatPathname = pathname;
+  fsProbe.onBeforeLstat = mutate;
 }
 
 function armReadMutation(pathname: string, mutate: () => void): void {
@@ -586,6 +700,7 @@ function expectRequestShape(fixture: RepositoryFixture): void {
 }
 
 function readProductionDependencyClosure(entry: string): Map<string, string> {
+  const workspaceRoot = resolve(fileURLToPath(new URL("../../../", import.meta.url)));
   const closure = new Map<string, string>();
   const pending = [entry];
   while (pending.length > 0) {
@@ -593,28 +708,287 @@ function readProductionDependencyClosure(entry: string): Map<string, string> {
     if (pathname === undefined || closure.has(pathname)) continue;
     const source = readFileSync(pathname, "utf8");
     closure.set(pathname, source);
-    for (const specifier of relativeImports(source)) {
-      const dependency = resolve(dirname(pathname), specifier.replace(/\.js$/u, ".ts"));
-      pending.push(dependency);
+    const sourceFile = parseTypeScript(pathname, source);
+    for (const specifier of staticProductionDependencies(sourceFile)) {
+      const dependency = resolveProductionDependency(
+        specifier,
+        pathname,
+        workspaceRoot,
+      );
+      if (dependency !== null) pending.push(dependency);
     }
   }
   return closure;
 }
 
-function relativeImports(source: string): readonly string[] {
-  return [...source.matchAll(/\bfrom\s+["'](\.[^"']+)["']/gu)]
-    .map((match) => match[1])
-    .filter((value): value is string => value !== undefined);
+function parseTypeScript(pathname: string, source: string): ts.SourceFile {
+  return ts.createSourceFile(
+    pathname,
+    source,
+    ts.ScriptTarget.ES2022,
+    true,
+    ts.ScriptKind.TS,
+  );
 }
 
-function nodeFsImports(source: string): readonly string[] {
+function staticProductionDependencies(sourceFile: ts.SourceFile): readonly string[] {
+  const specifiers: string[] = [];
+  for (const statement of sourceFile.statements) {
+    if (ts.isImportDeclaration(statement)) {
+      specifiers.push(literalModuleSpecifier(statement.moduleSpecifier));
+    } else if (
+      ts.isExportDeclaration(statement) &&
+      statement.moduleSpecifier !== undefined
+    ) {
+      specifiers.push(literalModuleSpecifier(statement.moduleSpecifier));
+    } else if (
+      ts.isImportEqualsDeclaration(statement) &&
+      ts.isExternalModuleReference(statement.moduleReference) &&
+      statement.moduleReference.expression !== undefined
+    ) {
+      specifiers.push(literalModuleSpecifier(
+        statement.moduleReference.expression,
+      ));
+    }
+  }
+  visitNodes(sourceFile, (node) => {
+    if (
+      ts.isCallExpression(node) &&
+      (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
+        isRequireCallee(node.expression))
+    ) {
+      throw new Error(
+        "Dynamic import and require calls are forbidden in production closure",
+      );
+    }
+  });
+  return Object.freeze(specifiers);
+}
+
+function literalModuleSpecifier(expression: ts.Expression): string {
+  if (!ts.isStringLiteralLike(expression)) {
+    throw new Error("Production module specifiers must be string literals");
+  }
+  return expression.text;
+}
+
+function isRequireCallee(expression: ts.Expression): boolean {
+  return ts.isIdentifier(expression) && expression.text === "require" ||
+    ts.isPropertyAccessExpression(expression) &&
+      ts.isIdentifier(expression.expression) &&
+      expression.expression.text === "require";
+}
+
+function resolveProductionDependency(
+  specifier: string,
+  containingFile: string,
+  workspaceRoot: string,
+): string | null {
+  if (specifier.startsWith("node:")) return null;
+  const result = ts.resolveModuleName(
+    specifier,
+    containingFile,
+    {
+      module: ts.ModuleKind.NodeNext,
+      moduleResolution: ts.ModuleResolutionKind.NodeNext,
+      target: ts.ScriptTarget.ES2022,
+    },
+    ts.sys,
+  ).resolvedModule;
+  if (result === undefined) {
+    if (specifier.startsWith(".") || specifier.startsWith("@navigator/")) {
+      throw new Error(`Production dependency could not be resolved: ${specifier}`);
+    }
+    return null;
+  }
+  const resolvedFile = ts.sys.realpath?.(result.resolvedFileName) ??
+    result.resolvedFileName;
+  const dependency = resolve(resolvedFile);
+  const workspaceRelative = relative(workspaceRoot, dependency);
+  const isWorkspaceDependency = workspaceRelative !== "" &&
+    workspaceRelative !== ".." &&
+    !workspaceRelative.startsWith(`..${sep}`) &&
+    !isAbsolute(workspaceRelative) &&
+    !workspaceRelative.split(sep).includes("node_modules");
+  if (specifier.startsWith(".") || isWorkspaceDependency) {
+    if (!isWorkspaceDependency || !dependency.endsWith(".ts")) {
+      throw new Error(`Production source dependency escaped workspace: ${specifier}`);
+    }
+    return dependency;
+  }
+  return null;
+}
+
+function productionCapabilityViolations(
+  sourceFile: ts.SourceFile,
+  specifiers: readonly string[],
+): readonly string[] {
+  const violations = new Set<string>();
+  for (const specifier of specifiers) {
+    if (
+      specifier === "fs" ||
+      specifier.startsWith("fs/") ||
+      specifier.startsWith("node:fs/") ||
+      specifier === "@prisma/client" ||
+      specifier.startsWith("@prisma/client/") ||
+      /^(?:node:)?(?:child_process|worker_threads|cluster|process|http|https|net|tls|dgram|dns)(?:\/|$)/u.test(specifier) ||
+      /^(?:undici|node-fetch)(?:\/|$)/u.test(specifier)
+    ) violations.add(`forbidden module: ${specifier}`);
+    if (
+      specifier === "node:fs" &&
+      basename(sourceFile.fileName) !== "basic-stable-json-file-set.ts"
+    ) violations.add(`node:fs outside stable reader: ${sourceFile.fileName}`);
+  }
+
+  const writeApis = new Set([
+    "appendFile", "appendFileSync", "chmod", "chmodSync", "chown", "chownSync",
+    "copyFile", "copyFileSync", "cp", "cpSync", "createWriteStream", "fchmod",
+    "fchmodSync", "fchown", "fchownSync", "ftruncate", "ftruncateSync", "futimes",
+    "futimesSync", "lchown", "lchownSync", "link", "linkSync", "lutimes",
+    "lutimesSync", "mkdir", "mkdirSync", "mkdtemp", "mkdtempSync", "rename",
+    "renameSync", "rm", "rmSync", "rmdir", "rmdirSync", "symlink", "symlinkSync",
+    "truncate", "truncateSync", "unlink", "unlinkSync", "utimes", "utimesSync",
+    "write", "writeFile", "writeFileSync", "writeSync",
+  ]);
+  visitNodes(sourceFile, (node) => {
+    if (ts.isCallExpression(node) || ts.isNewExpression(node)) {
+      const name = calledExpressionName(node.expression);
+      if (name !== null && writeApis.has(name)) {
+        violations.add(`filesystem write API: ${name}`);
+      }
+      if (name === "fetch") violations.add("network API: fetch");
+      if (name === "eval" || name === "Function") {
+        violations.add(`runtime code execution: ${name}`);
+      }
+      if (name === "Date") violations.add("clock API: Date");
+    }
+    if (ts.isIdentifier(node) && isRuntimeIdentifierReference(node)) {
+      if (node.text === "process") violations.add("environment/process API");
+      if (node.text === "performance" || node.text === "hrtime") {
+        violations.add(`clock API: ${node.text}`);
+      }
+      if (
+        node.text === "Date" &&
+        !isAllowedDateParseReference(node)
+      ) violations.add("clock API: Date");
+    }
+    if (
+      ts.isPropertyAccessExpression(node) &&
+      node.name.text === "hrtime"
+    ) violations.add("clock API: hrtime");
+  });
+  return [...violations].sort();
+}
+
+function nodeFsImports(sourceFile: ts.SourceFile): readonly string[] {
   const names: string[] = [];
-  for (const match of source.matchAll(
-    /import(?:\s+type)?\s*\{([^}]+)\}\s*from\s*"node:fs"/gu,
-  )) {
-    const block = match[1];
-    if (block === undefined) continue;
-    names.push(...block.split(",").map((name) => name.trim()).filter(Boolean));
+  for (const statement of sourceFile.statements) {
+    if (
+      !ts.isImportDeclaration(statement) ||
+      literalModuleSpecifier(statement.moduleSpecifier) !== "node:fs"
+    ) continue;
+    const clause = statement.importClause;
+    if (clause?.name !== undefined) names.push(`default:${clause.name.text}`);
+    if (clause?.namedBindings !== undefined) {
+      if (ts.isNamespaceImport(clause.namedBindings)) {
+        names.push(`namespace:${clause.namedBindings.name.text}`);
+      } else {
+        for (const element of clause.namedBindings.elements) {
+          const imported = element.propertyName?.text ?? element.name.text;
+          names.push(imported === element.name.text
+            ? imported
+            : `${imported} as ${element.name.text}`);
+        }
+      }
+    }
   }
   return names.sort();
+}
+
+function openSyncFlagSets(sourceFile: ts.SourceFile): readonly (readonly string[])[] {
+  const flagSets: string[][] = [];
+  let invalidReference = false;
+  visitNodes(sourceFile, (node) => {
+    if (!ts.isIdentifier(node) || node.text !== "openSync") return;
+    if (ts.isImportSpecifier(node.parent)) return;
+    if (
+      !ts.isCallExpression(node.parent) ||
+      node.parent.expression !== node ||
+      node.parent.arguments[1] === undefined
+    ) {
+      invalidReference = true;
+      return;
+    }
+    const flags = bitwiseConstantFlags(node.parent.arguments[1]);
+    if (flags === null) invalidReference = true;
+    else flagSets.push(flags.sort());
+  });
+  if (invalidReference) {
+    throw new Error("openSync must be called directly with static read-only flags");
+  }
+  return flagSets;
+}
+
+function bitwiseConstantFlags(expression: ts.Expression): string[] | null {
+  if (ts.isParenthesizedExpression(expression)) {
+    return bitwiseConstantFlags(expression.expression);
+  }
+  if (
+    ts.isBinaryExpression(expression) &&
+    expression.operatorToken.kind === ts.SyntaxKind.BarToken
+  ) {
+    const left = bitwiseConstantFlags(expression.left);
+    const right = bitwiseConstantFlags(expression.right);
+    return left === null || right === null ? null : [...left, ...right];
+  }
+  if (
+    ts.isPropertyAccessExpression(expression) &&
+    ts.isIdentifier(expression.expression) &&
+    expression.expression.text === "constants" &&
+    /^O_[A-Z]+$/u.test(expression.name.text)
+  ) return [expression.name.text];
+  return null;
+}
+
+function calledExpressionName(expression: ts.Expression): string | null {
+  if (ts.isIdentifier(expression)) return expression.text;
+  if (ts.isPropertyAccessExpression(expression)) return expression.name.text;
+  if (
+    ts.isElementAccessExpression(expression) &&
+    expression.argumentExpression !== undefined &&
+    ts.isStringLiteralLike(expression.argumentExpression)
+  ) return expression.argumentExpression.text;
+  return null;
+}
+
+function isRuntimeIdentifierReference(node: ts.Identifier): boolean {
+  const parent = node.parent;
+  if (
+    ts.isImportSpecifier(parent) ||
+    ts.isImportClause(parent) ||
+    ts.isNamespaceImport(parent) ||
+    ts.isBindingElement(parent) && parent.name === node ||
+    ts.isVariableDeclaration(parent) && parent.name === node ||
+    ts.isParameter(parent) && parent.name === node ||
+    ts.isFunctionDeclaration(parent) && parent.name === node ||
+    ts.isPropertyAccessExpression(parent) && parent.name === node ||
+    ts.isPropertyAssignment(parent) && parent.name === node
+  ) return false;
+  return true;
+}
+
+function isAllowedDateParseReference(node: ts.Identifier): boolean {
+  return ts.isPropertyAccessExpression(node.parent) &&
+    node.parent.expression === node &&
+    node.parent.name.text === "parse" &&
+    ts.isCallExpression(node.parent.parent) &&
+    node.parent.parent.expression === node.parent;
+}
+
+function visitNodes(root: ts.Node, visit: (node: ts.Node) => void): void {
+  const walk = (node: ts.Node): void => {
+    visit(node);
+    ts.forEachChild(node, walk);
+  };
+  walk(root);
 }
