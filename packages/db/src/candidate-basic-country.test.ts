@@ -14,7 +14,6 @@ describe("candidate:basic-country CLI", () => {
   test.each([
     [[]],
     [[CONFIG_PATH, "extra.json"]],
-    [["--help"]],
     [[""]],
   ])("accepts exactly one positional config path: %j", async (args) => {
     const fixture = cliFixture();
@@ -27,6 +26,26 @@ describe("candidate:basic-country CLI", () => {
     expect(fixture.compose).not.toHaveBeenCalled();
     expect(fixture.write).not.toHaveBeenCalled();
   });
+
+  test.each([[["--help"]], [["--", "--help"]]])(
+    "prints usage without constructing runtime dependencies: %j",
+    async (args) => {
+      const fixture = cliFixture();
+
+      const exitCode = await runCandidateBasicCountryCli(
+        args,
+        fixture.dependencies,
+      );
+
+      expect(exitCode).toBe(0);
+      expect(fixture.stdout).toEqual([
+        "Usage: pnpm candidate:basic-country -- .cache/basic-country/<ISO2>/<runId>/candidate-config.json\n",
+      ]);
+      expect(fixture.stderr).toEqual([]);
+      expect(fixture.compose).not.toHaveBeenCalled();
+      expect(fixture.write).not.toHaveBeenCalled();
+    },
+  );
 
   test("writes a ready candidate and emits one fixed success line", async () => {
     const fixture = cliFixture("ready");
@@ -152,7 +171,7 @@ describe("candidate:basic-country CLI", () => {
     )) as { scripts: Record<string, string> };
 
     expect(packageJson.scripts["candidate:basic-country"])
-      .toBe("node src/cli/candidate-basic-country.ts");
+      .toBe("node --import ../../scripts/node-ts-source-hook.mjs src/cli/candidate-basic-country.ts");
     expect(rootPackageJson.scripts["candidate:basic-country"])
       .toBe("pnpm --filter @navigator/db candidate:basic-country");
   });

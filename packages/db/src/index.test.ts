@@ -55,6 +55,10 @@ import type {
   BasicSourceFamily,
   BasicSourceRecord,
   BasicSourceRegister,
+  BasicActivationCountPort,
+  BasicActivationModel,
+  BasicActivationScope,
+  BasicCountryActivationPreflightResult,
   BasicCollectionAuditArtifactsV2,
   BasicCollectionAuditBundleV2,
   BasicDeterministicCandidateResult,
@@ -171,6 +175,7 @@ import {
   loadBasicCollectionAuditBundle,
   loadBasicCollectionAuditBundleVersioned,
   loadBasicCountryBundle,
+  preflightBasicCountryActivation,
   runBasicDeterministicCandidate,
   runBasicDeterministicSourceAdapters,
   runBasicHermesDiscovery,
@@ -191,6 +196,17 @@ describe("@navigator/db", () => {
     expect(loadBasicCountryBundle).toBeTypeOf("function");
     expect(validateBasicCountryBundle).toBeTypeOf("function");
     expect(buildBasicCountryImportPlan).toBeTypeOf("function");
+  });
+
+  test("exports the read-only Basic activation preflight API", () => {
+    expect(preflightBasicCountryActivation).toBeTypeOf("function");
+    const typeWitness: [
+      BasicActivationModel,
+      BasicActivationScope,
+      BasicActivationCountPort,
+      BasicCountryActivationPreflightResult,
+    ] | null = null;
+    expect(typeWitness).toBeNull();
   });
 
   test("exports the Basic collection audit API", () => {

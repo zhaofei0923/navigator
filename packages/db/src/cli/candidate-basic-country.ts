@@ -1,5 +1,4 @@
 import { realpath } from "node:fs/promises";
-import { registerHooks } from "node:module";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -29,12 +28,22 @@ export interface BasicCandidateCliDependencies {
   writeStderr(value: string): void;
 }
 
+const USAGE =
+  "Usage: pnpm candidate:basic-country -- .cache/basic-country/<ISO2>/<runId>/candidate-config.json";
+
 let defaultDependencies: Promise<BasicCandidateCliDependencies> | null = null;
 
 export async function runCandidateBasicCountryCli(
   args: readonly string[],
   dependencies?: BasicCandidateCliDependencies,
 ): Promise<number> {
+  if (
+    (args.length === 1 && args[0] === "--help") ||
+    (args.length === 2 && args[0] === "--" && args[1] === "--help")
+  ) {
+    emit(dependencies?.writeStdout ?? process.stdout.write.bind(process.stdout), `${USAGE}\n`);
+    return 0;
+  }
   const configPath = Array.isArray(args) && args.length === 2 && args[0] === "--"
     ? args[1]
     : Array.isArray(args) && args.length === 1
@@ -140,21 +149,6 @@ async function loadDefaultDependencies(): Promise<BasicCandidateCliDependencies>
   return defaultDependencies;
 }
 
-function registerLocalTypeScriptResolution(): void {
-  const sourceRoot = new URL("../", import.meta.url).href;
-  registerHooks({
-    resolve(specifier, context, nextResolve) {
-      if (
-        specifier.startsWith(".") && specifier.endsWith(".js") &&
-        context.parentURL?.startsWith(sourceRoot) === true
-      ) {
-        return nextResolve(`${specifier.slice(0, -3)}.ts`, context);
-      }
-      return nextResolve(specifier, context);
-    },
-  });
-}
-
 function emit(writer: (value: string) => void, value: string): void {
   try {
     writer(value);
@@ -174,7 +168,6 @@ function invalid(): never {
 const entrypoint = process.argv[1] ? pathToFileURL(process.argv[1]).href : "";
 if (import.meta.url === entrypoint) {
   try {
-    registerLocalTypeScriptResolution();
     process.exitCode = await runCandidateBasicCountryCli(process.argv.slice(2));
   } catch {
     emit(writeProcessStderr, "basic candidate error\n");
