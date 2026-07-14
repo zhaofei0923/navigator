@@ -67,6 +67,15 @@ export function readBasicStableJsonFileSet<Key extends string>(
   try {
     const validated = validateRequest(request);
     const directories = snapshotDirectoryChains(validated);
+    const exactDirectoryPaths = new Set(
+      validated.exactDirectories.map(({ pathname }) => pathname),
+    );
+    const exactDirectorySnapshots = directories.filter(({ pathname }) =>
+      exactDirectoryPaths.has(pathname));
+    if (exactDirectorySnapshots.length !== validated.exactDirectories.length) {
+      throw new Error(READ_ERROR);
+    }
+    requireUniqueSnapshotIdentities(exactDirectorySnapshots);
     for (const expected of validated.exactDirectories) {
       requireExactDirectoryEntries(expected);
     }
@@ -75,6 +84,7 @@ export function readBasicStableJsonFileSet<Key extends string>(
       key,
       identity: snapshotRegularFile(pathname, validated.maximumBytes),
     }));
+    requireUniqueSnapshotIdentities(files.map(({ identity }) => identity));
     const reads = files.map(({ key, identity }) => {
       const bytes = readRegularFile(identity);
       const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
@@ -168,38 +178,15 @@ function validateRequest<Key extends string>(
     return Object.freeze({ pathname, entries: Object.freeze(entries) });
   });
   if (
-    exactDirectories.length === 0 ||
     new Set(exactDirectories.map(({ pathname }) => pathname)).size !==
       exactDirectories.length
   ) throw new Error(READ_ERROR);
 
-  requireExactFileAllowlist(files, exactDirectories);
   return Object.freeze({
     files: Object.freeze(files),
     exactDirectories: Object.freeze(exactDirectories),
     maximumBytes: maximumBytes as number,
   });
-}
-
-function requireExactFileAllowlist<Key extends string>(
-  files: readonly Readonly<{ key: Key; pathname: string }>[],
-  exactDirectories: readonly DirectoryExpectation[],
-): void {
-  const expectedPaths = new Set<string>();
-  for (const directory of exactDirectories) {
-    for (const entry of directory.entries) {
-      expectedPaths.add(join(directory.pathname, entry));
-    }
-  }
-  const targetPaths = new Set(files.map(({ pathname }) => pathname));
-  if (
-    expectedPaths.size !== targetPaths.size ||
-    [...expectedPaths].some((pathname) => !targetPaths.has(pathname)) ||
-    files.some(({ pathname }) =>
-      !exactDirectories.some((directory) =>
-        directory.pathname === dirname(pathname) &&
-        directory.entries.includes(basename(pathname))))
-  ) throw new Error(READ_ERROR);
 }
 
 function snapshotDirectoryChains<Key extends string>(
@@ -337,6 +324,21 @@ function sameFileSnapshot(expected: FileIdentity, actual: BigIntStats): boolean 
     actual.ctimeNs === expected.ctimeNs;
 }
 
+function requireUniqueSnapshotIdentities(
+  snapshots: readonly Readonly<{
+    dev: bigint;
+    ino: bigint;
+    type: bigint;
+  }>[],
+): void {
+  const identities = new Set<string>();
+  for (const snapshot of snapshots) {
+    const identity = `${snapshot.dev}:${snapshot.ino}:${snapshot.type}`;
+    if (identities.has(identity)) throw new Error(READ_ERROR);
+    identities.add(identity);
+  }
+}
+
 function recursivelyFreezeJson(value: unknown): unknown {
   if (value === null || typeof value !== "object") return value;
   for (const key of Object.keys(value)) {
@@ -350,9 +352,11 @@ function recursivelyFreezeJson(value: unknown): unknown {
 }
 
 function requireNormalizedAbsolutePath(pathname: string): void {
+  const root = parse(pathname).root;
   if (
     pathname.includes("\0") ||
     !isAbsolute(pathname) ||
+    (pathname !== root && pathname.endsWith(sep)) ||
     normalize(pathname) !== pathname
   ) throw new Error(READ_ERROR);
 }

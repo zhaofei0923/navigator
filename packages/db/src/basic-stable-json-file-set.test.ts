@@ -1,4 +1,5 @@
 import {
+  linkSync,
   mkdirSync,
   mkdtempSync,
   renameSync,
@@ -12,8 +13,12 @@ import { join } from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 const fsProbe = vi.hoisted(() => ({
-  onRead: null as (() => void) | null,
+  onReadCall: null as Readonly<{
+    callIndex: number;
+    run: () => void;
+  }> | null,
   readCalls: 0,
+  readTargets: [] as Uint8Array[],
 }));
 
 vi.mock("node:fs", async (importOriginal) => {
@@ -22,10 +27,15 @@ vi.mock("node:fs", async (importOriginal) => {
     ...actual,
     readSync(...args: Parameters<typeof actual.readSync>) {
       const result = Reflect.apply(actual.readSync, undefined, args) as number;
+      const callIndex = fsProbe.readCalls;
+      const target: unknown = args[1];
+      if (target instanceof Uint8Array) fsProbe.readTargets.push(target);
       fsProbe.readCalls += 1;
-      const hook = fsProbe.onRead;
-      fsProbe.onRead = null;
-      hook?.();
+      const hook = fsProbe.onReadCall;
+      if (hook?.callIndex === callIndex) {
+        fsProbe.onReadCall = null;
+        hook.run();
+      }
       return result;
     },
   };
@@ -38,8 +48,9 @@ const roots = new Set<string>();
 const READ_ERROR = /^Stable JSON artifacts could not be read$/;
 
 afterEach(() => {
-  fsProbe.onRead = null;
+  fsProbe.onReadCall = null;
   fsProbe.readCalls = 0;
+  fsProbe.readTargets.length = 0;
   for (const root of roots) rmSync(root, { recursive: true, force: true });
   roots.clear();
 });
@@ -79,6 +90,26 @@ describe("stable JSON file-set reader", () => {
     expect(Object.isFrozen(result.first.bytes)).toBe(false);
   });
 
+  test("returns bytes detached from the internal readSync target", () => {
+    const { directory } = createDirectory();
+    writeFileSync(join(directory, "first.json"), '{"value":1}\n', "utf8");
+
+    const result = readBasicStableJsonFileSet({
+      files: { first: join(directory, "first.json") },
+      exactDirectories: [{ pathname: directory, entries: ["first.json"] }],
+      maximumBytes: BASIC_COUNTRY_PUBLICATION_JSON_MAX_BYTES,
+    });
+    const returnedBytes = new Uint8Array(result.first.bytes);
+    const internalTarget = fsProbe.readTargets[0];
+
+    expect(internalTarget).toBeInstanceOf(Uint8Array);
+    if (internalTarget === undefined) throw new Error("read target was not captured");
+    expect(internalTarget).not.toBe(result.first.bytes);
+    internalTarget.fill(0);
+    expect(result.first.bytes).toEqual(returnedBytes);
+    expect(new TextDecoder().decode(result.first.bytes)).toBe('{"value":1}\n');
+  });
+
   test("reads one stable snapshot across multiple exact directories", () => {
     const root = createRoot();
     const firstDirectory = join(root, "first");
@@ -102,6 +133,47 @@ describe("stable JSON file-set reader", () => {
 
     expect(result.first.value).toEqual({ value: 1 });
     expect(result.second.value).toEqual({ value: 2 });
+  });
+
+  test("reads a manifest while asserting additional exact directory entries", () => {
+    const { directory } = createDirectory();
+    writeFileSync(join(directory, "country.json"), "{}", "utf8");
+    writeFileSync(join(directory, "market-overview.json"), "{}", "utf8");
+    writeFileSync(
+      join(directory, "collection-manifest.json"),
+      '{"schemaVersion":"collection-manifest/v1"}\n',
+      "utf8",
+    );
+
+    const result = readBasicStableJsonFileSet({
+      files: { manifest: join(directory, "collection-manifest.json") },
+      exactDirectories: [{
+        pathname: directory,
+        entries: [
+          "country.json",
+          "market-overview.json",
+          "collection-manifest.json",
+        ],
+      }],
+      maximumBytes: BASIC_COUNTRY_PUBLICATION_JSON_MAX_BYTES,
+    });
+
+    expect(result.manifest.value).toEqual({
+      schemaVersion: "collection-manifest/v1",
+    });
+  });
+
+  test("reads a file whose parent has no exact directory assertion", () => {
+    const { directory } = createDirectory();
+    writeFileSync(join(directory, "first.json"), '{"value":1}', "utf8");
+
+    const result = readBasicStableJsonFileSet({
+      files: { first: join(directory, "first.json") },
+      exactDirectories: [],
+      maximumBytes: BASIC_COUNTRY_PUBLICATION_JSON_MAX_BYTES,
+    });
+
+    expect(result.first.value).toEqual({ value: 1 });
   });
 
   test.each([
@@ -132,6 +204,40 @@ describe("stable JSON file-set reader", () => {
       exactDirectories: [{ pathname: directory, entries: ["first.json"] }],
       maximumBytes: BASIC_COUNTRY_PUBLICATION_JSON_MAX_BYTES,
     })).toThrowError(READ_ERROR);
+  });
+
+  test("rejects hard-linked file target aliases after snapshotting", () => {
+    const { directory } = createDirectory();
+    const first = join(directory, "first.json");
+    const second = join(directory, "second.json");
+    writeFileSync(first, "{}", "utf8");
+    linkSync(first, second);
+
+    expect(() => readBasicStableJsonFileSet({
+      files: { first, second },
+      exactDirectories: [{
+        pathname: directory,
+        entries: ["first.json", "second.json"],
+      }],
+      maximumBytes: BASIC_COUNTRY_PUBLICATION_JSON_MAX_BYTES,
+    })).toThrowError(READ_ERROR);
+    expect(fsProbe.readCalls).toBe(0);
+  });
+
+  test("rejects non-root trailing-separator exact directory aliases", () => {
+    const { directory } = createDirectory();
+    const pathname = join(directory, "first.json");
+    writeFileSync(pathname, "{}", "utf8");
+
+    expect(() => readBasicStableJsonFileSet({
+      files: { first: pathname },
+      exactDirectories: [
+        { pathname: directory, entries: ["first.json"] },
+        { pathname: `${directory}/`, entries: ["first.json"] },
+      ],
+      maximumBytes: BASIC_COUNTRY_PUBLICATION_JSON_MAX_BYTES,
+    })).toThrowError(READ_ERROR);
+    expect(fsProbe.readCalls).toBe(0);
   });
 
   test.each(["missing", "extra"])(
@@ -245,7 +351,10 @@ describe("stable JSON file-set reader", () => {
     const replacement = join(root, "replacement.json");
     writeFileSync(pathname, '{"value":1}', "utf8");
     writeFileSync(replacement, '{"value":2}', "utf8");
-    fsProbe.onRead = () => renameSync(replacement, pathname);
+    fsProbe.onReadCall = {
+      callIndex: 0,
+      run: () => renameSync(replacement, pathname),
+    };
 
     expect(() => readBasicStableJsonFileSet({
       files: { first: pathname },
@@ -262,9 +371,12 @@ describe("stable JSON file-set reader", () => {
     const displaced = join(root, "displaced");
     writeTwoFileDirectory(directory, 1);
     writeTwoFileDirectory(replacement, 2);
-    fsProbe.onRead = () => {
-      renameSync(directory, displaced);
-      renameSync(replacement, directory);
+    fsProbe.onReadCall = {
+      callIndex: 0,
+      run: () => {
+        renameSync(directory, displaced);
+        renameSync(replacement, directory);
+      },
     };
 
     expect(() => readBasicStableJsonFileSet({
@@ -281,11 +393,44 @@ describe("stable JSON file-set reader", () => {
     expect(fsProbe.readCalls).toBeGreaterThan(0);
   });
 
+  test("rejects directory A changed during a later read from directory B", () => {
+    const root = createRoot();
+    const firstDirectory = join(root, "a");
+    const secondDirectory = join(root, "b");
+    mkdirSync(firstDirectory);
+    mkdirSync(secondDirectory);
+    writeFileSync(join(firstDirectory, "value.json"), '{"value":1}', "utf8");
+    writeFileSync(join(secondDirectory, "value.json"), '{"value":2}', "utf8");
+    fsProbe.onReadCall = {
+      callIndex: 2,
+      run: () => {
+        writeFileSync(join(firstDirectory, "unexpected.json"), "{}", "utf8");
+      },
+    };
+
+    expect(() => readBasicStableJsonFileSet({
+      files: {
+        first: join(firstDirectory, "value.json"),
+        second: join(secondDirectory, "value.json"),
+      },
+      exactDirectories: [
+        { pathname: firstDirectory, entries: ["value.json"] },
+        { pathname: secondDirectory, entries: ["value.json"] },
+      ],
+      maximumBytes: BASIC_COUNTRY_PUBLICATION_JSON_MAX_BYTES,
+    })).toThrowError(READ_ERROR);
+    expect(fsProbe.readCalls).toBeGreaterThan(2);
+    expect(fsProbe.onReadCall).toBeNull();
+  });
+
   test("rejects exact directory entries changed during the set read", () => {
     const { directory } = createDirectory();
     writeFileSync(join(directory, "first.json"), "{}", "utf8");
-    fsProbe.onRead = () => {
-      writeFileSync(join(directory, "unexpected.json"), "{}", "utf8");
+    fsProbe.onReadCall = {
+      callIndex: 0,
+      run: () => {
+        writeFileSync(join(directory, "unexpected.json"), "{}", "utf8");
+      },
     };
 
     expect(() => readBasicStableJsonFileSet({
