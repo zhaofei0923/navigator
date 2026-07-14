@@ -49,6 +49,11 @@ const DEEP_MODULES = [
   "chineseCompanies",
   "reports",
 ] as const;
+const LONE_SURROGATE_CASES = [
+  ["high", "\uD800"],
+  ["low", "\uDC00"],
+] as const;
+const SMILING_FACE = "\uD83D\uDE00";
 
 describe("approved Basic v2 publication validator", () => {
   test("returns exact frozen canonical data without byte arrays or parser errors", () => {
@@ -303,6 +308,94 @@ describe("approved Basic v2 publication validator", () => {
       );
       refreshApprovalForCandidateBytes(input);
     });
+  });
+
+  test.each(LONE_SURROGATE_CASES)(
+    "maps a manifest-bound receipt with an escaped lone %s surrogate to receipt invalid",
+    (_label, surrogate) => {
+      expectBlocker("APPROVAL_RECEIPT_INVALID", (input) => {
+        record(input, "approvalReceipt").reviewerId = surrogate;
+        refreshReceiptBytes(input);
+      });
+    },
+  );
+
+  test.each(LONE_SURROGATE_CASES)(
+    "maps receipt-bound candidate display text with an escaped lone %s surrogate to not ready",
+    (_label, surrogate) => {
+      expectBlocker("CANDIDATE_NOT_READY", (input) => {
+        const replacement = { zh: surrogate, en: "Valid summary" };
+        for (const item of array(candidateFact(input, "country.summary"), "evidence")) {
+          const evidence = record(item, "summary evidence");
+          evidence.rawValue = structuredClone(replacement);
+          evidence.normalizedValue = structuredClone(replacement);
+        }
+        record(record(input, "canonical"), "country").summary = replacement;
+        refreshCandidateApproval(input);
+      });
+    },
+  );
+
+  test.each(LONE_SURROGATE_CASES)(
+    "maps a receipt-bound candidate object key with an escaped lone %s surrogate to not ready",
+    (_label, surrogate) => {
+      expectBlocker("CANDIDATE_NOT_READY", (input) => {
+        const evidence = record(
+          array(candidateFact(input, "country.summary"), "evidence")[0],
+          "summary evidence",
+        );
+        evidence.rawValue = { [surrogate]: "value" };
+        refreshCandidateApproval(input);
+      });
+    },
+  );
+
+  test("accepts escaped proper surrogate pairs in display strings and object keys", () => {
+    const fixture = createBasicCountryPublicationFixture();
+    const input = structuredClone(fixture.validationInput) as unknown as MutableRecord;
+    const replacement = {
+      zh: "示例摘要" + SMILING_FACE,
+      en: "Example summary " + SMILING_FACE,
+    };
+    const evidenceItems = array(candidateFact(input, "country.summary"), "evidence");
+    for (const item of evidenceItems) {
+      const evidence = record(item, "summary evidence");
+      evidence.rawValue = structuredClone(replacement);
+      evidence.normalizedValue = structuredClone(replacement);
+    }
+    record(evidenceItems[0], "summary evidence").rawValue = {
+      [SMILING_FACE]: "valid supplementary key",
+    };
+    record(record(input, "canonical"), "country").summary = replacement;
+    record(input, "approvalReceipt").reviewerId = "reviewer-" + SMILING_FACE;
+    refreshCandidateApproval(input);
+    setCandidateArtifactBytes(
+      input,
+      "extracted-facts.json",
+      encodeJsonWithEscapedSmilingFace(
+        record(record(input, "candidate"), "extractedFacts"),
+      ),
+    );
+    refreshApprovalForCandidateBytes(input);
+    input.approvalReceiptBytes = encodeJsonWithEscapedSmilingFace(input.approvalReceipt);
+    record(input, "manifest").approvalReceiptSha256 = sha256Hex(
+      bytes(input.approvalReceiptBytes, "receipt"),
+    );
+    expect(new TextDecoder().decode(candidateBytes(
+      input,
+      "extracted-facts.json",
+    ))).toContain("\\uD83D\\uDE00");
+    expect(new TextDecoder().decode(
+      bytes(input.approvalReceiptBytes, "receipt"),
+    )).toContain("\\uD83D\\uDE00");
+
+    const result = validateApprovedBasicCountryPublicationV2(
+      input as unknown as BasicCountryPublicationValidationInput,
+    );
+
+    expect(result.valid).toBe(true);
+    expect(result.data?.approvalReceipt.reviewerId).toBe("reviewer-" + SMILING_FACE);
+    expect(result.data?.canonical.country.summary).toEqual(replacement);
   });
 
   test.each([
@@ -654,6 +747,14 @@ function refreshReceiptBytes(input: MutableRecord): void {
   const receiptBytes = encodeJson(input.approvalReceipt);
   input.approvalReceiptBytes = receiptBytes;
   record(input, "manifest").approvalReceiptSha256 = sha256Hex(receiptBytes);
+}
+
+function encodeJsonWithEscapedSmilingFace(value: unknown): Uint8Array {
+  const serialized = JSON.stringify(value);
+  if (serialized === undefined) throw new Error("fixture JSON is not serializable");
+  return new TextEncoder().encode(
+    serialized.replaceAll(SMILING_FACE, "\\uD83D\\uDE00") + "\n",
+  );
 }
 
 function encodeJson(value: unknown): Uint8Array {

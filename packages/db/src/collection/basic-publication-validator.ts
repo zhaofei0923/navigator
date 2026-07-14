@@ -67,6 +67,10 @@ const PUBLICATION_SNAPSHOT_BUDGETS = Object.freeze({
   maximumObjectProperties: 256,
   maximumTotalNodes: 65_536,
 });
+const HIGH_SURROGATE_START = 0xd800;
+const HIGH_SURROGATE_END = 0xdbff;
+const LOW_SURROGATE_START = 0xdc00;
+const LOW_SURROGATE_END = 0xdfff;
 const TYPED_ARRAY_PROTOTYPE = Object.getPrototypeOf(
   Uint8Array.prototype,
 ) as object;
@@ -307,10 +311,53 @@ function decodePublicationJson(
   try {
     const decoded = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
     const value: unknown = JSON.parse(decoded);
-    return snapshotPublicationJson(value);
+    const snapshot = snapshotPublicationJson(value);
+    return snapshot.valid && hasOnlyUnicodeScalarStrings(snapshot.data)
+      ? snapshot
+      : { valid: false };
   } catch {
     return { valid: false };
   }
+}
+
+function hasOnlyUnicodeScalarStrings(value: BasicCollectionJsonValue): boolean {
+  const pending: BasicCollectionJsonValue[] = [value];
+  while (pending.length > 0) {
+    const current = pending.pop();
+    if (current === undefined) return false;
+    if (typeof current === "string") {
+      if (!isUnicodeScalarString(current)) return false;
+      continue;
+    }
+    if (Array.isArray(current)) {
+      for (const item of current) pending.push(item);
+      continue;
+    }
+    if (current === null || typeof current !== "object") continue;
+    for (const [key, item] of Object.entries(current)) {
+      if (!isUnicodeScalarString(key)) return false;
+      pending.push(item);
+    }
+  }
+  return true;
+}
+
+function isUnicodeScalarString(value: string): boolean {
+  for (let index = 0; index < value.length; index += 1) {
+    const codeUnit = value.charCodeAt(index);
+    if (codeUnit >= HIGH_SURROGATE_START && codeUnit <= HIGH_SURROGATE_END) {
+      const next = value.charCodeAt(index + 1);
+      if (!(next >= LOW_SURROGATE_START && next <= LOW_SURROGATE_END)) {
+        return false;
+      }
+      index += 1;
+      continue;
+    }
+    if (codeUnit >= LOW_SURROGATE_START && codeUnit <= LOW_SURROGATE_END) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function reconstructCandidateFromArtifactBytes(
