@@ -1,6 +1,6 @@
 # basic-source-catalog.md — Basic 来源目录合同
 
-> 本文件是 `DATA-BASIC-CATALOG-1` 的规范性合同。总体边界以 [Basic 国家确定性采集与来源边界设计](./superpowers/specs/2026-07-12-basic-source-boundary-design.md) 为准；本任务只建立目录、请求计划与既有 World Bank adapter 绑定。后续已完成的 v2 transport、capture 与 CSV 边界以 [basic-source-formats.md](./basic-source-formats.md) 为准；二者都不写入 canonical、staging、Prisma 或 AI 索引。
+> 本文件始于 `DATA-BASIC-CATALOG-1`，并作为后续 `DATA-BASIC-<ISO2>` 任务追加已审核来源时继续适用的规范性合同。总体边界以 [Basic 国家确定性采集与来源边界设计](./superpowers/specs/2026-07-12-basic-source-boundary-design.md) 为准；v2 transport、capture 与 CSV 边界以 [basic-source-formats.md](./basic-source-formats.md) 为准。Catalog 本身不写入 canonical、staging、Prisma 或 AI 索引。
 
 ## 1. 职责与文件
 
@@ -145,9 +145,9 @@ sourceCountryId
 
 所有 HTML/PDF entry 都必须使用唯一 generic capture executor 身份。Parser 已复核该身份；未来 document runner 还必须在 cache/network 前再次复核。Generic executor 只捕获原始字节和 hash，不解析正文，不声明 source-specific metadata，也不产生 preliminary facts。
 
-## 7. 首版 World Bank Sources
+## 7. 已登记生产来源
 
-首版 catalog 只含四个 `open` World Bank JSON sources，`countryMappings = []`：
+Catalog 保留四个覆盖所有国家的 `open` World Bank JSON deterministic sources，`countryMappings = []`：
 
 | sourceId | 用途 | fieldPaths |
 |---|---|---|
@@ -156,7 +156,18 @@ sourceCountryId
 | `world-bank-gdp-growth` | GDP 增速 | `marketOverview.gdpGrowth` |
 | `world-bank-population` | 人口 | `marketOverview.population` |
 
-请求 URL、query 顺序和 adapter output 与既有 P1-6B fixtures 保持一致。Catalog 使用 World Bank Indicators API 和 World Development Indicators 的已审核归属信息；参考 [World Bank Indicators API documentation](https://datahelpdesk.worldbank.org/knowledgebase/articles/889392-about-the-indicators-api-documentation) 与 [World Bank public licenses](https://datacatalog.worldbank.org/public-licenses)。首版不包含 IMF、IRENA、Ember、HTML、PDF 或 credentialed source。
+请求 URL、query 顺序和 adapter output 与既有 P1-6B fixtures 保持一致。Catalog 使用 World Bank Indicators API 和 World Development Indicators 的已审核归属信息；参考 [World Bank Indicators API documentation](https://datahelpdesk.worldbank.org/knowledgebase/articles/889392-about-the-indicators-api-documentation) 与 [World Bank public licenses](https://datacatalog.worldbank.org/public-licenses)。
+
+单国任务可在同一 exact contract 下增加 country-scoped HTML/PDF manual sources。当前已登记：
+
+| sourceId | 国家 | 格式 | 用途 |
+|---|---|---|---|
+| `indonesia-esdm-2025-performance` | ID | HTML | 能源市场基线、摘要与关键指标 |
+| `indonesia-esdm-national-energy-policy-2025` | ID | PDF | 国家能源政策目标 |
+| `vietnam-chinhphu-adjusted-pdp8-2025` | VN | HTML | 调整后的电力规划 VIII 目标与产业方向 |
+| `vietnam-evn-annual-report-2024-2025` | VN | PDF | 2024 年装机、电力生产与购入基线 |
+
+这些 manual sources 只通过 `basic-manual-document-capture@1.0.0` 捕获原始 bytes/hash；事实、双语编辑输入和 source check 必须继续由 capture-hash-bound document plan 与人工审核提供。当前 catalog 不包含 IMF、IRENA、Ember 或 credentialed source。
 
 ## 8. 资源与错误边界
 
@@ -192,4 +203,4 @@ source catalog adapter binding is invalid
 - `runBasicDeterministicSourceAdapters()` 与四个 World Bank adapter；
 - P1-6C llama bridge、P1-6D offline dry run 与 `packages/db/src/index.ts` exports。
 
-Catalog 模块自身只生成计划和执行绑定，不调用网络、不创建 cache 或 audit artifacts。`DATA-BASIC-FORMATS-1` 已增加独立、package-private 的四 MIME transport、catalog-bound `basic-country-raw-capture/v2`、`raw-v2` cache 和 strict CSV parser/locator；它们消费 reviewed execution-plan request，但尚未接入 source runner，也未修改本节 v1 边界。HTML/PDF 目前只捕获原始 bytes 与 hash；document evidence、editorial input 和 model-free candidate runner 仍分属后续独立任务卡。
+Catalog 模块自身只生成计划和执行绑定，不调用网络、不创建 cache 或 audit artifacts。已完成的 v2 source runner 消费 reviewed execution plan，并通过四 MIME transport 建立 catalog-bound `raw-v2` cache；document evidence、editorial input 和 model-free candidate runner 再消费这些受绑定的捕获结果。HTML/PDF 仍只由 generic executor 捕获原始 bytes 与 hash，不自动解析、翻译或发布事实，也不修改本节 v1 边界。

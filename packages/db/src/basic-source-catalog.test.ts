@@ -698,21 +698,29 @@ describe("Basic source adapter registry", () => {
 });
 
 describe("committed Basic source catalog", () => {
-  test("registers the six reviewed Basic sources in deterministic order", () => {
+  test("registers the eight reviewed Basic sources in deterministic order", () => {
     const catalog = readCommittedCatalog();
     const sourceIds = [
       "indonesia-esdm-2025-performance",
       "indonesia-esdm-national-energy-policy-2025",
+      "vietnam-chinhphu-adjusted-pdp8-2025",
+      "vietnam-evn-annual-report-2024-2025",
+      "world-bank-country",
+      "world-bank-gdp",
+      "world-bank-gdp-growth",
+      "world-bank-population",
+    ] as const;
+    const worldBankSourceIds = [
       "world-bank-country",
       "world-bank-gdp",
       "world-bank-gdp-growth",
       "world-bank-population",
     ] as const;
 
-    expect(catalog.catalog.catalogVersion).toBe("2026-07-13.1");
+    expect(catalog.catalog.catalogVersion).toBe("2026-07-15.1");
     expect(catalog.catalog.countryMappings).toEqual([]);
     expect(catalog.catalogSha256).toBe(
-      "f8d404e342262ee44a7cb3a1099029131b3fc188494e6ad0fd9c846611513d12",
+      "ddb53c6b6fb82bc7dd050475a04b147f3ffa43b76886974591e950f829872f92",
     );
     expect(catalog.catalog.sources.map(({ sourceId }) => sourceId)).toEqual(
       sourceIds,
@@ -721,7 +729,7 @@ describe("committed Basic source catalog", () => {
     const plan = createBasicSourceExecutionPlan({
       catalog,
       countryCode: "VN",
-      sourceIds: sourceIds.slice(2),
+      sourceIds: worldBankSourceIds,
     });
     for (const entry of plan.sources) {
       const adapter = resolveBasicSourceAdapter(entry, "VN");
@@ -741,7 +749,7 @@ describe("committed Basic source catalog", () => {
     });
 
     expect(plan).toMatchObject({
-      catalogVersion: "2026-07-13.1",
+      catalogVersion: "2026-07-15.1",
       countryCode: "ID",
       sources: [
         {
@@ -838,6 +846,114 @@ describe("committed Basic source catalog", () => {
             allowedQueryParameters: ["id"],
           },
         },
+      ],
+    });
+  });
+
+  test("materializes the reviewed Vietnam government HTML request", () => {
+    const catalog = readCommittedCatalog();
+    const plan = createBasicSourceExecutionPlan({
+      catalog,
+      countryCode: "VN",
+      sourceIds: ["vietnam-chinhphu-adjusted-pdp8-2025"],
+    });
+    const entry = plan.sources[0]!;
+
+    expect(plan).toMatchObject({
+      catalogVersion: "2026-07-15.1",
+      countryCode: "VN",
+    });
+    expect({
+      url: entry.request.url,
+      method: entry.request.method,
+      accept: entry.request.accept,
+      allowedOrigins: entry.request.allowedOrigins,
+      origin: entry.source.requestTemplate.origin,
+      approvedOrigins: entry.source.approvedOrigins,
+      adapterId: entry.source.adapterId,
+      adapterVersion: entry.source.adapterVersion,
+      adapterKind: entry.source.adapterKind,
+      format: entry.source.format,
+      countryScope: entry.source.countryScope,
+      fieldPaths: entry.source.fieldPaths,
+    }).toEqual({
+      url: "https://xaydungchinhsach.chinhphu.vn/quyet-dinh-768-qd-ttg-thu-tuong-chinh-phu-phe-duyet-dieu-chinh-quy-hoach-dien-viii-119250417074054718.htm",
+      method: "GET",
+      accept: "text/html",
+      allowedOrigins: ["https://xaydungchinhsach.chinhphu.vn"],
+      origin: "https://xaydungchinhsach.chinhphu.vn",
+      approvedOrigins: ["https://xaydungchinhsach.chinhphu.vn"],
+      adapterId: "basic-manual-document-capture",
+      adapterVersion: "1.0.0",
+      adapterKind: "manual-document",
+      format: "html",
+      countryScope: ["VN"],
+      fieldPaths: [
+        "country.region",
+        "country.summary",
+        "marketOverview.energyDemand",
+        "marketOverview.industryTags",
+        "marketOverview.overview",
+        "marketOverview.renewableTarget",
+        "marketOverview.techTags",
+      ],
+    });
+  });
+
+  test("materializes the reviewed Vietnam EVN PDF request", () => {
+    const catalog = readCommittedCatalog();
+    const plan = createBasicSourceExecutionPlan({
+      catalog,
+      countryCode: "VN",
+      sourceIds: ["vietnam-evn-annual-report-2024-2025"],
+    });
+    const entry = plan.sources[0]!;
+
+    expect(plan).toMatchObject({
+      catalogVersion: "2026-07-15.1",
+      countryCode: "VN",
+    });
+    expect({
+      url: entry.request.url,
+      method: entry.request.method,
+      accept: entry.request.accept,
+      allowedOrigins: entry.request.allowedOrigins,
+      origin: entry.source.requestTemplate.origin,
+      approvedOrigins: entry.source.approvedOrigins,
+      adapterId: entry.source.adapterId,
+      adapterVersion: entry.source.adapterVersion,
+      adapterKind: entry.source.adapterKind,
+      format: entry.source.format,
+      countryScope: entry.source.countryScope,
+      fieldPaths: entry.source.fieldPaths,
+    }).toEqual({
+      url: "https://en.evn.com.vn/userfile/files/2026/4/AnnualRepot2025_V23-20260408155435105.pdf",
+      method: "GET",
+      accept: "application/pdf",
+      allowedOrigins: ["https://en.evn.com.vn"],
+      origin: "https://en.evn.com.vn",
+      approvedOrigins: ["https://en.evn.com.vn"],
+      adapterId: "basic-manual-document-capture",
+      adapterVersion: "1.0.0",
+      adapterKind: "manual-document",
+      format: "pdf",
+      countryScope: ["VN"],
+      fieldPaths: [
+        "country.summary",
+        "marketOverview.energyDemand",
+        "marketOverview.keyIndicators[0].label",
+        "marketOverview.keyIndicators[0].unit",
+        "marketOverview.keyIndicators[0].value",
+        "marketOverview.keyIndicators[0].year",
+        "marketOverview.keyIndicators[1].label",
+        "marketOverview.keyIndicators[1].unit",
+        "marketOverview.keyIndicators[1].value",
+        "marketOverview.keyIndicators[1].year",
+        "marketOverview.keyIndicators[2].label",
+        "marketOverview.keyIndicators[2].unit",
+        "marketOverview.keyIndicators[2].value",
+        "marketOverview.keyIndicators[2].year",
+        "marketOverview.overview",
       ],
     });
   });
