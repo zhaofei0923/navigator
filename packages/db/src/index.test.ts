@@ -199,7 +199,7 @@ import {
   BASIC_COUNTRY_PUBLICATION_MANIFEST_SCHEMA_VERSION,
   BASIC_DETERMINISTIC_STAGE_NAMES,
   WORLD_BANK_CORE_INDICATOR_ADAPTERS,
-  buildBasicCountryImportPlan,
+  buildApprovedBasicCountryPublicationImportPlan,
   bridgeBasicMarketOverviewDraft,
   captureBasicRawSource,
   createBasicSourceTransport,
@@ -230,7 +230,9 @@ describe("@navigator/db", () => {
     expect(createBasicCountryBundle).toBeTypeOf("function");
     expect(loadBasicCountryBundle).toBeTypeOf("function");
     expect(validateBasicCountryBundle).toBeTypeOf("function");
-    expect(buildBasicCountryImportPlan).toBeTypeOf("function");
+    expect(buildApprovedBasicCountryPublicationImportPlan).toBeTypeOf(
+      "function",
+    );
   });
 
   test("exports the read-only Basic activation preflight API", () => {

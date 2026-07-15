@@ -309,7 +309,7 @@ describe("Indonesia Basic r2 candidate", () => {
     expect(readdirSync(stagingDirectory).sort(compareText)).toEqual(ARTIFACT_NAMES);
     expect(existsSync(join(stagingDirectory, "collection-manifest.json"))).toBe(false);
     expect(existsSync(join(REPO_ROOT, "data", COUNTRY_DIRECTORY, "collection-manifest.json")))
-      .toBe(false);
+      .toBe(true);
   });
 });
 

@@ -1,48 +1,72 @@
-# indonesia-seed.md — 印尼 fixture 与未来 Basic 交付规范
+# indonesia-seed.md — 印度尼西亚真实 Basic 发布记录
 
-> `data/indonesia/` 是 inherited legacy synthetic regression fixture，只用于回归测试。它不是已完成的真实 Basic 数据、当前 rollout 样板或可复制 seed 模板。
+> `data/indonesia/` 是 `DATA-BASIC-ID-PUBLISH` 交付的已批准真实 `BASIC` canonical publication，不是国家特例或可跳过统一发布闸门的样板。
 
-所有国家（包括 `ID`）的首次真实数据交付必须恰好为 `BASIC`。真实 `ID` 交付须作为未来独立的 `DATA-BASIC-ID` 任务完成，并在 Basic 验收后才可通过单独、经人工批准的升级任务进入 `STANDARD` 或 `COMPLETE`。
-
----
-
-## 1. 现有 fixture 的边界
-
-- 不修改 `data/indonesia/`；它保留为 legacy synthetic regression fixture。
-- 不得将该 fixture 视为真实、已审核或已发布的印度尼西亚业务数据。
-- 不得复制 fixture 到其他国家，也不得以其内容作为采集、发布或 AI 数据的来源。
-- 不得为 `ID` 或其他国家增加特例字段、文件或页面；固定 10 模块结构以 [data-schema.md](./data-schema.md) 为唯一事实来源。
+所有国家（包括 `ID`）的首次真实数据交付必须恰好为 `BASIC`。印度尼西亚已完成该首次交付；`STANDARD` 与 `COMPLETE` 仍只能在 Basic 验收后，通过单独、经人工批准的升级任务启动。
 
 ---
 
-## 2. 未来 `DATA-BASIC-ID` 的真实交付
+## 1. 发布身份
 
-未来真实 `ID` 数据必须遵循 [basic-country-collection.md](./basic-country-collection.md) 的采集、审核和发布流程，并与所有国家使用相同的国家中立模板。
+| 项目 | 精确值 |
+|------|--------|
+| `countryDirectory` | `indonesia` |
+| `countryCode` | `ID` |
+| `runId` | `data-basic-id-20260711-r2` |
+| reviewer | `github:zhaofei0923` |
+| submitted / decided | `2026-07-15T00:01:43.000Z` |
 
-Basic 验收形态必须恰好为：
+immutable candidate 必须始终只有以下四个文件，其 SHA-256 绑定为：
 
-- `country.json` 使用 `ID`（ISO 3166-1 alpha-2）并包含固定 10 个 `moduleCoverage` 行。
-- `market-overview` 是唯一可展示的对象记录，状态为 `PARTIAL` 或 `COMPLETE`，并带齐双语展示字段与全部元字段。
-- 其余九个模块均为 `BUILDING`、`dataCount = 0`，没有 `published` 记录，C 端显示统一占位。
-- 国家 `coverageLevel` 由既有规则派生为恰好 `BASIC`，且不得满足 `STANDARD`。
-- 所有 Basic 数据保持 `aiUsable = false`，不产生知识片段，也不进入 AI 检索。
-- 数据先经历 `draft -> pending -> published`，只有独立人工审核批准后才能发布。
+| Candidate artifact | SHA-256 |
+|--------------------|---------|
+| `source-register.json` | `842f5675cc2ce3f5e18bb05b4b1dc016ec5e838e059cdfaf5b9025bc785f2799` |
+| `extracted-facts.json` | `953d200e586582cc21a74cc1837e5fa72ed83b2f532d4a264a205d6e7ae4b038` |
+| `market-overview.draft.json` | `dd6172f7a8047b8f2701b9eb57b56681f6b7543da18dfed84055d1c3cf17adb7` |
+| `review-report.json` | `a644f07748f39870e57beb0915091d002acee2aab4d41401968f59e40f157409` |
 
----
+独立批准回执位于 `data/approvals/indonesia/data-basic-id-20260711-r2.json`，精确 bytes 的 SHA-256 为：
 
-## 3. 数据与审核要求
+```text
+aad39cb02b3d24aec4b57d2275062062b0a9a3b5531eb1289461ef41fbe73bb1
+```
 
-每个未来真实 `ID` 记录均须遵守统一数据模型和治理规则：
+canonical 三文件的精确 SHA-256 为：
 
-1. 所有面向用户展示的文本使用 `{ zh, en }`；按既有降级规则处理缺失翻译。
-2. 每条业务数据带有 `source`、`sourceUrl`、`collectedAt`、`updatedAt`、`credibility`、`reviewStatus`、`aiUsable`、`countryCode`、`industryTags` 和 `techTags`。
-3. 来源、可信度、审核状态和标签遵循 [data-governance.md](./data-governance.md) 与 [data-schema.md](./data-schema.md)；未审核或 `UNVERIFIED` 内容不得进入 C 端覆盖计数或 AI。
-4. `sourceUrl = null` 时，`source` 必须说明原因；不允许伪造来源或缺失元字段。
+| Canonical artifact | SHA-256 |
+|--------------------|---------|
+| `country.json` | `bac4b7a7845d643ae5306f1dc159b0f3df50620d0998d073103c616386809c63` |
+| `market-overview.json` | `ae3343c2d015d283169ef86f8c41e4880a56604d78502006b77add9782938ba0` |
+| `collection-manifest.json` | `a30d8cf66d1ff1a45cb85eb4878f48c9ebaa993aaead01c547d7eb64a6135e41` |
 
----
+任何事实、翻译、元字段或 artifact correction 都必须创建新 run、新 candidate 和新批准回执，不得改写上述 identity。
 
-## 4. 验收与回归
+## 2. Canonical 与覆盖边界
 
-- `DATA-BASIC-ID` 的真实交付使用与 `DATA-BASIC-<ISO2>` 相同的验证器、审核闸门和 Web 验收，不设国家特例。
-- 对现有 `data/indonesia/` 的测试只能断言其 synthetic regression 行为，不能把它重新定义为真实 rollout 进度。
-- 真实 `ID` Basic 验收完成后，任何 Standard 或 Complete 增量仍需独立、经人工批准的升级任务。
+`data/indonesia/` 必须且只能包含：
+
+```text
+country.json
+market-overview.json
+collection-manifest.json
+```
+
+- 国家 `coverageLevel = BASIC`，固定保留 10 个 `moduleCoverage` 行。
+- `market-overview` 是唯一可展示的对象记录，状态为 `COMPLETE`、`dataCount = 1`、`reviewStatus = published`。
+- 其余九个模块均为 `BUILDING`、`dataCount = 0`，没有任何 `published` 记录，Web 与 API 返回统一占位。
+- Basic 数据固定 `aiUsable = false`，不产生知识片段，不创建 `KnowledgeChunk`，不进入 AI 检索。
+- manifest 与批准回执是 non-product sidecars，不进入 DB import、API、coverage counts 或 AI retrieval。
+
+## 3. DB 与 Web 验收
+
+- DB 入口先调用通用只读 publication loader，再生成 country、10 条 module coverage 和 market overview 的 country-generic upsert plan。
+- `@navigator/db` 公共入口只暴露经批准的 import builder；结构级 transformer 保持包内实现，不能绕过回执与 hash 校验。
+- import plan 不携带 approval、candidate、manifest、deep-module 或 KnowledgeChunk 数据，也不执行数据库删除。
+- Web registry 只消费 canonical `country.json` 与 `market-overview.json`；中英文切换时业务文本同步切换。
+- Web `prebuild` 与 CI 必须先运行 country-generic publication validation，任一 canonical/receipt/manifest/candidate 漂移都应阻断构建。
+- policy、risk、opportunities、projects、partners、chinese-companies、entry-strategy、ai-advisor、reports 必须返回 `BUILDING` 和零项，不能返回历史 synthetic IDs。
+- 外部 datastore 若曾导入 legacy Complete 行，其清理由单独批准的 `OPS-DATA-ID-BASIC-CLEANUP` 执行；本任务不执行数据库破坏性操作。
+
+## 4. 后续升级
+
+印度尼西亚已经先按 Basic 交付。任何 `STANDARD` 或 `COMPLETE` 增量必须在 Basic 验收后，以单独、经人工批准的升级任务完成，并继续遵守统一 10 模块模型、双语、元字段、发布和 AI 边界。

@@ -1,24 +1,77 @@
 {
   "code": "ID",
-  "name": { "zh": "印度尼西亚", "en": "Indonesia" },
-  "region": "southeast-asia",
-  "coverageLevel": "COMPLETE",
-  "flagEmoji": "🇮🇩",
-  "summary": {
-    "zh": "东南亚最大经济体，具备电力需求增长、可再生能源转型和新能源制造投资机会。",
-    "en": "Southeast Asia's largest economy, with rising power demand, renewable transition needs, and clean-energy manufacturing opportunities."
+  "name": {
+    "en": "Indonesia",
+    "zh": "印度尼西亚"
   },
+  "summary": {
+    "en": "In 2025, renewables accounted for 15.75% of Indonesia's energy mix, installed renewable capacity reached 15,630 MW, and electricity consumption was 1,584 kWh per capita; generation capacity also continued to expand.",
+    "zh": "印度尼西亚2025年可再生能源占能源结构15.75%，可再生能源装机15,630兆瓦，人均用电量1,584千瓦时；同期电源装机容量继续扩大。"
+  },
+  "region": "southeast-asia",
+  "flagEmoji": "🇮🇩",
+  "updatedAt": "2026-01-09T00:00:00.000Z",
+  "coverageLevel": "BASIC",
   "moduleCoverage": [
-    { "moduleKey": "market-overview", "status": "COMPLETE", "dataCount": 1, "updatedAt": "2026-01-15T00:00:00Z" },
-    { "moduleKey": "policy", "status": "COMPLETE", "dataCount": 5, "updatedAt": "2026-01-15T00:00:00Z" },
-    { "moduleKey": "risk", "status": "COMPLETE", "dataCount": 5, "updatedAt": "2026-01-15T00:00:00Z" },
-    { "moduleKey": "opportunities", "status": "COMPLETE", "dataCount": 5, "updatedAt": "2026-01-15T00:00:00Z" },
-    { "moduleKey": "projects", "status": "COMPLETE", "dataCount": 5, "updatedAt": "2026-01-15T00:00:00Z" },
-    { "moduleKey": "partners", "status": "COMPLETE", "dataCount": 5, "updatedAt": "2026-01-15T00:00:00Z" },
-    { "moduleKey": "chinese-companies", "status": "COMPLETE", "dataCount": 5, "updatedAt": "2026-01-15T00:00:00Z" },
-    { "moduleKey": "entry-strategy", "status": "COMPLETE", "dataCount": 1, "updatedAt": "2026-01-15T00:00:00Z" },
-    { "moduleKey": "ai-advisor", "status": "COMPLETE", "dataCount": 20, "updatedAt": "2026-01-15T00:00:00Z" },
-    { "moduleKey": "reports", "status": "COMPLETE", "dataCount": 5, "updatedAt": "2026-01-15T00:00:00Z" }
-  ],
-  "updatedAt": "2026-01-15T00:00:00Z"
+    {
+      "moduleKey": "market-overview",
+      "status": "COMPLETE",
+      "dataCount": 1,
+      "updatedAt": "2026-01-09T00:00:00.000Z"
+    },
+    {
+      "moduleKey": "policy",
+      "status": "BUILDING",
+      "dataCount": 0,
+      "updatedAt": "2026-01-09T00:00:00.000Z"
+    },
+    {
+      "moduleKey": "risk",
+      "status": "BUILDING",
+      "dataCount": 0,
+      "updatedAt": "2026-01-09T00:00:00.000Z"
+    },
+    {
+      "moduleKey": "opportunities",
+      "status": "BUILDING",
+      "dataCount": 0,
+      "updatedAt": "2026-01-09T00:00:00.000Z"
+    },
+    {
+      "moduleKey": "projects",
+      "status": "BUILDING",
+      "dataCount": 0,
+      "updatedAt": "2026-01-09T00:00:00.000Z"
+    },
+    {
+      "moduleKey": "partners",
+      "status": "BUILDING",
+      "dataCount": 0,
+      "updatedAt": "2026-01-09T00:00:00.000Z"
+    },
+    {
+      "moduleKey": "chinese-companies",
+      "status": "BUILDING",
+      "dataCount": 0,
+      "updatedAt": "2026-01-09T00:00:00.000Z"
+    },
+    {
+      "moduleKey": "entry-strategy",
+      "status": "BUILDING",
+      "dataCount": 0,
+      "updatedAt": "2026-01-09T00:00:00.000Z"
+    },
+    {
+      "moduleKey": "ai-advisor",
+      "status": "BUILDING",
+      "dataCount": 0,
+      "updatedAt": "2026-01-09T00:00:00.000Z"
+    },
+    {
+      "moduleKey": "reports",
+      "status": "BUILDING",
+      "dataCount": 0,
+      "updatedAt": "2026-01-09T00:00:00.000Z"
+    }
+  ]
 }

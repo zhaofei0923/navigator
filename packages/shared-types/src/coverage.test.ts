@@ -134,10 +134,11 @@ describe("coverage decision logic", () => {
     ).toBe("BASIC");
   });
 
-  test("evaluates the Indonesia seed as COMPLETE", () => {
-    const seed = loadIndonesiaSeed();
+  test("evaluates the approved Indonesia publication as BASIC", () => {
+    const country = readJson("country.json") as JsonRecord;
+    const marketOverview = readJson("market-overview.json") as JsonRecord;
     const moduleStatuses: Record<ModuleKey, ModuleCoverageStatus> = {
-      "market-overview": getObjectModuleCoverageStatus(seed.marketOverview, [
+      "market-overview": getObjectModuleCoverageStatus(marketOverview, [
         "overview",
         "population",
         "gdp",
@@ -146,32 +147,25 @@ describe("coverage decision logic", () => {
         "renewableTarget",
         "keyIndicators",
       ]),
-      policy: getListModuleCoverageStatus(publishedCount(seed.policy)),
-      risk: getListModuleCoverageStatus(publishedCount(seed.risk)),
-      opportunities: getListModuleCoverageStatus(
-        publishedCount(seed.opportunities),
-      ),
-      projects: getListModuleCoverageStatus(publishedCount(seed.projects)),
-      partners: getListModuleCoverageStatus(publishedCount(seed.partners)),
-      "chinese-companies": getListModuleCoverageStatus(
-        publishedCount(seed.chineseCompanies),
-      ),
-      "entry-strategy": getObjectModuleCoverageStatus(seed.entryStrategy, [
-        "overview",
-        "steps",
-        "recommendedMode",
-      ]),
-      "ai-advisor": getAiAdvisorCoverageStatus({
-        usableKnowledgeCount: seed.knowledge.filter(isAiEligible).length,
-        sourceModuleCount: new Set(
-          seed.knowledge.filter(isAiEligible).map((chunk) => chunk.sourceModule),
-        ).size,
-      }),
-      reports: getListModuleCoverageStatus(publishedCount(seed.reports)),
+      policy: "BUILDING",
+      risk: "BUILDING",
+      opportunities: "BUILDING",
+      projects: "BUILDING",
+      partners: "BUILDING",
+      "chinese-companies": "BUILDING",
+      "entry-strategy": "BUILDING",
+      "ai-advisor": "BUILDING",
+      reports: "BUILDING",
     };
 
-    expect(moduleStatuses).toEqual(allModuleStatuses("COMPLETE"));
-    expect(getCountryCoverageLevel(moduleStatuses)).toBe("COMPLETE");
+    expect(moduleStatuses).toEqual({
+      ...allModuleStatuses("BUILDING"),
+      "market-overview": "COMPLETE",
+    });
+    expect(getCountryCoverageLevel(moduleStatuses)).toBe("BASIC");
+    expect(country.coverageLevel).toBe("BASIC");
+    expect(marketOverview.reviewStatus).toBe("published");
+    expect(marketOverview.aiUsable).toBe(false);
   });
 });
 
@@ -184,50 +178,6 @@ function allModuleStatuses(
   >;
 }
 
-function loadIndonesiaSeed(): {
-  marketOverview: JsonRecord;
-  policy: JsonRecord[];
-  risk: JsonRecord[];
-  opportunities: JsonRecord[];
-  projects: JsonRecord[];
-  partners: JsonRecord[];
-  chineseCompanies: JsonRecord[];
-  entryStrategy: JsonRecord;
-  reports: JsonRecord[];
-  knowledge: JsonRecord[];
-} {
-  return {
-    marketOverview: readJson("market-overview.json") as JsonRecord,
-    policy: readJsonArray("policy.json"),
-    risk: readJsonArray("risk.json"),
-    opportunities: readJsonArray("opportunities.json"),
-    projects: readJsonArray("projects.json"),
-    partners: readJsonArray("partners.json"),
-    chineseCompanies: readJsonArray("chinese-companies.json"),
-    entryStrategy: readJson("entry-strategy.json") as JsonRecord,
-    reports: readJsonArray("reports.json"),
-    knowledge: readJsonArray("knowledge/chunks.json"),
-  };
-}
-
 function readJson(pathname: string): unknown {
   return JSON.parse(readFileSync(new URL(`../../../data/indonesia/${pathname}`, import.meta.url), "utf8"));
-}
-
-function readJsonArray(pathname: string): JsonRecord[] {
-  const value = readJson(pathname);
-  expect(Array.isArray(value)).toBe(true);
-  return value as JsonRecord[];
-}
-
-function publishedCount(items: JsonRecord[]): number {
-  return items.filter((item) => item.reviewStatus === "published").length;
-}
-
-function isAiEligible(item: JsonRecord): boolean {
-  return (
-    item.reviewStatus === "published" &&
-    item.aiUsable === true &&
-    item.credibility !== "UNVERIFIED"
-  );
 }

@@ -62,7 +62,7 @@ navigator/
 │   ├── shared-types/         # 前后端共享类型（从 db 派生）
 │   └── ai-advisor/           # RAG 检索与问答逻辑
 └── data/
-    └── indonesia/            # legacy synthetic regression fixture，非真实国家交付
+    └── indonesia/            # 已批准的真实 BASIC canonical publication
 ```
 
 **放置规则**：

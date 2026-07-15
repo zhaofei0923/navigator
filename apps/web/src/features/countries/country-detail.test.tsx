@@ -29,33 +29,37 @@ function renderCountryDetail(locale: "zh-CN" | "en") {
 }
 
 describe("CountryDetail visible i18n", () => {
-  test("renders Chinese detail without raw English metadata, units, or tags", () => {
+  test("renders the published Chinese market overview and nine placeholders", () => {
     const html = renderCountryDetail("zh-CN");
 
     expect(html).toContain("印度尼西亚");
-    expect(html).toContain("内部样板数据");
-    expect(html).toContain("百万人");
-    expect(html).toContain("万亿美元");
-    expect(html).toContain("光伏、储能、电动车、电网");
+    expect(html).toContain("基础覆盖");
+    expect(html).toContain("1/10 个模块");
+    expect(html).toContain("可再生能源装机达到15,630兆瓦");
+    expect(html).toContain("可再生能源占比");
+    expect(html.match(/数据建设中/g)).toHaveLength(9);
+    expect(html).toContain("外部公开来源");
     expect(html).not.toContain("P1-2 manually curated");
     expect(html).not.toContain("Derived from published country module knowledge chunks");
-    expect(html).not.toContain("million people");
-    expect(html).not.toContain("trillion USD");
-    expect(html).not.toContain("solar, storage, EV, grid");
+    expect(html).not.toContain("id_pol_001");
+    expect(html).not.toContain("id_know_001");
     expect(html).not.toContain(">tags<");
   });
 
-  test("renders English detail with localized display metadata and tags", () => {
+  test("renders the published English market overview and nine placeholders", () => {
     const html = renderCountryDetail("en");
 
     expect(html).toContain("Indonesia");
-    expect(html).toContain("Internal sample data");
-    expect(html).toContain("million people");
-    expect(html).toContain("trillion USD");
-    expect(html).toContain("Solar, Storage, EV, Grid");
+    expect(html).toContain("Basic");
+    expect(html).toContain("1/10 modules");
+    expect(html).toContain("Installed renewable capacity reached 15,630 MW");
+    expect(html).toContain("Renewable energy mix share");
+    expect(html.match(/Data Building/g)).toHaveLength(9);
+    expect(html).toContain("External public source");
     expect(html).not.toContain("P1-2 manually curated");
     expect(html).not.toContain("Derived from published country module knowledge chunks");
-    expect(html).not.toContain("solar, storage, EV, grid");
+    expect(html).not.toContain("id_pol_001");
+    expect(html).not.toContain("id_know_001");
     expect(html).not.toContain(">tags<");
   });
 

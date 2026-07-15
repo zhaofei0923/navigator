@@ -1,34 +1,60 @@
 {
-  "id": "id_mkt_001",
   "overview": {
-    "zh": "印尼是东南亚人口和经济规模最大的市场之一。新能源企业应重点关注爪哇和苏门答腊的负荷中心、群岛电网互联约束、工业园区用电增长，以及政府推动可再生能源和电动交通的长期方向。",
-    "en": "Indonesia is one of Southeast Asia's largest markets by population and economic scale. Clean-energy companies should focus on Java and Sumatra load centers, archipelago grid constraints, industrial-park power growth, and the government's long-term push for renewables and electric mobility."
+    "zh": "2025年能源与矿产领域投资为317亿美元，其中电力46亿美元、可再生能源与节能24亿美元。可再生能源装机达到15,630兆瓦，其中太阳能1,494兆瓦、风电152兆瓦。",
+    "en": "Energy and mineral investment reached USD 31.7 billion in 2025, including USD 4.6 billion in electricity and USD 2.4 billion in renewables and conservation. Installed renewable capacity reached 15,630 MW, including 1,494 MW of solar and 152 MW of wind."
   },
-  "population": 278700000,
-  "gdp": 1371000000000,
-  "gdpGrowth": 5.0,
+  "population": 285721236,
+  "gdp": 1445642584163.81,
+  "gdpGrowth": 5.10808904438025,
   "energyDemand": {
-    "zh": "电力需求由城市化、矿冶和制造业园区扩张共同驱动，离网和岛屿供电仍需要储能、微网和混合能源方案。",
-    "en": "Power demand is driven by urbanization, mining and smelting, and manufacturing-park expansion, while off-grid and island supply still need storage, microgrid, and hybrid energy solutions."
+    "zh": "2025年人均用电量为1,584千瓦时，高于2024年的1,411千瓦时；电源装机容量同比增加7吉瓦至107.51吉瓦。",
+    "en": "Electricity consumption per capita was 1,584 kWh in 2025, up from 1,411 kWh in 2024; installed generation capacity increased by 7 GW to 107.51 GW."
   },
   "renewableTarget": {
-    "zh": "政策方向强调提高可再生能源占比、减少柴油依赖并支持电动车和电池产业链本地化。",
-    "en": "Policy direction emphasizes increasing the renewable share, reducing diesel reliance, and supporting localized EV and battery supply chains."
+    "zh": "2025年《国家能源政策》将新能源和可再生能源占比目标设为2030年19%至23%、2040年36%至40%、2050年53%至55%、2060年70%至72%。能源矿产资源部报告2025年实际占比为15.75%。",
+    "en": "The 2025 National Energy Policy sets new and renewable energy share targets of 19%-23% in 2030, 36%-40% in 2040, 53%-55% in 2050, and 70%-72% in 2060. The Ministry reported a 15.75% share in 2025."
   },
   "keyIndicators": [
-    { "label": { "zh": "人口", "en": "Population" }, "value": "278.7", "unit": "million people", "year": 2024 },
-    { "label": { "zh": "GDP", "en": "GDP" }, "value": "1.371", "unit": "trillion USD", "year": 2024 },
-    { "label": { "zh": "实际 GDP 增速", "en": "Real GDP growth" }, "value": "5.0", "unit": "%", "year": 2024 },
-    { "label": { "zh": "优先机会", "en": "Priority opportunities" }, "value": "solar, storage, EV, grid", "unit": "tags", "year": 2026 }
+    {
+      "label": {
+        "zh": "可再生能源占比",
+        "en": "Renewable energy mix share"
+      },
+      "value": "15.75",
+      "unit": "%",
+      "year": 2025
+    },
+    {
+      "label": {
+        "zh": "可再生能源装机容量",
+        "en": "Installed renewable capacity"
+      },
+      "value": "15630",
+      "unit": "MW",
+      "year": 2025
+    },
+    {
+      "label": {
+        "zh": "人均用电量",
+        "en": "Electricity consumption per capita"
+      },
+      "value": "1584",
+      "unit": "kWh/person",
+      "year": 2025
+    }
   ],
-  "source": "P1-2 manually curated Indonesia seed baseline; sourceUrl null because this is an internal sample fixture for schema and coverage validation",
-  "sourceUrl": null,
-  "collectedAt": "2026-01-10T00:00:00Z",
-  "updatedAt": "2026-01-15T00:00:00Z",
-  "credibility": "ESTIMATED",
+  "source": "Indonesia Ministry of Energy and Mineral Resources",
+  "sourceUrl": "https://www.esdm.go.id/en/media-center/news-archives/capaian-positif-tahun-2025-negara-hadir-penuhi-kebutuhan-energi-masyarakat",
+  "collectedAt": "2026-07-13T14:09:07.223Z",
+  "updatedAt": "2026-01-09T00:00:00.000Z",
+  "credibility": "OFFICIAL",
   "reviewStatus": "published",
-  "aiUsable": true,
+  "aiUsable": false,
   "countryCode": "ID",
-  "industryTags": ["solar", "storage", "ev", "grid"],
-  "techTags": ["pv-module", "inverter", "lfp"]
+  "industryTags": [
+    "grid",
+    "solar",
+    "wind"
+  ],
+  "techTags": []
 }

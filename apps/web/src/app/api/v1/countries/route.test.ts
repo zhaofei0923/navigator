@@ -27,13 +27,13 @@ describe("GET /api/v1/countries", () => {
     expect(body.data[0]).toEqual(
       expect.objectContaining({
         code: "ID",
-        coverageLevel: "COMPLETE",
+        coverageLevel: "BASIC",
         name: "Indonesia",
         signals: expect.objectContaining({
-          opportunityLevel: "HIGH",
-          policyFriendliness: "MEDIUM",
-          recommendedPriority: "EXPLORE",
-          riskLevel: "HIGH",
+          opportunityLevel: "DATA_BUILDING",
+          policyFriendliness: "DATA_BUILDING",
+          recommendedPriority: "DATA_BUILDING",
+          riskLevel: "DATA_BUILDING",
         }),
       }),
     );

@@ -2,46 +2,73 @@ import { describe, expect, test } from "vitest";
 
 import { GET } from "./route.js";
 
+const BUILDING_MODULE_KEYS = [
+  "policy",
+  "risk",
+  "opportunities",
+  "projects",
+  "partners",
+  "chinese-companies",
+  "entry-strategy",
+  "ai-advisor",
+  "reports",
+] as const;
+
 describe("GET /api/v1/countries/:code/modules/:moduleKey", () => {
-  test("returns localized published list module items", async () => {
+  test.each(
+    BUILDING_MODULE_KEYS.flatMap((moduleKey) =>
+      (["localized", "raw"] as const).map((textMode) => [
+        moduleKey,
+        textMode,
+      ] as const),
+    ),
+  )("returns a BUILDING placeholder for %s in %s mode", async (moduleKey, textMode) => {
     const response = await GET(
       new Request(
-        "https://navigator.test/api/v1/countries/ID/modules/policy?locale=en",
+        `https://navigator.test/api/v1/countries/ID/modules/${moduleKey}?locale=en&textMode=${textMode}`,
       ),
-      { params: Promise.resolve({ code: "ID", moduleKey: "policy" }) },
+      { params: Promise.resolve({ code: "ID", moduleKey }) },
     );
     const body = (await response.json()) as {
       success: boolean;
       data: {
-        items: Array<{ id: string; title: string }>;
+        items: unknown[];
+        item?: unknown;
         moduleKey: string;
         status: string;
-        _i18nFallback: string[];
+        _i18nFallback?: string[];
       };
-      meta: { locale: string; page: number; pageSize: number; total: number };
+      meta: {
+        locale: string;
+        page: number;
+        pageSize: number;
+        textMode: string;
+        total: number;
+      };
     };
 
     expect(response.status).toBe(200);
     expect(body.success).toBe(true);
     expect(body.data).toMatchObject({
-      moduleKey: "policy",
-      status: "COMPLETE",
-      _i18nFallback: [],
+      moduleKey,
+      status: "BUILDING",
     });
     expect(body.meta).toMatchObject({
       locale: "en",
       page: 1,
       pageSize: 20,
-      total: 5,
+      textMode,
+      total: 0,
     });
-    expect(body.data.items).toHaveLength(5);
-    expect(body.data.items[0]).toMatchObject({
-      id: "id_pol_001",
-      title: "Renewable power procurement framework",
-    });
-    expect(body.data.items.map((item) => item.id)).not.toContain(
-      "id_pol_anti_draft_001",
-    );
+    expect(body.data.items).toEqual([]);
+    expect(body.data).not.toHaveProperty("item");
+    if (textMode === "localized") {
+      expect(body.data._i18nFallback).toEqual([]);
+    } else {
+      expect(body.data).not.toHaveProperty("_i18nFallback");
+    }
+    expect(JSON.stringify(body)).not.toContain("id_pol_001");
+    expect(JSON.stringify(body)).not.toContain("id_pol_anti_draft_001");
   });
 
   test("returns raw object module item", async () => {
@@ -61,7 +88,9 @@ describe("GET /api/v1/countries/:code/modules/:moduleKey", () => {
 
     expect(response.status).toBe(200);
     expect(body.meta.textMode).toBe("raw");
-    expect(body.data.item.overview.en).toContain("Indonesia is one");
+    expect(body.data.item.overview.en).toContain(
+      "Installed renewable capacity reached 15,630 MW",
+    );
     expect(body.data._i18nFallback).toBeUndefined();
   });
 

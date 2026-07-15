@@ -52,30 +52,30 @@ function renderCountryExplorer(locale: "zh-CN" | "en") {
   );
 }
 
-describe("CountryExplorer signals", () => {
-  test("renders derived country signals in English", () => {
+describe("CountryExplorer Basic publication", () => {
+  test("renders BASIC coverage and data-building signals in English", () => {
     const html = renderCountryExplorer("en");
 
     expect(html).toContain("Opportunity");
     expect(html).toContain("Risk");
     expect(html).toContain("Policy friendliness");
     expect(html).toContain("Recommended priority");
-    expect(html).toContain("High");
-    expect(html).toContain("Medium");
-    expect(html).toContain("Explore");
-    expect(html).toContain("Start with local channel partners");
+    expect(html).toContain("Basic");
+    expect(html).toContain("1/10");
+    expect(html).toContain("Data Building");
+    expect(html).not.toContain("Start with local channel partners");
   });
 
-  test("renders derived country signals in Chinese", () => {
+  test("renders BASIC coverage and data-building signals in Chinese", () => {
     const html = renderCountryExplorer("zh-CN");
 
     expect(html).toContain("机会强度");
     expect(html).toContain("风险强度");
     expect(html).toContain("政策友好度");
     expect(html).toContain("推荐优先级");
-    expect(html).toContain("高");
-    expect(html).toContain("中");
-    expect(html).toContain("探索");
-    expect(html).toContain("本地渠道伙伴");
+    expect(html).toContain("基础覆盖");
+    expect(html).toContain("1/10");
+    expect(html).toContain("数据建设中");
+    expect(html).not.toContain("本地渠道伙伴");
   });
 });

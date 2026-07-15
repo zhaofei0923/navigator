@@ -1,0 +1,8 @@
+{
+  "schemaVersion": "basic-country-publication-manifest/v2",
+  "activeRunId": "data-basic-id-20260711-r2",
+  "mappingVersion": "basic-country-canonical/v2",
+  "auditBundlePath": "data/staging/indonesia/data-basic-id-20260711-r2",
+  "approvalReceiptPath": "data/approvals/indonesia/data-basic-id-20260711-r2.json",
+  "approvalReceiptSha256": "aad39cb02b3d24aec4b57d2275062062b0a9a3b5531eb1289461ef41fbe73bb1"
+}

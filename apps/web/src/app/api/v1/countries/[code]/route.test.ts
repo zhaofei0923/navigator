@@ -114,17 +114,24 @@ describe("GET /api/v1/countries/:code", () => {
     );
     const body = (await response.json()) as {
       success: boolean;
-      data: { code: string; name: string; moduleCoverage: unknown[] };
+      data: {
+        code: string;
+        coverageLevel: string;
+        name: string;
+        moduleCoverage: Array<{ status: string }>;
+      };
       meta: { locale: string; textMode: string };
     };
 
     expect(response.status).toBe(200);
     expect(body).toMatchObject({
       success: true,
-      data: { code: "ID", name: "Indonesia" },
+      data: { code: "ID", coverageLevel: "BASIC", name: "Indonesia" },
       meta: { locale: "en", textMode: "localized" },
     });
     expect(body.data.moduleCoverage).toHaveLength(10);
+    expect(body.data.moduleCoverage.filter(({ status }) => status === "BUILDING"))
+      .toHaveLength(9);
     expect(body.data).not.toHaveProperty("industryTags");
     expect(body.data).not.toHaveProperty("techTags");
     expectNoP1_6DFields(body);

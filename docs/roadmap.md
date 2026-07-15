@@ -79,9 +79,9 @@ graph LR
 - 验收：schema 与 data-schema 完全一致；迁移可执行；`shared-types` 与 schema 枚举一致；报告 `accessLevel`、`Lead.contact` 按 data-schema §6 加密存储、知识片段双语向量字段齐全；不得新增评分/国家计划持久化字段，若需新增字段必须先改 `data-schema.md`。
 - 人工确认：**是（修改统一数据模型，AGENTS.md §11）** —— PR 标注。
 
-#### P1-2 历史印尼 fixture 与数据治理校验
-- 目标：保留 `data/indonesia/` 的 legacy synthetic regression fixture 覆盖，并实现 [data-governance.md](./data-governance.md) 数据质量校验；它不是当前国家 rollout 样板或真实数据。
-- 验收：fixture 回归校验通过；缺元字段不得入库；`draft` / `pending` / `UNVERIFIED` 反例不进入 C 端展示、覆盖判定或 AI 检索；真实 `ID` 数据仅可由未来 `DATA-BASIC-ID` 依 Basic 验收另行交付。
+#### P1-2 历史印尼 fixture 与数据治理校验（已完成，fixture 已退役）
+- 目标：实现 [data-governance.md](./data-governance.md) 数据质量校验，并在真实发布前以 legacy synthetic fixture 覆盖 Complete 回归；该 canonical fixture 已由 `DATA-BASIC-ID-PUBLISH` 原子替换为真实 Basic 三文件发布。
+- 验收：缺元字段不得入库；`draft` / `pending` / `UNVERIFIED` 反例不进入 C 端展示、覆盖判定或 AI 检索；旧 synthetic deeper-module 与 knowledge 文件、专用 DB 导入入口和 Web registry 引用均已退役。
 - 人工确认：否（不改结构；改结构须回 P1-1）。
 
 #### P1-3 覆盖等级判定逻辑
@@ -155,14 +155,14 @@ graph LR
 - 目标：按 [basic-country-publication.md](./basic-country-publication.md) 建立 country-generic、read-only、fail-closed 发布边界，以独立批准回执和六字段 manifest v2 将 immutable 四文件 candidate、人工决定与 canonical Basic mapping 绑定到同一 country/run identity。
 - 验收：candidate 保持 `reviewStatus = draft`、`aiUsable = false`、`humanDecision = null` 且恰好四文件；回执记录 `draft -> pending -> published` 并绑定四个 artifact bytes，manifest 绑定回执 bytes；ordered validator 只接受恰好 `BASIC`、published market overview、其余九模块 `BUILDING`、无 deeper-module data、无 KnowledgeChunk、无 AI eligibility 的 canonical bundle。loader 不写文件，不调用 Prisma/API/AI，也不导入 coverage 数据。
 - 完成边界：本卡只交付通用 contracts、validator、read-only loader、public package surface 与规范文档，**不创建真实批准回执，不修改 canonical data，不发布任何国家数据**。
-- 模型边界：批准回执与 manifest 是 non-product sidecars，不进入 seed、API、coverage counts 或 AI retrieval；本卡及下一张 `DATA-BASIC-ID-PUBLISH` 均不修改 `docs/data-schema.md` 或 Prisma schema。
+- 模型边界：批准回执与 manifest 是 non-product sidecars，不进入 seed、API、coverage counts 或 AI retrieval；本卡及已完成的 `DATA-BASIC-ID-PUBLISH` 均未修改 `docs/data-schema.md` 或 Prisma schema。
 - 人工确认：发布方法已按项目所有者批准的 independent receipt 设计实现；本卡不替代任何单国发布决定。
 
-#### DATA-BASIC-ID-PUBLISH Indonesia Basic atomic publication（下一任务，需明确人工批准）
-- 目标：作为下一张 explicit human-approved atomic task，仅针对已确认的 `ID` candidate identity 创建独立回执、确定性 canonical Basic mapping 与 manifest v2，并通过通用只读发布闸门后原子提交。
-- 验收：重新稳定读取并核对已确认的四个 candidate SHA-256；candidate 与回执保持不可变，任何 correction 创建新 run 和新回执；首次真实交付恰好为 `BASIC`，market overview 为 `published` 且 `aiUsable = false`，其余九模块为 `BUILDING`，无 knowledge/deeper modules；补齐 DB import、Web、i18n 和 Playwright 验收，但不修改 Prisma schema。
-- 完成边界：不得把本通用 gate 的完成视为 `ID` 已发布；外部 datastore 的 legacy Complete 清理仍由单独批准的 `OPS-DATA-ID-BASIC-CLEANUP` 处理。
-- 人工确认：是（必须由项目所有者对精确 country/run/hash identity 和原子发布 diff 再次明确批准）。
+#### DATA-BASIC-ID-PUBLISH Indonesia Basic atomic publication（已完成）
+- 目标：针对项目所有者明确批准的 `indonesia` / `ID` / `data-basic-id-20260711-r2` identity 创建独立回执、确定性 canonical Basic mapping 与 manifest v2，并通过通用只读发布闸门原子提交。
+- 验收：四个 candidate SHA-256 分别为 `842f5675…f2799`、`953d200e…b038`、`dd6172f7…1adb7`、`a644f077…57409`；candidate 保持不可变且恰好四文件。批准回执 SHA-256 为 `aad39cb0…3bb1`；canonical 目录恰好三文件，国家为 `BASIC`，market overview 为 `published` 且 `aiUsable = false`，其余九模块为 `BUILDING`，无 knowledge/deeper modules；DB import、Web/API、i18n 与 Playwright 均按该边界验收，未修改 Prisma schema。
+- 完成边界：精确完整 identity 与 hashes 记录在 [indonesia-seed.md](./indonesia-seed.md)。外部 datastore 的 legacy Complete 清理由单独批准的 `OPS-DATA-ID-BASIC-CLEANUP` 处理；本任务未执行删除或其他数据库破坏性操作。
+- 人工确认：是（项目所有者已明确批准上述 country/run/hash identity 与本原子发布任务）。
 
 #### DATA-BASIC-<ISO2> 单国 Basic 数据任务卡
 - 目标：每张任务卡只采集一个 ISO 3166-1 alpha-2 国家，使用固定 10 模块模型完成 Basic 国家骨架和市场基础画像。
