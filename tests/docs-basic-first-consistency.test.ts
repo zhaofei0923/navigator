@@ -31,33 +31,27 @@ const RETIRED_CLAIMS = [
   "fixture 参考印尼样板",
 ] as const;
 
-const FIXTURE_BOUNDARY_DOCUMENTS = [
+const REAL_BASIC_PUBLICATION_DOCUMENTS = [
   {
     documentPath: "docs/indonesia-seed.md",
     requirements: [
-      { description: "marks the fixture as synthetic", pattern: /synthetic regression fixture/i },
-      { description: "marks the fixture as non-real", pattern: /(?:不是|不得[^。\n]*视为)[^。\n]*真实/ },
-      { description: "marks the fixture as non-rollout", pattern: /不是[^。\n]*rollout/ },
-      { description: "forbids copying the fixture", pattern: /(?:不可|不得)复制/ },
+      { description: "marks ID as an approved real Basic publication", pattern: /已批准真实 `BASIC` canonical publication/i },
+      { description: "records the immutable candidate identity", pattern: /data-basic-id-20260711-r2/ },
+      { description: "records the receipt digest", pattern: /aad39cb02b3d24aec4b57d2275062062b0a9a3b5531eb1289461ef41fbe73bb1/ },
+      { description: "keeps the canonical three-file allowlist", pattern: /必须且只能包含/ },
     ],
   },
   {
     documentPath: "docs/testing.md",
     requirements: [
-      { description: "marks the fixture as synthetic", pattern: /synthetic regression fixture/i },
-      { description: "marks the fixture as non-real", pattern: /不是[^。\n]*真实/ },
-      { description: "marks the fixture as non-rollout", pattern: /不是[^。\n]*rollout/ },
-      {
-        description: "forbids copying the fixture",
-        pattern: /(?:不可|不能|不得)复制|不是[^。\n]*可复制/,
-      },
+      { description: "marks ID as an approved real Basic publication", pattern: /已批准的真实 `BASIC` canonical publication/i },
+      { description: "requires canonical allowlist tests", pattern: /canonical 三文件 allowlist/ },
     ],
   },
   {
     documentPath: "AGENTS.md",
     requirements: [
-      { description: "marks the fixture as legacy synthetic", pattern: /legacy synthetic regression fixture/i },
-      { description: "marks the fixture as a non-real country delivery", pattern: /非真实国家交付/ },
+      { description: "marks ID as an approved real Basic publication", pattern: /已批准的真实 BASIC canonical publication/i },
     ],
   },
 ] as const;
@@ -114,14 +108,14 @@ describe("Basic-first documentation policy", () => {
     }
   });
 
-  it("keeps every fixture boundary explicit in its owning document", () => {
-    for (const fixtureDocument of FIXTURE_BOUNDARY_DOCUMENTS) {
-      const policy = readRootFile(fixtureDocument.documentPath);
+  it("keeps the real Indonesia Basic publication boundary explicit", () => {
+    for (const publicationDocument of REAL_BASIC_PUBLICATION_DOCUMENTS) {
+      const policy = readRootFile(publicationDocument.documentPath);
 
-      for (const requirement of fixtureDocument.requirements) {
+      for (const requirement of publicationDocument.requirements) {
         expect(
           policy,
-          `${fixtureDocument.documentPath}: ${requirement.description}`,
+          `${publicationDocument.documentPath}: ${requirement.description}`,
         ).toMatch(requirement.pattern);
       }
     }

@@ -71,7 +71,8 @@
 
 - 数据库：用独立测试库（`.env.test` 的 `DATABASE_URL`）或事务回滚/内存替身，禁止连生产库。
 - LLM / embedding：mock `AI_PROVIDER` 调用，断言**过滤发生在检索层**而非依赖模型。
-- 现有 `data/indonesia/` 是 legacy synthetic regression fixture，不是 rollout sample、真实已发布国家数据或可复制 seed 模板；测试使用最小化数据集，避免为单国写特例。
+- `data/indonesia/` 是已批准的真实 `BASIC` canonical publication；测试必须锁定其 candidate/receipt/manifest 字节身份、canonical 三文件 allowlist、九个 `BUILDING` 占位和 AI/深层模块隔离，同时避免为单国写生产特例。
+- Web 构建与 CI 必须调用 `pnpm --filter @navigator/db validate:approved-basic-publications`，按 `data/<countryDirectory>/` 自动发现并验证全部 canonical publication，禁止只校验单一国家或绕过批准回执。
 - Deterministic Basic candidate 的 `ID` fixture 只能验证 ISO2/coverage shape；名称、URL、来源内容、值和时间必须明确标为 synthetic fixture-only，不能复制或声称任何真实印度尼西亚事实。
 
 ---

@@ -26,25 +26,25 @@ test("country explorer filters coverage and keeps coverage badges visible", asyn
 
   await expect(page.getByRole("heading", { name: "Country data explorer" })).toBeVisible();
   await expect(page.getByRole("article", { name: /Indonesia/ })).toContainText(
-    "Complete",
+    "Basic",
   );
   await expect(page.getByRole("article", { name: /Indonesia/ })).toContainText(
-    "Opportunity High",
+    "Opportunity Data Building",
   );
   await expect(page.getByRole("article", { name: /Indonesia/ })).toContainText(
-    "Risk High",
+    "Risk Data Building",
   );
   const signalsPanel = page.locator(".country-side-panel");
   await expect(signalsPanel.getByText("Recommended priority")).toBeVisible();
-  await expect(signalsPanel.getByText("Explore", { exact: true })).toBeVisible();
+  await expect(signalsPanel.getByText("Data Building", { exact: true }).first()).toBeVisible();
   await expect(
     page.getByRole("img", { name: "Global renewable energy data map" }),
   ).toBeVisible();
 
-  await page.getByLabel("Coverage").selectOption("COMPLETE");
+  await page.getByLabel("Coverage").selectOption("BASIC");
   await page.getByRole("button", { name: "Apply filters" }).click();
 
-  await expect(page).toHaveURL(/coverageLevel=COMPLETE/);
+  await expect(page).toHaveURL(/coverageLevel=BASIC/);
   await expect(page.getByRole("article", { name: /Indonesia/ })).toBeVisible();
   await expect(page.getByText("1 country")).toBeVisible();
 
@@ -58,11 +58,11 @@ test("country explorer filters coverage and keeps coverage badges visible", asyn
 test("country explorer switches UI language on the same route", async ({
   page,
 }) => {
-  await page.goto("/en/countries?coverageLevel=COMPLETE");
+  await page.goto("/en/countries?coverageLevel=BASIC");
 
   await page.getByRole("link", { name: "zh-CN" }).click();
 
-  await expect(page).toHaveURL(/\/zh-CN\/countries\?coverageLevel=COMPLETE/);
+  await expect(page).toHaveURL(/\/zh-CN\/countries\?coverageLevel=BASIC/);
   await expect(page.getByRole("heading", { name: "国家数据浏览器" })).toBeVisible();
 });
 
@@ -75,26 +75,22 @@ test("country detail renders ten module skeleton and switches language", async (
   await expect(
     page.getByRole("heading", { exact: true, name: "Indonesia" }),
   ).toBeVisible();
-  await expect(page.getByText("10/10 modules")).toBeVisible();
+  await expect(page.getByText("1/10 modules")).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Country modules" })).toContainText(
     "Market overview",
   );
   await expect(page.getByRole("heading", { name: "Market overview" })).toBeVisible();
-  await expect(page.getByText("Renewable power procurement framework")).toBeVisible();
   await expect(
-    page.getByRole("heading", { exact: true, name: "C&I rooftop solar" }),
+    page.getByText(/Installed renewable capacity reached 15,630 MW/),
   ).toBeVisible();
   await expect(
     page.getByRole("heading", { exact: true, name: "AI Advisor" }),
   ).toBeVisible();
-  await expect(page.getByText("Internal sample data").first()).toBeVisible();
-  await expect(page.getByText("Solar, Storage, EV, Grid")).toBeVisible();
+  await expect(page.getByText("Data Building", { exact: true })).toHaveCount(9);
   const englishVisibleText = await main.innerText();
-  expect(englishVisibleText).not.toContain("P1-2 manually curated");
-  expect(englishVisibleText).not.toContain(
-    "Derived from published country module knowledge chunks",
-  );
-  expect(englishVisibleText).not.toContain("solar, storage, EV, grid");
+  expect(englishVisibleText).not.toContain("id_pol_001");
+  expect(englishVisibleText).not.toContain("id_know_001");
+  expect(englishVisibleText).not.toContain("Internal sample data");
 
   await page.getByRole("link", { name: "zh-CN" }).click();
 
@@ -103,12 +99,10 @@ test("country detail renders ten module skeleton and switches language", async (
     page.getByRole("heading", { exact: true, name: "印度尼西亚" }),
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "市场概览" })).toBeVisible();
-  await expect(page.getByText("内部样板数据").first()).toBeVisible();
-  await expect(page.getByText("光伏、储能、电动车、电网")).toBeVisible();
+  await expect(page.getByText(/可再生能源装机达到15,630兆瓦/)).toBeVisible();
+  await expect(page.getByText("数据建设中", { exact: true })).toHaveCount(9);
   const chineseVisibleText = await main.innerText();
-  expect(chineseVisibleText).not.toContain("P1-2 manually curated");
-  expect(chineseVisibleText).not.toContain(
-    "Derived from published country module knowledge chunks",
-  );
-  expect(chineseVisibleText).not.toContain("solar, storage, EV, grid");
+  expect(chineseVisibleText).not.toContain("id_pol_001");
+  expect(chineseVisibleText).not.toContain("id_know_001");
+  expect(chineseVisibleText).not.toContain("内部样板数据");
 });

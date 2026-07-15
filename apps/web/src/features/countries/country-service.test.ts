@@ -200,12 +200,12 @@ describe("country explorer service", () => {
     ).toThrow();
   });
 
-  test("uses the approved Indonesia seed as the current country catalog", () => {
+  test("uses the approved Indonesia Basic publication as the current country catalog", () => {
     const response = buildCountriesResponse({ locale: "en" });
 
     expect(response.data.map((country) => country.code)).toEqual(["ID"]);
     expect(response.data[0]).toMatchObject({
-      coverageLevel: "COMPLETE",
+      coverageLevel: "BASIC",
       name: "Indonesia",
       region: "southeast-asia",
     });
@@ -218,32 +218,33 @@ describe("country explorer service", () => {
     );
 
     expect(aiCoverage).toEqual({
-      dataCount: 20,
+      dataCount: 0,
       moduleKey: "ai-advisor",
-      status: "COMPLETE",
-      updatedAt: "2026-01-15T00:00:00Z",
+      status: "BUILDING",
+      updatedAt: "2026-01-09T00:00:00.000Z",
     });
   });
 
   test("filters countries by coverage level", () => {
-    const result = filterCountryCatalog({ coverageLevel: "COMPLETE" });
+    const result = filterCountryCatalog({ coverageLevel: "BASIC" });
 
     expect(result.map((country) => country.code)).toEqual(["ID"]);
+    expect(filterCountryCatalog({ coverageLevel: "COMPLETE" })).toEqual([]);
   });
 
   test("filters countries by region and tags", () => {
     const result = filterCountryCatalog({
-      industryTags: ["solar"],
+      industryTags: ["solar", "wind"],
       region: "southeast-asia",
-      techTags: ["pv-module"],
     });
 
     expect(result.map((country) => country.code)).toEqual(["ID"]);
+    expect(filterCountryCatalog({ techTags: ["pv-module"] })).toEqual([]);
   });
 
   test("builds localized API response with aligned meta", () => {
     const response = buildCountriesResponse({
-      coverageLevel: "COMPLETE",
+      coverageLevel: "BASIC",
       locale: "en",
     });
 
@@ -261,20 +262,15 @@ describe("country explorer service", () => {
     expect(response.data[0]).not.toHaveProperty("industryTags");
     expect(response.data[0]).not.toHaveProperty("techTags");
     expect(response.data[0]?.signals).toMatchObject({
-      opportunityLevel: "HIGH",
-      policyFriendliness: "MEDIUM",
-      recommendedEntryMode:
-        "Start with local channel partners plus project-based EPC co-development, then assess asset-light assembly or a joint venture after traction matures.",
-      recommendedPriority: "EXPLORE",
-      riskLevel: "HIGH",
-      sourceCount: expect.any(Number),
-      updatedAt: "2026-01-15T00:00:00Z",
+      opportunityLevel: "DATA_BUILDING",
+      policyFriendliness: "DATA_BUILDING",
+      recommendedEntryMode: null,
+      recommendedPriority: "DATA_BUILDING",
+      riskLevel: "DATA_BUILDING",
+      sourceCount: 0,
+      updatedAt: "2026-01-09T00:00:00.000Z",
     });
-    expect(response.data[0]?.signals.sources).toEqual(
-      expect.arrayContaining([
-        "P1-2 manually curated Indonesia seed baseline; sourceUrl null because this is an internal sample fixture for schema and coverage validation",
-      ]),
-    );
+    expect(response.data[0]?.signals.sources).toEqual([]);
   });
 
   test("records fallback fields when country business text is untranslated", () => {
@@ -396,10 +392,7 @@ describe("country explorer service", () => {
     expect(response.data[0]).toMatchObject({
       name: { zh: "印度尼西亚", en: "Indonesia" },
       signals: {
-        recommendedEntryMode: {
-          en: "Start with local channel partners plus project-based EPC co-development, then assess asset-light assembly or a joint venture after traction matures.",
-          zh: "推荐以本地渠道伙伴 + 项目型 EPC 联合开发起步，成熟后再评估轻资产组装或合资。",
-        },
+        recommendedEntryMode: null,
       },
       summary: {
         zh: expect.any(String),
@@ -414,8 +407,8 @@ describe("country explorer service", () => {
     expect(getFilterOptions()).toMatchObject({
       coverageLevels: ["BASIC", "STANDARD", "COMPLETE"],
       regions: ["southeast-asia"],
-      industryTags: expect.arrayContaining(["solar", "storage", "ev", "grid"]),
-      techTags: expect.arrayContaining(["pv-module", "lfp"]),
+      industryTags: ["solar", "wind", "grid"],
+      techTags: [],
     });
   });
 
@@ -427,7 +420,7 @@ describe("country explorer service", () => {
       meta: { locale: "en", textMode: "localized" },
       data: {
         code: "ID",
-        coverageLevel: "COMPLETE",
+        coverageLevel: "BASIC",
         name: "Indonesia",
         region: "southeast-asia",
       },
@@ -448,7 +441,7 @@ describe("country explorer service", () => {
       meta: { locale: "en", textMode: "raw" },
       data: {
         code: "ID",
-        coverageLevel: "COMPLETE",
+        coverageLevel: "BASIC",
         name: { zh: "印度尼西亚", en: "Indonesia" },
       },
     });
@@ -472,7 +465,7 @@ describe("country explorer service", () => {
     expect(buildCountryDetailResponse("ZZ", { locale: "en" })).toBeNull();
   });
 
-  test("builds localized list module payload from public verified items only", () => {
+  test("returns a BUILDING policy placeholder without legacy records", () => {
     const response = buildCountryModuleResponse("ID", "policy", {
       locale: "en",
     });
@@ -481,7 +474,7 @@ describe("country explorer service", () => {
       success: true,
       data: {
         moduleKey: "policy",
-        status: "COMPLETE",
+        status: "BUILDING",
         _i18nFallback: [],
       },
       meta: {
@@ -489,17 +482,12 @@ describe("country explorer service", () => {
         page: 1,
         pageSize: 20,
         textMode: "localized",
-        total: 5,
+        total: 0,
       },
     });
-    expect(response?.data.items).toHaveLength(5);
-    expect(response?.data.items?.[0]).toMatchObject({
-      id: "id_pol_001",
-      title: "Renewable power procurement framework",
-    });
-    expect(response?.data.items?.map((item) => item.id)).not.toContain(
-      "id_pol_anti_draft_001",
-    );
+    expect(response?.data.items).toEqual([]);
+    expect(JSON.stringify(response)).not.toContain("id_pol_001");
+    expect(JSON.stringify(response)).not.toContain("id_pol_anti_draft_001");
   });
 
   test("builds raw object module payload with LocalizedText fields", () => {
@@ -512,8 +500,8 @@ describe("country explorer service", () => {
 
     expect(response?.data.item).toMatchObject({
       overview: {
-        zh: expect.stringContaining("印尼是东南亚"),
-        en: expect.stringContaining("Indonesia is one"),
+        zh: expect.stringContaining("可再生能源装机达到15,630兆瓦"),
+        en: expect.stringContaining("Installed renewable capacity reached 15,630 MW"),
       },
     });
     expect(response?.meta.textMode).toBe("raw");
@@ -548,43 +536,29 @@ describe("country explorer service", () => {
     });
   });
 
-  test("summarizes AI advisor readiness without exposing chunks or embeddings", () => {
+  test("keeps AI advisor BUILDING without legacy chunks or readiness records", () => {
     const response = buildCountryModuleResponse("ID", "ai-advisor", {
       locale: "en",
     });
-    const firstItem = response?.data.items?.[0];
-
-    expect(response?.meta.total).toBe(1);
-    expect(firstItem).toMatchObject({
-      content: expect.stringContaining("Advisor-ready knowledge"),
-      id: "ai-advisor-readiness",
-      usableChunkCount: 20,
+    expect(response).toMatchObject({
+      data: { moduleKey: "ai-advisor", status: "BUILDING", items: [] },
+      meta: { total: 0 },
     });
-    expect(firstItem).not.toHaveProperty("embeddingZh");
-    expect(firstItem).not.toHaveProperty("embeddingEn");
-    expect(firstItem).not.toMatchObject({
-      id: "id_know_001",
-    });
-    expect(response?.data.items?.map((item) => item.id)).not.toContain(
-      "id_know_anti_unverified_001",
-    );
+    expect(JSON.stringify(response)).not.toContain("ai-advisor-readiness");
+    expect(JSON.stringify(response)).not.toContain("id_know_001");
+    expect(JSON.stringify(response)).not.toContain("embeddingZh");
   });
 
-  test("omits report file URLs from public module responses", () => {
+  test("keeps reports BUILDING without legacy report records or file URLs", () => {
     const response = buildCountryModuleResponse("ID", "reports", {
       locale: "en",
     });
 
-    expect(response?.data.items?.[0]).toMatchObject({
-      accessLevel: "FREE",
-      id: "id_report_001",
-      title: "Indonesia clean-energy market entry brief",
+    expect(response).toMatchObject({
+      data: { moduleKey: "reports", status: "BUILDING", items: [] },
+      meta: { total: 0 },
     });
-    expect(response?.data.items?.[0]).not.toHaveProperty("fileUrl");
-    expect(response?.data.items?.[1]).toMatchObject({
-      accessLevel: "MEMBER",
-      id: "id_report_002",
-    });
-    expect(response?.data.items?.[1]).not.toHaveProperty("fileUrl");
+    expect(JSON.stringify(response)).not.toContain("id_report_001");
+    expect(JSON.stringify(response)).not.toContain("fileUrl");
   });
 });

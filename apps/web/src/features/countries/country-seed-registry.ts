@@ -6,17 +6,8 @@ import type {
 } from "@navigator/shared-types/schema";
 import type { LocalizedText } from "@navigator/shared-types/i18n";
 
-import indonesiaChineseCompaniesSeed from "../../../../../data/indonesia/chinese-companies.json";
 import indonesiaCountrySeed from "../../../../../data/indonesia/country.json";
-import indonesiaEntryStrategySeed from "../../../../../data/indonesia/entry-strategy.json";
-import indonesiaKnowledgeChunksSeed from "../../../../../data/indonesia/knowledge/chunks.json";
 import indonesiaMarketOverviewSeed from "../../../../../data/indonesia/market-overview.json";
-import indonesiaOpportunitiesSeed from "../../../../../data/indonesia/opportunities.json";
-import indonesiaPartnersSeed from "../../../../../data/indonesia/partners.json";
-import indonesiaPolicySeed from "../../../../../data/indonesia/policy.json";
-import indonesiaProjectsSeed from "../../../../../data/indonesia/projects.json";
-import indonesiaReportsSeed from "../../../../../data/indonesia/reports.json";
-import indonesiaRiskSeed from "../../../../../data/indonesia/risk.json";
 
 export interface CountryModuleCoverageSeed {
   moduleKey: ModuleKey;
@@ -63,34 +54,22 @@ export interface CountrySeedBundle {
 }
 
 const indonesiaModuleData = {
-  "ai-advisor": indonesiaKnowledgeChunksSeed as readonly CountryModuleRecord[],
-  "chinese-companies":
-    indonesiaChineseCompaniesSeed as readonly CountryModuleRecord[],
-  "entry-strategy": indonesiaEntryStrategySeed as CountryModuleRecord,
+  "ai-advisor": [],
+  "chinese-companies": [],
+  "entry-strategy": null,
   "market-overview": indonesiaMarketOverviewSeed as CountryModuleRecord,
-  opportunities: indonesiaOpportunitiesSeed as readonly CountryModuleRecord[],
-  partners: indonesiaPartnersSeed as readonly CountryModuleRecord[],
-  policy: indonesiaPolicySeed as readonly CountryModuleRecord[],
-  projects: indonesiaProjectsSeed as readonly CountryModuleRecord[],
-  reports: indonesiaReportsSeed as readonly CountryModuleRecord[],
-  risk: indonesiaRiskSeed as readonly CountryModuleRecord[],
+  opportunities: [],
+  partners: [],
+  policy: [],
+  projects: [],
+  reports: [],
+  risk: [],
 } satisfies CountryModuleDataRegistry;
 
 export const countrySeedBundles = [
   {
     country: indonesiaCountrySeed as CountrySeedRecord,
     moduleData: indonesiaModuleData,
-    tagSources: [
-      indonesiaMarketOverviewSeed,
-      ...indonesiaPolicySeed,
-      ...indonesiaRiskSeed,
-      ...indonesiaOpportunitiesSeed,
-      ...indonesiaProjectsSeed,
-      ...indonesiaPartnersSeed,
-      ...indonesiaChineseCompaniesSeed,
-      indonesiaEntryStrategySeed,
-      ...indonesiaKnowledgeChunksSeed,
-      ...indonesiaReportsSeed,
-    ],
+    tagSources: [indonesiaMarketOverviewSeed],
   },
 ] as const satisfies readonly CountrySeedBundle[];

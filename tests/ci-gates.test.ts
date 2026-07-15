@@ -18,6 +18,7 @@ describe("P0-4 CI gates", () => {
     expect(runCommands).toEqual(
       expect.arrayContaining([
         "pnpm install --frozen-lockfile",
+        "pnpm --filter @navigator/db validate:approved-basic-publications",
         "pnpm lint",
         "pnpm typecheck",
         "pnpm test",
