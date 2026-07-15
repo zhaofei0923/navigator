@@ -1,6 +1,6 @@
 {
   "schemaVersion": "basic-source-catalog/v1",
-  "catalogVersion": "2026-07-13.1",
+  "catalogVersion": "2026-07-15.1",
   "sources": [
     {
       "sourceId": "indonesia-esdm-2025-performance",
@@ -87,6 +87,94 @@
       "adapterVersion": "1.0.0",
       "adapterKind": "manual-document",
       "fieldPaths": ["marketOverview.renewableTarget"]
+    },
+    {
+      "sourceId": "vietnam-chinhphu-adjusted-pdp8-2025",
+      "sourceName": "Government of Viet Nam",
+      "sourceFamily": "government",
+      "credibility": "OFFICIAL",
+      "format": "html",
+      "countryScope": ["VN"],
+      "requestTemplate": {
+        "origin": "https://xaydungchinhsach.chinhphu.vn",
+        "pathSegments": [
+          {
+            "kind": "literal",
+            "value": "quyet-dinh-768-qd-ttg-thu-tuong-chinh-phu-phe-duyet-dieu-chinh-quy-hoach-dien-viii-119250417074054718.htm"
+          }
+        ],
+        "query": []
+      },
+      "accept": "text/html",
+      "approvedOrigins": ["https://xaydungchinhsach.chinhphu.vn"],
+      "allowedQueryParameters": [],
+      "accessMode": "open",
+      "licenseName": "Official government publication; no open-content license declared",
+      "licenseUrl": "https://xaydungchinhsach.chinhphu.vn/quyet-dinh-768-qd-ttg-thu-tuong-chinh-phu-phe-duyet-dieu-chinh-quy-hoach-dien-viii-119250417074054718.htm",
+      "attribution": "Factual extraction with attribution to the Government of Viet Nam summary of Decision 768/QD-TTg; no open-content license is asserted.",
+      "refreshCadence": "event-driven",
+      "adapterId": "basic-manual-document-capture",
+      "adapterVersion": "1.0.0",
+      "adapterKind": "manual-document",
+      "fieldPaths": [
+        "country.region",
+        "country.summary",
+        "marketOverview.energyDemand",
+        "marketOverview.industryTags",
+        "marketOverview.overview",
+        "marketOverview.renewableTarget",
+        "marketOverview.techTags"
+      ]
+    },
+    {
+      "sourceId": "vietnam-evn-annual-report-2024-2025",
+      "sourceName": "Vietnam Electricity (EVN)",
+      "sourceFamily": "grid-operator",
+      "credibility": "OFFICIAL",
+      "format": "pdf",
+      "countryScope": ["VN"],
+      "requestTemplate": {
+        "origin": "https://en.evn.com.vn",
+        "pathSegments": [
+          { "kind": "literal", "value": "userfile" },
+          { "kind": "literal", "value": "files" },
+          { "kind": "literal", "value": "2026" },
+          { "kind": "literal", "value": "4" },
+          {
+            "kind": "literal",
+            "value": "AnnualRepot2025_V23-20260408155435105.pdf"
+          }
+        ],
+        "query": []
+      },
+      "accept": "application/pdf",
+      "approvedOrigins": ["https://en.evn.com.vn"],
+      "allowedQueryParameters": [],
+      "accessMode": "open",
+      "licenseName": "Official annual report; no open-content license declared",
+      "licenseUrl": "https://www.evn.com.vn/d/vi-VN/news-pdf/Bao-cao-thuong-nien-EVN-Annual-Report-2024-2025-60-50-506384",
+      "attribution": "Factual extraction with attribution to the official Vietnam Electricity Annual Report 2024-2025; no open-content license is asserted.",
+      "refreshCadence": "annual",
+      "adapterId": "basic-manual-document-capture",
+      "adapterVersion": "1.0.0",
+      "adapterKind": "manual-document",
+      "fieldPaths": [
+        "country.summary",
+        "marketOverview.energyDemand",
+        "marketOverview.keyIndicators[0].label",
+        "marketOverview.keyIndicators[0].unit",
+        "marketOverview.keyIndicators[0].value",
+        "marketOverview.keyIndicators[0].year",
+        "marketOverview.keyIndicators[1].label",
+        "marketOverview.keyIndicators[1].unit",
+        "marketOverview.keyIndicators[1].value",
+        "marketOverview.keyIndicators[1].year",
+        "marketOverview.keyIndicators[2].label",
+        "marketOverview.keyIndicators[2].unit",
+        "marketOverview.keyIndicators[2].value",
+        "marketOverview.keyIndicators[2].year",
+        "marketOverview.overview"
+      ]
     },
     {
       "sourceId": "world-bank-country",

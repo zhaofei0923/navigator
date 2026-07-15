@@ -164,6 +164,12 @@ graph LR
 - 完成边界：精确完整 identity 与 hashes 记录在 [indonesia-seed.md](./indonesia-seed.md)。外部 datastore 的 legacy Complete 清理由单独批准的 `OPS-DATA-ID-BASIC-CLEANUP` 处理；本任务未执行删除或其他数据库破坏性操作。
 - 人工确认：是（项目所有者已明确批准上述 country/run/hash identity 与本原子发布任务）。
 
+#### DATA-BASIC-VN-COLLECT Vietnam Basic candidate collection（已完成）
+- 目标：针对项目所有者批准启动的 `vietnam` / `VN` / `data-basic-vn-20260715-r3` identity，使用两条越南官方 HTML/PDF 来源与四条 World Bank deterministic sources，生成可追溯、双语、model-free 的 Basic `draft` 候选。
+- 验收：候选恰好包含 `source-register.json`、`extracted-facts.json`、`market-overview.draft.json` 与 `review-report.json`；四个 SHA-256 分别为 `9a164b73048b290a2fd964a292158149d722adcd6edc54d4fea1d67f6cb879a3`、`ca66fb3f8ee67c69ae9f33b4d941bf84209311cee139b68ed0a84d15ea9b99ce`、`3aa83f37cf0177e043d3ed0d5493c6193cb68e9f8dd33c75a46958a0079b5a95`、`163107e63f1ae72288dc10c8ed0770f94f9b93bf3dd896e67f0870f588492a1e`。候选通过 v2 validator，状态为 `ready-for-human-review`，保持 `reviewStatus = draft`、`aiUsable = false`、`humanDecision = null`，来源检查全部通过且无 injection risk。
+- 完成边界：本卡仅提交 immutable staging candidate 与来源目录/测试，不创建 `data/vietnam/` canonical、批准回执、collection manifest、Prisma 记录、KnowledgeChunk、AI 索引或 C 端发布；因此越南尚未发布，也尚未形成可对外声明的 `BASIC` 覆盖。
+- 人工确认：国家启动已由项目所有者批准；候选事实、双语文本、发布及任何后续覆盖升级仍待人工分别确认。
+
 #### DATA-BASIC-<ISO2> 单国 Basic 数据任务卡
 - 目标：每张任务卡只采集一个 ISO 3166-1 alpha-2 国家，使用固定 10 模块模型完成 Basic 国家骨架和市场基础画像。
 - 验收：一国一任务卡、一分支、一审核周期，且仅合并一次到 `main`；合并后的 `main` 验证通过后，仅推送一次到 `origin/main`。数据先为 `draft`，仅在人工审核后发布；首次真实交付恰好为 `BASIC`，`market-overview` 外九个模块均为 `BUILDING`；Basic 数据保持 `aiUsable = false` 且不产生知识片段；通过仓库校验和代表性 Web 检查，确认基础画像正常渲染、`BUILDING` 模块显示占位。
