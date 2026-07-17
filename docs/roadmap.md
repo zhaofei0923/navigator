@@ -170,6 +170,12 @@ graph LR
 - 完成边界：本卡仅提交 immutable staging candidate 与来源目录/测试，不创建 `data/vietnam/` canonical、批准回执、collection manifest、Prisma 记录、KnowledgeChunk、AI 索引或 C 端发布；因此越南尚未发布，也尚未形成可对外声明的 `BASIC` 覆盖。
 - 人工确认：国家启动已由项目所有者批准；候选事实、双语文本、发布及任何后续覆盖升级仍待人工分别确认。
 
+#### DATA-BASIC-VN-PUBLISH Vietnam Basic atomic publication（已完成）
+- 目标：针对项目所有者明确批准的 `vietnam` / `VN` / `data-basic-vn-20260715-r3` identity 创建独立批准回执、确定性 canonical Basic mapping 与 manifest v2，并通过通用只读发布闸门原子提交。
+- 验收：候选四文件保持不可变且 SHA-256 与 `DATA-BASIC-VN-COLLECT` 记录一致；批准回执记录 `draft -> pending -> published` 并绑定 candidate bytes；canonical 目录恰好三文件，国家为 `BASIC`，market overview 为 `published` 且 `aiUsable = false`，其余九模块为 `BUILDING`，无 knowledge/deeper modules。DB import、Web/API、中英文渲染与 Playwright 均按此边界验收，未修改 Prisma schema。
+- 完成边界：精确 identity、receipt 与 canonical hashes 记录在 [vietnam-seed.md](./vietnam-seed.md)。该发布不启用 AI，也不授权 Standard 或 Complete 升级。
+- 人工确认：是（项目所有者已明确批准上述 candidate identity、hashes 与本原子发布任务）。
+
 #### DATA-BASIC-<ISO2> 单国 Basic 数据任务卡
 - 目标：每张任务卡只采集一个 ISO 3166-1 alpha-2 国家，使用固定 10 模块模型完成 Basic 国家骨架和市场基础画像。
 - 验收：一国一任务卡、一分支、一审核周期，且仅合并一次到 `main`；合并后的 `main` 验证通过后，仅推送一次到 `origin/main`。数据先为 `draft`，仅在人工审核后发布；首次真实交付恰好为 `BASIC`，`market-overview` 外九个模块均为 `BUILDING`；Basic 数据保持 `aiUsable = false` 且不产生知识片段；通过仓库校验和代表性 Web 检查，确认基础画像正常渲染、`BUILDING` 模块显示占位。

@@ -1,0 +1,77 @@
+{
+  "code": "VN",
+  "name": {
+    "en": "Viet Nam",
+    "zh": "越南"
+  },
+  "summary": {
+    "en": "Viet Nam's power system had 82,387 MW of installed capacity in 2024, including 21,447 MW of renewables; total power production and purchases reached 308,732 million kWh. The adjusted Power Development Plan VIII sets 2030 ranges for wind, solar, and storage.",
+    "zh": "越南2024年电力系统总装机82,387兆瓦，其中可再生能源装机21,447兆瓦；全年发电与购电总量为308,732百万千瓦时。调整后的电力规划VIII列明了2030年风电、光伏和储能发展区间。"
+  },
+  "region": "southeast-asia",
+  "flagEmoji": "🇻🇳",
+  "updatedAt": "2026-01-08T07:34:00.000Z",
+  "coverageLevel": "BASIC",
+  "moduleCoverage": [
+    {
+      "moduleKey": "market-overview",
+      "status": "COMPLETE",
+      "dataCount": 1,
+      "updatedAt": "2026-01-08T07:34:00.000Z"
+    },
+    {
+      "moduleKey": "policy",
+      "status": "BUILDING",
+      "dataCount": 0,
+      "updatedAt": "2026-01-08T07:34:00.000Z"
+    },
+    {
+      "moduleKey": "risk",
+      "status": "BUILDING",
+      "dataCount": 0,
+      "updatedAt": "2026-01-08T07:34:00.000Z"
+    },
+    {
+      "moduleKey": "opportunities",
+      "status": "BUILDING",
+      "dataCount": 0,
+      "updatedAt": "2026-01-08T07:34:00.000Z"
+    },
+    {
+      "moduleKey": "projects",
+      "status": "BUILDING",
+      "dataCount": 0,
+      "updatedAt": "2026-01-08T07:34:00.000Z"
+    },
+    {
+      "moduleKey": "partners",
+      "status": "BUILDING",
+      "dataCount": 0,
+      "updatedAt": "2026-01-08T07:34:00.000Z"
+    },
+    {
+      "moduleKey": "chinese-companies",
+      "status": "BUILDING",
+      "dataCount": 0,
+      "updatedAt": "2026-01-08T07:34:00.000Z"
+    },
+    {
+      "moduleKey": "entry-strategy",
+      "status": "BUILDING",
+      "dataCount": 0,
+      "updatedAt": "2026-01-08T07:34:00.000Z"
+    },
+    {
+      "moduleKey": "ai-advisor",
+      "status": "BUILDING",
+      "dataCount": 0,
+      "updatedAt": "2026-01-08T07:34:00.000Z"
+    },
+    {
+      "moduleKey": "reports",
+      "status": "BUILDING",
+      "dataCount": 0,
+      "updatedAt": "2026-01-08T07:34:00.000Z"
+    }
+  ]
+}

@@ -85,7 +85,7 @@ describe("tracked TypeScript command hook", () => {
 
     expect(result.status, result.stderr).toBe(0);
     expect(result.stdout).toContain(
-      '{"countryDirectories":["indonesia"],"countryCodes":["ID"]}',
+      '{"countryDirectories":["indonesia","vietnam"],"countryCodes":["ID","VN"]}',
     );
   }, 30_000);
 });

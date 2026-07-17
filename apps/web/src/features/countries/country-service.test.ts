@@ -200,13 +200,18 @@ describe("country explorer service", () => {
     ).toThrow();
   });
 
-  test("uses the approved Indonesia Basic publication as the current country catalog", () => {
+  test("uses every approved Basic publication as the current country catalog", () => {
     const response = buildCountriesResponse({ locale: "en" });
 
-    expect(response.data.map((country) => country.code)).toEqual(["ID"]);
+    expect(response.data.map((country) => country.code)).toEqual(["ID", "VN"]);
     expect(response.data[0]).toMatchObject({
       coverageLevel: "BASIC",
       name: "Indonesia",
+      region: "southeast-asia",
+    });
+    expect(response.data[1]).toMatchObject({
+      coverageLevel: "BASIC",
+      name: "Viet Nam",
       region: "southeast-asia",
     });
   });
@@ -228,7 +233,7 @@ describe("country explorer service", () => {
   test("filters countries by coverage level", () => {
     const result = filterCountryCatalog({ coverageLevel: "BASIC" });
 
-    expect(result.map((country) => country.code)).toEqual(["ID"]);
+    expect(result.map((country) => country.code)).toEqual(["ID", "VN"]);
     expect(filterCountryCatalog({ coverageLevel: "COMPLETE" })).toEqual([]);
   });
 
@@ -238,7 +243,7 @@ describe("country explorer service", () => {
       region: "southeast-asia",
     });
 
-    expect(result.map((country) => country.code)).toEqual(["ID"]);
+    expect(result.map((country) => country.code)).toEqual(["ID", "VN"]);
     expect(filterCountryCatalog({ techTags: ["pv-module"] })).toEqual([]);
   });
 
@@ -255,10 +260,13 @@ describe("country explorer service", () => {
         page: 1,
         pageSize: 20,
         textMode: "localized",
-        total: 1,
+        total: 2,
       },
     });
-    expect(response.data.map((country) => country.name)).toEqual(["Indonesia"]);
+    expect(response.data.map((country) => country.name)).toEqual([
+      "Indonesia",
+      "Viet Nam",
+    ]);
     expect(response.data[0]).not.toHaveProperty("industryTags");
     expect(response.data[0]).not.toHaveProperty("techTags");
     expect(response.data[0]?.signals).toMatchObject({
@@ -407,8 +415,8 @@ describe("country explorer service", () => {
     expect(getFilterOptions()).toMatchObject({
       coverageLevels: ["BASIC", "STANDARD", "COMPLETE"],
       regions: ["southeast-asia"],
-      industryTags: ["solar", "wind", "grid"],
-      techTags: [],
+      industryTags: ["solar", "wind", "storage", "grid"],
+      techTags: ["onshore-wind", "offshore-wind"],
     });
   });
 
@@ -431,6 +439,31 @@ describe("country explorer service", () => {
     expect(response?.data).not.toHaveProperty("industryTags");
     expect(response?.data).not.toHaveProperty("techTags");
     expectNoP1_6DFields(response);
+  });
+
+  test("serves published Vietnam data in both locales while AI remains BUILDING", () => {
+    const english = buildCountryDetailResponse("VN", { locale: "en" });
+    const chinese = buildCountryDetailResponse("VN", { locale: "zh-CN" });
+    const aiAdvisor = buildCountryModuleResponse("VN", "ai-advisor", {
+      locale: "en",
+    });
+
+    expect(english?.data).toMatchObject({
+      code: "VN",
+      coverageLevel: "BASIC",
+      name: "Viet Nam",
+      summary: expect.stringContaining("82,387 MW"),
+    });
+    expect(chinese?.data).toMatchObject({
+      code: "VN",
+      coverageLevel: "BASIC",
+      name: "越南",
+      summary: expect.stringContaining("82,387兆瓦"),
+    });
+    expect(aiAdvisor).toMatchObject({
+      data: { moduleKey: "ai-advisor", status: "BUILDING", items: [] },
+      meta: { total: 0 },
+    });
   });
 
   test("builds a raw country detail without P1-6D audit or runtime fields", () => {

@@ -10,8 +10,8 @@ import { CountryDetail } from "./country-detail.js";
 import { buildCountryDetailResponse } from "./country-service.js";
 import type { LocalizedCountryDetail } from "./country-service.js";
 
-function renderCountryDetail(locale: "zh-CN" | "en") {
-  const response = buildCountryDetailResponse("ID", { locale });
+function renderCountryDetail(code: string, locale: "zh-CN" | "en") {
+  const response = buildCountryDetailResponse(code, { locale });
 
   if (response === null || response.meta.textMode !== "localized") {
     throw new Error("Expected localized Indonesia detail response");
@@ -30,7 +30,7 @@ function renderCountryDetail(locale: "zh-CN" | "en") {
 
 describe("CountryDetail visible i18n", () => {
   test("renders the published Chinese market overview and nine placeholders", () => {
-    const html = renderCountryDetail("zh-CN");
+    const html = renderCountryDetail("ID", "zh-CN");
 
     expect(html).toContain("印度尼西亚");
     expect(html).toContain("基础覆盖");
@@ -47,7 +47,7 @@ describe("CountryDetail visible i18n", () => {
   });
 
   test("renders the published English market overview and nine placeholders", () => {
-    const html = renderCountryDetail("en");
+    const html = renderCountryDetail("ID", "en");
 
     expect(html).toContain("Indonesia");
     expect(html).toContain("Basic");
@@ -61,6 +61,18 @@ describe("CountryDetail visible i18n", () => {
     expect(html).not.toContain("id_pol_001");
     expect(html).not.toContain("id_know_001");
     expect(html).not.toContain(">tags<");
+  });
+
+  test("renders Vietnam's published bilingual overview with the same nine placeholders", () => {
+    const chinese = renderCountryDetail("VN", "zh-CN");
+    const english = renderCountryDetail("VN", "en");
+
+    expect(chinese).toContain("越南");
+    expect(chinese).toContain("总装机容量为82,387兆瓦");
+    expect(chinese.match(/数据建设中/g)).toHaveLength(9);
+    expect(english).toContain("Viet Nam");
+    expect(english).toContain("Total installed capacity was 82,387 MW");
+    expect(english.match(/Data Building/g)).toHaveLength(9);
   });
 
   test("does not expose unknown raw source, unit, or tag values", () => {

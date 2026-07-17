@@ -160,6 +160,21 @@ describe("GET /api/v1/countries/:code", () => {
     expect(body.data.moduleCoverage).toHaveLength(10);
   });
 
+  test("returns Vietnam's published Basic detail in Chinese", async () => {
+    const response = await GET(
+      new Request("https://navigator.test/api/v1/countries/VN?locale=zh-CN"),
+      { params: Promise.resolve({ code: "VN" }) },
+    );
+    const body = (await response.json()) as {
+      data: { code: string; name: string; moduleCoverage: Array<{ status: string }> };
+    };
+
+    expect(response.status).toBe(200);
+    expect(body.data).toMatchObject({ code: "VN", name: "越南" });
+    expect(body.data.moduleCoverage.filter(({ status }) => status === "BUILDING"))
+      .toHaveLength(9);
+  });
+
   test("keeps the route outside the P1-6D audit boundary", () => {
     const sources = [
       readFileSync(new URL("./route.ts", import.meta.url), "utf8"),

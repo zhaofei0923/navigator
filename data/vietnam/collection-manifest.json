@@ -1,0 +1,8 @@
+{
+  "schemaVersion": "basic-country-publication-manifest/v2",
+  "activeRunId": "data-basic-vn-20260715-r3",
+  "mappingVersion": "basic-country-canonical/v2",
+  "auditBundlePath": "data/staging/vietnam/data-basic-vn-20260715-r3",
+  "approvalReceiptPath": "data/approvals/vietnam/data-basic-vn-20260715-r3.json",
+  "approvalReceiptSha256": "da457ef9dd8418a8a17b0f94e52504492da4f33fe3cdbb5b48434bf9b110df02"
+}
