@@ -31,6 +31,9 @@
 - Create: `data/saudi-arabia/market-overview.json`
 - Create: `data/saudi-arabia/collection-manifest.json`
 - Modify: `packages/db/src/approved-basic-publications-validation.test.ts`
+- Modify: `packages/db/src/saudi-arabia-basic-r1-candidate.test.ts`
+- Modify: `packages/db/src/saudi-arabia-basic-r2-candidate.test.ts`
+- Modify: `tests/node-ts-source-commands.test.ts`
 
 **Interfaces:**
 - Consumes: `loadApprovedBasicCountryPublicationV2(repositoryRoot, countryDirectory)` and the immutable r2 four-file candidate.
@@ -180,7 +183,7 @@ Expected: all tests pass and validation prints the three exact directories/codes
 - [x] **Step 7: Commit Task 1**
 
 ```bash
-git add data/saudi-arabia data/approvals/saudi-arabia packages/db/src/saudi-arabia-basic-publication.test.ts packages/db/src/approved-basic-publications-validation.test.ts
+git add data/saudi-arabia data/approvals/saudi-arabia packages/db/src/saudi-arabia-basic-publication.test.ts packages/db/src/approved-basic-publications-validation.test.ts packages/db/src/saudi-arabia-basic-r1-candidate.test.ts packages/db/src/saudi-arabia-basic-r2-candidate.test.ts tests/node-ts-source-commands.test.ts
 git commit -m "feat: publish Saudi Arabia Basic data"
 ```
 
@@ -192,7 +195,6 @@ git commit -m "feat: publish Saudi Arabia Basic data"
 - Modify: `apps/web/src/features/countries/country-seed-registry.ts`
 - Modify: `apps/web/src/features/countries/country-service.test.ts`
 - Modify: `apps/web/src/app/api/v1/countries/route.test.ts`
-- Modify: `tests/node-ts-source-commands.test.ts`
 - Modify: `tests/e2e/country-explorer.e2e.ts`
 
 **Interfaces:**
@@ -203,7 +205,7 @@ git commit -m "feat: publish Saudi Arabia Basic data"
 
 Extend tests to require the published catalog order `["ID", "VN", "SA"]`, localized names `["Indonesia", "Viet Nam", "Saudi Arabia"]`, raw Saudi name `{ zh: "沙特阿拉伯", en: "Saudi Arabia" }`, total `3`, and filter regions `["southeast-asia", "middle-east"]`. Add a service test that loads `SA` in English and Chinese, preserves `BASIC`, renders the approximate `92.5 GW` summary, and returns `BUILDING`/empty AI advisor data.
 
-Update the root command test to import `indonesia`, `vietnam`, and `saudi-arabia`, while expecting the build validation's sorted identity:
+Verify the Task 1 root command test imports `indonesia`, `vietnam`, and `saudi-arabia`, while expecting the build validation's sorted identity:
 
 ```text
 {"countryDirectories":["indonesia","saudi-arabia","vietnam"],"countryCodes":["ID","SA","VN"]}
@@ -248,7 +250,7 @@ Expected: all unit, command, and Playwright tests pass; Saudi renders bilinguall
 - [x] **Step 6: Commit Task 2**
 
 ```bash
-git add apps/web/src/features/countries/country-seed-registry.ts apps/web/src/features/countries/country-service.test.ts apps/web/src/app/api/v1/countries/route.test.ts tests/node-ts-source-commands.test.ts tests/e2e/country-explorer.e2e.ts
+git add apps/web/src/features/countries/country-seed-registry.ts apps/web/src/features/countries/country-service.test.ts apps/web/src/app/api/v1/countries/route.test.ts tests/e2e/country-explorer.e2e.ts
 git commit -m "feat: expose Saudi Arabia Basic publication"
 ```
 
