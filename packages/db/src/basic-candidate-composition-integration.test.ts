@@ -271,10 +271,14 @@ function syntheticCatalog(): Record<string, unknown> {
     new URL("../catalog/basic-source-catalog.json", import.meta.url),
     "utf8",
   )) as Record<string, unknown> & { sources: unknown[] };
+  const sources = [...committed.sources, manualCatalogSource()] as Array<{
+    sourceId: string;
+  }>;
+  sources.sort((left, right) => compareText(left.sourceId, right.sourceId));
   return {
     ...committed,
     catalogVersion: "fixture-catalog-to-staging-v2",
-    sources: [manualCatalogSource(), ...committed.sources],
+    sources,
   };
 }
 

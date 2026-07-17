@@ -16,8 +16,11 @@ const COUNTRY_DIRECTORY = "saudi-arabia";
 const COUNTRY_CODE = "SA";
 const R1_RUN_ID = "data-basic-sa-20260717-r1";
 const R2_RUN_ID = "data-basic-sa-20260717-r2";
-const CATALOG_VERSION = "2026-07-17.1";
-const CATALOG_SHA256 =
+const CURRENT_CATALOG_VERSION = "2026-07-17.2";
+const CURRENT_CATALOG_SHA256 =
+  "6d4c6a27367eb36e4fe20df8fe78a9c9a9e865f84af563a22e31069c176d6f0a";
+const CANDIDATE_CATALOG_VERSION = "2026-07-17.1";
+const CANDIDATE_CATALOG_SHA256 =
   "3c174b76efe8c637436c52f473911d6409d79ac2e057eb251bb860dba4c417e7";
 const SOURCE_IDS = [
   "saudi-gastat-electrical-energy-statistics-2024",
@@ -28,10 +31,18 @@ const SOURCE_IDS = [
   "world-bank-gdp-growth",
   "world-bank-population",
 ] as const;
-const CATALOG_SOURCE_IDS = [
+const CURRENT_CATALOG_SOURCE_IDS = [
+  "brazil-epe-ben-2026-summary",
+  "brazil-ipea-ods7-renewable-target",
   "indonesia-esdm-2025-performance",
   "indonesia-esdm-national-energy-policy-2025",
   ...SOURCE_IDS.slice(0, 3),
+  "south-africa-eskom-results-presentation-2025",
+  "south-africa-government-irp-2025",
+  "south-africa-government-rmippp-hybrid-projects-2023",
+  "uae-admo-barakah-unit-4-2024",
+  "uae-admo-wind-program-2023",
+  "uae-government-energy-strategy-2050",
   "vietnam-chinhphu-adjusted-pdp8-2025",
   "vietnam-evn-annual-report-2024-2025",
   ...SOURCE_IDS.slice(3),
@@ -199,11 +210,11 @@ describe("Saudi Arabia Basic r2 qualifier correction", () => {
       "utf8",
     )) as unknown);
     expect(catalog).toMatchObject({
-      catalog: { catalogVersion: CATALOG_VERSION, countryMappings: [] },
-      catalogSha256: CATALOG_SHA256,
+      catalog: { catalogVersion: CURRENT_CATALOG_VERSION, countryMappings: [] },
+      catalogSha256: CURRENT_CATALOG_SHA256,
     });
     expect(catalog.catalog.sources.map(({ sourceId }) => sourceId)).toEqual(
-      CATALOG_SOURCE_IDS,
+      CURRENT_CATALOG_SOURCE_IDS,
     );
   });
 
@@ -294,8 +305,8 @@ describe("Saudi Arabia Basic r2 qualifier correction", () => {
       sourceRegister: {
         runId: R2_RUN_ID,
         countryCode: COUNTRY_CODE,
-        catalogVersion: CATALOG_VERSION,
-        catalogSha256: CATALOG_SHA256,
+        catalogVersion: CANDIDATE_CATALOG_VERSION,
+        catalogSha256: CANDIDATE_CATALOG_SHA256,
       },
       extractedFacts: { runId: R2_RUN_ID, countryCode: COUNTRY_CODE },
       reviewReport: {

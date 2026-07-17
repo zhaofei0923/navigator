@@ -162,15 +162,29 @@ Catalog 保留四个覆盖所有国家的 `open` World Bank JSON deterministic s
 
 | sourceId | 国家 | 格式 | 官方发布方 | 字段归属 |
 |---|---|---|---|---|
+| `brazil-epe-ben-2026-summary` | BR | HTML | Empresa de Pesquisa Energetica (EPE) | 国家地区/摘要、需求、产业标签、关键指标组 0/1/2、市场概述 |
+| `brazil-ipea-ods7-renewable-target` | BR | HTML | Institute for Applied Economic Research (IPEA) | `marketOverview.renewableTarget` |
 | `indonesia-esdm-2025-performance` | ID | HTML | Indonesia Ministry of Energy and Mineral Resources | 能源市场基线、摘要与关键指标 |
 | `indonesia-esdm-national-energy-policy-2025` | ID | PDF | Government of Indonesia | 国家能源政策目标 |
 | `saudi-gastat-electrical-energy-statistics-2024` | SA | PDF | General Authority for Statistics | `country.summary`、`marketOverview.energyDemand`、关键指标组 0 和 2、`marketOverview.overview` |
 | `saudi-gastat-renewable-energy-statistics-2024` | SA | HTML | General Authority for Statistics | `country.region`、`country.summary`、`marketOverview.industryTags`、关键指标组 1、`marketOverview.overview`、`marketOverview.techTags` |
 | `saudi-spa-energy-storage-2025` | SA | HTML | Saudi Press Agency | `country.summary`、`marketOverview.industryTags`、`marketOverview.overview`、`marketOverview.renewableTarget`、`marketOverview.techTags` |
+| `south-africa-eskom-results-presentation-2025` | ZA | PDF | Eskom Holdings SOC Ltd | 国家摘要、需求、产业标签、关键指标组 0/1、市场概述 |
+| `south-africa-government-irp-2025` | ZA | PDF | Government of South Africa | 国家地区/摘要、产业标签、关键指标组 2、市场概述、可再生能源目标 |
+| `south-africa-government-rmippp-hybrid-projects-2023` | ZA | HTML | Government of South Africa | 国家摘要、产业与技术标签、市场概述 |
+| `uae-admo-barakah-unit-4-2024` | AE | HTML | Abu Dhabi Media Office | 国家摘要、需求、产业标签、关键指标组 0、市场概述 |
+| `uae-admo-wind-program-2023` | AE | HTML | Abu Dhabi Media Office | 国家摘要、产业标签、关键指标组 2、市场概述 |
+| `uae-government-energy-strategy-2050` | AE | HTML | Government of the United Arab Emirates | 国家地区/摘要、需求、产业标签、关键指标组 1、市场概述、可再生能源目标 |
 | `vietnam-chinhphu-adjusted-pdp8-2025` | VN | HTML | Government of Viet Nam | 调整后的电力规划 VIII 目标与产业方向 |
 | `vietnam-evn-annual-report-2024-2025` | VN | PDF | Vietnam Electricity (EVN) | 2024 年装机、电力生产与购入基线 |
 
+Catalog `2026-07-17.2` 共登记 19 条来源，canonical SHA-256 为 `6d4c6a27367eb36e4fe20df8fe78a9c9a9e865f84af563a22e31069c176d6f0a`，`countryMappings = []`。其中 EPE 新闻页按其页脚声明登记为 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.pt_BR)；本版本新增的其余七条来源不主张开放内容许可。EPE 新闻页、South Africa IRP、UAE Wind Program 页面和 UAE Energy Strategy 2050 页面只支持受控 `industryTags`，不支持任何 exact controlled `techTags`；只有明确写出 Onshore Wind 的 South Africa RMIPPPP 页面保留 `techTags` ownership，后续 candidate 只能归一化该精确枚举，不能推断储能化学体系或光伏设备类型。
+
 这些 manual sources 只通过 `basic-manual-document-capture@1.0.0` 捕获原始 bytes/hash；HTML/PDF evidence 绝不直接解析为 candidate facts。事实、双语编辑输入和 source check 必须继续由绑定 capture hash 的人工 observation plan 与人工审核提供。当前 catalog 不包含 IMF、IRENA、Ember 或 credentialed source。
+
+巴西后续 observation plan 必须保持以下口径：EPE 新闻页发布于 `2026-06-03`；安全的关键指标组固定为组 0 的 2025 年最终电力消费同比增长 `2.7%`、组 1 的太阳能装机 `64,793 MW`、组 2 的风电装机 `34,707 MW`。新闻页的 `86.8%` 是 2025 年“可再生能源在电力矩阵中的占比”，而未登记的动态 BEN 章节以另一国内电力供应口径给出 `86.6%`；本任务不选择任何数值型可再生能源占比指标，也不得混用两个定义。`20.4 TWh` 是增量，不是总供应量。IPEA 只支持“到 2030 年维持全国能源矩阵较高可再生能源占比”的定性目标，不能表述为电力矩阵数值目标或法律目标。
+
+v2 raw capture 对单响应执行精确 `10,485,760` bytes（10 MiB）硬上限。以下已审核但超限的官方文件未进入 catalog：UAE FCSC `UAE Numbers 2022` 约 `16.2 MB`、Brazil BEN PDF `17,717,974` bytes、Brazil PDE PDF `14,878,646` bytes、South Africa Eskom integrated report `12,246,797` bytes。不得通过截断、拆包或绕过限制使用这些文件；如需纳入，必须另立来源与 transport 设计任务。
 
 `DATA-BASIC-SA-COLLECT` 的 `SA` / `data-basic-sa-20260717-r1` 是不可变的审核历史，而非可发布候选。它绑定 catalog `2026-07-17.1` 和 SHA-256 `3c174b76efe8c637436c52f473911d6409d79ac2e057eb251bb860dba4c417e7`，四个 artifact hash 分别为 `source-register.json` `fcc3de285225f2e26a04f82b72e53caf69df605971fd2eb10b0eacbe2e884711`、`extracted-facts.json` `7a423661d5b7bd2d43c7f81b39131eeea47fb82cf62624343d976128eb4d36d1`、`market-overview.draft.json` `567821ee55b5fd04cf4db198ee8a25629ec459a8f4542ae57185d478b800c92a`、`review-report.json` `a375cc5b759f3e1b619a3c1826adb0eaad48c5779a44a816a387fd021e301ee9`。由于其遗漏官方对约 `92.5 GW` 与约 `340,430 GWh` 的限定词，r1 在任何人工批准前已被 superseded；它永不得批准或发布，且不得作为任何批准决定或发布任务的输入。
 
