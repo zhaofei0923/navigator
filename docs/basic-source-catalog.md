@@ -172,6 +172,8 @@ Catalog 保留四个覆盖所有国家的 `open` World Bank JSON deterministic s
 
 这些 manual sources 只通过 `basic-manual-document-capture@1.0.0` 捕获原始 bytes/hash；HTML/PDF evidence 绝不直接解析为 candidate facts。事实、双语编辑输入和 source check 必须继续由绑定 capture hash 的人工 observation plan 与人工审核提供。当前 catalog 不包含 IMF、IRENA、Ember 或 credentialed source。
 
+`DATA-BASIC-SA-COLLECT` 的 `SA` / `data-basic-sa-20260717-r1` candidate 绑定 catalog `2026-07-17.1` 和 SHA-256 `3c174b76efe8c637436c52f473911d6409d79ac2e057eb251bb860dba4c417e7`。其来源集合恰好由上述三条 Saudi official manual-document sources 与四条 World Bank deterministic sources 组成；候选四个 staging artifacts、32 条 facts 和 7 个 source checks 均保持在人工审核闸门前。该记录的状态为 `ready-for-human-review`，但仍是 `reviewStatus = draft`、`aiUsable = false`、`humanDecision = null`：它不是 canonical、未发布且不可用于 AI。只有单独人工发布决定获批后，才可由独立的 `DATA-BASIC-SA-PUBLISH` 任务处理发布。
+
 ## 8. 资源与错误边界
 
 | 对象 | 上限 |

@@ -296,8 +296,8 @@ Expected: no raw cache is tracked; the staging path contains exactly four files;
 - [ ] **Step 5: Commit the reviewed task card**
 
 ```bash
-git add docs/basic-source-catalog.md docs/country-rollout.md docs/roadmap.md docs/superpowers/plans/2026-07-17-saudi-basic-candidate-plan.md packages/db/catalog/basic-source-catalog.json packages/db/src/basic-source-catalog.test.ts packages/db/src/saudi-arabia-basic-r1-candidate.test.ts data/staging/saudi-arabia/data-basic-sa-20260717-r1/source-register.json data/staging/saudi-arabia/data-basic-sa-20260717-r1/extracted-facts.json data/staging/saudi-arabia/data-basic-sa-20260717-r1/market-overview.draft.json data/staging/saudi-arabia/data-basic-sa-20260717-r1/review-report.json
-git commit -m "feat: collect Saudi Arabia Basic candidate"
+git add docs/basic-source-catalog.md docs/country-rollout.md docs/roadmap.md docs/superpowers/plans/2026-07-17-saudi-basic-candidate-plan.md
+git commit -m "docs: record Saudi Basic candidate status"
 ```
 
-Expected: one Conventional Commit containing only this task card.
+Expected: one Task 3 Conventional Commit containing only the status documentation and execution-plan correction; reviewed Task 1-2 commits remain unchanged.

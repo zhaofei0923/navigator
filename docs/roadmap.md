@@ -170,6 +170,12 @@ graph LR
 - 完成边界：本卡仅提交 immutable staging candidate 与来源目录/测试，不创建 `data/vietnam/` canonical、批准回执、collection manifest、Prisma 记录、KnowledgeChunk、AI 索引或 C 端发布；因此越南尚未发布，也尚未形成可对外声明的 `BASIC` 覆盖。
 - 人工确认：国家启动已由项目所有者批准；候选事实、双语文本、发布及任何后续覆盖升级仍待人工分别确认。
 
+#### DATA-BASIC-SA-COLLECT Saudi Arabia Basic candidate collection（已完成）
+- 目标：针对项目所有者批准启动的 `saudi-arabia` / `SA` / `data-basic-sa-20260717-r1` identity，使用 GASTAT Electrical Energy Statistics 2024 PDF、GASTAT Renewable Energy Statistics 2024 HTML、Saudi Press Agency energy-storage 2025 HTML 与四条 World Bank deterministic sources，生成可追溯、双语、model-free 的 Basic `draft` 候选。
+- 验收：候选绑定 catalog `2026-07-17.1` 与 SHA-256 `3c174b76efe8c637436c52f473911d6409d79ac2e057eb251bb860dba4c417e7`，且恰好包含 `source-register.json`、`extracted-facts.json`、`market-overview.draft.json` 与 `review-report.json`；四个 SHA-256 分别为 `fcc3de285225f2e26a04f82b72e53caf69df605971fd2eb10b0eacbe2e884711`、`7a423661d5b7bd2d43c7f81b39131eeea47fb82cf62624343d976128eb4d36d1`、`567821ee55b5fd04cf4db198ee8a25629ec459a8f4542ae57185d478b800c92a`、`a375cc5b759f3e1b619a3c1826adb0eaad48c5779a44a816a387fd021e301ee9`。候选通过 v2 validator，状态为 `ready-for-human-review`，具有 7 个通过的 source checks、32 条 facts、零 blockers/conflicts/injection risks，并保持 `reviewStatus = draft`、`aiUsable = false`、`humanDecision = null`。
+- 完成边界：本卡仅提交 immutable staging candidate、来源目录与 lock tests；不创建 `data/saudi-arabia/` canonical、批准回执、collection manifest、Prisma 记录、KnowledgeChunk、AI 索引或 C 端发布。因此 Saudi Arabia 尚未发布，尚未形成可对外声明的 `BASIC` 覆盖，且不得用于 AI。
+- 人工确认：候选事实、双语文本与发布仍待独立人工决定。只有发布决定获批后，才可创建和执行单独的 `DATA-BASIC-SA-PUBLISH` 任务；该候选不授权 Standard、Complete 或 AI 启用。
+
 #### DATA-BASIC-VN-PUBLISH Vietnam Basic atomic publication（已完成）
 - 目标：针对项目所有者明确批准的 `vietnam` / `VN` / `data-basic-vn-20260715-r3` identity 创建独立批准回执、确定性 canonical Basic mapping 与 manifest v2，并通过通用只读发布闸门原子提交。
 - 验收：候选四文件保持不可变且 SHA-256 与 `DATA-BASIC-VN-COLLECT` 记录一致；批准回执记录 `draft -> pending -> published` 并绑定 candidate bytes；canonical 目录恰好三文件，国家为 `BASIC`，market overview 为 `published` 且 `aiUsable = false`，其余九模块为 `BUILDING`，无 knowledge/deeper modules。DB import、Web/API、中英文渲染与 Playwright 均按此边界验收，未修改 Prisma schema。

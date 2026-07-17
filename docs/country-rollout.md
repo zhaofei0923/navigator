@@ -28,7 +28,7 @@ MVP 到商业化初期的当前建设目标是经人工批准的国家先完成 
 |------|--------|------|----------|------|------|
 | 首次真实验证 | ID | 印度尼西亚 | Basic | 验证 Basic 十模块骨架与人工发布闸门 | 已发布 Basic |
 | 扩展 | VN | 越南 | Basic | 已按批准的 v2 candidate 发布基础画像；后续覆盖升级仍须独立人工决定 | 已发布 Basic |
-| 扩展 | SA | 沙特阿拉伯 | Basic | 先完成统一基础画像；后续覆盖升级另行人工批准 | 待人工确认 |
+| 扩展 | SA | 沙特阿拉伯 | Basic | 已形成待人工审核的 Basic draft 候选；仅在独立发布决定获批后，才能进入单独发布任务 | 候选待人工审核（未发布） |
 | 扩展 | AE | 阿联酋 | Basic | 先完成统一基础画像；后续覆盖升级另行人工批准 | 待人工确认 |
 | 扩展 | BR | 巴西 | Basic | 先完成统一基础画像；后续覆盖升级另行人工批准 | 待人工确认 |
 | 基础池 | KE | 肯尼亚 | Basic | 非洲示范市场 | 待人工确认 |
@@ -37,6 +37,14 @@ MVP 到商业化初期的当前建设目标是经人工批准的国家先完成 
 | 基础池 | AU | 澳大利亚 | Basic | 成熟能源市场与储能机会 | 待人工确认 |
 
 `ID` 是首个真实 Basic 验证国家；`VN`、`SA`、`AE`、`BR` 与其他候选国家同样必须先按 Basic 交付，再在独立、经人工批准的升级任务中决定是否推进 Standard 或 Complete。首批 30–50 个 Basic 国家清单、最终国家顺序和覆盖升级结论均属于业务优先级决策，必须由人工确认后再进入 seed 或后台录入。
+
+### SA draft candidate record
+
+- `DATA-BASIC-SA-COLLECT` 已产生 `SA` / `saudi-arabia` / `data-basic-sa-20260717-r1` 的 immutable staging candidate，绑定 catalog `2026-07-17.1` 与 SHA-256 `3c174b76efe8c637436c52f473911d6409d79ac2e057eb251bb860dba4c417e7`。
+- staging 目录恰好包含 `source-register.json` (`fcc3de285225f2e26a04f82b72e53caf69df605971fd2eb10b0eacbe2e884711`)、`extracted-facts.json` (`7a423661d5b7bd2d43c7f81b39131eeea47fb82cf62624343d976128eb4d36d1`)、`market-overview.draft.json` (`567821ee55b5fd04cf4db198ee8a25629ec459a8f4542ae57185d478b800c92a`) 与 `review-report.json` (`a375cc5b759f3e1b619a3c1826adb0eaad48c5779a44a816a387fd021e301ee9`)。
+- 来源为三条 Saudi official manual-document sources：GASTAT Electrical Energy Statistics 2024 PDF、GASTAT Renewable Energy Statistics 2024 HTML、Saudi Press Agency energy-storage 2025 HTML；以及四条 World Bank deterministic sources：country、GDP、GDP growth、population。
+- 该候选有 7 个通过的 source checks 和 32 条 facts，状态为 `ready-for-human-review`，`reviewStatus = draft`、`aiUsable = false`、`humanDecision = null`，且无 blockers、conflicts 或 injection risks。它不是 canonical，未发布，不能用于 AI，也不构成对外可声明的 `BASIC` 覆盖。
+- 下一步必须先由人工作出独立发布决定；只有决定获批后，才可创建并执行单独的 `DATA-BASIC-SA-PUBLISH` 任务。该 candidate 不授权 Standard、Complete 或 AI 启用。
 
 ---
 
