@@ -170,6 +170,12 @@ graph LR
 - 完成边界：本卡仅提交 immutable staging candidate 与来源目录/测试，不创建 `data/vietnam/` canonical、批准回执、collection manifest、Prisma 记录、KnowledgeChunk、AI 索引或 C 端发布；因此越南尚未发布，也尚未形成可对外声明的 `BASIC` 覆盖。
 - 人工确认：国家启动已由项目所有者批准；候选事实、双语文本、发布及任何后续覆盖升级仍待人工分别确认。
 
+#### DATA-BASIC-SA-COLLECT Saudi Arabia r2 qualifier correction（已完成，待人工审核）
+- 目标：保留不可变的 `saudi-arabia` / `SA` / `data-basic-sa-20260717-r1` 审计历史；r1 永不得批准或发布，且不得作为任何批准决定或发布任务的输入；并以新鲜七源 capture 生成唯一可供审核的 `data-basic-sa-20260717-r2` Basic `draft` 候选，恢复官方对约 `92.5 GW` 和约 `340,430 GWh` 的限定词。
+- 验收：r1 的四个 artifact 继续锁定为 `source-register.json` `fcc3de285225f2e26a04f82b72e53caf69df605971fd2eb10b0eacbe2e884711`、`extracted-facts.json` `7a423661d5b7bd2d43c7f81b39131eeea47fb82cf62624343d976128eb4d36d1`、`market-overview.draft.json` `567821ee55b5fd04cf4db198ee8a25629ec459a8f4542ae57185d478b800c92a`、`review-report.json` `a375cc5b759f3e1b619a3c1826adb0eaad48c5779a44a816a387fd021e301ee9`；由于上述两个官方限定词缺失，r1 在批准前已 superseded，是不可变审计历史，永不得批准或发布，且不得作为任何批准决定或发布任务的输入。r2 绑定 catalog `2026-07-17.1` 与 SHA-256 `3c174b76efe8c637436c52f473911d6409d79ac2e057eb251bb860dba4c417e7`，并恰好包含 `source-register.json` `b242dc902b7002dc3a2cec1bd87703760d776ada2b5c301329543b1f5945353d`、`extracted-facts.json` `bd0df36ba29453e0d337ad8401310c443ff26686cc8efc06994902b017814072`、`market-overview.draft.json` `2a297d007279afb80baeb316581aca874738ce614443a2a7944ad576e32c6285`、`review-report.json` `c8677f1bac448aa87ec79e35f3ffb9fc5b15c615f2b47ab3072ed588e09e6f9d`。r2 的 source register 绑定七条新鲜 capture identity，v2 validator 为 valid 且 `ready-for-human-review`，有 7 个通过的 source checks、32 条 facts、零 blockers/errors/conflicts/missing/injection risks。
+- 完成边界：r2 保持 `reviewStatus = draft`、`aiUsable = false`、`humanDecision = null`；不创建 `data/saudi-arabia/` canonical、批准回执、collection manifest、Prisma 记录、KnowledgeChunk、AI 索引或 C 端发布。因此 Saudi Arabia 尚未发布，尚未形成可对外声明的 `BASIC` 覆盖，且不得用于 AI。
+- 人工确认：只有针对 r2 的独立人工发布决定获批后，才可创建和执行单独的 `DATA-BASIC-SA-PUBLISH` 任务。r1 是不可变审计历史，永不得批准或发布，且不得作为该决定或任何发布任务的输入；r2 也不授权 Standard、Complete 或 AI 启用。
+
 #### DATA-BASIC-VN-PUBLISH Vietnam Basic atomic publication（已完成）
 - 目标：针对项目所有者明确批准的 `vietnam` / `VN` / `data-basic-vn-20260715-r3` identity 创建独立批准回执、确定性 canonical Basic mapping 与 manifest v2，并通过通用只读发布闸门原子提交。
 - 验收：候选四文件保持不可变且 SHA-256 与 `DATA-BASIC-VN-COLLECT` 记录一致；批准回执记录 `draft -> pending -> published` 并绑定 candidate bytes；canonical 目录恰好三文件，国家为 `BASIC`，market overview 为 `published` 且 `aiUsable = false`，其余九模块为 `BUILDING`，无 knowledge/deeper modules。DB import、Web/API、中英文渲染与 Playwright 均按此边界验收，未修改 Prisma schema。

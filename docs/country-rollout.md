@@ -28,7 +28,7 @@ MVP 到商业化初期的当前建设目标是经人工批准的国家先完成 
 |------|--------|------|----------|------|------|
 | 首次真实验证 | ID | 印度尼西亚 | Basic | 验证 Basic 十模块骨架与人工发布闸门 | 已发布 Basic |
 | 扩展 | VN | 越南 | Basic | 已按批准的 v2 candidate 发布基础画像；后续覆盖升级仍须独立人工决定 | 已发布 Basic |
-| 扩展 | SA | 沙特阿拉伯 | Basic | 先完成统一基础画像；后续覆盖升级另行人工批准 | 待人工确认 |
+| 扩展 | SA | 沙特阿拉伯 | Basic | r1 是不可变审计历史，永不得批准或发布，且不得作为任何批准决定或发布任务的输入；仅 r2 可待人工审核，且仅在独立发布决定获批后才能进入单独发布任务 | r2 候选待人工审核（未发布） |
 | 扩展 | AE | 阿联酋 | Basic | 先完成统一基础画像；后续覆盖升级另行人工批准 | 待人工确认 |
 | 扩展 | BR | 巴西 | Basic | 先完成统一基础画像；后续覆盖升级另行人工批准 | 待人工确认 |
 | 基础池 | KE | 肯尼亚 | Basic | 非洲示范市场 | 待人工确认 |
@@ -37,6 +37,14 @@ MVP 到商业化初期的当前建设目标是经人工批准的国家先完成 
 | 基础池 | AU | 澳大利亚 | Basic | 成熟能源市场与储能机会 | 待人工确认 |
 
 `ID` 是首个真实 Basic 验证国家；`VN`、`SA`、`AE`、`BR` 与其他候选国家同样必须先按 Basic 交付，再在独立、经人工批准的升级任务中决定是否推进 Standard 或 Complete。首批 30–50 个 Basic 国家清单、最终国家顺序和覆盖升级结论均属于业务优先级决策，必须由人工确认后再进入 seed 或后台录入。
+
+### SA r2 review candidate record
+
+- `DATA-BASIC-SA-COLLECT` 的 `SA` / `saudi-arabia` / `data-basic-sa-20260717-r1` 保持 immutable history：其四个 artifact hash 仍为 `source-register.json` `fcc3de285225f2e26a04f82b72e53caf69df605971fd2eb10b0eacbe2e884711`、`extracted-facts.json` `7a423661d5b7bd2d43c7f81b39131eeea47fb82cf62624343d976128eb4d36d1`、`market-overview.draft.json` `567821ee55b5fd04cf4db198ee8a25629ec459a8f4542ae57185d478b800c92a`、`review-report.json` `a375cc5b759f3e1b619a3c1826adb0eaad48c5779a44a816a387fd021e301ee9`。r1 遗漏了官方对约 `92.5 GW` 与约 `340,430 GWh` 的限定词，故在批准前已 superseded；它是不可变审计历史，永不得批准或发布，且不得作为任何批准决定或发布任务的输入。
+- 唯一可供人工审核的是 `data-basic-sa-20260717-r2`，绑定 catalog `2026-07-17.1` 与 SHA-256 `3c174b76efe8c637436c52f473911d6409d79ac2e057eb251bb860dba4c417e7`。r2 的七个新鲜 source identities 来自上述三条 Saudi official manual-document sources 和四条 World Bank deterministic sources；其 source-register 记录的检索时间为 `2026-07-17T11:43:29.591Z` 至 `2026-07-17T11:43:39.177Z`，不复用 r1 capture identity。
+- r2 staging 目录恰好包含 `source-register.json` (`b242dc902b7002dc3a2cec1bd87703760d776ada2b5c301329543b1f5945353d`)、`extracted-facts.json` (`bd0df36ba29453e0d337ad8401310c443ff26686cc8efc06994902b017814072`)、`market-overview.draft.json` (`2a297d007279afb80baeb316581aca874738ce614443a2a7944ad576e32c6285`) 与 `review-report.json` (`c8677f1bac448aa87ec79e35f3ffb9fc5b15c615f2b47ab3072ed588e09e6f9d`)。
+- r2 validator 为 valid 且状态为 `ready-for-human-review`，有 7 个 sources、32 条 facts、零 blockers/errors/conflicts/missing/injection risks；`reviewStatus = draft`、`aiUsable = false`、`humanDecision = null`。它不是 canonical，未发布，不能用于 AI，也不构成对外可声明的 `BASIC` 覆盖。
+- 下一步只能是针对 r2 的独立人工决定；只有该决定获批后，才可创建并执行单独的 `DATA-BASIC-SA-PUBLISH` 任务。r1 是不可变审计历史，永不得批准或发布，且不得作为该决定或任何发布任务的输入；r2 也不授权 Standard、Complete 或 AI 启用。
 
 ---
 

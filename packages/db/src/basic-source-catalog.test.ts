@@ -698,11 +698,14 @@ describe("Basic source adapter registry", () => {
 });
 
 describe("committed Basic source catalog", () => {
-  test("registers the eight reviewed Basic sources in deterministic order", () => {
+  test("registers the eleven reviewed Basic sources in deterministic order", () => {
     const catalog = readCommittedCatalog();
     const sourceIds = [
       "indonesia-esdm-2025-performance",
       "indonesia-esdm-national-energy-policy-2025",
+      "saudi-gastat-electrical-energy-statistics-2024",
+      "saudi-gastat-renewable-energy-statistics-2024",
+      "saudi-spa-energy-storage-2025",
       "vietnam-chinhphu-adjusted-pdp8-2025",
       "vietnam-evn-annual-report-2024-2025",
       "world-bank-country",
@@ -717,10 +720,10 @@ describe("committed Basic source catalog", () => {
       "world-bank-population",
     ] as const;
 
-    expect(catalog.catalog.catalogVersion).toBe("2026-07-15.1");
+    expect(catalog.catalog.catalogVersion).toBe("2026-07-17.1");
     expect(catalog.catalog.countryMappings).toEqual([]);
     expect(catalog.catalogSha256).toBe(
-      "ddb53c6b6fb82bc7dd050475a04b147f3ffa43b76886974591e950f829872f92",
+      "3c174b76efe8c637436c52f473911d6409d79ac2e057eb251bb860dba4c417e7",
     );
     expect(catalog.catalog.sources.map(({ sourceId }) => sourceId)).toEqual(
       sourceIds,
@@ -737,6 +740,102 @@ describe("committed Basic source catalog", () => {
     }
   });
 
+  test("materializes the reviewed Saudi official source requests", () => {
+    const catalog = readCommittedCatalog();
+    const plan = createBasicSourceExecutionPlan({
+      catalog,
+      countryCode: "SA",
+      sourceIds: [
+        "saudi-gastat-electrical-energy-statistics-2024",
+        "saudi-gastat-renewable-energy-statistics-2024",
+        "saudi-spa-energy-storage-2025",
+      ],
+    });
+
+    expect(plan).toMatchObject({
+      catalogVersion: "2026-07-17.1",
+      countryCode: "SA",
+    });
+    expect(plan.sources.map(({ source, request }) => ({
+      sourceId: source.sourceId,
+      format: source.format,
+      url: request.url,
+      accept: request.accept,
+    }))).toEqual([
+      {
+        sourceId: "saudi-gastat-electrical-energy-statistics-2024",
+        format: "pdf",
+        url: "https://www.stats.gov.sa/documents/20117/2435281/Electrical%2BEnergy%2BStatistics%2B2024%2BEN.pdf/fe9d3d6f-809b-cdb9-7559-3f2a21f4e415?t=1765087585713",
+        accept: "application/pdf",
+      },
+      {
+        sourceId: "saudi-gastat-renewable-energy-statistics-2024",
+        format: "html",
+        url: "https://stats.gov.sa/en/w/news/63",
+        accept: "text/html",
+      },
+      {
+        sourceId: "saudi-spa-energy-storage-2025",
+        format: "html",
+        url: "https://www.spa.gov.sa/w2261911",
+        accept: "text/html",
+      },
+    ]);
+    expect(plan.sources.map(({ source }) => ({
+      adapterId: source.adapterId,
+      adapterVersion: source.adapterVersion,
+      adapterKind: source.adapterKind,
+      fieldPaths: source.fieldPaths,
+    }))).toEqual([
+      {
+        adapterId: "basic-manual-document-capture",
+        adapterVersion: "1.0.0",
+        adapterKind: "manual-document",
+        fieldPaths: [
+          "country.summary",
+          "marketOverview.energyDemand",
+          "marketOverview.keyIndicators[0].label",
+          "marketOverview.keyIndicators[0].unit",
+          "marketOverview.keyIndicators[0].value",
+          "marketOverview.keyIndicators[0].year",
+          "marketOverview.keyIndicators[2].label",
+          "marketOverview.keyIndicators[2].unit",
+          "marketOverview.keyIndicators[2].value",
+          "marketOverview.keyIndicators[2].year",
+          "marketOverview.overview",
+        ],
+      },
+      {
+        adapterId: "basic-manual-document-capture",
+        adapterVersion: "1.0.0",
+        adapterKind: "manual-document",
+        fieldPaths: [
+          "country.region",
+          "country.summary",
+          "marketOverview.industryTags",
+          "marketOverview.keyIndicators[1].label",
+          "marketOverview.keyIndicators[1].unit",
+          "marketOverview.keyIndicators[1].value",
+          "marketOverview.keyIndicators[1].year",
+          "marketOverview.overview",
+          "marketOverview.techTags",
+        ],
+      },
+      {
+        adapterId: "basic-manual-document-capture",
+        adapterVersion: "1.0.0",
+        adapterKind: "manual-document",
+        fieldPaths: [
+          "country.summary",
+          "marketOverview.industryTags",
+          "marketOverview.overview",
+          "marketOverview.renewableTarget",
+          "marketOverview.techTags",
+        ],
+      },
+    ]);
+  });
+
   test("materializes the reviewed Indonesia government document requests", () => {
     const catalog = readCommittedCatalog();
     const plan = createBasicSourceExecutionPlan({
@@ -749,7 +848,7 @@ describe("committed Basic source catalog", () => {
     });
 
     expect(plan).toMatchObject({
-      catalogVersion: "2026-07-15.1",
+      catalogVersion: "2026-07-17.1",
       countryCode: "ID",
       sources: [
         {
@@ -860,7 +959,7 @@ describe("committed Basic source catalog", () => {
     const entry = plan.sources[0]!;
 
     expect(plan).toMatchObject({
-      catalogVersion: "2026-07-15.1",
+      catalogVersion: "2026-07-17.1",
       countryCode: "VN",
     });
     expect({
@@ -910,7 +1009,7 @@ describe("committed Basic source catalog", () => {
     const entry = plan.sources[0]!;
 
     expect(plan).toMatchObject({
-      catalogVersion: "2026-07-15.1",
+      catalogVersion: "2026-07-17.1",
       countryCode: "VN",
     });
     expect({
