@@ -339,11 +339,14 @@ describe("Saudi Arabia Basic r1 candidate", () => {
       industryTags: ["grid", "solar", "storage", "wind"],
       techTags: [],
     });
+    const factScopes = [...new Set(bundle.extractedFacts.facts.map(({ fieldPath }) => (
+      fieldPath.split(/[.[\]]/, 1)[0]
+    )))].sort(compareText);
     expect({
-      coverageLevel: "BASIC",
+      factScopes,
       reviewStatus: bundle.marketOverviewDraft.reviewStatus,
       aiUsable: bundle.marketOverviewDraft.aiUsable,
-    }).toEqual({ coverageLevel: "BASIC", reviewStatus: "draft", aiUsable: false });
+    }).toEqual({ factScopes: ["country", "marketOverview"], reviewStatus: "draft", aiUsable: false });
     expect(bundle.marketOverviewDraft.industryTags).toEqual(["grid", "solar", "storage", "wind"]);
     for (const value of [
       bundle.marketOverviewDraft.overview,
