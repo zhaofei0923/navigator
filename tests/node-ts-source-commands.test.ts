@@ -61,7 +61,7 @@ describe("tracked TypeScript command hook", () => {
   }, 30_000);
 
   test("runs the approved Basic publication import command for every published country", () => {
-    for (const countryDirectory of ["indonesia", "vietnam"]) {
+    for (const countryDirectory of ["indonesia", "saudi-arabia", "vietnam"]) {
       const result = runPnpm([
         "--filter",
         "@navigator/db",
@@ -88,7 +88,7 @@ describe("tracked TypeScript command hook", () => {
 
     expect(result.status, result.stderr).toBe(0);
     expect(result.stdout).toContain(
-      '{"countryDirectories":["indonesia","vietnam"],"countryCodes":["ID","VN"]}',
+      '{"countryDirectories":["indonesia","saudi-arabia","vietnam"],"countryCodes":["ID","SA","VN"]}',
     );
   }, 30_000);
 });

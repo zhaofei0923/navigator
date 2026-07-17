@@ -203,7 +203,11 @@ describe("country explorer service", () => {
   test("uses every approved Basic publication as the current country catalog", () => {
     const response = buildCountriesResponse({ locale: "en" });
 
-    expect(response.data.map((country) => country.code)).toEqual(["ID", "VN"]);
+    expect(response.data.map((country) => country.code)).toEqual([
+      "ID",
+      "VN",
+      "SA",
+    ]);
     expect(response.data[0]).toMatchObject({
       coverageLevel: "BASIC",
       name: "Indonesia",
@@ -213,6 +217,11 @@ describe("country explorer service", () => {
       coverageLevel: "BASIC",
       name: "Viet Nam",
       region: "southeast-asia",
+    });
+    expect(response.data[2]).toMatchObject({
+      coverageLevel: "BASIC",
+      name: "Saudi Arabia",
+      region: "middle-east",
     });
   });
 
@@ -233,7 +242,7 @@ describe("country explorer service", () => {
   test("filters countries by coverage level", () => {
     const result = filterCountryCatalog({ coverageLevel: "BASIC" });
 
-    expect(result.map((country) => country.code)).toEqual(["ID", "VN"]);
+    expect(result.map((country) => country.code)).toEqual(["ID", "VN", "SA"]);
     expect(filterCountryCatalog({ coverageLevel: "COMPLETE" })).toEqual([]);
   });
 
@@ -260,12 +269,13 @@ describe("country explorer service", () => {
         page: 1,
         pageSize: 20,
         textMode: "localized",
-        total: 2,
+        total: 3,
       },
     });
     expect(response.data.map((country) => country.name)).toEqual([
       "Indonesia",
       "Viet Nam",
+      "Saudi Arabia",
     ]);
     expect(response.data[0]).not.toHaveProperty("industryTags");
     expect(response.data[0]).not.toHaveProperty("techTags");
@@ -414,7 +424,7 @@ describe("country explorer service", () => {
   test("exposes filter options from the catalog", () => {
     expect(getFilterOptions()).toMatchObject({
       coverageLevels: ["BASIC", "STANDARD", "COMPLETE"],
-      regions: ["southeast-asia"],
+      regions: ["southeast-asia", "middle-east"],
       industryTags: ["solar", "wind", "storage", "grid"],
       techTags: ["onshore-wind", "offshore-wind"],
     });
@@ -459,6 +469,31 @@ describe("country explorer service", () => {
       coverageLevel: "BASIC",
       name: "越南",
       summary: expect.stringContaining("82,387兆瓦"),
+    });
+    expect(aiAdvisor).toMatchObject({
+      data: { moduleKey: "ai-advisor", status: "BUILDING", items: [] },
+      meta: { total: 0 },
+    });
+  });
+
+  test("serves published Saudi data in both locales while AI remains BUILDING", () => {
+    const english = buildCountryDetailResponse("SA", { locale: "en" });
+    const chinese = buildCountryDetailResponse("SA", { locale: "zh-CN" });
+    const aiAdvisor = buildCountryModuleResponse("SA", "ai-advisor", {
+      locale: "en",
+    });
+
+    expect(english?.data).toMatchObject({
+      code: "SA",
+      coverageLevel: "BASIC",
+      name: "Saudi Arabia",
+      summary: expect.stringContaining("approximately 92.5 GW"),
+    });
+    expect(chinese?.data).toMatchObject({
+      code: "SA",
+      coverageLevel: "BASIC",
+      name: "沙特阿拉伯",
+      summary: expect.stringContaining("约为92.5吉瓦"),
     });
     expect(aiAdvisor).toMatchObject({
       data: { moduleKey: "ai-advisor", status: "BUILDING", items: [] },

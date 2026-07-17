@@ -10,6 +10,8 @@ import indonesiaCountrySeed from "../../../../../data/indonesia/country.json";
 import indonesiaMarketOverviewSeed from "../../../../../data/indonesia/market-overview.json";
 import vietnamCountrySeed from "../../../../../data/vietnam/country.json";
 import vietnamMarketOverviewSeed from "../../../../../data/vietnam/market-overview.json";
+import saudiArabiaCountrySeed from "../../../../../data/saudi-arabia/country.json";
+import saudiArabiaMarketOverviewSeed from "../../../../../data/saudi-arabia/market-overview.json";
 
 export interface CountryModuleCoverageSeed {
   moduleKey: ModuleKey;
@@ -81,6 +83,19 @@ const vietnamModuleData = {
   risk: [],
 } satisfies CountryModuleDataRegistry;
 
+const saudiArabiaModuleData = {
+  "ai-advisor": [],
+  "chinese-companies": [],
+  "entry-strategy": null,
+  "market-overview": saudiArabiaMarketOverviewSeed as CountryModuleRecord,
+  opportunities: [],
+  partners: [],
+  policy: [],
+  projects: [],
+  reports: [],
+  risk: [],
+} satisfies CountryModuleDataRegistry;
+
 export const countrySeedBundles = [
   {
     country: indonesiaCountrySeed as CountrySeedRecord,
@@ -91,5 +106,10 @@ export const countrySeedBundles = [
     country: vietnamCountrySeed as CountrySeedRecord,
     moduleData: vietnamModuleData,
     tagSources: [vietnamMarketOverviewSeed],
+  },
+  {
+    country: saudiArabiaCountrySeed as CountrySeedRecord,
+    moduleData: saudiArabiaModuleData,
+    tagSources: [saudiArabiaMarketOverviewSeed],
   },
 ] as const satisfies readonly CountrySeedBundle[];
