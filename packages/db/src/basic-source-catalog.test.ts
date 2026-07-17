@@ -698,14 +698,22 @@ describe("Basic source adapter registry", () => {
 });
 
 describe("committed Basic source catalog", () => {
-  test("registers the eleven reviewed Basic sources in deterministic order", () => {
+  test("registers the nineteen reviewed Basic sources in deterministic order", () => {
     const catalog = readCommittedCatalog();
     const sourceIds = [
+      "brazil-epe-ben-2026-summary",
+      "brazil-ipea-ods7-renewable-target",
       "indonesia-esdm-2025-performance",
       "indonesia-esdm-national-energy-policy-2025",
       "saudi-gastat-electrical-energy-statistics-2024",
       "saudi-gastat-renewable-energy-statistics-2024",
       "saudi-spa-energy-storage-2025",
+      "south-africa-eskom-results-presentation-2025",
+      "south-africa-government-irp-2025",
+      "south-africa-government-rmippp-hybrid-projects-2023",
+      "uae-admo-barakah-unit-4-2024",
+      "uae-admo-wind-program-2023",
+      "uae-government-energy-strategy-2050",
       "vietnam-chinhphu-adjusted-pdp8-2025",
       "vietnam-evn-annual-report-2024-2025",
       "world-bank-country",
@@ -720,10 +728,10 @@ describe("committed Basic source catalog", () => {
       "world-bank-population",
     ] as const;
 
-    expect(catalog.catalog.catalogVersion).toBe("2026-07-17.1");
+    expect(catalog.catalog.catalogVersion).toBe("2026-07-17.2");
     expect(catalog.catalog.countryMappings).toEqual([]);
     expect(catalog.catalogSha256).toBe(
-      "3c174b76efe8c637436c52f473911d6409d79ac2e057eb251bb860dba4c417e7",
+      "6d4c6a27367eb36e4fe20df8fe78a9c9a9e865f84af563a22e31069c176d6f0a",
     );
     expect(catalog.catalog.sources.map(({ sourceId }) => sourceId)).toEqual(
       sourceIds,
@@ -740,6 +748,288 @@ describe("committed Basic source catalog", () => {
     }
   });
 
+  test("materializes the reviewed Brazil official source requests and bindings", () => {
+    const catalog = readCommittedCatalog();
+    const plan = createBasicSourceExecutionPlan({
+      catalog,
+      countryCode: "BR",
+      sourceIds: [
+        "brazil-epe-ben-2026-summary",
+        "brazil-ipea-ods7-renewable-target",
+      ],
+    });
+    expectReviewedManualDocumentBindings(plan.sources, "BR");
+
+    expect(plan).toMatchObject({
+      catalogVersion: "2026-07-17.2",
+      countryCode: "BR",
+    });
+    expect(plan.sources.map(({ source, request }) => ({
+      sourceId: source.sourceId,
+      format: source.format,
+      url: request.url,
+      accept: request.accept,
+      licenseName: source.licenseName,
+      licenseUrl: source.licenseUrl,
+      adapterId: source.adapterId,
+      adapterVersion: source.adapterVersion,
+      adapterKind: source.adapterKind,
+      fieldPaths: source.fieldPaths,
+    }))).toEqual([
+      {
+        sourceId: "brazil-epe-ben-2026-summary",
+        format: "html",
+        url: "https://www.epe.gov.br/pt/imprensa/noticias/epe-publica-o-relatorio-sintese-do-balanco-energetico-nacional-2026",
+        accept: "text/html",
+        licenseName: "Creative Commons Attribution 4.0 International (CC BY 4.0)",
+        licenseUrl: "https://creativecommons.org/licenses/by/4.0/deed.pt_BR",
+        adapterId: "basic-manual-document-capture",
+        adapterVersion: "1.0.0",
+        adapterKind: "manual-document",
+        fieldPaths: [
+          "country.region",
+          "country.summary",
+          "marketOverview.energyDemand",
+          "marketOverview.industryTags",
+          "marketOverview.keyIndicators[0].label",
+          "marketOverview.keyIndicators[0].unit",
+          "marketOverview.keyIndicators[0].value",
+          "marketOverview.keyIndicators[0].year",
+          "marketOverview.keyIndicators[1].label",
+          "marketOverview.keyIndicators[1].unit",
+          "marketOverview.keyIndicators[1].value",
+          "marketOverview.keyIndicators[1].year",
+          "marketOverview.keyIndicators[2].label",
+          "marketOverview.keyIndicators[2].unit",
+          "marketOverview.keyIndicators[2].value",
+          "marketOverview.keyIndicators[2].year",
+          "marketOverview.overview",
+        ],
+      },
+      {
+        sourceId: "brazil-ipea-ods7-renewable-target",
+        format: "html",
+        url: "https://www.ipea.gov.br/ods/ods7.html",
+        accept: "text/html",
+        licenseName: "Official publication; no open-content license declared",
+        licenseUrl: "https://www.ipea.gov.br/ods/ods7.html",
+        adapterId: "basic-manual-document-capture",
+        adapterVersion: "1.0.0",
+        adapterKind: "manual-document",
+        fieldPaths: ["marketOverview.renewableTarget"],
+      },
+    ]);
+  });
+
+  test("materializes the reviewed South Africa official source requests and bindings", () => {
+    const catalog = readCommittedCatalog();
+    const plan = createBasicSourceExecutionPlan({
+      catalog,
+      countryCode: "ZA",
+      sourceIds: [
+        "south-africa-eskom-results-presentation-2025",
+        "south-africa-government-irp-2025",
+        "south-africa-government-rmippp-hybrid-projects-2023",
+      ],
+    });
+    expectReviewedManualDocumentBindings(plan.sources, "ZA");
+
+    expect(plan).toMatchObject({
+      catalogVersion: "2026-07-17.2",
+      countryCode: "ZA",
+    });
+    expect(plan.sources.map(({ source, request }) => ({
+      sourceId: source.sourceId,
+      format: source.format,
+      url: request.url,
+      accept: request.accept,
+      adapterId: source.adapterId,
+      adapterVersion: source.adapterVersion,
+      adapterKind: source.adapterKind,
+      fieldPaths: source.fieldPaths,
+    }))).toEqual([
+      {
+        sourceId: "south-africa-eskom-results-presentation-2025",
+        format: "pdf",
+        url: "https://www.eskom.co.za/wp-content/uploads/2025/09/Eskom-results-presentation-2025.pdf",
+        accept: "application/pdf",
+        adapterId: "basic-manual-document-capture",
+        adapterVersion: "1.0.0",
+        adapterKind: "manual-document",
+        fieldPaths: [
+          "country.summary",
+          "marketOverview.energyDemand",
+          "marketOverview.industryTags",
+          "marketOverview.keyIndicators[0].label",
+          "marketOverview.keyIndicators[0].unit",
+          "marketOverview.keyIndicators[0].value",
+          "marketOverview.keyIndicators[0].year",
+          "marketOverview.keyIndicators[1].label",
+          "marketOverview.keyIndicators[1].unit",
+          "marketOverview.keyIndicators[1].value",
+          "marketOverview.keyIndicators[1].year",
+          "marketOverview.overview",
+        ],
+      },
+      {
+        sourceId: "south-africa-government-irp-2025",
+        format: "pdf",
+        url: "https://www.gov.za/sites/default/files/gcis_document/202510/53596gon6767.pdf",
+        accept: "application/pdf",
+        adapterId: "basic-manual-document-capture",
+        adapterVersion: "1.0.0",
+        adapterKind: "manual-document",
+        fieldPaths: [
+          "country.region",
+          "country.summary",
+          "marketOverview.industryTags",
+          "marketOverview.keyIndicators[2].label",
+          "marketOverview.keyIndicators[2].unit",
+          "marketOverview.keyIndicators[2].value",
+          "marketOverview.keyIndicators[2].year",
+          "marketOverview.overview",
+          "marketOverview.renewableTarget",
+        ],
+      },
+      {
+        sourceId: "south-africa-government-rmippp-hybrid-projects-2023",
+        format: "html",
+        url: "https://www.gov.za/news/media-statements/minister-gwede-mantashe-signs-agreements-under-risk-mitigation-independent",
+        accept: "text/html",
+        adapterId: "basic-manual-document-capture",
+        adapterVersion: "1.0.0",
+        adapterKind: "manual-document",
+        fieldPaths: [
+          "country.summary",
+          "marketOverview.industryTags",
+          "marketOverview.overview",
+          "marketOverview.techTags",
+        ],
+      },
+    ]);
+  });
+
+  test("materializes the reviewed UAE official source requests and bindings", () => {
+    const catalog = readCommittedCatalog();
+    const plan = createBasicSourceExecutionPlan({
+      catalog,
+      countryCode: "AE",
+      sourceIds: [
+        "uae-admo-barakah-unit-4-2024",
+        "uae-admo-wind-program-2023",
+        "uae-government-energy-strategy-2050",
+      ],
+    });
+    expectReviewedManualDocumentBindings(plan.sources, "AE");
+
+    expect(plan).toMatchObject({
+      catalogVersion: "2026-07-17.2",
+      countryCode: "AE",
+    });
+    expect(plan.sources.map(({ source, request }) => ({
+      sourceId: source.sourceId,
+      format: source.format,
+      url: request.url,
+      accept: request.accept,
+      adapterId: source.adapterId,
+      adapterVersion: source.adapterVersion,
+      adapterKind: source.adapterKind,
+      fieldPaths: source.fieldPaths,
+    }))).toEqual([
+      {
+        sourceId: "uae-admo-barakah-unit-4-2024",
+        format: "html",
+        url: "https://www.mediaoffice.abudhabi/en/energy/unit-4-of-abu-dhabis-barakah-nuclear-energy-plant-begins-commercial-operations",
+        accept: "text/html",
+        adapterId: "basic-manual-document-capture",
+        adapterVersion: "1.0.0",
+        adapterKind: "manual-document",
+        fieldPaths: [
+          "country.summary",
+          "marketOverview.energyDemand",
+          "marketOverview.industryTags",
+          "marketOverview.keyIndicators[0].label",
+          "marketOverview.keyIndicators[0].unit",
+          "marketOverview.keyIndicators[0].value",
+          "marketOverview.keyIndicators[0].year",
+          "marketOverview.overview",
+        ],
+      },
+      {
+        sourceId: "uae-admo-wind-program-2023",
+        format: "html",
+        url: "https://www.mediaoffice.abudhabi/en/energy/on-behalf-of-the-uae-president-khaled-bin-mohamed-bin-zayed-inaugurates-uae-wind-program",
+        accept: "text/html",
+        adapterId: "basic-manual-document-capture",
+        adapterVersion: "1.0.0",
+        adapterKind: "manual-document",
+        fieldPaths: [
+          "country.summary",
+          "marketOverview.industryTags",
+          "marketOverview.keyIndicators[2].label",
+          "marketOverview.keyIndicators[2].unit",
+          "marketOverview.keyIndicators[2].value",
+          "marketOverview.keyIndicators[2].year",
+          "marketOverview.overview",
+        ],
+      },
+      {
+        sourceId: "uae-government-energy-strategy-2050",
+        format: "html",
+        url: "https://u.ae/en/about-the-uae/strategies-initiatives-and-awards/strategies-plans-and-visions/environment-and-energy/uae-energy-strategy-2050",
+        accept: "text/html",
+        adapterId: "basic-manual-document-capture",
+        adapterVersion: "1.0.0",
+        adapterKind: "manual-document",
+        fieldPaths: [
+          "country.region",
+          "country.summary",
+          "marketOverview.energyDemand",
+          "marketOverview.industryTags",
+          "marketOverview.keyIndicators[1].label",
+          "marketOverview.keyIndicators[1].unit",
+          "marketOverview.keyIndicators[1].value",
+          "marketOverview.keyIndicators[1].year",
+          "marketOverview.overview",
+          "marketOverview.renewableTarget",
+        ],
+      },
+    ]);
+  });
+
+  test("records the reviewed license posture for the eight new sources", () => {
+    const catalog = readCommittedCatalog();
+    const sources = new Map(catalog.catalog.sources.map((source) => [
+      source.sourceId,
+      source,
+    ]));
+    const epe = sources.get("brazil-epe-ben-2026-summary");
+    expect(epe).toMatchObject({
+      licenseName: "Creative Commons Attribution 4.0 International (CC BY 4.0)",
+      licenseUrl: "https://creativecommons.org/licenses/by/4.0/deed.pt_BR",
+      attribution: "Factual extraction with attribution to Empresa de Pesquisa Energetica (EPE) and its official Balanco Energetico Nacional 2026 summary page; licensed under CC BY 4.0; changes and translations must be indicated.",
+    });
+
+    const noOpenContentLicenseSourceIds = [
+      "brazil-ipea-ods7-renewable-target",
+      "south-africa-eskom-results-presentation-2025",
+      "south-africa-government-irp-2025",
+      "south-africa-government-rmippp-hybrid-projects-2023",
+      "uae-admo-barakah-unit-4-2024",
+      "uae-admo-wind-program-2023",
+      "uae-government-energy-strategy-2050",
+    ] as const;
+    for (const sourceId of noOpenContentLicenseSourceIds) {
+      const source = sources.get(sourceId);
+      expect(source?.licenseName, sourceId).toContain(
+        "no open-content license declared",
+      );
+      expect(source?.attribution, sourceId).toContain(
+        "no open-content license is asserted",
+      );
+    }
+  });
+
   test("materializes the reviewed Saudi official source requests", () => {
     const catalog = readCommittedCatalog();
     const plan = createBasicSourceExecutionPlan({
@@ -753,7 +1043,7 @@ describe("committed Basic source catalog", () => {
     });
 
     expect(plan).toMatchObject({
-      catalogVersion: "2026-07-17.1",
+      catalogVersion: "2026-07-17.2",
       countryCode: "SA",
     });
     expect(plan.sources.map(({ source, request }) => ({
@@ -848,7 +1138,7 @@ describe("committed Basic source catalog", () => {
     });
 
     expect(plan).toMatchObject({
-      catalogVersion: "2026-07-17.1",
+      catalogVersion: "2026-07-17.2",
       countryCode: "ID",
       sources: [
         {
@@ -959,7 +1249,7 @@ describe("committed Basic source catalog", () => {
     const entry = plan.sources[0]!;
 
     expect(plan).toMatchObject({
-      catalogVersion: "2026-07-17.1",
+      catalogVersion: "2026-07-17.2",
       countryCode: "VN",
     });
     expect({
@@ -1009,7 +1299,7 @@ describe("committed Basic source catalog", () => {
     const entry = plan.sources[0]!;
 
     expect(plan).toMatchObject({
-      catalogVersion: "2026-07-17.1",
+      catalogVersion: "2026-07-17.2",
       countryCode: "VN",
     });
     expect({
@@ -1057,6 +1347,32 @@ describe("committed Basic source catalog", () => {
     });
   });
 });
+
+function expectReviewedManualDocumentBindings(
+  entries: readonly BasicSourceExecutionPlanEntry[],
+  countryCode: string,
+): void {
+  for (const entry of entries) {
+    const origin = new URL(entry.request.url).origin;
+    expect(entry.source).toMatchObject({
+      credibility: "OFFICIAL",
+      countryScope: [countryCode],
+      requestTemplate: { origin, query: [] },
+      approvedOrigins: [origin],
+      allowedQueryParameters: [],
+      accessMode: "open",
+      adapterId: "basic-manual-document-capture",
+      adapterVersion: "1.0.0",
+      adapterKind: "manual-document",
+    });
+    expect(entry.request).toMatchObject({
+      method: "GET",
+      accept: entry.source.accept,
+      allowedOrigins: [origin],
+      allowedQueryParameters: [],
+    });
+  }
+}
 
 function validCatalog() {
   return {

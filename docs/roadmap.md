@@ -189,6 +189,13 @@ graph LR
 - 完成边界：精确 identity、reviewer/timestamps、receipt 与 canonical hashes 记录在 [saudi-arabia-seed.md](./saudi-arabia-seed.md)。r2 是唯一 active publication；本次发布不授权 Standard、Complete、AI 或任何深度模块，r1 仍不得作为后续决定或发布输入。
 - 人工确认：是（项目所有者已明确批准 `saudi-arabia` / `SA` / `data-basic-sa-20260717-r2`、上述 candidate hashes、`reviewer = github:zhaofei0923`、submitted / decided `2026-07-17T13:21:53.000Z` 与本原子发布任务）。
 
+#### DATA-BASIC-BATCH-1-SOURCES AE/BR/ZA reviewed source catalog（已完成）
+- 目标：在任何 `AE`、`BR`、`ZA` candidate 采集前，先将八条经人工审阅的国家范围官方 HTML/PDF 来源登记到统一 Basic source catalog，并将 catalog 从 `2026-07-17.1` 升级为 `2026-07-17.2`。
+- 验收：catalog 共 19 条来源、严格按 `sourceId` 字典序排列，SHA-256 为 `6d4c6a27367eb36e4fe20df8fe78a9c9a9e865f84af563a22e31069c176d6f0a`；三国 materialized URL、Accept、open access、空 query、同源 allowlist、`basic-manual-document-capture@1.0.0` 与精确 field paths 有测试锁定。EPE 页面准确登记 CC BY 4.0，其余七条新增来源不主张开放内容许可；EPE、South Africa IRP、UAE Wind Program 与 UAE Energy Strategy 2050 不拥有 `techTags`，只有明确写出 Onshore Wind 的 South Africa RMIPPPP 保留该字段 ownership；四个超过 10 MiB 的文件明确排除。Vietnam 与 Saudi 历史 candidate 继续绑定各自不可变 catalog version/SHA 和 artifact bytes。
+- 测试：先观察新版本/来源缺失的 focused RED，再通过 catalog、Vietnam r3、Saudi r1/r2 focused GREEN，并运行仓库 `lint`、`typecheck`、`test`。
+- 完成边界：本卡只扩展来源控制平面和文档，不创建或完成 `AE`、`BR`、`ZA` staging candidate、批准回执、manifest、canonical data、Prisma 记录、Web 展示、KnowledgeChunk、AI 索引或发布。
+- 人工确认：三国启动顺序和八条来源已由项目所有者批准；本卡不修改统一数据模型、AI Prompt/检索边界、权限、计费、依赖或技术栈。
+
 #### DATA-BASIC-<ISO2> 单国 Basic 数据任务卡
 - 目标：每张任务卡只采集一个 ISO 3166-1 alpha-2 国家，使用固定 10 模块模型完成 Basic 国家骨架和市场基础画像。
 - 验收：一国一任务卡、一分支、一审核周期，且仅合并一次到 `main`；合并后的 `main` 验证通过后，仅推送一次到 `origin/main`。数据先为 `draft`，仅在人工审核后发布；首次真实交付恰好为 `BASIC`，`market-overview` 外九个模块均为 `BUILDING`；Basic 数据保持 `aiUsable = false` 且不产生知识片段；通过仓库校验和代表性 Web 检查，确认基础画像正常渲染、`BUILDING` 模块显示占位。
