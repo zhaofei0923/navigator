@@ -57,7 +57,9 @@ test("country explorer filters coverage and keeps coverage badges visible", asyn
   ).toBeVisible();
 
   await page.goBack();
-  await expect(page).toHaveURL(/\/en\/countries\?coverageLevel=BASIC/);
+  await expect(page).toHaveURL(/\/en\/countries/);
+  expect(new URL(page.url()).searchParams.get("coverageLevel")).toBe("BASIC");
+  await expect(vietnamCard).toBeVisible();
   await vietnamCard.getByRole("link", { name: /Viet Nam/ }).click();
   await expect(page).toHaveURL(/\/en\/countries\/VN/);
   await expect(
