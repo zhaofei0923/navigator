@@ -1,0 +1,8 @@
+{
+  "schemaVersion": "basic-country-publication-manifest/v2",
+  "activeRunId": "data-basic-sa-20260717-r2",
+  "mappingVersion": "basic-country-canonical/v2",
+  "auditBundlePath": "data/staging/saudi-arabia/data-basic-sa-20260717-r2",
+  "approvalReceiptPath": "data/approvals/saudi-arabia/data-basic-sa-20260717-r2.json",
+  "approvalReceiptSha256": "b09aca2ea28e507977ab977246acdf0fc61c17337ddd7646e6b17b516b2ee5bc"
+}

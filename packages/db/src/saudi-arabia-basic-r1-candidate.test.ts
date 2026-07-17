@@ -369,8 +369,15 @@ describe("Saudi Arabia Basic r1 candidate", () => {
     expect(bundle.reviewReport.conflicts).toEqual([]);
     expect(bundle.reviewReport.injectionRisks).toEqual([]);
     expect(existsSync(join(stagingDirectory, "collection-manifest.json"))).toBe(false);
-    expect(existsSync(join(REPO_ROOT, "data", COUNTRY_DIRECTORY))).toBe(false);
-    expect(existsSync(join(REPO_ROOT, "data", "approvals", COUNTRY_DIRECTORY))).toBe(false);
+    expect(existsSync(join(REPO_ROOT, "data", COUNTRY_DIRECTORY))).toBe(true);
+    expect(existsSync(join(REPO_ROOT, "data", "approvals", COUNTRY_DIRECTORY))).toBe(true);
+    expect(existsSync(join(
+      REPO_ROOT,
+      "data",
+      "approvals",
+      COUNTRY_DIRECTORY,
+      `${RUN_ID}.json`,
+    ))).toBe(false);
   });
 });
 
