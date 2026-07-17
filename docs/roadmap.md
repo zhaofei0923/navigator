@@ -182,6 +182,13 @@ graph LR
 - 完成边界：精确 identity、receipt 与 canonical hashes 记录在 [vietnam-seed.md](./vietnam-seed.md)。该发布不启用 AI，也不授权 Standard 或 Complete 升级。
 - 人工确认：是（项目所有者已明确批准上述 candidate identity、hashes 与本原子发布任务）。
 
+#### DATA-BASIC-SA-PUBLISH Saudi Arabia Basic atomic publication（已完成）
+- 目标：针对项目所有者明确批准的 `saudi-arabia` / `SA` / `data-basic-sa-20260717-r2` identity 创建独立批准回执、确定性 canonical Basic mapping 与 manifest v2，并通过通用只读发布闸门原子提交；`data-basic-sa-20260717-r1` 只保留为不可变审计历史，永不得批准、发布或作为输入。
+- 验收：r2 candidate 四文件保持不可变，SHA-256 依次为 `source-register.json` `b242dc902b7002dc3a2cec1bd87703760d776ada2b5c301329543b1f5945353d`、`extracted-facts.json` `bd0df36ba29453e0d337ad8401310c443ff26686cc8efc06994902b017814072`、`market-overview.draft.json` `2a297d007279afb80baeb316581aca874738ce614443a2a7944ad576e32c6285`、`review-report.json` `c8677f1bac448aa87ec79e35f3ffb9fc5b15c615f2b47ab3072ed588e09e6f9d`；批准回执 SHA-256 为 `b09aca2ea28e507977ab977246acdf0fc61c17337ddd7646e6b17b516b2ee5bc`。canonical 恰好三文件：`country.json` `0ea252d57e178f328435f87ba7b732f75137734d31ad4449dcf62a987d536db7`、`market-overview.json` `bd772ce5ba20b70920a85c54845a1683444ebe06aa258e16331f237399cb1037`、`collection-manifest.json` `40c26ae8199e2475577a60e909859eb6b025e447e76968bcc35af3fc75f4c71a`。发布后覆盖恰好为 `BASIC`，market overview 为 `published` 且 `aiUsable = false`，其余九模块为 `BUILDING`/零项，无 KnowledgeChunk、AI eligibility 或 deeper-module data。
+- 测试：Saudi publication lock、all-publication validation、DB import、Web service/API、root command 与中英文 Playwright 均覆盖 r2 identity、三文件 allowlist、九模块占位及 AI/深层模块隔离；仓库 `lint`、`typecheck`、`test` 与 Saudi country explorer E2E 通过。未修改 `docs/data-schema.md`、Prisma schema、依赖、AI 检索/Prompt、权限或计费边界。
+- 完成边界：精确 identity、reviewer/timestamps、receipt 与 canonical hashes 记录在 [saudi-arabia-seed.md](./saudi-arabia-seed.md)。r2 是唯一 active publication；本次发布不授权 Standard、Complete、AI 或任何深度模块，r1 仍不得作为后续决定或发布输入。
+- 人工确认：是（项目所有者已明确批准 `saudi-arabia` / `SA` / `data-basic-sa-20260717-r2`、上述 candidate hashes、`reviewer = github:zhaofei0923`、submitted / decided `2026-07-17T13:21:53.000Z` 与本原子发布任务）。
+
 #### DATA-BASIC-<ISO2> 单国 Basic 数据任务卡
 - 目标：每张任务卡只采集一个 ISO 3166-1 alpha-2 国家，使用固定 10 模块模型完成 Basic 国家骨架和市场基础画像。
 - 验收：一国一任务卡、一分支、一审核周期，且仅合并一次到 `main`；合并后的 `main` 验证通过后，仅推送一次到 `origin/main`。数据先为 `draft`，仅在人工审核后发布；首次真实交付恰好为 `BASIC`，`market-overview` 外九个模块均为 `BUILDING`；Basic 数据保持 `aiUsable = false` 且不产生知识片段；通过仓库校验和代表性 Web 检查，确认基础画像正常渲染、`BUILDING` 模块显示占位。

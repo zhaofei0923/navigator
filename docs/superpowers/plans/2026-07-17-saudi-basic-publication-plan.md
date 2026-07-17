@@ -36,7 +36,7 @@
 - Consumes: `loadApprovedBasicCountryPublicationV2(repositoryRoot, countryDirectory)` and the immutable r2 four-file candidate.
 - Produces: one valid approved canonical publication at `data/saudi-arabia/` and one external receipt at `data/approvals/saudi-arabia/data-basic-sa-20260717-r2.json`.
 
-- [ ] **Step 1: Write the failing publication lock test**
+- [x] **Step 1: Write the failing publication lock test**
 
 Create `saudi-arabia-basic-publication.test.ts` following the existing loader-level publication contract. Lock these exact candidate hashes:
 
@@ -67,7 +67,7 @@ expect(receipt).toMatchObject({
 
 It must also require the canonical directory allowlist `collection-manifest.json`, `country.json`, `market-overview.json`; loader validity; `coverageLevel: "BASIC"`; bilingual Saudi name and summary; `middle-east`; `reviewStatus: "published"`; `aiUsable: false`; one complete market overview; nine building modules; and empty deep/knowledge data.
 
-- [ ] **Step 2: Run the test and confirm RED**
+- [x] **Step 2: Run the test and confirm RED**
 
 Run:
 
@@ -77,7 +77,7 @@ pnpm --filter @navigator/db exec vitest run src/saudi-arabia-basic-publication.t
 
 Expected: FAIL because the approval receipt and canonical Saudi directory do not exist.
 
-- [ ] **Step 3: Create the external approval receipt**
+- [x] **Step 3: Create the external approval receipt**
 
 Create the strict receipt with exactly the Basic publication contract keys:
 
@@ -110,7 +110,7 @@ Create the strict receipt with exactly the Basic publication contract keys:
 }
 ```
 
-- [ ] **Step 4: Create deterministic canonical records**
+- [x] **Step 4: Create deterministic canonical records**
 
 Create `country.json` from the six approved country facts:
 
@@ -140,7 +140,7 @@ Create `market-overview.json` by copying every r2 draft field exactly and changi
 
 Keep `aiUsable: false`, the approximate qualifiers, source metadata, tags, and key indicators byte-semantically unchanged.
 
-- [ ] **Step 5: Bind the receipt in manifest v2**
+- [x] **Step 5: Bind the receipt in manifest v2**
 
 Compute SHA-256 over the exact receipt bytes and create:
 
@@ -157,7 +157,7 @@ Compute SHA-256 over the exact receipt bytes and create:
 
 This digest assumes the exact two-space-indented receipt key order shown in Step 3 and one trailing LF. Recompute it from the committed receipt bytes and fail the task if it differs.
 
-- [ ] **Step 6: Extend all-publication validation and verify GREEN**
+- [x] **Step 6: Extend all-publication validation and verify GREEN**
 
 Update `approved-basic-publications-validation.test.ts` to expect:
 
@@ -177,7 +177,7 @@ pnpm --filter @navigator/db validate:approved-basic-publications
 
 Expected: all tests pass and validation prints the three exact directories/codes.
 
-- [ ] **Step 7: Commit Task 1**
+- [x] **Step 7: Commit Task 1**
 
 ```bash
 git add data/saudi-arabia data/approvals/saudi-arabia packages/db/src/saudi-arabia-basic-publication.test.ts packages/db/src/approved-basic-publications-validation.test.ts
@@ -199,7 +199,7 @@ git commit -m "feat: publish Saudi Arabia Basic data"
 - Consumes: the canonical Saudi `country.json` and `market-overview.json` from Task 1.
 - Produces: a third published Web country, API/import coverage, and bilingual Saudi browser verification.
 
-- [ ] **Step 1: Write failing registry/API expectations**
+- [x] **Step 1: Write failing registry/API expectations**
 
 Extend tests to require the published catalog order `["ID", "VN", "SA"]`, localized names `["Indonesia", "Viet Nam", "Saudi Arabia"]`, raw Saudi name `{ zh: "沙特阿拉伯", en: "Saudi Arabia" }`, total `3`, and filter regions `["southeast-asia", "middle-east"]`. Add a service test that loads `SA` in English and Chinese, preserves `BASIC`, renders the approximate `92.5 GW` summary, and returns `BUILDING`/empty AI advisor data.
 
@@ -209,7 +209,7 @@ Update the root command test to import `indonesia`, `vietnam`, and `saudi-arabia
 {"countryDirectories":["indonesia","saudi-arabia","vietnam"],"countryCodes":["ID","SA","VN"]}
 ```
 
-- [ ] **Step 2: Run focused tests and confirm RED**
+- [x] **Step 2: Run focused tests and confirm RED**
 
 Run:
 
@@ -220,11 +220,11 @@ pnpm exec vitest run tests/node-ts-source-commands.test.ts
 
 Expected: FAIL because the Web registry does not yet include Saudi Arabia.
 
-- [ ] **Step 3: Register canonical Saudi seed data**
+- [x] **Step 3: Register canonical Saudi seed data**
 
 Import `data/saudi-arabia/country.json` and `data/saudi-arabia/market-overview.json` in `country-seed-registry.ts`. Create the same ten-module data registry shape used by existing Basic countries: one market-overview object, empty list modules, and `entry-strategy: null`. Append the Saudi bundle after Vietnam so existing country order remains stable.
 
-- [ ] **Step 4: Add bilingual Saudi Playwright coverage**
+- [x] **Step 4: Add bilingual Saudi Playwright coverage**
 
 Update the explorer count to `3 countries`, assert the Saudi card is visible under `coverageLevel=BASIC`, and add a Saudi detail test that verifies:
 
@@ -233,7 +233,7 @@ Update the explorer count to `3 countries`, assert the Saudi card is visible und
 /zh-CN/countries/SA -> 沙特阿拉伯 -> 约为92.5吉瓦 -> 9 x 数据建设中
 ```
 
-- [ ] **Step 5: Verify Web and E2E GREEN**
+- [x] **Step 5: Verify Web and E2E GREEN**
 
 Run:
 
@@ -245,7 +245,7 @@ pnpm test:e2e -- tests/e2e/country-explorer.e2e.ts
 
 Expected: all unit, command, and Playwright tests pass; Saudi renders bilingually and no AI/deeper records are exposed.
 
-- [ ] **Step 6: Commit Task 2**
+- [x] **Step 6: Commit Task 2**
 
 ```bash
 git add apps/web/src/features/countries/country-seed-registry.ts apps/web/src/features/countries/country-service.test.ts apps/web/src/app/api/v1/countries/route.test.ts tests/node-ts-source-commands.test.ts tests/e2e/country-explorer.e2e.ts
@@ -266,15 +266,15 @@ git commit -m "feat: expose Saudi Arabia Basic publication"
 - Consumes: exact candidate, receipt, and canonical hashes from Tasks 1-2.
 - Produces: an auditable documentation record that distinguishes r1 history from the active r2 Basic publication.
 
-- [ ] **Step 1: Record exact publication identity and hashes**
+- [x] **Step 1: Record exact publication identity and hashes**
 
 Create `saudi-arabia-seed.md` with the exact country/run/reviewer/timestamps, all four immutable candidate hashes, receipt hash, and all three canonical file hashes. State that r1 remains prohibited, r2 is the only active run, coverage is exactly `BASIC`, and AI/deeper modules remain disabled.
 
-- [ ] **Step 2: Update rollout and roadmap status**
+- [x] **Step 2: Update rollout and roadmap status**
 
 Change Saudi Arabia from `r2 candidate awaiting review` to `published Basic`. Add a `DATA-BASIC-SA-PUBLISH` task card documenting the exact approved r2 identity, receipt/canonical hashes, tests, no schema change, and explicit owner confirmation. Do not rewrite r1 history or imply authorization for deeper coverage.
 
-- [ ] **Step 3: Run scope and repository verification**
+- [x] **Step 3: Run scope and repository verification**
 
 Run:
 
@@ -288,7 +288,7 @@ pnpm test:e2e -- tests/e2e/country-explorer.e2e.ts
 
 Expected: all commands exit zero. Confirm the r2 candidate hashes are unchanged, no r1 approval exists, canonical Saudi has exactly three files, and no schema/dependency/AI/permission file changed.
 
-- [ ] **Step 4: Commit Task 3**
+- [x] **Step 4: Commit Task 3**
 
 ```bash
 git add docs/saudi-arabia-seed.md docs/country-rollout.md docs/roadmap.md docs/superpowers/plans/2026-07-17-saudi-basic-publication-plan.md
