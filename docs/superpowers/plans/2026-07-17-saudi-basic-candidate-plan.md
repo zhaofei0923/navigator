@@ -19,6 +19,12 @@
 - Every readable business field is bilingual `{ zh, en }`; every fact is source-bound; all three manual sources and all four World Bank sources must pass review with zero conflicts, blockers, or injection risks.
 - All tests use pnpm, and no generated candidate file may overwrite an existing run.
 
+## Correction Record: Saudi r1 Qualifier Omission
+
+`data-basic-sa-20260717-r1` remains immutable audit history with its original four artifact hashes and is not to be edited, regenerated, approved, or published. Before any human approval, review identified that r1 omitted the official approximate qualifiers for `92.5 GW` total licensed generation capacity and `340,430 GWh` electricity consumption. It is therefore superseded and must never be published.
+
+The corrective plan is [Saudi Arabia Basic R2 Qualifier Correction Implementation Plan](./2026-07-17-saudi-basic-r2-qualifier-correction-plan.md). Only its new `data-basic-sa-20260717-r2` candidate is eligible for a future, separate human decision; only an approved decision for r2 may authorize a separate `DATA-BASIC-SA-PUBLISH` task. This record corrects current status without rewriting r1 history.
+
 ---
 
 ### Task 1: Register Reviewed Saudi Official Sources
