@@ -1,6 +1,6 @@
 {
   "schemaVersion": "basic-source-catalog/v1",
-  "catalogVersion": "2026-07-15.1",
+  "catalogVersion": "2026-07-17.1",
   "sources": [
     {
       "sourceId": "indonesia-esdm-2025-performance",
@@ -87,6 +87,127 @@
       "adapterVersion": "1.0.0",
       "adapterKind": "manual-document",
       "fieldPaths": ["marketOverview.renewableTarget"]
+    },
+    {
+      "sourceId": "saudi-gastat-electrical-energy-statistics-2024",
+      "sourceName": "General Authority for Statistics",
+      "sourceFamily": "official-statistics",
+      "credibility": "OFFICIAL",
+      "format": "pdf",
+      "countryScope": ["SA"],
+      "requestTemplate": {
+        "origin": "https://www.stats.gov.sa",
+        "pathSegments": [
+          { "kind": "literal", "value": "documents" },
+          { "kind": "literal", "value": "20117" },
+          { "kind": "literal", "value": "2435281" },
+          { "kind": "literal", "value": "Electrical+Energy+Statistics+2024+EN.pdf" },
+          { "kind": "literal", "value": "fe9d3d6f-809b-cdb9-7559-3f2a21f4e415" }
+        ],
+        "query": [
+          {
+            "name": "t",
+            "value": { "kind": "literal", "value": "1765087585713" }
+          }
+        ]
+      },
+      "accept": "application/pdf",
+      "approvedOrigins": ["https://www.stats.gov.sa"],
+      "allowedQueryParameters": ["t"],
+      "accessMode": "open",
+      "licenseName": "Official publication; no open-content license declared",
+      "licenseUrl": "https://www.stats.gov.sa/documents/20117/2435281/Electrical%2BEnergy%2BStatistics%2B2024%2BEN.pdf/fe9d3d6f-809b-cdb9-7559-3f2a21f4e415?t=1765087585713",
+      "attribution": "Factual extraction with attribution to the General Authority for Statistics Electrical Energy Statistics 2024 publication; no open-content license is asserted.",
+      "refreshCadence": "annual",
+      "adapterId": "basic-manual-document-capture",
+      "adapterVersion": "1.0.0",
+      "adapterKind": "manual-document",
+      "fieldPaths": [
+        "country.summary",
+        "marketOverview.energyDemand",
+        "marketOverview.keyIndicators[0].label",
+        "marketOverview.keyIndicators[0].unit",
+        "marketOverview.keyIndicators[0].value",
+        "marketOverview.keyIndicators[0].year",
+        "marketOverview.keyIndicators[2].label",
+        "marketOverview.keyIndicators[2].unit",
+        "marketOverview.keyIndicators[2].value",
+        "marketOverview.keyIndicators[2].year",
+        "marketOverview.overview"
+      ]
+    },
+    {
+      "sourceId": "saudi-gastat-renewable-energy-statistics-2024",
+      "sourceName": "General Authority for Statistics",
+      "sourceFamily": "official-statistics",
+      "credibility": "OFFICIAL",
+      "format": "html",
+      "countryScope": ["SA"],
+      "requestTemplate": {
+        "origin": "https://stats.gov.sa",
+        "pathSegments": [
+          { "kind": "literal", "value": "en" },
+          { "kind": "literal", "value": "w" },
+          { "kind": "literal", "value": "news" },
+          { "kind": "literal", "value": "63" }
+        ],
+        "query": []
+      },
+      "accept": "text/html",
+      "approvedOrigins": ["https://stats.gov.sa"],
+      "allowedQueryParameters": [],
+      "accessMode": "open",
+      "licenseName": "Official publication; no open-content license declared",
+      "licenseUrl": "https://stats.gov.sa/en/w/news/63",
+      "attribution": "Factual extraction with attribution to the General Authority for Statistics renewable energy statistics publication; no open-content license is asserted.",
+      "refreshCadence": "annual",
+      "adapterId": "basic-manual-document-capture",
+      "adapterVersion": "1.0.0",
+      "adapterKind": "manual-document",
+      "fieldPaths": [
+        "country.region",
+        "country.summary",
+        "marketOverview.industryTags",
+        "marketOverview.keyIndicators[1].label",
+        "marketOverview.keyIndicators[1].unit",
+        "marketOverview.keyIndicators[1].value",
+        "marketOverview.keyIndicators[1].year",
+        "marketOverview.overview",
+        "marketOverview.techTags"
+      ]
+    },
+    {
+      "sourceId": "saudi-spa-energy-storage-2025",
+      "sourceName": "Saudi Press Agency",
+      "sourceFamily": "government",
+      "credibility": "OFFICIAL",
+      "format": "html",
+      "countryScope": ["SA"],
+      "requestTemplate": {
+        "origin": "https://www.spa.gov.sa",
+        "pathSegments": [
+          { "kind": "literal", "value": "w2261911" }
+        ],
+        "query": []
+      },
+      "accept": "text/html",
+      "approvedOrigins": ["https://www.spa.gov.sa"],
+      "allowedQueryParameters": [],
+      "accessMode": "open",
+      "licenseName": "Official publication; no open-content license declared",
+      "licenseUrl": "https://www.spa.gov.sa/w2261911",
+      "attribution": "Factual extraction with attribution to the Saudi Press Agency energy storage publication; no open-content license is asserted.",
+      "refreshCadence": "event-driven",
+      "adapterId": "basic-manual-document-capture",
+      "adapterVersion": "1.0.0",
+      "adapterKind": "manual-document",
+      "fieldPaths": [
+        "country.summary",
+        "marketOverview.industryTags",
+        "marketOverview.overview",
+        "marketOverview.renewableTarget",
+        "marketOverview.techTags"
+      ]
     },
     {
       "sourceId": "vietnam-chinhphu-adjusted-pdp8-2025",

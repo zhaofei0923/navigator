@@ -160,14 +160,17 @@ Catalog 保留四个覆盖所有国家的 `open` World Bank JSON deterministic s
 
 单国任务可在同一 exact contract 下增加 country-scoped HTML/PDF manual sources。当前已登记：
 
-| sourceId | 国家 | 格式 | 用途 |
-|---|---|---|---|
-| `indonesia-esdm-2025-performance` | ID | HTML | 能源市场基线、摘要与关键指标 |
-| `indonesia-esdm-national-energy-policy-2025` | ID | PDF | 国家能源政策目标 |
-| `vietnam-chinhphu-adjusted-pdp8-2025` | VN | HTML | 调整后的电力规划 VIII 目标与产业方向 |
-| `vietnam-evn-annual-report-2024-2025` | VN | PDF | 2024 年装机、电力生产与购入基线 |
+| sourceId | 国家 | 格式 | 官方发布方 | 字段归属 |
+|---|---|---|---|---|
+| `indonesia-esdm-2025-performance` | ID | HTML | Indonesia Ministry of Energy and Mineral Resources | 能源市场基线、摘要与关键指标 |
+| `indonesia-esdm-national-energy-policy-2025` | ID | PDF | Government of Indonesia | 国家能源政策目标 |
+| `saudi-gastat-electrical-energy-statistics-2024` | SA | PDF | General Authority for Statistics | `country.summary`、`marketOverview.energyDemand`、关键指标组 0 和 2、`marketOverview.overview` |
+| `saudi-gastat-renewable-energy-statistics-2024` | SA | HTML | General Authority for Statistics | `country.region`、`country.summary`、`marketOverview.industryTags`、关键指标组 1、`marketOverview.overview`、`marketOverview.techTags` |
+| `saudi-spa-energy-storage-2025` | SA | HTML | Saudi Press Agency | `country.summary`、`marketOverview.industryTags`、`marketOverview.overview`、`marketOverview.renewableTarget`、`marketOverview.techTags` |
+| `vietnam-chinhphu-adjusted-pdp8-2025` | VN | HTML | Government of Viet Nam | 调整后的电力规划 VIII 目标与产业方向 |
+| `vietnam-evn-annual-report-2024-2025` | VN | PDF | Vietnam Electricity (EVN) | 2024 年装机、电力生产与购入基线 |
 
-这些 manual sources 只通过 `basic-manual-document-capture@1.0.0` 捕获原始 bytes/hash；事实、双语编辑输入和 source check 必须继续由 capture-hash-bound document plan 与人工审核提供。当前 catalog 不包含 IMF、IRENA、Ember 或 credentialed source。
+这些 manual sources 只通过 `basic-manual-document-capture@1.0.0` 捕获原始 bytes/hash；HTML/PDF evidence 绝不直接解析为 candidate facts。事实、双语编辑输入和 source check 必须继续由绑定 capture hash 的人工 observation plan 与人工审核提供。当前 catalog 不包含 IMF、IRENA、Ember 或 credentialed source。
 
 ## 8. 资源与错误边界
 
