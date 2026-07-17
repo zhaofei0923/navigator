@@ -24,7 +24,7 @@ describe("GET /api/v1/countries", () => {
 
     expect(response.status).toBe(200);
     expect(body.success).toBe(true);
-    expect(body.data.map(({ code }) => code)).toEqual(["ID", "VN"]);
+    expect(body.data.map(({ code }) => code)).toEqual(["ID", "VN", "SA"]);
     expect(body.data[1]).toEqual(
       expect.objectContaining({
         code: "VN",
@@ -40,6 +40,13 @@ describe("GET /api/v1/countries", () => {
     );
     expect(body.data[1]).not.toHaveProperty("industryTags");
     expect(body.data[1]).not.toHaveProperty("techTags");
+    expect(body.data[2]).toEqual(
+      expect.objectContaining({
+        code: "SA",
+        coverageLevel: "BASIC",
+        name: "Saudi Arabia",
+      }),
+    );
   });
 
   test.each([
@@ -80,7 +87,11 @@ describe("GET /api/v1/countries", () => {
     };
 
     expect(body.meta.locale).toBe("en");
-    expect(body.data.map(({ name }) => name)).toEqual(["Indonesia", "Viet Nam"]);
+    expect(body.data.map(({ name }) => name)).toEqual([
+      "Indonesia",
+      "Viet Nam",
+      "Saudi Arabia",
+    ]);
   });
 
   test("returns raw LocalizedText fields when requested", async () => {
@@ -101,6 +112,10 @@ describe("GET /api/v1/countries", () => {
     });
     expect(body.data[0]?._i18nFallback).toBeUndefined();
     expect(body.data[1]?.name).toEqual({ zh: "越南", en: "Viet Nam" });
+    expect(body.data[2]?.name).toEqual({
+      zh: "沙特阿拉伯",
+      en: "Saudi Arabia",
+    });
   });
 
   test("caps pageSize at the documented maximum", async () => {
