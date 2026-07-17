@@ -46,12 +46,22 @@ test("country explorer filters coverage and keeps coverage badges visible", asyn
 
   await expect(page).toHaveURL(/coverageLevel=BASIC/);
   await expect(page.getByRole("article", { name: /Indonesia/ })).toBeVisible();
+  const vietnamCard = page.getByRole("article", { name: /Viet Nam/ });
+  await expect(vietnamCard).toBeVisible();
   await expect(page.getByText("2 countries")).toBeVisible();
 
   await page.getByRole("link", { name: /Indonesia/ }).click();
   await expect(page).toHaveURL(/\/en\/countries\/ID/);
   await expect(
     page.getByRole("heading", { exact: true, name: "Indonesia" }),
+  ).toBeVisible();
+
+  await page.goBack();
+  await expect(page).toHaveURL(/\/en\/countries\?coverageLevel=BASIC/);
+  await vietnamCard.getByRole("link", { name: /Viet Nam/ }).click();
+  await expect(page).toHaveURL(/\/en\/countries\/VN/);
+  await expect(
+    page.getByRole("heading", { exact: true, name: "Viet Nam" }),
   ).toBeVisible();
 });
 

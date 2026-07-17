@@ -60,20 +60,23 @@ describe("tracked TypeScript command hook", () => {
     );
   }, 30_000);
 
-  test("runs the approved Basic publication import command", () => {
-    const result = runPnpm([
-      "--filter",
-      "@navigator/db",
-      "seed:approved-basic-country",
-      "--",
-      "indonesia",
-    ]);
+  test("runs the approved Basic publication import command for every published country", () => {
+    for (const countryDirectory of ["indonesia", "vietnam"]) {
+      const result = runPnpm([
+        "--filter",
+        "@navigator/db",
+        "seed:approved-basic-country",
+        "--",
+        countryDirectory,
+      ]);
 
-    expect(result.status, result.stderr).toBe(0);
-    expect(result.stdout).toContain('"coverageLevel": "BASIC"');
-    expect(result.stdout).toContain('"aiEligibleKnowledgeIds": []');
-    expect(result.stdout).not.toContain("id_pol_001");
-    expect(result.stdout).not.toContain("id_know_001");
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.stdout).toContain('"coverageLevel": "BASIC"');
+      expect(result.stdout).toContain('"aiEligibleKnowledgeIds": []');
+      expect(result.stdout).not.toMatch(
+        /"model": "(?:policy|risk|opportunity|project|partner|chineseCompany|knowledgeChunk)"/,
+      );
+    }
   }, 30_000);
 
   test("validates all approved Basic publications through the build gate", () => {
