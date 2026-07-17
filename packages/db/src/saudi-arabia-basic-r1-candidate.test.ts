@@ -340,7 +340,7 @@ describe("Saudi Arabia Basic r1 candidate", () => {
       techTags: [],
     });
     const factScopes = [...new Set(bundle.extractedFacts.facts.map(({ fieldPath }) => (
-      fieldPath.split(/[.[\]]/, 1)[0]
+      fieldPath.replace(/[.[\]].*$/, "")
     )))].sort(compareText);
     expect({
       factScopes,
