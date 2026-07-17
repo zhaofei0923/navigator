@@ -268,7 +268,7 @@ Replace the Saudi test's temporary catalog digest, retrieval timestamps, content
 
 - [ ] **Step 1: Update status documentation**
 
-Record `DATA-BASIC-SA-COLLECT`, run `data-basic-sa-20260717-r1`, catalog version/digest, exact four staging artifacts, official-source split, and the explicit state: candidate ready for human review, not canonical, not published, not AI-usable. Preserve the rollout rule that the next action is a separate human decision followed by a separate `DATA-BASIC-SA-PUBLISH` task only if approved.
+Record `DATA-BASIC-SA-COLLECT`, run `data-basic-sa-20260717-r1`, catalog version/digest, exact four staging artifacts, official-source split, and its historical state: draft candidate, not canonical, not published, and not AI-usable. `r1` was superseded before approval and is retained only as immutable audit history; it must never proceed to approval or publication. Only `data-basic-sa-20260717-r2` may proceed to human review and, if separately approved, a separate `DATA-BASIC-SA-PUBLISH` task.
 
 - [ ] **Step 2: Run focused validation**
 

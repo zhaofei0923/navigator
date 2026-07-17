@@ -142,6 +142,26 @@ const CAPACITY_UNCERTAINTY =
   "The source reports total licensed generation capacity as approximately 92.5 GW.";
 const CONSUMPTION_UNCERTAINTY =
   "The source reports electricity consumption as approximately 340,430 GWh.";
+const ELECTRICAL_ENERGY_SUMMARY_RAW_VALUE = {
+  consumptionGrowthPercent: 4.1,
+  electricityConsumptionGWh: 340430,
+  electricityConsumptionQualifier: "approximately",
+  energySentGrowthPercent: 5.7,
+  energySentGrowthQualifier: "approximately",
+  energySentToNetworkGWh: 402628,
+  licensedGenerationCapacityGW: 92.5,
+  licensedGenerationCapacityQualifier: "approximately",
+} as const;
+const LICENSED_CAPACITY_OVERVIEW_RAW_VALUE = {
+  energySentToNetworkGWh: 402628,
+  licensedGenerationCapacityGW: 92.5,
+  licensedGenerationCapacityQualifier: "approximately",
+  year: 2024,
+} as const;
+const LICENSED_CAPACITY_LABEL_RAW_VALUE = {
+  label: "Total licensed electrical energy generation capacity",
+  qualifier: "approximately",
+} as const;
 const INDICATORS = [
   {
     label: {
@@ -201,6 +221,47 @@ describe("Saudi Arabia Basic r2 qualifier correction", () => {
     expect(hashArtifacts(r1Directory, Object.keys(R1_ARTIFACT_HASHES))).toEqual(
       R1_ARTIFACT_HASHES,
     );
+  });
+
+  test("uses fresh r2 captures for every r1 source", () => {
+    const r1Bundle = loadBasicCollectionAuditBundleVersioned(
+      REPO_ROOT,
+      COUNTRY_DIRECTORY,
+      R1_RUN_ID,
+    );
+    const r2Bundle = loadBasicCollectionAuditBundleVersioned(
+      REPO_ROOT,
+      COUNTRY_DIRECTORY,
+      R2_RUN_ID,
+    );
+    const r1Sources = new Map(r1Bundle.sourceRegister.sources.map((source) => [
+      source.sourceId,
+      source,
+    ]));
+    const r2Sources = new Map(r2Bundle.sourceRegister.sources.map((source) => [
+      source.sourceId,
+      source,
+    ]));
+
+    expect([...r1Sources.keys()]).toEqual(SOURCE_IDS);
+    expect([...r2Sources.keys()]).toEqual(SOURCE_IDS);
+    for (const sourceId of SOURCE_IDS) {
+      const r1Source = r1Sources.get(sourceId);
+      const r2Source = r2Sources.get(sourceId);
+      expect(r1Source, `${sourceId} r1 source`).toBeDefined();
+      expect(r2Source, `${sourceId} r2 source`).toBeDefined();
+      if (r1Source === undefined || r2Source === undefined) {
+        throw new Error(`missing corresponding Saudi source capture: ${sourceId}`);
+      }
+
+      expect(r2Source.retrievedAt, `${sourceId} capture identity`).not.toBe(
+        r1Source.retrievedAt,
+      );
+      expect(
+        Date.parse(r2Source.retrievedAt),
+        `${sourceId} retrieval timestamp`,
+      ).toBeGreaterThan(Date.parse(r1Source.retrievedAt));
+    }
   });
 
   test("locks the corrected generated r2 candidate at the human-review gate", () => {
@@ -308,6 +369,9 @@ describe("Saudi Arabia Basic r2 qualifier correction", () => {
     expect(factsByPath.get("country.summary")).toMatchObject({
       uncertainty: CAPACITY_UNCERTAINTY,
     });
+    expect(factsByPath.get("country.summary")?.evidence.find(
+      ({ sourceId }) => sourceId === "saudi-gastat-electrical-energy-statistics-2024",
+    )?.rawValue).toEqual(ELECTRICAL_ENERGY_SUMMARY_RAW_VALUE);
     for (const evidence of factsByPath.get("country.summary")?.evidence ?? []) {
       expect(evidence.normalizedValue).toEqual(SUMMARY);
     }
@@ -338,9 +402,14 @@ describe("Saudi Arabia Basic r2 qualifier correction", () => {
     expect(factsByPath.get("marketOverview.energyDemand")).toMatchObject({
       uncertainty: CONSUMPTION_UNCERTAINTY,
     });
+    expect(factsByPath.get("marketOverview.energyDemand")?.evidence[0]?.rawValue)
+      .toEqual(ELECTRICAL_ENERGY_SUMMARY_RAW_VALUE);
     expect(factsByPath.get("marketOverview.overview")).toMatchObject({
       uncertainty: CAPACITY_UNCERTAINTY,
     });
+    expect(factsByPath.get("marketOverview.overview")?.evidence.find(
+      ({ sourceId }) => sourceId === "saudi-gastat-electrical-energy-statistics-2024",
+    )?.rawValue).toEqual(LICENSED_CAPACITY_OVERVIEW_RAW_VALUE);
     expect(factsByPath.get("marketOverview.techTags")).toMatchObject({
       extractionMethod: "manual",
       uncertainty: expect.stringContaining("product-level technology taxonomy"),
@@ -348,6 +417,8 @@ describe("Saudi Arabia Basic r2 qualifier correction", () => {
     expect(factsByPath.get("marketOverview.keyIndicators[0].label")).toMatchObject({
       uncertainty: CAPACITY_UNCERTAINTY,
     });
+    expect(factsByPath.get("marketOverview.keyIndicators[0].label")?.evidence[0]?.rawValue)
+      .toEqual(LICENSED_CAPACITY_LABEL_RAW_VALUE);
     expect(factsByPath.get("marketOverview.keyIndicators[0].value")).toMatchObject({
       extractionMethod: "manual",
       uncertainty: CAPACITY_UNCERTAINTY,
