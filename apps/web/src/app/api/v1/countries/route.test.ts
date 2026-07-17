@@ -24,11 +24,12 @@ describe("GET /api/v1/countries", () => {
 
     expect(response.status).toBe(200);
     expect(body.success).toBe(true);
-    expect(body.data[0]).toEqual(
+    expect(body.data.map(({ code }) => code)).toEqual(["ID", "VN"]);
+    expect(body.data[1]).toEqual(
       expect.objectContaining({
-        code: "ID",
+        code: "VN",
         coverageLevel: "BASIC",
-        name: "Indonesia",
+        name: "Viet Nam",
         signals: expect.objectContaining({
           opportunityLevel: "DATA_BUILDING",
           policyFriendliness: "DATA_BUILDING",
@@ -37,8 +38,8 @@ describe("GET /api/v1/countries", () => {
         }),
       }),
     );
-    expect(body.data[0]).not.toHaveProperty("industryTags");
-    expect(body.data[0]).not.toHaveProperty("techTags");
+    expect(body.data[1]).not.toHaveProperty("industryTags");
+    expect(body.data[1]).not.toHaveProperty("techTags");
   });
 
   test.each([
@@ -79,7 +80,7 @@ describe("GET /api/v1/countries", () => {
     };
 
     expect(body.meta.locale).toBe("en");
-    expect(body.data[0]?.name).toBe("Indonesia");
+    expect(body.data.map(({ name }) => name)).toEqual(["Indonesia", "Viet Nam"]);
   });
 
   test("returns raw LocalizedText fields when requested", async () => {
@@ -99,6 +100,7 @@ describe("GET /api/v1/countries", () => {
       en: "Indonesia",
     });
     expect(body.data[0]?._i18nFallback).toBeUndefined();
+    expect(body.data[1]?.name).toEqual({ zh: "越南", en: "Viet Nam" });
   });
 
   test("caps pageSize at the documented maximum", async () => {

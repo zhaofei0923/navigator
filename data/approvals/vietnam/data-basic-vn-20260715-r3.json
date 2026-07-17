@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "basic-country-publication-approval/v1",
+  "countryDirectory": "vietnam",
+  "countryCode": "VN",
+  "runId": "data-basic-vn-20260715-r3",
+  "submission": {
+    "fromReviewStatus": "draft",
+    "toReviewStatus": "pending",
+    "submittedAt": "2026-07-17T09:31:27.000Z"
+  },
+  "decision": "approved",
+  "reviewerId": "github:zhaofei0923",
+  "decidedAt": "2026-07-17T09:31:27.000Z",
+  "authorizedPublication": {
+    "coverageLevel": "BASIC",
+    "fromReviewStatus": "pending",
+    "toReviewStatus": "published",
+    "aiUsable": false
+  },
+  "artifactSha256": {
+    "source-register.json": "9a164b73048b290a2fd964a292158149d722adcd6edc54d4fea1d67f6cb879a3",
+    "extracted-facts.json": "ca66fb3f8ee67c69ae9f33b4d941bf84209311cee139b68ed0a84d15ea9b99ce",
+    "market-overview.draft.json": "3aa83f37cf0177e043d3ed0d5493c6193cb68e9f8dd33c75a46958a0079b5a95",
+    "review-report.json": "163107e63f1ae72288dc10c8ed0770f94f9b93bf3dd896e67f0870f588492a1e"
+  }
+}

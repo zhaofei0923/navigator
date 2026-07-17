@@ -46,13 +46,42 @@ test("country explorer filters coverage and keeps coverage badges visible", asyn
 
   await expect(page).toHaveURL(/coverageLevel=BASIC/);
   await expect(page.getByRole("article", { name: /Indonesia/ })).toBeVisible();
-  await expect(page.getByText("1 country")).toBeVisible();
+  const vietnamCard = page.getByRole("article", { name: /Viet Nam/ });
+  await expect(vietnamCard).toBeVisible();
+  await expect(page.getByText("2 countries")).toBeVisible();
 
   await page.getByRole("link", { name: /Indonesia/ }).click();
   await expect(page).toHaveURL(/\/en\/countries\/ID/);
   await expect(
     page.getByRole("heading", { exact: true, name: "Indonesia" }),
   ).toBeVisible();
+
+  await page.goBack();
+  await expect(page).toHaveURL(/\/en\/countries/);
+  expect(new URL(page.url()).searchParams.get("coverageLevel")).toBe("BASIC");
+  await expect(vietnamCard).toBeVisible();
+  await vietnamCard.getByRole("link", { name: /Viet Nam/ }).click();
+  await expect(page).toHaveURL(/\/en\/countries\/VN/);
+  await expect(
+    page.getByRole("heading", { exact: true, name: "Viet Nam" }),
+  ).toBeVisible();
+});
+
+test("Vietnam Basic detail renders in English and Chinese without enabling AI", async ({
+  page,
+}) => {
+  await page.goto("/en/countries/VN");
+
+  await expect(page.getByRole("heading", { exact: true, name: "Viet Nam" })).toBeVisible();
+  await expect(page.getByText(/Total installed capacity was 82,387 MW/)).toBeVisible();
+  await expect(page.getByText("Data Building", { exact: true })).toHaveCount(9);
+
+  await page.getByRole("link", { name: "zh-CN" }).click();
+
+  await expect(page).toHaveURL(/\/zh-CN\/countries\/VN/);
+  await expect(page.getByRole("heading", { exact: true, name: "越南" })).toBeVisible();
+  await expect(page.getByText(/总装机容量为82,387兆瓦/)).toBeVisible();
+  await expect(page.getByText("数据建设中", { exact: true })).toHaveCount(9);
 });
 
 test("country explorer switches UI language on the same route", async ({

@@ -16,8 +16,8 @@ const REPO_ROOT = fileURLToPath(new URL("../../../", import.meta.url)).replace(
 describe("approved Basic publications build validation", () => {
   test("validates every canonical country directory through the publication gate", () => {
     expect(validateApprovedBasicCountryPublications(REPO_ROOT)).toEqual({
-      countryDirectories: ["indonesia"],
-      countryCodes: ["ID"],
+      countryDirectories: ["indonesia", "vietnam"],
+      countryCodes: ["ID", "VN"],
     });
   });
 

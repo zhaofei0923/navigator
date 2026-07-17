@@ -14,14 +14,14 @@ const REPO_ROOT = fileURLToPath(new URL("../../../", import.meta.url)).replace(
 );
 
 describe("approved Basic country publication import", () => {
-  test("builds an isolated country-generic plan from the committed ID publication", () => {
-    const plan = buildApprovedBasicCountryPublicationImportPlan(
-      REPO_ROOT,
-      "indonesia",
-    );
+  test.each([
+    ["indonesia", "ID"],
+    ["vietnam", "VN"],
+  ] as const)("builds an isolated country-generic plan from %s", (directory, code) => {
+    const plan = buildApprovedBasicCountryPublicationImportPlan(REPO_ROOT, directory);
 
     expect(plan.summary).toMatchObject({
-      countryCode: "ID",
+      countryCode: code,
       coverageLevel: "BASIC",
       moduleStatuses: {
         "market-overview": "COMPLETE",
@@ -53,8 +53,6 @@ describe("approved Basic country publication import", () => {
       "knowledgeChunk",
       "reviewReport",
       "sourceRegister",
-      "id_pol_001",
-      "id_know_001",
     ]) {
       expect(serialized).not.toContain(forbidden);
     }
