@@ -12,6 +12,13 @@ export {
   importPreparedApprovedBasicCountry,
 } from "./runtime/basic-country-import-runtime.js";
 export {
+  createPrismaBasicCountryImportPort,
+} from "./runtime/prisma-basic-country-import-port.js";
+export {
+  PrismaBasicCountryReadError,
+  readPrismaBasicCanonicalCountry,
+} from "./runtime/prisma-basic-country-read.js";
+export {
   BASIC_COLLECTION_AUDIT_SCHEMA_VERSION,
   BASIC_COLLECTION_BLOCKER_CODES,
 } from "./collection/basic-collection-contracts.js";
@@ -98,6 +105,13 @@ export type {
   BasicCountryImportTransaction,
   BasicCountryImportTransactionPort,
 } from "./runtime/basic-country-import-runtime.js";
+export type {
+  PrismaBasicCountryClient,
+  PrismaBasicCountryTransaction,
+} from "./runtime/prisma-basic-country-import-port.js";
+export type {
+  PrismaBasicCountryReadErrorCode,
+} from "./runtime/prisma-basic-country-read.js";
 export type {
   BasicRawCaptureResult,
 } from "./collection/basic-raw-capture.js";
