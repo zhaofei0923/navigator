@@ -1,4 +1,7 @@
+import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { readFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, test, vi } from "vitest";
@@ -8,6 +11,7 @@ import {
   importAllApprovedBasicCountries,
   prepareAllApprovedBasicCountryImports,
 } from "./seed/approved-basic-countries-prisma-import.js";
+import { discoverApprovedBasicCountryDirectories } from "./seed/approved-basic-publications-validation.js";
 import {
   isPreparedApprovedBasicCountryImportFromLoader,
   type PreparedApprovedBasicCountryImport,
@@ -19,6 +23,7 @@ import type {
 import type { BasicSeedImportOperation } from "./seed/basic-country-import.js";
 
 const REPO_ROOT = fileURLToPath(new URL("../../../", import.meta.url)).replace(/\/$/u, "");
+const INVALID_PUBLICATION_SET_ERROR = "Approved Basic publication set is invalid";
 
 describe("approved BASIC country Prisma import orchestration", () => {
   test("discovers and prepares every current publication in directory order", () => {
@@ -73,6 +78,61 @@ describe("approved BASIC country Prisma import orchestration", () => {
     expect(createClient).not.toHaveBeenCalled();
   });
 
+  test("rejects an empty publication set before client or transaction access", async () => {
+    const temporaryRepoRoot = createTemporaryRepoRoot();
+    const createClient = vi.fn();
+    const transaction = vi.fn();
+    try {
+      await expect(async () => {
+        const prepared = prepareAllApprovedBasicCountryImports(temporaryRepoRoot);
+        createClient();
+        await importAllApprovedBasicCountries(prepared, { transaction });
+      }).rejects.toMatchObject({ message: INVALID_PUBLICATION_SET_ERROR });
+
+      expect(createClient).not.toHaveBeenCalled();
+      expect(transaction).not.toHaveBeenCalled();
+    } finally {
+      rmSync(temporaryRepoRoot, { force: true, recursive: true });
+    }
+  });
+
+  test("loads every publication then rejects duplicate prepared country codes", async () => {
+    const temporaryRepoRoot = createTemporaryRepoRoot(["country-a", "country-b"]);
+    try {
+      const [fixtureDirectory] = discoverApprovedBasicCountryDirectories(REPO_ROOT);
+      if (fixtureDirectory === undefined) {
+        throw new Error("Missing approved publication fixture");
+      }
+      const authenticPublication = loadApprovedBasicCountryPublicationV2(
+        REPO_ROOT,
+        fixtureDirectory,
+      );
+      if (!authenticPublication.valid) {
+        throw new Error("Invalid approved publication fixture");
+      }
+      const loaded: string[] = [];
+      const createClient = vi.fn();
+      const transaction = vi.fn();
+      await expect(async () => {
+        const prepared = prepareAllApprovedBasicCountryImports(
+          temporaryRepoRoot,
+          (_repoRoot, countryDirectory) => {
+            loaded.push(countryDirectory);
+            return authenticPublication;
+          },
+        );
+        createClient();
+        await importAllApprovedBasicCountries(prepared, { transaction });
+      }).rejects.toMatchObject({ message: INVALID_PUBLICATION_SET_ERROR });
+
+      expect(loaded).toEqual(["country-a", "country-b"]);
+      expect(createClient).not.toHaveBeenCalled();
+      expect(transaction).not.toHaveBeenCalled();
+    } finally {
+      rmSync(temporaryRepoRoot, { force: true, recursive: true });
+    }
+  });
+
   test("imports strictly serially and returns deterministic dynamic totals", async () => {
     const prepared = prepareAllApprovedBasicCountryImports(REPO_ROOT);
     const port = new StatefulBatchPort(prepared);
@@ -118,6 +178,16 @@ describe("approved BASIC country Prisma import orchestration", () => {
     expect(source).toMatch(/for\s*\(\s*const\s+\w+\s+of\s+prepared\s*\)/u);
   });
 });
+
+function createTemporaryRepoRoot(countryDirectories: readonly string[] = []): string {
+  const repoRoot = mkdtempSync(join(tmpdir(), "navigator-approved-basic-set-"));
+  const dataDirectory = join(repoRoot, "data");
+  mkdirSync(dataDirectory);
+  for (const countryDirectory of countryDirectories) {
+    mkdirSync(join(dataDirectory, countryDirectory));
+  }
+  return repoRoot;
+}
 
 interface BatchState {
   readonly countries: Map<string, BasicSeedImportOperation>;

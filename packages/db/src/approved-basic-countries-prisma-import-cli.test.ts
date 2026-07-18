@@ -1,4 +1,6 @@
-import { resolve } from "node:path";
+import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -103,6 +105,27 @@ describe("approved BASIC countries Prisma import CLI", () => {
     expect(harness.createClient).not.toHaveBeenCalled();
     expect(harness.disconnect).not.toHaveBeenCalled();
     expect(adapterState.calls).toBe(0);
+  });
+
+  test("rejects an empty publication set without client or adapter lifecycle", async () => {
+    const temporaryRepoRoot = mkdtempSync(
+      join(tmpdir(), "navigator-approved-basic-cli-set-"),
+    );
+    try {
+      mkdirSync(join(temporaryRepoRoot, "data"));
+      const harness = createHarness();
+      harness.dependencies.repoRoot = temporaryRepoRoot;
+      await expect(runApprovedBasicCountriesPrismaImportCli([], harness.dependencies))
+        .resolves.toBe(1);
+
+      expectRedactedFailure(harness);
+      expect(harness.createClient).not.toHaveBeenCalled();
+      expect(harness.disconnect).not.toHaveBeenCalled();
+      expect(adapterState.calls).toBe(0);
+      expect(harness.client.$transaction).not.toHaveBeenCalled();
+    } finally {
+      rmSync(temporaryRepoRoot, { force: true, recursive: true });
+    }
   });
 
   test("redacts constructor failure and disconnects zero times", async () => {
