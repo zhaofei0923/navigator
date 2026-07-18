@@ -56,7 +56,7 @@ MVP 到商业化初期的当前建设目标是经人工批准的国家先完成 
 - 该决定只批准试点选择与候选建设启动，不自动启用 AI，也不改变权限、计费或数据模型。来源、事实、双语文本、STANDARD 发布、`aiUsable`、真实 ID KnowledgeChunk 创建与可检索资格、COMPLETE 升级均须分别人工批准。
 - 详细依赖和任务切片以 [六国 BASIC 后里程碑设计](./superpowers/specs/2026-07-18-six-basic-platform-milestone-design.md) 与 [roadmap.md](./roadmap.md) 为准。
 
-2026-07-18 执行进度：M1 正在按 DB → API → OPS 严格串行推进。`PLATFORM-DB-1` 已完成；`PLATFORM-API-1` 仅完成无新增依赖的任务 1–2，仍须等待 Gate 0 对精确 NestJS 依赖集合的人工批准后才能执行任务 3–6；`PLATFORM-OPS-1` 必须继续等待 API 完成，因此 API 与 M1 均未完成。
+2026-07-18 执行进度：M1 正在按 DB → API → OPS 严格串行推进。`PLATFORM-DB-1` 已完成；`PLATFORM-API-1` 仅完成无新增依赖的任务 1–2，仍须等待 Gate 0 对精确 NestJS 依赖集合的人工批准后才能执行任务 3–8；`PLATFORM-OPS-1` 必须继续等待 API 完成，因此 API 与 M1 均未完成。
 
 与 M1 并行的 `DATA-STANDARD-ID` 已完成严格合成 fixture、parser、覆盖判定与 AI 负向边界切片。该切片不含真实 ID 来源、事实或双语业务文本，不构成 STANDARD 发布，也不授权 `aiUsable = true`、真实 KnowledgeChunk、AI 可检索资格或 COMPLETE；ID 的真实 canonical publication 仍恰好为 BASIC。上述真实数据与发布动作仍须逐项通过人工关口。
 

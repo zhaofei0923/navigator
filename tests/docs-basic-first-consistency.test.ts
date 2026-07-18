@@ -98,6 +98,9 @@ const SIX_BASIC_ACTIVE_RUNS = [
 const PLATFORM_MILESTONE_DESIGN =
   "docs/superpowers/specs/2026-07-18-six-basic-platform-milestone-design.md";
 
+const PLATFORM_API_PLAN =
+  "docs/superpowers/plans/2026-07-18-platform-api-1.md";
+
 const ID_STANDARD_GATE =
   "来源、事实、双语文本、STANDARD 发布、`aiUsable`、真实 ID KnowledgeChunk 创建与可检索资格、COMPLETE 升级均须分别人工批准。";
 
@@ -186,6 +189,29 @@ describe("Basic-first documentation policy", () => {
       );
       expect(policy, `${documentPath}: independent gates`).toContain(
         ID_STANDARD_GATE,
+      );
+    }
+  });
+
+  it("keeps the post-Gate API task range aligned with the implementation plan", () => {
+    const apiPlan = readRootFile(PLATFORM_API_PLAN);
+    const taskNumbers = [...apiPlan.matchAll(/^## 任务 (\d+)：/gm)].map(
+      ([, taskNumber]) => Number(taskNumber),
+    );
+
+    expect(taskNumbers).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+
+    for (const documentPath of [
+      "docs/roadmap.md",
+      "docs/country-rollout.md",
+    ] as const) {
+      const policy = readRootFile(documentPath);
+
+      expect(policy, `${documentPath}: complete post-Gate range`).toContain(
+        "任务 3–8",
+      );
+      expect(policy, `${documentPath}: truncated post-Gate range`).not.toContain(
+        "任务 3–6",
       );
     }
   });
