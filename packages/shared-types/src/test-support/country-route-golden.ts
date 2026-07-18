@@ -173,6 +173,8 @@ const listFixtures: readonly CountryRouteGoldenFixture[] = [
   { id: "list-pagination", route: "list", requestPath: "/api/v1/countries?locale=en&page=2&pageSize=2", expectedStatus: 200, expectedBody: listBody(["SA", "AE"], "en", "localized", 2, 2, 6) },
   { id: "list-pageSize-cap", route: "list", requestPath: "/api/v1/countries?locale=en&pageSize=999", expectedStatus: 200, expectedBody: listBody(ALL_CODES, "en", "localized", 1, 100, 6) },
   { id: "list-all-filters", route: "list", requestPath: "/api/v1/countries?coverageLevel=BASIC&region=southeast-asia&industryTags=solar,wind&techTags=onshore-wind&locale=en&textMode=localized&page=1&pageSize=1", expectedStatus: 200, expectedBody: listBody(["VN"], "en", "localized", 1, 1, 1) },
+  { id: "list-industry-filter-storage", route: "list", requestPath: "/api/v1/countries?industryTags=storage&locale=en", expectedStatus: 200, expectedBody: listBody(["VN", "SA", "ZA"], "en", "localized", 1, 20, 3) },
+  { id: "list-industry-all-match-empty", route: "list", requestPath: "/api/v1/countries?industryTags=storage,ev&locale=en", expectedStatus: 200, expectedBody: listBody([], "en", "localized", 1, 20, 0) },
   { id: "list-filter-empty", route: "list", requestPath: "/api/v1/countries?coverageLevel=COMPLETE&locale=en", expectedStatus: 200, expectedBody: listBody([], "en", "localized", 1, 20, 0) },
   { id: "list-accept-language", route: "list", requestPath: "/api/v1/countries", headers: { "accept-language": "en-US,en;q=0.9" }, expectedStatus: 200, expectedBody: listBody(ALL_CODES, "en", "localized") },
 ];
@@ -284,5 +286,6 @@ export const COUNTRY_FALLBACK_GOLDEN = {
 
 export {
   COUNTRY_SENSITIVE_GOLDEN_BODY,
+  COUNTRY_SENSITIVE_RAW_GOLDEN_BODY,
   COUNTRY_SENSITIVE_GOLDEN_SNAPSHOT,
 } from "./country-route-golden-sensitive.js";

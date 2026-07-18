@@ -5,9 +5,12 @@ import {
   COUNTRY_ROUTE_FORBIDDEN_BODY_FRAGMENTS,
   COUNTRY_ROUTE_GOLDEN_FIXTURES,
   COUNTRY_SENSITIVE_GOLDEN_BODY,
+  COUNTRY_SENSITIVE_RAW_GOLDEN_BODY,
   COUNTRY_SENSITIVE_GOLDEN_SNAPSHOT,
-} from "@navigator/shared-types/country-route-golden";
-import type { CountryRouteGoldenFixture } from "@navigator/shared-types/country-route-golden";
+} from "@navigator/shared-types/test-support/country-route-golden";
+import type {
+  CountryRouteGoldenFixture,
+} from "@navigator/shared-types/test-support/country-route-golden";
 import type { CountryCatalogItem } from "@navigator/shared-types/country-api";
 import { formatCountryModuleResponse } from "@navigator/shared-types/country-formatter";
 
@@ -60,6 +63,8 @@ describe("pre-migration country route golden matrix", () => {
     expect(ids).toContain("module-market-overview-localized-en");
     expect(ids).toContain("module-reports-raw-zh");
     expect(ids).toContain("list-all-filters");
+    expect(ids).toContain("list-industry-filter-storage");
+    expect(ids).toContain("list-industry-all-match-empty");
     expect(ids).toContain("list-invalid-pageSize-alpha");
     expect(ids).toContain("detail-unknown-country");
     expect(ids).toContain("module-invalid-moduleKey");
@@ -119,5 +124,16 @@ describe("pre-migration country route golden matrix", () => {
         { locale: "en" },
       ),
     ).toEqual(COUNTRY_SENSITIVE_GOLDEN_BODY);
+  });
+
+  test("freezes the fully redacted raw public module body", () => {
+    expect(
+      formatCountryModuleResponse(
+        COUNTRY_SENSITIVE_GOLDEN_SNAPSHOT,
+        "policy",
+        { locale: "en" },
+        "raw",
+      ),
+    ).toEqual(COUNTRY_SENSITIVE_RAW_GOLDEN_BODY);
   });
 });
