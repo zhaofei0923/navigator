@@ -12,6 +12,7 @@ import {
 } from "../seed/basic-country-activation-preflight.js";
 import type { BasicSeedImportOperation } from "../seed/basic-country-import.js";
 import type { BasicCanonicalData } from "../seed/basic-country-types.js";
+import { SAFE_COUNTRY_DIRECTORY } from "../seed/basic-country-validation-utils.js";
 
 const MODULE_KEY_TO_IMPORT_VALUE = {
   "market-overview": "MARKET_OVERVIEW",
@@ -143,25 +144,39 @@ export async function importPreparedApprovedBasicCountry(
 
 function hasExactBasicPlan(prepared: PreparedApprovedBasicCountryImport): boolean {
   const { canonical, countryCode, countryDirectory, plan } = prepared;
-  if (countryDirectory.length === 0 || countryCode.length !== 2) return false;
-  if (!hasCanonicalCountryCode(canonical, countryCode)) return false;
-  if (!hasExactKeys(plan.summary, ["countryCode", "coverageLevel", "moduleStatuses"])) {
-    return false;
-  }
   if (
-    plan.summary.countryCode !== countryCode ||
-    plan.summary.coverageLevel !== "BASIC" ||
-    !hasExactModuleStatuses(plan.summary.moduleStatuses)
+    typeof countryDirectory !== "string" ||
+    !SAFE_COUNTRY_DIRECTORY.test(countryDirectory) ||
+    typeof countryCode !== "string" ||
+    !/^[A-Z]{2}$/.test(countryCode) ||
+    !isRecord(plan) ||
+    !hasExactKeys(plan, ["summary", "operations", "aiEligibleKnowledgeIds"])
   ) {
     return false;
   }
-  if (!Array.isArray(plan.aiEligibleKnowledgeIds) || plan.aiEligibleKnowledgeIds.length !== 0) {
+  if (!hasCanonicalCountryCode(canonical, countryCode)) return false;
+  const summary = plan.summary;
+  if (!isRecord(summary) || !hasExactKeys(summary, ["countryCode", "coverageLevel", "moduleStatuses"])) {
     return false;
   }
-  if (plan.operations.length !== MODULE_KEYS.length + 2) return false;
+  if (
+    summary.countryCode !== countryCode ||
+    summary.coverageLevel !== "BASIC" ||
+    !hasExactModuleStatuses(summary.moduleStatuses)
+  ) {
+    return false;
+  }
+  const aiEligibleKnowledgeIds = plan.aiEligibleKnowledgeIds;
+  if (!Array.isArray(aiEligibleKnowledgeIds) || aiEligibleKnowledgeIds.length !== 0) {
+    return false;
+  }
+  const operations = plan.operations;
+  if (!Array.isArray(operations) || operations.length !== MODULE_KEYS.length + 2) {
+    return false;
+  }
 
-  const countryOperation = plan.operations[0];
-  const marketOverviewOperation = plan.operations.at(-1);
+  const countryOperation = operations[0];
+  const marketOverviewOperation = operations.at(-1);
   if (
     countryOperation === undefined ||
     marketOverviewOperation === undefined ||
@@ -172,7 +187,7 @@ function hasExactBasicPlan(prepared: PreparedApprovedBasicCountryImport): boolea
   }
 
   return MODULE_KEYS.every((moduleKey, index) => {
-    const operation = plan.operations[index + 1];
+    const operation = operations[index + 1];
     return operation !== undefined && isExactModuleCoverageOperation(
       operation,
       countryCode,
@@ -182,44 +197,63 @@ function hasExactBasicPlan(prepared: PreparedApprovedBasicCountryImport): boolea
 }
 
 function hasCanonicalCountryCode(
-  canonical: BasicCanonicalData,
+  canonical: unknown,
   countryCode: string,
 ): boolean {
-  return isRecord(canonical.country) &&
+  return isRecord(canonical) &&
+    isRecord(canonical.country) &&
     canonical.country.code === countryCode &&
     canonical.country.coverageLevel === "BASIC";
 }
 
-function hasExactModuleStatuses(value: Record<string, string>): boolean {
-  if (!hasExactKeys(value, MODULE_KEYS)) return false;
+function hasExactModuleStatuses(value: unknown): boolean {
+  if (!isRecord(value) || !hasExactKeys(value, MODULE_KEYS)) return false;
   return MODULE_KEYS.every((moduleKey) =>
     value[moduleKey] === (moduleKey === "market-overview" ? "COMPLETE" : "BUILDING")
   );
 }
 
 function isExactCountryOperation(
-  operation: BasicSeedImportOperation,
+  operation: unknown,
   countryCode: string,
 ): boolean {
-  if (operation.model !== "country" || operation.action !== "upsert") return false;
-  const { args } = operation;
-  return hasExactKeys(args, ["where", "create", "update"]) &&
-    hasExactKeys(args.where, ["code"]) &&
-    args.where.code === countryCode &&
+  if (operation === null || !isRecord(operation) || operation.model !== "country" || operation.action !== "upsert") {
+    return false;
+  }
+  const args = operation.args;
+  if (!isRecord(args) || !hasExactKeys(args, ["where", "create", "update"])) {
+    return false;
+  }
+  const where = args.where;
+  return isRecord(where) &&
+    hasExactKeys(where, ["code"]) &&
+    where.code === countryCode &&
     isExactCountryData(args.create, countryCode) &&
     isDeepStrictEqual(args.create, args.update);
 }
 
 function isExactModuleCoverageOperation(
-  operation: BasicSeedImportOperation,
+  operation: unknown,
   countryCode: string,
   moduleKey: string,
 ): boolean {
-  if (operation.model !== "moduleCoverage" || operation.action !== "upsert") return false;
-  const { args } = operation;
-  const where = args.where.countryCode_moduleKey;
-  return hasExactKeys(args, ["where", "create", "update"]) &&
-    hasExactKeys(args.where, ["countryCode_moduleKey"]) &&
+  if (
+    !isRecord(operation) ||
+    operation.model !== "moduleCoverage" ||
+    operation.action !== "upsert"
+  ) {
+    return false;
+  }
+  const args = operation.args;
+  if (!isRecord(args) || !hasExactKeys(args, ["where", "create", "update"])) {
+    return false;
+  }
+  const whereArgs = args.where;
+  if (!isRecord(whereArgs) || !hasExactKeys(whereArgs, ["countryCode_moduleKey"])) {
+    return false;
+  }
+  const where = whereArgs.countryCode_moduleKey;
+  return isRecord(where) &&
     hasExactKeys(where, ["countryCode", "moduleKey"]) &&
     where.countryCode === countryCode &&
     where.moduleKey === moduleKey &&
@@ -228,14 +262,24 @@ function isExactModuleCoverageOperation(
 }
 
 function isExactMarketOverviewOperation(
-  operation: BasicSeedImportOperation,
+  operation: unknown,
   countryCode: string,
 ): boolean {
-  if (operation.model !== "marketOverview" || operation.action !== "upsert") return false;
-  const { args } = operation;
-  return hasExactKeys(args, ["where", "create", "update"]) &&
-    hasExactKeys(args.where, ["countryCode"]) &&
-    args.where.countryCode === countryCode &&
+  if (
+    !isRecord(operation) ||
+    operation.model !== "marketOverview" ||
+    operation.action !== "upsert"
+  ) {
+    return false;
+  }
+  const args = operation.args;
+  if (!isRecord(args) || !hasExactKeys(args, ["where", "create", "update"])) {
+    return false;
+  }
+  const where = args.where;
+  return isRecord(where) &&
+    hasExactKeys(where, ["countryCode"]) &&
+    where.countryCode === countryCode &&
     isExactMarketOverviewData(args.create, countryCode) &&
     isDeepStrictEqual(args.create, args.update);
 }
@@ -266,7 +310,8 @@ function isExactMarketOverviewData(value: unknown, countryCode: string): boolean
     value.countryCode === countryCode;
 }
 
-function hasExactKeys(value: object, expected: readonly string[]): boolean {
+function hasExactKeys(value: unknown, expected: readonly string[]): boolean {
+  if (!isRecord(value)) return false;
   const keys = Object.keys(value).sort();
   return keys.length === expected.length &&
     keys.every((key, index) => key === [...expected].sort()[index]);

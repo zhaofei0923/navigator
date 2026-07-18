@@ -18,7 +18,8 @@ vi.mock("./seed/approved-basic-country-import.js", async (importOriginal) => {
   return {
     ...actual,
     isPreparedApprovedBasicCountryImportFromLoader(value: unknown): boolean {
-      return typeof value === "object" && value !== null && trustedPreparations.has(value);
+      return actual.isPreparedApprovedBasicCountryImportFromLoader(value) ||
+        (typeof value === "object" && value !== null && trustedPreparations.has(value));
     },
   };
 });
@@ -64,9 +65,22 @@ describe("importPreparedApprovedBasicCountry", () => {
     ["country operation", (prepared: MutablePrepared) => { prepared.plan.operations.shift(); }],
     ["module order", (prepared: MutablePrepared) => { prepared.plan.operations[1] = prepared.plan.operations[2]!; }],
     ["country code", (prepared: MutablePrepared) => { prepared.countryCode = "ZZ"; }],
+    ["unsafe country directory", (prepared: MutablePrepared) => { prepared.countryDirectory = "../unsafe"; }],
     ["summary code", (prepared: MutablePrepared) => { prepared.plan.summary.countryCode = "ZZ"; }],
     ["coverage level", (prepared: MutablePrepared) => { prepared.plan.summary.coverageLevel = "STANDARD"; }],
     ["AI knowledge ids", (prepared: MutablePrepared) => { prepared.plan.aiEligibleKnowledgeIds = ["unexpected"]; }],
+    ["market overview where country code", (prepared: MutablePrepared) => {
+      marketOverviewWhere(prepared).countryCode = "ZZ";
+    }],
+    ["null module statuses", (prepared: MutablePrepared) => {
+      prepared.plan.summary.moduleStatuses = null as unknown as Record<string, string>;
+    }],
+    ["array country where", (prepared: MutablePrepared) => {
+      countryOperationArgs(prepared).where = [];
+    }],
+    ["scalar coverage composite where", (prepared: MutablePrepared) => {
+      moduleCoverageOperationArgs(prepared).where = { countryCode_moduleKey: "invalid" };
+    }],
   ] as const)("rejects invalid %s before opening a transaction", async (_name, corrupt) => {
     const prepared = editableApprovedPreparation();
     corrupt(prepared);
@@ -218,15 +232,29 @@ interface MutablePrepared {
 }
 
 function approvedPreparation(): PreparedApprovedBasicCountryImport {
-  const prepared = prepareApprovedBasicCountryImport(REPO_ROOT, "indonesia");
-  trustedPreparations.add(prepared);
-  return prepared;
+  return prepareApprovedBasicCountryImport(REPO_ROOT, "indonesia");
 }
 
 function editableApprovedPreparation(): MutablePrepared {
   const prepared = structuredClone(approvedPreparation()) as MutablePrepared;
   trustedPreparations.add(prepared);
   return prepared;
+}
+
+function countryOperationArgs(prepared: MutablePrepared): { where: unknown } {
+  return prepared.plan.operations[0]!.args as unknown as { where: unknown };
+}
+
+function moduleCoverageOperationArgs(prepared: MutablePrepared): {
+  where: { countryCode_moduleKey: unknown };
+} {
+  return prepared.plan.operations[1]!.args as unknown as {
+    where: { countryCode_moduleKey: unknown };
+  };
+}
+
+function marketOverviewWhere(prepared: MutablePrepared): { countryCode: string } {
+  return prepared.plan.operations.at(-1)!.args.where as { countryCode: string };
 }
 
 interface TransactionOptions {
