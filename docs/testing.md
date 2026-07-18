@@ -103,6 +103,41 @@ composition integration 在 Linux `/tmp` 建立真实临时 workspace，使用 f
 
 native helper 需要 `/proc/self/fd` 与 `renameat2(RENAME_NOREPLACE)`。不得在 DrvFS（如 `/mnt/c`）执行 writer 验证；不支持该 syscall/flag 时必须 fail closed，禁止 JavaScript rename/copy fallback。本卡没有 Web 行为，定向验收不要求 E2E；完整 branch gate 仍为 `pnpm lint`、`pnpm typecheck`、`pnpm test` 和 `pnpm turbo run lint typecheck test --force`。
 
+### 6.2 六国 BASIC PostgreSQL 集成验收
+
+集成测试只连接任务专用的 disposable pgvector 容器。测试进程必须显式提供 `DATABASE_URL`，且 URL 只允许 `postgresql` 协议、字面量 `127.0.0.1` / `[::1]` host 和精确数据库名 `navigator_platform_db_1_test`；`localhost`、DNS、其他 IP/库名一律在构造 Prisma client 前脱敏拒绝。普通 `pnpm test` 不提供该变量，固定显示 skip 原因且不连接数据库。
+
+先证明固定容器名不存在，再创建容器；若名称已存在则中止流程并人工确认，禁止复用或停止该已有容器：
+
+```bash
+test -z "$(docker ps -a --filter name=^/navigator-platform-db-1-test$ --format '{{.Names}}')"
+docker run --detach --rm \
+  --name navigator-platform-db-1-test \
+  --publish 127.0.0.1:55432:5432 \
+  --env POSTGRES_USER=navigator_test \
+  --env POSTGRES_PASSWORD=navigator_test_only \
+  --env POSTGRES_DB=navigator_platform_db_1_test \
+  pgvector/pgvector:pg17@sha256:d2ef61f42ef767baa5a1475393303cc235bcd92febd9d7014eddb48b41f3bad0
+```
+
+等待 `pg_isready` 成功后，由外层按顺序生成 client、应用 migration 并运行验收；测试本身不迁移或清库：
+
+```bash
+docker exec navigator-platform-db-1-test \
+  pg_isready --username navigator_test --dbname navigator_platform_db_1_test
+DATABASE_URL=postgresql://navigator_test:navigator_test_only@127.0.0.1:55432/navigator_platform_db_1_test \
+  pnpm --filter @navigator/db exec prisma generate --schema prisma/schema.prisma
+DATABASE_URL=postgresql://navigator_test:navigator_test_only@127.0.0.1:55432/navigator_platform_db_1_test \
+  pnpm --filter @navigator/db exec prisma migrate deploy --schema prisma/schema.prisma
+pnpm --filter @navigator/db prisma:validate
+DATABASE_URL=postgresql://navigator_test:navigator_test_only@127.0.0.1:55432/navigator_platform_db_1_test \
+  pnpm --filter @navigator/db exec vitest run \
+  src/approved-basic-countries-postgres.integration.test.ts
+docker stop navigator-platform-db-1-test
+```
+
+验收证明 `0001_init` 已成功应用、真实事务故障全部回滚、六国串行导入两次仍为 Country=6 / ModuleCoverage=60 / MarketOverview=6、其余深层表/KnowledgeChunk/Lead=0，并逐国将数据库回读结果与 canonical publication 做深度相等比较。仅停止本流程创建的固定名容器；禁止连接生产库，禁止 `migrate reset`、`db push`、drop、truncate、`deleteMany` 或由测试执行任何破坏性清理。
+
 ---
 
 ## 7. 一致性检查清单
