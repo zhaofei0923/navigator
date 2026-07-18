@@ -6,6 +6,14 @@ export { validateBasicCountryBundle } from "./seed/basic-country-validator.js";
 export {
   buildApprovedBasicCountryPublicationImportPlan,
 } from "./seed/approved-basic-country-import.js";
+export {
+  importAllApprovedBasicCountries,
+  prepareAllApprovedBasicCountryImports,
+} from "./seed/approved-basic-countries-prisma-import.js";
+export {
+  APPROVED_BASIC_COUNTRIES_IMPORT_USAGE,
+  runApprovedBasicCountriesPrismaImportCli,
+} from "./seed/approved-basic-countries-prisma-import-cli.js";
 export { preflightBasicCountryActivation } from "./seed/basic-country-activation-preflight.js";
 export {
   BasicCountryImportError,
@@ -93,6 +101,10 @@ export type {
   BasicCountryImportPlan,
   BasicSeedImportOperation,
 } from "./seed/basic-country-import.js";
+export type {
+  ApprovedBasicCountriesPrismaImportCliClient,
+  ApprovedBasicCountriesPrismaImportCliDependencies,
+} from "./seed/approved-basic-countries-prisma-import-cli.js";
 export type {
   BasicActivationCountPort,
   BasicActivationModel,

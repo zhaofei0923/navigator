@@ -30,6 +30,11 @@ describe("tracked TypeScript command hook", () => {
     ).toBe(
       "node --experimental-transform-types --import ../../scripts/node-ts-source-hook.mjs src/seed/approved-basic-publications-validation.ts",
     );
+    expect(
+      dbPackageJson.scripts?.["import:approved-basic-publications"],
+    ).toBe(
+      "node --experimental-transform-types --import ../../scripts/node-ts-source-hook.mjs src/seed/approved-basic-countries-prisma-import-cli.ts",
+    );
     expect(webPackageJson.scripts?.prebuild).toBe(
       "pnpm --filter @navigator/db validate:approved-basic-publications",
     );
@@ -96,6 +101,75 @@ describe("tracked TypeScript command hook", () => {
     expect(result.status, result.stderr).toBe(0);
     expect(result.stdout).toContain(
       '{"countryDirectories":["brazil","indonesia","saudi-arabia","south-africa","united-arab-emirates","vietnam"],"countryCodes":["BR","ID","SA","ZA","AE","VN"]}',
+    );
+  }, 30_000);
+
+  test("launches the TypeScript all-country import CLI with an injected fake client", () => {
+    const cliModule = "./packages/db/src/seed/approved-basic-countries-prisma-import-cli.ts";
+    const childSource = `
+      import { runApprovedBasicCountriesPrismaImportCli } from ${JSON.stringify(cliModule)};
+      const emptyCount = () => ({ count: async () => 0 });
+      const client = {
+        async $transaction(run) {
+          let country = null;
+          const coverages = new Map();
+          let marketOverview = null;
+          const transaction = {
+            country: {
+              async upsert(args) { country = args.create; return country; },
+              async findUnique() {
+                return country === null ? null : {
+                  ...country,
+                  moduleCoverage: [...coverages.values()].reverse(),
+                  marketOverview,
+                  policies: [], risks: [], opportunities: [], projects: [], partners: [],
+                  chineseCompanies: [], entryStrategy: null, reports: [], knowledgeChunks: [],
+                };
+              },
+            },
+            moduleCoverage: {
+              async upsert(args) {
+                coverages.set(String(args.create.moduleKey), args.create);
+                return args.create;
+              },
+            },
+            marketOverview: {
+              ...emptyCount(),
+              async upsert(args) { marketOverview = args.create; return marketOverview; },
+            },
+            policy: emptyCount(), risk: emptyCount(), opportunity: emptyCount(),
+            project: emptyCount(), partner: emptyCount(), chineseCompany: emptyCount(),
+            entryStrategy: emptyCount(), report: emptyCount(), knowledgeChunk: emptyCount(),
+          };
+          return run(transaction);
+        },
+        async $disconnect() {},
+      };
+      const status = await runApprovedBasicCountriesPrismaImportCli([], {
+        repoRoot: process.cwd(),
+        createClient: () => client,
+        stdout: (line) => process.stdout.write(line),
+        stderr: (line) => process.stderr.write(line),
+      });
+      process.exitCode = status;
+    `;
+    const result = spawnSync("node", [
+      "--experimental-transform-types",
+      "--import",
+      resolve(repositoryRoot, "scripts/node-ts-source-hook.mjs"),
+      "--input-type=module",
+      "--eval",
+      childSource,
+    ], {
+      cwd: repositoryRoot,
+      env: { ...process.env, NODE_NO_WARNINGS: "1" },
+      encoding: "utf8",
+    });
+
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stderr).toBe("");
+    expect(result.stdout).toBe(
+      '{"status":"ok","countryCount":6,"operationCount":72}\n',
     );
   }, 30_000);
 });

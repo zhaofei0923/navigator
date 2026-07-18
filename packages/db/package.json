@@ -12,6 +12,7 @@
     "candidate:basic-country": "node --import ../../scripts/node-ts-source-hook.mjs src/cli/candidate-basic-country.ts",
     "preflight:basic-activation": "node --import ../../scripts/node-ts-source-hook.mjs src/seed/basic-country-activation-preflight-cli.ts",
     "seed:approved-basic-country": "node --experimental-transform-types --import ../../scripts/node-ts-source-hook.mjs src/seed/approved-basic-country-import.ts",
+    "import:approved-basic-publications": "node --experimental-transform-types --import ../../scripts/node-ts-source-hook.mjs src/seed/approved-basic-countries-prisma-import-cli.ts",
     "validate:approved-basic-publications": "node --experimental-transform-types --import ../../scripts/node-ts-source-hook.mjs src/seed/approved-basic-publications-validation.ts",
     "typecheck": "tsc --project tsconfig.json --noEmit --pretty false",
     "pretest": "pnpm run build:basic-candidate-native",
