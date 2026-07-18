@@ -3,10 +3,10 @@ import { createServer } from "node:net";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { afterEach, describe, expect, test } from "vitest";
-import type { INestApplication } from "@nestjs/common";
+import { afterEach, describe, expect, test, vi } from "vitest";
+import { RequestMethod, type INestApplication } from "@nestjs/common";
 
-import { bootstrap } from "./main.js";
+import * as main from "./main.js";
 
 const applications: INestApplication[] = [];
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
@@ -17,7 +17,7 @@ afterEach(async () => {
 
 describe("bootstrap", () => {
   test("listens only on the loopback address", async () => {
-    const app = await bootstrap({
+    const app = await main.bootstrap({
       API_PORT: String(await availablePort()),
       COUNTRY_READ_SOURCE: "canonical",
       CANONICAL_REPOSITORY_ROOT: repositoryRoot,
@@ -34,7 +34,36 @@ describe("bootstrap", () => {
     expect(source).not.toMatch(/app\.listen\(config\.port\s*\)/);
     expect(source).not.toContain('app.listen(config.port, "0.0.0.0")');
   });
+
+  test("configures the exact API prefix exclusions and shutdown signals", () => {
+    const setGlobalPrefix = vi.fn();
+    const enableShutdownHooks = vi.fn();
+    const configureApplication = Reflect.get(main, "configureApplication") as
+      | ApplicationConfigurator
+      | undefined;
+
+    expect(configureApplication).toBeTypeOf("function");
+    configureApplication?.({ setGlobalPrefix, enableShutdownHooks });
+
+    expect(setGlobalPrefix).toHaveBeenCalledExactlyOnceWith("api/v1", {
+      exclude: [
+        { path: "health/live", method: RequestMethod.GET },
+        { path: "health/ready", method: RequestMethod.GET },
+      ],
+    });
+    expect(enableShutdownHooks).toHaveBeenCalledExactlyOnceWith([
+      "SIGTERM",
+      "SIGINT",
+    ]);
+  });
 });
+
+type ApplicationConfigurator = (application: {
+  setGlobalPrefix(prefix: string, options: {
+    exclude: { path: string; method: RequestMethod }[];
+  }): unknown;
+  enableShutdownHooks(signals: string[]): unknown;
+}) => void;
 
 async function availablePort(): Promise<number> {
   const server = createServer();

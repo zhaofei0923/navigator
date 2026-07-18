@@ -2,9 +2,11 @@ import { describe, expect, test, vi } from "vitest";
 import { Test } from "@nestjs/testing";
 
 import type { CountryReadRuntime } from "@navigator/db/country-read-runtime";
+import type { CountryReadRepository } from "@navigator/shared-types/country-runtime";
 
+import { AppModule } from "../app.module.js";
 import {
-  API_CONFIG,
+  COUNTRY_READ_REPOSITORY,
   COUNTRY_READ_RUNTIME_FACTORIES,
   CountryReadRuntimeProvider,
   type CountryReadRuntimeFactories,
@@ -82,37 +84,36 @@ describe("CountryReadRuntimeProvider", () => {
 
   test("shares one runtime for concurrent Nest injections", async () => {
     const runtime = createRuntime();
+    const databaseUrl = "postgresql://navigator:secret@127.0.0.1:5432/navigator";
     const factories: CountryReadRuntimeFactories = {
       createPrismaCountryReadRuntime: vi.fn(() => runtime),
       createApprovedPublicationCountryReadRuntime: vi.fn(() => createRuntime()),
     };
     const module = await Test.createTestingModule({
-      providers: [
-        {
-          provide: API_CONFIG,
-          useValue: {
-            port: 3100,
-            countryReadSource: "database",
-            databaseUrl: "postgresql://navigator:secret@127.0.0.1:5432/navigator",
-          },
-        },
-        {
-          provide: COUNTRY_READ_RUNTIME_FACTORIES,
-          useValue: factories,
-        },
-        CountryReadRuntimeProvider,
+      imports: [
+        AppModule.register({
+          port: 3100,
+          countryReadSource: "database",
+          databaseUrl,
+        }),
       ],
     })
+      .overrideProvider(COUNTRY_READ_RUNTIME_FACTORIES)
+      .useValue(factories)
       .compile();
 
     try {
       const [first, second] = await Promise.all([
-        module.resolve(CountryReadRuntimeProvider),
-        module.resolve(CountryReadRuntimeProvider),
+        module.resolve<CountryReadRepository>(COUNTRY_READ_REPOSITORY),
+        module.resolve<CountryReadRepository>(COUNTRY_READ_REPOSITORY),
       ]);
 
       expect(first).toBe(second);
+      expect(first).toBe(runtime.repository);
       expect(factories.createPrismaCountryReadRuntime).toHaveBeenCalledTimes(1);
+      expect(factories.createPrismaCountryReadRuntime).toHaveBeenCalledWith({
+        databaseUrl,
+      });
       expect(factories.createApprovedPublicationCountryReadRuntime).not.toHaveBeenCalled();
     } finally {
       await module.close();

@@ -10,8 +10,10 @@ const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(scriptDirectory, "../../..");
 const temporaryDirectory = await mkdtemp(join(tmpdir(), "navigator-api-smoke-"));
 let child;
+let exit;
 
 try {
+  await assertPortUnavailable(PORT);
   child = spawn(process.execPath, [resolve(scriptDirectory, "../dist/main.js")], {
     cwd: temporaryDirectory,
     env: {
@@ -23,19 +25,31 @@ try {
     stdio: "ignore",
   });
 
-  const exit = waitForExit(child);
-  await waitForListener(PORT, exit);
-  child.kill("SIGTERM");
+  exit = waitForExit(child);
+  await waitForListener(PORT, child, exit);
+  assertChildRunning(child);
+  if (!child.kill("SIGTERM")) {
+    throw new Error("API_RUNTIME_SMOKE_SIGNAL_FAILED");
+  }
 
   const result = await exit;
-  if (result.code !== 0 && result.signal !== "SIGTERM") {
+  if (result.code !== null || result.signal !== "SIGTERM") {
     throw new Error("API_RUNTIME_SMOKE_EXIT_FAILED");
   }
 } finally {
-  if (child !== undefined && child.exitCode === null) {
+  if (child !== undefined && isChildRunning(child)) {
     child.kill("SIGTERM");
   }
+  if (exit !== undefined) {
+    await exit.catch(() => undefined);
+  }
   await rm(temporaryDirectory, { recursive: true, force: true });
+}
+
+async function assertPortUnavailable(port) {
+  if (await canConnect(port)) {
+    throw new Error("API_RUNTIME_SMOKE_PORT_OCCUPIED");
+  }
 }
 
 function waitForExit(childProcess) {
@@ -45,12 +59,15 @@ function waitForExit(childProcess) {
   });
 }
 
-async function waitForListener(port, exit) {
+async function waitForListener(port, childProcess, exitPromise) {
   const deadline = Date.now() + 10_000;
   while (Date.now() < deadline) {
-    if (await canConnect(port)) return;
+    if (await canConnect(port)) {
+      assertChildRunning(childProcess);
+      return;
+    }
     const result = await Promise.race([
-      exit.then((value) => ({ type: "exit", value })),
+      exitPromise.then((value) => ({ type: "exit", value })),
       delay(100).then(() => ({ type: "retry" })),
     ]);
     if (result.type === "exit") {
@@ -58,6 +75,16 @@ async function waitForListener(port, exit) {
     }
   }
   throw new Error("API_RUNTIME_SMOKE_LISTENER_TIMEOUT");
+}
+
+function assertChildRunning(childProcess) {
+  if (!isChildRunning(childProcess)) {
+    throw new Error("API_RUNTIME_SMOKE_CHILD_EXITED");
+  }
+}
+
+function isChildRunning(childProcess) {
+  return childProcess.exitCode === null && childProcess.signalCode === null;
 }
 
 function canConnect(port) {

@@ -13,6 +13,14 @@ export async function bootstrap(
   const config = validateApiEnv(environment);
   const app = await NestFactory.create(AppModule.register(config), { logger: false });
 
+  configureApplication(app);
+  await app.listen(config.port, "127.0.0.1");
+  return app;
+}
+
+export function configureApplication(
+  app: ApiApplicationConfigurationTarget,
+): void {
   app.setGlobalPrefix("api/v1", {
     exclude: [
       { path: "health/live", method: RequestMethod.GET },
@@ -20,8 +28,13 @@ export async function bootstrap(
     ],
   });
   app.enableShutdownHooks(["SIGTERM", "SIGINT"]);
-  await app.listen(config.port, "127.0.0.1");
-  return app;
+}
+
+export interface ApiApplicationConfigurationTarget {
+  setGlobalPrefix(prefix: string, options: {
+    exclude: { path: string; method: RequestMethod }[];
+  }): unknown;
+  enableShutdownHooks(signals: string[]): unknown;
 }
 
 if (isEntrypoint()) {
