@@ -28,6 +28,7 @@ Web 占位和跨国复制能力。
 2. 项目所有者已选择 `ID` 作为首个深覆盖试点，并批准启动独立的
    `DATA-STANDARD-ID`；该任务与 M1 并行。此决定只批准试点选择和候选建设启动，
    不预先批准来源、事实、发布、`aiUsable`、KnowledgeChunk 或后续 COMPLETE 升级。
+   来源、事实、双语文本、STANDARD 发布、`aiUsable`、真实 ID KnowledgeChunk 创建与可检索资格、COMPLETE 升级均须分别人工批准。
 3. 平台底座与试点国 STANDARD 建设并行；任何一方都不需要等待另一方全部完成才
    能启动。
 4. RAG 离线管道和问答接口骨架可在平台底座完成后用严格 fixtures 开发，但真实 AI

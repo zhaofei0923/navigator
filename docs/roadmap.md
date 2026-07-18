@@ -24,9 +24,8 @@ graph LR
   P0[P0 地基] --> P1[P1 数据层]
   P1 --> P2[P2 Web 展示]
   P1 --> M0[M0 六国 BASIC 已完成]
-  P2 --> PF[P2.5 生产平台底座]
   M0 --> PF
-  M0 --> SP[单国 STANDARD 试点]
+  M0 --> SP[ID STANDARD 试点]
   PF --> P3[P3 AI 管道与接口骨架]
   SP --> AIB[AI 受控 Beta]
   P3 --> AIB
@@ -67,6 +66,8 @@ graph LR
 | M6 单国 COMPLETE 与复制 | **后续独立批准** | 先执行 `DATA-COMPLETE-<ISO2>`，再按国家拆卡复制 | 试点经独立任务达到 COMPLETE，且 AI/会员相关 Beta 已验收 |
 
 本次里程碑更新已由项目所有者追加选择 ID 并批准 `DATA-STANDARD-ID` 启动；该批准不等于批准具体来源、事实、STANDARD 发布、`aiUsable` 或 COMPLETE 升级。本次仍不修改数据模型、AI Prompt/检索边界、会员权益或计费，也不授权新增依赖或生产部署。
+
+来源、事实、双语文本、STANDARD 发布、`aiUsable`、真实 ID KnowledgeChunk 创建与可检索资格、COMPLETE 升级均须分别人工批准。
 
 ---
 
@@ -256,7 +257,7 @@ graph LR
 #### `DATA-STANDARD-ID` Indonesia Standard 深覆盖试点 ⚠️（已批准启动）
 - 目标：只对已发布 BASIC 的 `ID` 补齐 policy、risk、opportunities 等 Standard 必需数据；与 M1 并行，不得夹带平台代码或其他国家数据。
 - 验收：新增内容均为双语、可追溯且元字段完整，经独立审核发布；国家通过 STANDARD 机器判定；数据导入、Web/API、覆盖边界与回归测试通过；不得仅因达到 STANDARD 就自动生成 KnowledgeChunk 或开启 AI。
-- 人工确认：试点国家和候选建设启动已由项目所有者批准；来源登记、事实/双语文本、发布与 `aiUsable` 决定仍分别受人工关口约束。
+- 人工确认：试点国家和候选建设启动已由项目所有者批准。来源、事实、双语文本、STANDARD 发布、`aiUsable`、真实 ID KnowledgeChunk 创建与可检索资格、COMPLETE 升级均须分别人工批准。
 
 #### `DATA-COMPLETE-<ISO2>` 单国 Complete 闭环试点 ⚠️
 - 目标：仅在同一国家的 STANDARD 试点验收后，以新任务补齐固定十模块，验证项目、伙伴、中资企业、策略、AI 和报告闭环。

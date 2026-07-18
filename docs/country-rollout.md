@@ -52,8 +52,8 @@ MVP 到商业化初期的当前建设目标是经人工批准的国家先完成 
 这六个 canonical publication、批准回执和十模块占位共同构成 M0 完成证据。它们已经验证统一模型和跨国复制能力，因此：
 
 - 生产 PostgreSQL/Prisma 读取链路、NestJS API、运行治理、Admin 核心、鉴权与留资基础可以启动，不等待任何国家达到 COMPLETE。
-- 项目所有者已选择 `ID` 作为首个 Standard 试点，并批准 `DATA-STANDARD-ID` 与平台底座并行启动。
-- 该决定只批准试点选择与候选建设启动，不预先批准来源、事实、Standard 发布、Complete 升级或 `aiUsable`，不自动启用 AI，也不改变权限、计费或数据模型。
+- 项目所有者已选择 `ID` 作为首个 Standard 试点，并批准 `DATA-STANDARD-ID` 与 M1 并行启动。
+- 该决定只批准试点选择与候选建设启动，不自动启用 AI，也不改变权限、计费或数据模型。来源、事实、双语文本、STANDARD 发布、`aiUsable`、真实 ID KnowledgeChunk 创建与可检索资格、COMPLETE 升级均须分别人工批准。
 - 详细依赖和任务切片以 [六国 BASIC 后里程碑设计](./superpowers/specs/2026-07-18-six-basic-platform-milestone-design.md) 与 [roadmap.md](./roadmap.md) 为准。
 
 ### SA r1 audit history and r2 Basic publication record
