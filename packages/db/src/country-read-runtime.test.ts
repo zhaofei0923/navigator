@@ -15,7 +15,10 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 
 const prismaState = vi.hoisted(() => ({
   constructOptions: [] as unknown[],
+  constructorError: null as Error | null,
+  disconnectError: null as Error | null,
   disconnectCalls: 0,
+  transactionError: null as Error | null,
   transactionCalls: [] as unknown[],
 }));
 
@@ -29,6 +32,7 @@ vi.mock("@prisma/client", () => ({
 
     constructor(options: unknown) {
       prismaState.constructOptions.push(options);
+      if (prismaState.constructorError !== null) throw prismaState.constructorError;
     }
 
     async $transaction<T>(
@@ -42,11 +46,13 @@ vi.mock("@prisma/client", () => ({
       options: unknown,
     ): Promise<T> {
       prismaState.transactionCalls.push(options);
+      if (prismaState.transactionError !== null) throw prismaState.transactionError;
       return callback({ country: this.country });
     }
 
     async $disconnect(): Promise<void> {
       prismaState.disconnectCalls += 1;
+      if (prismaState.disconnectError !== null) throw prismaState.disconnectError;
     }
   },
 }));
@@ -65,7 +71,10 @@ const temporaryDirectories: string[] = [];
 
 afterEach(() => {
   prismaState.constructOptions.length = 0;
+  prismaState.constructorError = null;
+  prismaState.disconnectError = null;
   prismaState.disconnectCalls = 0;
+  prismaState.transactionError = null;
   prismaState.transactionCalls.length = 0;
   while (temporaryDirectories.length > 0) {
     const directory = temporaryDirectories.pop();
@@ -103,6 +112,57 @@ describe("CountryReadRuntime factories", () => {
       "COUNTRY_READ_PING_OPTIONS_INVALID",
     );
     expect(prismaState.transactionCalls).toHaveLength(0);
+  });
+
+  test("redacts constructor and configuration failures without retaining cause", () => {
+    prismaState.constructorError = new Error(
+      "postgresql://navigator:secret@example.test/private/path",
+    );
+
+    const constructorError = captureThrown(() => createPrismaCountryReadRuntime({
+      databaseUrl: "postgresql://navigator:secret@example.test/private/path",
+    }));
+    expectStableRuntimeError(constructorError, "COUNTRY_READ_RUNTIME_INIT_FAILED");
+
+    prismaState.constructorError = null;
+    const configError = captureThrown(() => createPrismaCountryReadRuntime({
+      databaseUrl: "",
+    }));
+    expectStableRuntimeError(configError, "COUNTRY_READ_RUNTIME_CONFIG_INVALID");
+  });
+
+  test("redacts ping failures without retaining cause", async () => {
+    const runtime = createPrismaCountryReadRuntime({
+      databaseUrl: "postgresql://navigator:secret@example.test/private/path",
+    });
+    prismaState.transactionError = new Error(
+      "postgresql://navigator:secret@example.test/private/path",
+    );
+
+    const error = await captureRejected(
+      runtime.ping({ maxWaitMs: 10, timeoutMs: 20 }),
+    );
+
+    expectStableRuntimeError(error, "COUNTRY_READ_PING_FAILED");
+  });
+
+  test("redacts close failures and preserves idempotence after rejection", async () => {
+    const runtime = createPrismaCountryReadRuntime({
+      databaseUrl: "postgresql://navigator:secret@example.test/private/path",
+    });
+    prismaState.disconnectError = new Error(
+      "postgresql://navigator:secret@example.test/private/path",
+    );
+
+    const first = runtime.close();
+    const second = runtime.close();
+    const firstError = await captureRejected(first);
+    const secondError = await captureRejected(second);
+
+    expect(first).toBe(second);
+    expectStableRuntimeError(firstError, "COUNTRY_READ_CLOSE_FAILED");
+    expectStableRuntimeError(secondError, "COUNTRY_READ_CLOSE_FAILED");
+    expect(prismaState.disconnectCalls).toBe(1);
   });
 
   test("canonical runtime freezes one startup snapshot and remains cwd/filesystem independent", async () => {
@@ -225,4 +285,29 @@ function isRecursivelyFrozen(value: unknown, seen = new WeakSet<object>()): bool
   if (!Object.isFrozen(value)) return false;
   seen.add(value);
   return Object.values(value).every((child) => isRecursivelyFrozen(child, seen));
+}
+
+function captureThrown(operation: () => unknown): Error {
+  try {
+    operation();
+  } catch (error) {
+    if (error instanceof Error) return error;
+  }
+  throw new Error("Expected operation to throw Error");
+}
+
+async function captureRejected(promise: Promise<unknown>): Promise<Error> {
+  try {
+    await promise;
+  } catch (error) {
+    if (error instanceof Error) return error;
+  }
+  throw new Error("Expected promise to reject with Error");
+}
+
+function expectStableRuntimeError(error: Error, code: string): void {
+  expect(error.message).toBe(code);
+  expect("cause" in error).toBe(false);
+  expect(JSON.stringify(error)).not.toMatch(/secret|private\/path/u);
+  expect(Object.values(error).some((value) => value instanceof Error)).toBe(false);
 }

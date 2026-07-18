@@ -1,10 +1,17 @@
+import type { Prisma, PrismaClient } from "@prisma/client";
 import {
   sortCountrySnapshots,
   type CountryDataSnapshot,
   type CountryReadRepository,
   type JsonObject,
-  type JsonValue,
 } from "@navigator/shared-types/country-runtime";
+
+import {
+  KEY_INDICATOR_KEYS,
+  LOCALIZED_TEXT_KEYS,
+  hasExactOwnKeys,
+} from "../seed/basic-country-validation-utils.js";
+import { normalizeCountryReadSnapshot } from "./country-read-normalization.js";
 
 const COUNTRY_READ_INVALID_DATA = "COUNTRY_READ_INVALID_DATA" as const;
 const COUNTRY_READ_QUERY_FAILED = "COUNTRY_READ_QUERY_FAILED" as const;
@@ -82,19 +89,20 @@ const CREDIBILITIES = ["OFFICIAL", "VERIFIED", "ESTIMATED", "UNVERIFIED"] as con
 const RISK_LEVELS = ["LOW", "MEDIUM", "HIGH"] as const;
 const PROJECT_STATUSES = ["PLANNING", "BIDDING", "CONSTRUCTION", "OPERATIONAL"] as const;
 const ACCESS_LEVELS = ["FREE", "MEMBER", "PREMIUM"] as const;
+const STRATEGY_STEP_KEYS = ["order", "title", "detail"] as const;
 
-const PUBLIC_RELATION_WHERE = Object.freeze({
+const PUBLIC_RELATION_WHERE = {
   reviewStatus: "published",
   credibility: { not: "UNVERIFIED" },
-} as const);
-const KNOWLEDGE_RELATION_WHERE = Object.freeze({
+} satisfies Prisma.MarketOverviewWhereInput;
+const KNOWLEDGE_RELATION_WHERE = {
   ...PUBLIC_RELATION_WHERE,
   aiUsable: true,
-} as const);
-const LIST_RELATION_ORDER = Object.freeze([
+} satisfies Prisma.KnowledgeChunkWhereInput;
+const LIST_RELATION_ORDER = [
   { updatedAt: "desc" },
   { id: "asc" },
-] as const);
+] satisfies Prisma.PolicyOrderByWithRelationInput[];
 
 const METADATA_SELECT = {
   source: true,
@@ -253,23 +261,18 @@ const COUNTRY_SELECT = {
       ...METADATA_SELECT,
     },
   },
-} as const;
+} satisfies Prisma.CountrySelect;
 
-export interface PrismaCountryFindManyArgs {
-  readonly where: Readonly<Record<string, never>>;
-  readonly orderBy: readonly [{ readonly code: "asc" }];
-  readonly select: typeof COUNTRY_SELECT;
-}
-
-export interface PrismaCountryFindUniqueArgs {
-  readonly where: Readonly<{ readonly code: string }>;
-  readonly select: typeof COUNTRY_SELECT;
-}
+const COUNTRY_LIST_ARGS = {
+  where: {},
+  orderBy: [{ code: "asc" }],
+  select: COUNTRY_SELECT,
+} satisfies Prisma.CountryFindManyArgs;
 
 export interface PrismaCountryReadClient {
   readonly country: {
-    findMany(args: PrismaCountryFindManyArgs): Promise<unknown>;
-    findUnique(args: PrismaCountryFindUniqueArgs): Promise<unknown>;
+    findMany(args: Prisma.CountryFindManyArgs): Promise<unknown>;
+    findUnique(args: Prisma.CountryFindUniqueArgs): Promise<unknown>;
   };
 }
 
@@ -280,8 +283,8 @@ export type PrismaCountryReadRepositoryErrorCode =
 export class PrismaCountryReadRepositoryError extends Error {
   readonly code: PrismaCountryReadRepositoryErrorCode;
 
-  constructor(code: PrismaCountryReadRepositoryErrorCode, options?: ErrorOptions) {
-    super(code, options);
+  constructor(code: PrismaCountryReadRepositoryErrorCode) {
+    super(code);
     this.name = "PrismaCountryReadRepositoryError";
     this.code = code;
   }
@@ -294,11 +297,7 @@ export function createPrismaCountryReadRepository(
     async list(): Promise<readonly CountryDataSnapshot[]> {
       let rows: unknown;
       try {
-        rows = await client.country.findMany({
-          where: {},
-          orderBy: [{ code: "asc" }],
-          select: COUNTRY_SELECT,
-        });
+        rows = await client.country.findMany(COUNTRY_LIST_ARGS);
       } catch (error) {
         throw queryFailed(error);
       }
@@ -313,7 +312,7 @@ export function createPrismaCountryReadRepository(
         row = await client.country.findUnique({
           where: { code },
           select: COUNTRY_SELECT,
-        });
+        } satisfies Prisma.CountryFindUniqueArgs);
       } catch (error) {
         throw queryFailed(error);
       }
@@ -354,7 +353,7 @@ function parseCountrySnapshot(value: unknown): CountryDataSnapshot {
         parseKnowledge,
       ),
     } satisfies CountryDataSnapshot;
-    return deepFreeze(snapshot);
+    return deepFreeze(normalizeCountryReadSnapshot(snapshot));
   } catch (error) {
     if (error instanceof PrismaCountryReadRepositoryError) throw error;
     throw invalidData(error);
@@ -364,11 +363,11 @@ function parseCountrySnapshot(value: unknown): CountryDataSnapshot {
 function parseCountry(row: Readonly<Record<string, unknown>>, code: string): JsonObject {
   return {
     code,
-    name: cloneJsonObject(row.name),
+    name: parseLocalizedText(row.name),
     region: mapToken(row.region, PRISMA_REGION_TO_SHARED),
     coverageLevel: requireEnum(row.coverageLevel, COVERAGE_LEVELS),
     flagEmoji: requireNonBlankString(row.flagEmoji),
-    summary: cloneJsonObject(row.summary),
+    summary: parseLocalizedText(row.summary),
     moduleCoverage: parseCoverage(row.moduleCoverage, code),
     updatedAt: dateToIso(row.updatedAt),
   };
@@ -401,13 +400,13 @@ function parseCoverage(value: unknown, countryCode: string): readonly JsonObject
 function parseMarketOverview(value: unknown, countryCode: string): JsonObject {
   const row = requireRecord(value);
   return {
-    overview: cloneJsonObject(row.overview),
+    overview: parseLocalizedText(row.overview),
     population: finiteNumberOrNull(row.population, true),
     gdp: finiteNumberOrNull(row.gdp),
     gdpGrowth: finiteNumberOrNull(row.gdpGrowth),
-    energyDemand: cloneJsonObject(row.energyDemand),
-    renewableTarget: cloneJsonObject(row.renewableTarget),
-    keyIndicators: cloneJsonArray(row.keyIndicators),
+    energyDemand: parseLocalizedText(row.energyDemand),
+    renewableTarget: parseLocalizedText(row.renewableTarget),
+    keyIndicators: parseKeyIndicators(row.keyIndicators),
     ...parseMetadata(row, countryCode),
   };
 }
@@ -423,26 +422,21 @@ function parseRecordList(
   parser: RecordParser,
 ): readonly JsonObject[] {
   if (!Array.isArray(value)) throw invalidData();
-  const seenIds = new Set<string>();
-  const records = value.map((item) => {
+  return value.map((item) => {
     const row = requireRecord(item);
-    const id = requireNonBlankString(row.id);
-    if (seenIds.has(id)) throw invalidData();
-    seenIds.add(id);
     return parser(row, countryCode);
   });
-  return records.sort(compareModuleRecords);
 }
 
 function parsePolicy(row: Readonly<Record<string, unknown>>, code: string): JsonObject {
   return {
     id: requireNonBlankString(row.id),
-    title: cloneJsonObject(row.title),
-    summary: cloneJsonObject(row.summary),
-    body: cloneJsonObject(row.body),
+    title: parseLocalizedText(row.title),
+    summary: parseLocalizedText(row.summary),
+    body: parseLocalizedText(row.body),
     policyType: mapToken(row.policyType, PRISMA_POLICY_TYPE_TO_SHARED),
     effectiveDate: dateToIsoOrNull(row.effectiveDate),
-    authority: cloneJsonObject(row.authority),
+    authority: parseLocalizedText(row.authority),
     ...parseMetadata(row, code),
   };
 }
@@ -450,11 +444,11 @@ function parsePolicy(row: Readonly<Record<string, unknown>>, code: string): Json
 function parseRisk(row: Readonly<Record<string, unknown>>, code: string): JsonObject {
   return {
     id: requireNonBlankString(row.id),
-    title: cloneJsonObject(row.title),
+    title: parseLocalizedText(row.title),
     category: requireNonBlankString(row.category),
     level: requireEnum(row.level, RISK_LEVELS),
-    description: cloneJsonObject(row.description),
-    mitigation: cloneJsonObject(row.mitigation),
+    description: parseLocalizedText(row.description),
+    mitigation: parseLocalizedText(row.mitigation),
     ...parseMetadata(row, code),
   };
 }
@@ -465,10 +459,10 @@ function parseOpportunity(
 ): JsonObject {
   return {
     id: requireNonBlankString(row.id),
-    title: cloneJsonObject(row.title),
-    description: cloneJsonObject(row.description),
-    marketSize: cloneJsonObjectOrNull(row.marketSize),
-    timeWindow: cloneJsonObjectOrNull(row.timeWindow),
+    title: parseLocalizedText(row.title),
+    description: parseLocalizedText(row.description),
+    marketSize: parseLocalizedTextOrNull(row.marketSize),
+    timeWindow: parseLocalizedTextOrNull(row.timeWindow),
     ...parseMetadata(row, code),
   };
 }
@@ -476,12 +470,12 @@ function parseOpportunity(
 function parseProject(row: Readonly<Record<string, unknown>>, code: string): JsonObject {
   return {
     id: requireNonBlankString(row.id),
-    name: cloneJsonObject(row.name),
-    description: cloneJsonObject(row.description),
+    name: parseLocalizedText(row.name),
+    description: parseLocalizedText(row.description),
     status: requireEnum(row.status, PROJECT_STATUSES),
     capacity: stringOrNull(row.capacity),
     investment: finiteNumberOrNull(row.investment),
-    location: cloneJsonObjectOrNull(row.location),
+    location: parseLocalizedTextOrNull(row.location),
     ...parseMetadata(row, code),
   };
 }
@@ -489,10 +483,10 @@ function parseProject(row: Readonly<Record<string, unknown>>, code: string): Jso
 function parsePartner(row: Readonly<Record<string, unknown>>, code: string): JsonObject {
   return {
     id: requireNonBlankString(row.id),
-    name: cloneJsonObject(row.name),
+    name: parseLocalizedText(row.name),
     partnerType: requireNonBlankString(row.partnerType),
-    description: cloneJsonObject(row.description),
-    contactHint: cloneJsonObjectOrNull(row.contactHint),
+    description: parseLocalizedText(row.description),
+    contactHint: parseLocalizedTextOrNull(row.contactHint),
     ...parseMetadata(row, code),
   };
 }
@@ -503,11 +497,11 @@ function parseChineseCompany(
 ): JsonObject {
   return {
     id: requireNonBlankString(row.id),
-    name: cloneJsonObject(row.name),
+    name: parseLocalizedText(row.name),
     industry: requireNonBlankString(row.industry),
-    businessScope: cloneJsonObject(row.businessScope),
+    businessScope: parseLocalizedText(row.businessScope),
     entryYear: safeIntegerOrNull(row.entryYear),
-    caseStudy: cloneJsonObjectOrNull(row.caseStudy),
+    caseStudy: parseLocalizedTextOrNull(row.caseStudy),
     ...parseMetadata(row, code),
   };
 }
@@ -516,9 +510,9 @@ function parseEntryStrategy(value: unknown, code: string): JsonObject {
   const row = requireRecord(value);
   return {
     id: requireNonBlankString(row.id),
-    overview: cloneJsonObject(row.overview),
-    steps: cloneJsonArray(row.steps),
-    recommendedMode: cloneJsonObject(row.recommendedMode),
+    overview: parseLocalizedText(row.overview),
+    steps: parseStrategySteps(row.steps),
+    recommendedMode: parseLocalizedText(row.recommendedMode),
     ...parseMetadata(row, code),
   };
 }
@@ -526,9 +520,9 @@ function parseEntryStrategy(value: unknown, code: string): JsonObject {
 function parseReport(row: Readonly<Record<string, unknown>>, code: string): JsonObject {
   return {
     id: requireNonBlankString(row.id),
-    title: cloneJsonObject(row.title),
-    abstract: cloneJsonObject(row.abstract),
-    fileUrl: requireHttpUrl(row.fileUrl),
+    title: parseLocalizedText(row.title),
+    abstract: parseLocalizedText(row.abstract),
+    fileUrl: requireNonBlankString(row.fileUrl),
     publishedAt: dateToIso(row.publishedAt),
     accessLevel: requireEnum(row.accessLevel, ACCESS_LEVELS),
     ...parseMetadata(row, code),
@@ -539,7 +533,7 @@ function parseKnowledge(row: Readonly<Record<string, unknown>>, code: string): J
   const metadata = parseMetadata(row, code, true);
   return {
     id: requireNonBlankString(row.id),
-    content: cloneJsonObject(row.content),
+    content: parseLocalizedText(row.content),
     sourceModule: mapToken(row.sourceModule, PRISMA_SOURCE_MODULE_TO_SHARED),
     sourceId: requireNonBlankString(row.sourceId),
     ...metadata,
@@ -592,50 +586,58 @@ function validateAndSortSnapshots(
   }
 }
 
-function compareModuleRecords(left: JsonObject, right: JsonObject): number {
-  const updatedDifference = String(right.updatedAt).localeCompare(
-    String(left.updatedAt),
-    "en",
-  );
-  return updatedDifference !== 0
-    ? updatedDifference
-    : String(left.id).localeCompare(String(right.id), "en");
-}
-
-function cloneJsonObject(value: unknown): JsonObject {
-  const cloned = cloneJson(value);
-  if (Array.isArray(cloned) || cloned === null || typeof cloned !== "object") {
+function parseLocalizedText(value: unknown): JsonObject {
+  if (
+    !hasExactOwnKeys(value, LOCALIZED_TEXT_KEYS) ||
+    typeof value.zh !== "string" ||
+    typeof value.en !== "string"
+  ) {
     throw invalidData();
   }
-  return cloned as JsonObject;
+  return { zh: value.zh, en: value.en };
 }
 
-function cloneJsonObjectOrNull(value: unknown): JsonObject | null {
-  return value === null ? null : cloneJsonObject(value);
+function parseLocalizedTextOrNull(value: unknown): JsonObject | null {
+  return value === null ? null : parseLocalizedText(value);
 }
 
-function cloneJsonArray(value: unknown): readonly JsonValue[] {
+function parseKeyIndicators(value: unknown): readonly JsonObject[] {
   if (!Array.isArray(value)) throw invalidData();
-  return value.map((item) => cloneJson(item));
+  return value.map((item) => {
+    if (
+      !hasExactOwnKeys(item, KEY_INDICATOR_KEYS) ||
+      typeof item.value !== "string" ||
+      typeof item.unit !== "string" ||
+      typeof item.year !== "number" ||
+      !Number.isSafeInteger(item.year)
+    ) {
+      throw invalidData();
+    }
+    return {
+      label: parseLocalizedText(item.label),
+      value: item.value,
+      unit: item.unit,
+      year: item.year,
+    };
+  });
 }
 
-function cloneJson(value: unknown, seen = new WeakSet<object>()): JsonValue {
-  if (value === null || typeof value === "string" || typeof value === "boolean") {
-    return value;
-  }
-  if (typeof value === "number") {
-    if (!Number.isFinite(value)) throw invalidData();
-    return value;
-  }
-  if (typeof value !== "object" || seen.has(value)) throw invalidData();
-  seen.add(value);
-  if (Array.isArray(value)) return value.map((item) => cloneJson(item, seen));
-  if (Object.getPrototypeOf(value) !== Object.prototype) throw invalidData();
-  const cloned: Record<string, JsonValue> = {};
-  for (const [key, child] of Object.entries(value)) {
-    cloned[key] = cloneJson(child, seen);
-  }
-  return cloned;
+function parseStrategySteps(value: unknown): readonly JsonObject[] {
+  if (!Array.isArray(value)) throw invalidData();
+  return value.map((item) => {
+    if (
+      !hasExactOwnKeys(item, STRATEGY_STEP_KEYS) ||
+      typeof item.order !== "number" ||
+      !Number.isSafeInteger(item.order)
+    ) {
+      throw invalidData();
+    }
+    return {
+      order: item.order,
+      title: parseLocalizedText(item.title),
+      detail: parseLocalizedText(item.detail),
+    };
+  });
 }
 
 function requireRecord(value: unknown): Readonly<Record<string, unknown>> {
@@ -739,13 +741,13 @@ function requireHttpUrl(value: unknown): string {
 }
 
 function invalidData(cause?: unknown): PrismaCountryReadRepositoryError {
-  return cause === undefined
-    ? new PrismaCountryReadRepositoryError(COUNTRY_READ_INVALID_DATA)
-    : new PrismaCountryReadRepositoryError(COUNTRY_READ_INVALID_DATA, { cause });
+  void cause;
+  return new PrismaCountryReadRepositoryError(COUNTRY_READ_INVALID_DATA);
 }
 
 function queryFailed(cause: unknown): PrismaCountryReadRepositoryError {
-  return new PrismaCountryReadRepositoryError(COUNTRY_READ_QUERY_FAILED, { cause });
+  void cause;
+  return new PrismaCountryReadRepositoryError(COUNTRY_READ_QUERY_FAILED);
 }
 
 function deepFreeze<T>(value: T, seen = new WeakSet<object>()): T {

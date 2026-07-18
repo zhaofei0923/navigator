@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -11,7 +12,10 @@ import { MODULE_KEYS } from "@navigator/shared-types/schema";
 import { describe, expect, test } from "vitest";
 
 import { loadApprovedBasicCountryPublicationV2 } from "./collection/basic-publication-loader.js";
-import { createApprovedPublicationCountryReadRepository } from "./read/approved-publication-country-read-repository.js";
+import {
+  ApprovedPublicationCountryReadRepositoryError,
+  createApprovedPublicationCountryReadRepository,
+} from "./read/approved-publication-country-read-repository.js";
 import {
   createPrismaCountryReadRepository,
   type PrismaCountryReadClient,
@@ -258,6 +262,117 @@ for (const harness of harnesses) {
       }
     });
   });
+}
+
+describe("approved publication adapter error boundary", () => {
+  test("redacts a sensitive invalid-root loader failure behind the stable runtime error", () => {
+    const sensitiveRoot = "/private/tenant-secret/publication-root-does-not-exist";
+
+    let thrown: unknown;
+    try {
+      createApprovedPublicationCountryReadRepository({
+        repositoryRoot: sensitiveRoot,
+      });
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(ApprovedPublicationCountryReadRepositoryError);
+    expect(thrown).toMatchObject({
+      name: "ApprovedPublicationCountryReadRepositoryError",
+      message: "APPROVED_PUBLICATION_RUNTIME_INVALID",
+    });
+    expect(thrown).not.toHaveProperty("cause");
+    expect(JSON.stringify(thrown)).not.toContain(sensitiveRoot);
+  });
+});
+
+describe("country read deep-record normalization", () => {
+  test("normalizes STANDARD-like list slots by updatedAt descending then id ascending", async () => {
+    const { normalizeCountryReadSnapshot } = await import(
+      "./read/country-read-normalization.js"
+    );
+    const normalized = normalizeCountryReadSnapshot(standardLikeSnapshot());
+
+    expect(normalized.policy.map((record) => record.id)).toEqual([
+      "policy-a",
+      "policy-b",
+      "policy-z",
+    ]);
+    expect(normalized.reports.map((record) => record.id)).toEqual([
+      "report-new",
+      "report-old",
+    ]);
+    expect(normalized.knowledge.map((record) => record.id)).toEqual([
+      "knowledge-a",
+      "knowledge-b",
+    ]);
+    expect(normalized.policy).toHaveLength(3);
+    expect(normalized.reports).toHaveLength(2);
+    expect(normalized.knowledge).toHaveLength(2);
+  });
+
+  test("rejects duplicate record IDs without rejecting legitimate multiple records", async () => {
+    const { normalizeCountryReadSnapshot } = await import(
+      "./read/country-read-normalization.js"
+    );
+    const snapshot = standardLikeSnapshot();
+    const duplicate = {
+      ...snapshot,
+      reports: [snapshot.reports[0]!, { ...snapshot.reports[1]!, id: "report-old" }],
+    } satisfies CountryDataSnapshot;
+
+    expect(() => normalizeCountryReadSnapshot(duplicate)).toThrow(
+      "COUNTRY_READ_INVALID_DATA",
+    );
+  });
+
+  test("both approved-publication and Prisma adapters call the same normalizer", () => {
+    const readDirectory = resolve(dirname(fileURLToPath(import.meta.url)), "read");
+    for (const filename of [
+      "approved-publication-country-read-repository.ts",
+      "prisma-country-read-repository.ts",
+    ]) {
+      const source = readFileSync(resolve(readDirectory, filename), "utf8");
+      expect(source).toContain("normalizeCountryReadSnapshot");
+    }
+  });
+});
+
+function standardLikeSnapshot(): CountryDataSnapshot {
+  const record = (id: string, updatedAt: string): JsonObject => ({ id, updatedAt });
+  return {
+    country: {
+      code: "ID",
+      name: { zh: "印度尼西亚", en: "Indonesia" },
+      region: "southeast-asia",
+      coverageLevel: "STANDARD",
+      flagEmoji: "🇮🇩",
+      summary: { zh: "摘要", en: "Summary" },
+      moduleCoverage: [],
+      updatedAt: "2026-03-01T00:00:00.000Z",
+    },
+    marketOverview: null,
+    policy: [
+      record("policy-z", "2026-01-01T00:00:00.000Z"),
+      record("policy-b", "2026-02-01T00:00:00.000Z"),
+      record("policy-a", "2026-02-01T00:00:00.000Z"),
+    ],
+    risk: [],
+    opportunities: [],
+    projects: [],
+    partners: [],
+    chineseCompanies: [],
+    entryStrategy: null,
+    reports: [
+      record("report-old", "2026-01-01T00:00:00.000Z"),
+      record("report-new", "2026-03-01T00:00:00.000Z"),
+    ],
+    knowledge: [
+      record("knowledge-b", "2026-04-01T00:00:00.000Z"),
+      record("knowledge-a", "2026-04-01T00:00:00.000Z"),
+    ],
+  };
 }
 
 function findForbiddenBoundaryKey(value: unknown): string | null {

@@ -1,3 +1,8 @@
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+import type { PrismaClient } from "@prisma/client";
 import { MODULE_KEYS } from "@navigator/shared-types/schema";
 import { describe, expect, test } from "vitest";
 
@@ -160,6 +165,12 @@ class RecordingClient implements PrismaCountryReadClient {
   };
 }
 
+function compileOnlyGeneratedPrismaClient(client: PrismaClient): void {
+  createPrismaCountryReadRepository(client);
+}
+
+void compileOnlyGeneratedPrismaClient;
+
 describe("Prisma CountryReadRepository boundary", () => {
   test("uses explicit deterministic queries and C-end relation filters", async () => {
     const client = new RecordingClient();
@@ -211,6 +222,37 @@ describe("Prisma CountryReadRepository boundary", () => {
     expect(snapshot).not.toHaveProperty("country.findMany");
   });
 
+  test("normalizes multiple policy, report, and knowledge records without dropping them", async () => {
+    const client = new RecordingClient();
+    const row = structuredClone(validRow());
+    row.policies = reversedRecords(row, "policies", [
+      ["policy-z", "2026-01-01T00:00:00.000Z"],
+      ["policy-b", "2026-03-01T00:00:00.000Z"],
+      ["policy-a", "2026-03-01T00:00:00.000Z"],
+    ]);
+    row.reports = reversedRecords(row, "reports", [
+      ["report-old", "2026-01-01T00:00:00.000Z"],
+      ["report-new", "2026-03-01T00:00:00.000Z"],
+    ]);
+    row.knowledgeChunks = reversedRecords(row, "knowledgeChunks", [
+      ["knowledge-b", "2026-04-01T00:00:00.000Z"],
+      ["knowledge-a", "2026-04-01T00:00:00.000Z"],
+    ]);
+    client.row = row;
+
+    const snapshot = await createPrismaCountryReadRepository(client).findByCode("ID");
+
+    expect(snapshot?.policy.map((record) => record.id)).toEqual([
+      "policy-a", "policy-b", "policy-z",
+    ]);
+    expect(snapshot?.reports.map((record) => record.id)).toEqual([
+      "report-new", "report-old",
+    ]);
+    expect(snapshot?.knowledge.map((record) => record.id)).toEqual([
+      "knowledge-a", "knowledge-b",
+    ]);
+  });
+
   test("rejects invalid codes without querying and returns null for unknown codes", async () => {
     const client = new RecordingClient();
     const repository = createPrismaCountryReadRepository(client);
@@ -260,4 +302,205 @@ describe("Prisma CountryReadRepository boundary", () => {
     await expect(rejection).rejects.toThrow("COUNTRY_READ_QUERY_FAILED");
     await expect(rejection).rejects.not.toThrow("secret");
   });
+
+  test("does not retain query or validation errors in cause or enumerable properties", async () => {
+    const queryClient = new RecordingClient();
+    queryClient.queryError = new Error(
+      "postgresql://user:secret@example.test/private/path",
+    );
+    const queryError = await captureError(
+      createPrismaCountryReadRepository(queryClient).list(),
+    );
+    expectStableRedactedError(queryError, "COUNTRY_READ_QUERY_FAILED");
+
+    const validationClient = new RecordingClient();
+    const invalidRow = structuredClone(validRow());
+    invalidRow.name = { zh: undefined, en: "invalid" };
+    validationClient.row = invalidRow;
+    const validationError = await captureError(
+      createPrismaCountryReadRepository(validationClient).list(),
+    );
+    expectStableRedactedError(validationError, "COUNTRY_READ_INVALID_DATA");
+  });
+
+  test("binds query shapes to generated Prisma 6 types without runtime double assertions", () => {
+    const sourceDirectory = dirname(fileURLToPath(import.meta.url));
+    const repositorySource = readFileSync(
+      resolve(sourceDirectory, "read/prisma-country-read-repository.ts"),
+      "utf8",
+    );
+    const runtimeSource = readFileSync(
+      resolve(sourceDirectory, "read/country-read-runtime.ts"),
+      "utf8",
+    );
+
+    expect(repositorySource).toContain("satisfies Prisma.CountrySelect");
+    expect(repositorySource).toContain("satisfies Prisma.CountryFindManyArgs");
+    expect(repositorySource).toContain("satisfies Prisma.CountryFindUniqueArgs");
+    expect(runtimeSource).not.toContain("as unknown as PrismaRuntimeClient");
+  });
+
+  test.each(localizedJsonMutations())(
+    "fails closed for invalid LocalizedText field %s",
+    async (_label, mutate) => {
+      const client = new RecordingClient();
+      const row = structuredClone(validRow());
+      mutate(row);
+      client.row = row;
+
+      await expect(createPrismaCountryReadRepository(client).list()).rejects.toThrow(
+        "COUNTRY_READ_INVALID_DATA",
+      );
+    },
+  );
+
+  test.each([
+    ["Indicator missing year", (row: Record<string, unknown>) => {
+      marketOverview(row).keyIndicators = [{ label: localized("Label"), value: "1", unit: "%" }];
+    }],
+    ["Indicator extra audit key", (row: Record<string, unknown>) => {
+      marketOverview(row).keyIndicators = [{
+        label: localized("Label"), value: "1", unit: "%", year: 2026, audit: true,
+      }];
+    }],
+    ["Indicator wrong label", (row: Record<string, unknown>) => {
+      marketOverview(row).keyIndicators = [{ label: { zh: "missing-en" }, value: "1", unit: "%", year: 2026 }];
+    }],
+    ["Indicator unsafe year", (row: Record<string, unknown>) => {
+      marketOverview(row).keyIndicators = [{ label: localized("Label"), value: "1", unit: "%", year: 2026.5 }];
+    }],
+    ["StrategyStep missing detail", (row: Record<string, unknown>) => {
+      entryStrategy(row).steps = [{ order: 1, title: localized("Step") }];
+    }],
+    ["StrategyStep extra audit key", (row: Record<string, unknown>) => {
+      entryStrategy(row).steps = [{
+        order: 1, title: localized("Step"), detail: localized("Detail"), audit: true,
+      }];
+    }],
+    ["StrategyStep wrong localized detail", (row: Record<string, unknown>) => {
+      entryStrategy(row).steps = [{ order: 1, title: localized("Step"), detail: { zh: 1, en: "Detail" } }];
+    }],
+    ["StrategyStep unsafe order", (row: Record<string, unknown>) => {
+      entryStrategy(row).steps = [{ order: 1.5, title: localized("Step"), detail: localized("Detail") }];
+    }],
+  ] as const)("fails closed for malformed %s", async (_label, mutate) => {
+    const client = new RecordingClient();
+    const row = structuredClone(validRow());
+    mutate(row);
+    client.row = row;
+
+    await expect(createPrismaCountryReadRepository(client).list()).rejects.toThrow(
+      "COUNTRY_READ_INVALID_DATA",
+    );
+  });
+
+  test("accepts and preserves a nonblank gated relative report locator", async () => {
+    const client = new RecordingClient();
+    const row = structuredClone(validRow());
+    firstRelation(row, "reports").fileUrl = "reports/ID/member/report.pdf";
+    client.row = row;
+
+    const snapshot = await createPrismaCountryReadRepository(client).findByCode("ID");
+
+    expect(snapshot?.reports[0]?.fileUrl).toBe("reports/ID/member/report.pdf");
+  });
 });
+
+function reversedRecords(
+  row: Record<string, unknown>,
+  relation: string,
+  identities: readonly (readonly [string, string])[],
+): Array<Record<string, unknown>> {
+  const template = firstRelation(row, relation);
+  return identities.map(([id, updatedAt]) => ({
+    ...structuredClone(template),
+    id,
+    updatedAt: new Date(updatedAt),
+  })).reverse();
+}
+
+function localizedJsonMutations(): Array<readonly [
+  string,
+  (row: Record<string, unknown>) => void,
+]> {
+  const withAudit = { zh: "中文", en: "English", audit: { runId: "secret-run" } };
+  return [
+    ["country.name missing en", (row) => { row.name = { zh: "中文" }; }],
+    ["country.summary wrong type", (row) => { row.summary = { zh: 1, en: "Summary" }; }],
+    ["marketOverview.overview", (row) => { marketOverview(row).overview = withAudit; }],
+    ["marketOverview.energyDemand", (row) => { marketOverview(row).energyDemand = withAudit; }],
+    ["marketOverview.renewableTarget", (row) => { marketOverview(row).renewableTarget = withAudit; }],
+    ["policy.title", (row) => { firstRelation(row, "policies").title = withAudit; }],
+    ["policy.summary", (row) => { firstRelation(row, "policies").summary = withAudit; }],
+    ["policy.body", (row) => { firstRelation(row, "policies").body = withAudit; }],
+    ["policy.authority", (row) => { firstRelation(row, "policies").authority = withAudit; }],
+    ["risk.title", (row) => { firstRelation(row, "risks").title = withAudit; }],
+    ["risk.description", (row) => { firstRelation(row, "risks").description = withAudit; }],
+    ["risk.mitigation", (row) => { firstRelation(row, "risks").mitigation = withAudit; }],
+    ["opportunity.title", (row) => { firstRelation(row, "opportunities").title = withAudit; }],
+    ["opportunity.description", (row) => { firstRelation(row, "opportunities").description = withAudit; }],
+    ["opportunity.marketSize", (row) => { firstRelation(row, "opportunities").marketSize = withAudit; }],
+    ["opportunity.timeWindow", (row) => { firstRelation(row, "opportunities").timeWindow = withAudit; }],
+    ["project.name", (row) => { firstRelation(row, "projects").name = withAudit; }],
+    ["project.description", (row) => { firstRelation(row, "projects").description = withAudit; }],
+    ["project.location", (row) => { firstRelation(row, "projects").location = withAudit; }],
+    ["partner.name", (row) => { firstRelation(row, "partners").name = withAudit; }],
+    ["partner.description", (row) => { firstRelation(row, "partners").description = withAudit; }],
+    ["partner.contactHint", (row) => { firstRelation(row, "partners").contactHint = withAudit; }],
+    ["chineseCompany.name", (row) => { firstRelation(row, "chineseCompanies").name = withAudit; }],
+    ["chineseCompany.businessScope", (row) => { firstRelation(row, "chineseCompanies").businessScope = withAudit; }],
+    ["chineseCompany.caseStudy", (row) => { firstRelation(row, "chineseCompanies").caseStudy = withAudit; }],
+    ["entryStrategy.overview", (row) => { entryStrategy(row).overview = withAudit; }],
+    ["entryStrategy.recommendedMode", (row) => { entryStrategy(row).recommendedMode = withAudit; }],
+    ["report.title", (row) => { firstRelation(row, "reports").title = withAudit; }],
+    ["report.abstract", (row) => { firstRelation(row, "reports").abstract = withAudit; }],
+    ["knowledge.content", (row) => { firstRelation(row, "knowledgeChunks").content = withAudit; }],
+  ];
+}
+
+function marketOverview(row: Record<string, unknown>): Record<string, unknown> {
+  const value = row.marketOverview;
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error("Invalid market overview fixture");
+  }
+  return value as Record<string, unknown>;
+}
+
+function entryStrategy(row: Record<string, unknown>): Record<string, unknown> {
+  const value = row.entryStrategy;
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error("Invalid entry strategy fixture");
+  }
+  return value as Record<string, unknown>;
+}
+
+function firstRelation(
+  row: Record<string, unknown>,
+  relation: string,
+): Record<string, unknown> {
+  const value = row[relation];
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new Error("Invalid relation fixture");
+  }
+  const first = value[0];
+  if (typeof first !== "object" || first === null || Array.isArray(first)) {
+    throw new Error("Invalid relation fixture");
+  }
+  return first as Record<string, unknown>;
+}
+
+async function captureError(promise: Promise<unknown>): Promise<Error> {
+  try {
+    await promise;
+  } catch (error) {
+    if (error instanceof Error) return error;
+  }
+  throw new Error("Expected promise to reject with Error");
+}
+
+function expectStableRedactedError(error: Error, code: string): void {
+  expect(error.message).toBe(code);
+  expect("cause" in error).toBe(false);
+  expect(JSON.stringify(error)).not.toMatch(/secret|private\/path/u);
+  expect(Object.values(error).some((value) => value instanceof Error)).toBe(false);
+}

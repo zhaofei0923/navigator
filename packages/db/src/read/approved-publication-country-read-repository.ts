@@ -11,6 +11,7 @@ import {
 
 import { loadApprovedBasicCountryPublicationV2 } from "../collection/basic-publication-loader.js";
 import { discoverApprovedBasicCountryDirectories } from "../seed/approved-basic-publications-validation.js";
+import { normalizeCountryReadSnapshot } from "./country-read-normalization.js";
 
 const APPROVED_PUBLICATION_RUNTIME_INVALID =
   "APPROVED_PUBLICATION_RUNTIME_INVALID" as const;
@@ -20,8 +21,8 @@ export interface ApprovedPublicationCountryReadRepositoryOptions {
 }
 
 export class ApprovedPublicationCountryReadRepositoryError extends Error {
-  constructor(options?: ErrorOptions) {
-    super(APPROVED_PUBLICATION_RUNTIME_INVALID, options);
+  constructor() {
+    super(APPROVED_PUBLICATION_RUNTIME_INVALID);
     this.name = "ApprovedPublicationCountryReadRepositoryError";
   }
 }
@@ -61,7 +62,7 @@ function loadApprovedSnapshots(
       );
       if (!publication.valid) throw invalidRuntime();
       const canonical = publication.data.canonical;
-      return deepFreeze({
+      return deepFreeze(normalizeCountryReadSnapshot({
         country: cloneJsonObject(canonical.country),
         marketOverview: cloneJsonObject(canonical.marketOverview),
         policy: cloneJsonObjectArray(canonical.policy),
@@ -75,7 +76,7 @@ function loadApprovedSnapshots(
           : cloneJsonObject(canonical.entryStrategy),
         reports: cloneJsonObjectArray(canonical.reports),
         knowledge: cloneJsonObjectArray(canonical.knowledge),
-      } satisfies CountryDataSnapshot);
+      } satisfies CountryDataSnapshot));
     });
     const sorted = sortCountrySnapshots(snapshots);
     const seenCodes = new Set<string>();
@@ -158,10 +159,8 @@ function isNormalizedCountryCode(value: string): boolean {
   return /^[A-Z]{2}$/u.test(value);
 }
 
-function invalidRuntime(cause?: unknown): ApprovedPublicationCountryReadRepositoryError {
-  return cause === undefined
-    ? new ApprovedPublicationCountryReadRepositoryError()
-    : new ApprovedPublicationCountryReadRepositoryError({ cause });
+function invalidRuntime(_cause?: unknown): ApprovedPublicationCountryReadRepositoryError {
+  return new ApprovedPublicationCountryReadRepositoryError();
 }
 
 function deepFreeze<T>(value: T, seen = new WeakSet<object>()): T {

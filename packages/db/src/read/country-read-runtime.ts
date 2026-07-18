@@ -4,7 +4,6 @@ import type { CountryReadRepository } from "@navigator/shared-types/country-runt
 import { createApprovedPublicationCountryReadRepository } from "./approved-publication-country-read-repository.js";
 import {
   createPrismaCountryReadRepository,
-  type PrismaCountryReadClient,
 } from "./prisma-country-read-repository.js";
 
 export interface CountryReadRuntime {
@@ -21,22 +20,6 @@ interface CountryReadPingOptions {
   readonly timeoutMs: number;
 }
 
-interface PrismaRuntimeTransaction {
-  readonly country: {
-    count(args: {
-      readonly where: Readonly<Record<string, never>>;
-    }): Promise<number>;
-  };
-}
-
-interface PrismaRuntimeClient extends PrismaCountryReadClient {
-  $transaction<T>(
-    callback: (transaction: PrismaRuntimeTransaction) => Promise<T>,
-    options: { readonly maxWait: number; readonly timeout: number },
-  ): Promise<T>;
-  $disconnect(): Promise<void>;
-}
-
 export function createPrismaCountryReadRuntime(options: {
   readonly databaseUrl: string;
 }): CountryReadRuntime {
@@ -47,9 +30,14 @@ export function createPrismaCountryReadRuntime(options: {
     throw new Error("COUNTRY_READ_RUNTIME_CONFIG_INVALID");
   }
 
-  const client = new PrismaClient({
-    datasourceUrl: options.databaseUrl,
-  }) as unknown as PrismaRuntimeClient;
+  let client: PrismaClient;
+  try {
+    client = new PrismaClient({
+      datasourceUrl: options.databaseUrl,
+    });
+  } catch {
+    throw runtimeError("COUNTRY_READ_RUNTIME_INIT_FAILED");
+  }
   const repository = createPrismaCountryReadRepository(client);
   let closePromise: Promise<void> | null = null;
 
@@ -58,18 +46,30 @@ export function createPrismaCountryReadRuntime(options: {
     async ping(pingOptions: CountryReadPingOptions): Promise<void> {
       assertPingOptions(pingOptions);
       if (closePromise !== null) throw new Error("COUNTRY_READ_RUNTIME_CLOSED");
-      await client.$transaction(
-        async (transaction) => {
-          await transaction.country.count({ where: {} });
-        },
-        {
-          maxWait: pingOptions.maxWaitMs,
-          timeout: pingOptions.timeoutMs,
-        },
-      );
+      try {
+        await client.$transaction(
+          async (transaction) => {
+            await transaction.country.count({ where: {} });
+          },
+          {
+            maxWait: pingOptions.maxWaitMs,
+            timeout: pingOptions.timeoutMs,
+          },
+        );
+      } catch {
+        throw runtimeError("COUNTRY_READ_PING_FAILED");
+      }
     },
     close(): Promise<void> {
-      closePromise ??= client.$disconnect();
+      if (closePromise === null) {
+        try {
+          closePromise = client.$disconnect().catch(() => {
+            throw runtimeError("COUNTRY_READ_CLOSE_FAILED");
+          });
+        } catch {
+          closePromise = Promise.reject(runtimeError("COUNTRY_READ_CLOSE_FAILED"));
+        }
+      }
       return closePromise;
     },
   });
@@ -123,4 +123,8 @@ function isRecursivelyFrozen(
   if (!Object.isFrozen(value)) return false;
   seen.add(value);
   return Object.values(value).every((child) => isRecursivelyFrozen(child, seen));
+}
+
+function runtimeError(code: string): Error {
+  return new Error(code);
 }
