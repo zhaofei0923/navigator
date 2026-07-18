@@ -139,7 +139,14 @@ if ! command -v ss >/dev/null 2>&1; then
   echo "PLATFORM_DB_TEST_PORT_CHECK_UNAVAILABLE" >&2
   exit 1
 fi
-if ss -H -ltn "sport = :${navigator_db_test_port}" | rg -q .; then
+navigator_db_test_listeners=""
+if ! navigator_db_test_listeners="$(
+  ss -H -ltn "sport = :${navigator_db_test_port}"
+)"; then
+  echo "PLATFORM_DB_TEST_PORT_CHECK_FAILED" >&2
+  exit 1
+fi
+if [[ -n "$navigator_db_test_listeners" ]]; then
   echo "PLATFORM_DB_TEST_PORT_IN_USE" >&2
   exit 1
 fi
