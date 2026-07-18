@@ -64,6 +64,10 @@ describe("PostgreSQL BASIC import integration URL safety", () => {
       "postgresql://test:test@127.0.0.2:55432/navigator_platform_db_1_test",
       "postgresql://test:test@127.0.0.1:55432/postgres",
       "postgresql://test:test@127.0.0.1:55432/navigator_platform_db_1_test/other",
+      "postgresql://test:test@127.0.0.1:55432/other/../navigator_platform_db_1_test",
+      "postgresql://test:test@127.0.0.1:55432/%2e%2e/navigator_platform_db_1_test",
+      "postgresql://test:test@127.0.0.1:55432/other/%2e%2e/navigator_platform_db_1_test",
+      "postgresql://test:test@127.0.0.1:55432/%2e/navigator_platform_db_1_test",
       "postgresql://test:test@127.0.0.1:55432/navigator_platform_db_1_test?schema=other",
       "postgresql://test:test@127.0.0.1:55432/navigator_platform_db_1_test#other",
       "postgresql://credential-marker@database.example/navigator_platform_db_1_test",
@@ -201,11 +205,15 @@ function selectIntegrationDatabase(
 function requireSafeIntegrationDatabaseUrl(value: string): string {
   try {
     const parsed = new URL(value);
-    const decodedPathname = decodeURIComponent(parsed.pathname);
+    const schemeDelimiter = value.indexOf("://");
+    const rawPathStart = schemeDelimiter === -1
+      ? -1
+      : value.indexOf("/", schemeDelimiter + 3);
+    const rawPath = rawPathStart === -1 ? "" : value.slice(rawPathStart);
     if (
       parsed.protocol !== "postgresql:" ||
       (parsed.hostname !== "127.0.0.1" && parsed.hostname !== "[::1]") ||
-      decodedPathname !== "/navigator_platform_db_1_test" ||
+      rawPath !== "/navigator_platform_db_1_test" ||
       parsed.search !== "" ||
       parsed.hash !== ""
     ) {

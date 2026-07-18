@@ -105,26 +105,75 @@ native helper 需要 `/proc/self/fd` 与 `renameat2(RENAME_NOREPLACE)`。不得�
 
 ### 6.2 六国 BASIC PostgreSQL 集成验收
 
-集成测试只连接任务专用的 disposable pgvector 容器。测试进程必须显式提供 `DATABASE_URL`，且 URL 只允许 `postgresql` 协议、字面量 `127.0.0.1` / `[::1]` host 和精确数据库名 `navigator_platform_db_1_test`；`localhost`、DNS、其他 IP/库名一律在构造 Prisma client 前脱敏拒绝。普通 `pnpm test` 不提供该变量，固定显示 skip 原因且不连接数据库。
+集成测试只连接任务专用的 disposable pgvector 容器。测试进程必须显式提供 `DATABASE_URL`，且 URL 只允许 `postgresql` 协议、字面量 `127.0.0.1` / `[::1]` host，并要求 authority 后的原始 path 字节精确为 `/navigator_platform_db_1_test`；`localhost`、DNS、其他 IP/库名、dot-segment、percent-encoded path、query/hash 一律在构造 Prisma client 前脱敏拒绝。普通 `pnpm test` 不提供该变量，固定显示 skip 原因且不连接数据库。Prisma client 生成与 migration 由测试外层 harness 负责，集成测试本身不迁移或清库。
 
-先证明固定容器名不存在，再创建容器；若名称已存在则中止流程并人工确认，禁止复用或停止该已有容器：
+使用以下完整 harness。它先证明固定容器名不存在、确认端口空闲，再创建容器并保存本次 `docker run` 返回的 container ID；任一步失败都会退出，trap 只按已保存的本次 ID 清理。若发现已有容器或 `docker run` 因竞态失败，ID 保持为空，禁止复用、停止或清理未知容器：
 
 ```bash
-test -z "$(docker ps -a --filter name=^/navigator-platform-db-1-test$ --format '{{.Names}}')"
-docker run --detach --rm \
-  --name navigator-platform-db-1-test \
-  --publish 127.0.0.1:55432:5432 \
+set -euo pipefail
+
+navigator_db_test_name="navigator-platform-db-1-test"
+navigator_db_test_port="55432"
+navigator_db_test_container_id=""
+
+navigator_cleanup_db_test() {
+  if [[ -n "$navigator_db_test_container_id" ]]; then
+    docker stop "$navigator_db_test_container_id" >/dev/null
+    navigator_db_test_container_id=""
+  fi
+}
+trap navigator_cleanup_db_test EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+navigator_existing_db_id="$(
+  docker ps -a \
+    --filter "name=^/${navigator_db_test_name}$" \
+    --format '{{.ID}}'
+)"
+if [[ -n "$navigator_existing_db_id" ]]; then
+  echo "PLATFORM_DB_TEST_CONTAINER_ALREADY_EXISTS" >&2
+  exit 1
+fi
+if ! command -v ss >/dev/null 2>&1; then
+  echo "PLATFORM_DB_TEST_PORT_CHECK_UNAVAILABLE" >&2
+  exit 1
+fi
+if ss -H -ltn "sport = :${navigator_db_test_port}" | rg -q .; then
+  echo "PLATFORM_DB_TEST_PORT_IN_USE" >&2
+  exit 1
+fi
+
+navigator_created_db_id=""
+if ! navigator_created_db_id="$(docker run --detach --rm \
+  --name "$navigator_db_test_name" \
+  --publish "127.0.0.1:${navigator_db_test_port}:5432" \
   --env POSTGRES_USER=navigator_test \
   --env POSTGRES_PASSWORD=navigator_test_only \
   --env POSTGRES_DB=navigator_platform_db_1_test \
-  pgvector/pgvector:pg17@sha256:d2ef61f42ef767baa5a1475393303cc235bcd92febd9d7014eddb48b41f3bad0
-```
+  pgvector/pgvector:pg17@sha256:d2ef61f42ef767baa5a1475393303cc235bcd92febd9d7014eddb48b41f3bad0)"
+then
+  navigator_created_db_id=""
+  echo "PLATFORM_DB_TEST_CONTAINER_CREATE_FAILED" >&2
+  exit 1
+fi
+navigator_db_test_container_id="$navigator_created_db_id"
 
-等待 `pg_isready` 成功后，由外层按顺序生成 client、应用 migration 并运行验收；测试本身不迁移或清库：
+navigator_db_test_ready="false"
+for navigator_db_test_attempt in $(seq 1 30); do
+  if docker exec "$navigator_db_test_container_id" \
+    pg_isready --username navigator_test --dbname navigator_platform_db_1_test
+  then
+    navigator_db_test_ready="true"
+    break
+  fi
+  sleep 1
+done
+if [[ "$navigator_db_test_ready" != "true" ]]; then
+  echo "PLATFORM_DB_TEST_NOT_READY" >&2
+  exit 1
+fi
 
-```bash
-docker exec navigator-platform-db-1-test \
-  pg_isready --username navigator_test --dbname navigator_platform_db_1_test
 DATABASE_URL=postgresql://navigator_test:navigator_test_only@127.0.0.1:55432/navigator_platform_db_1_test \
   pnpm --filter @navigator/db exec prisma generate --schema prisma/schema.prisma
 DATABASE_URL=postgresql://navigator_test:navigator_test_only@127.0.0.1:55432/navigator_platform_db_1_test \
@@ -133,10 +182,12 @@ pnpm --filter @navigator/db prisma:validate
 DATABASE_URL=postgresql://navigator_test:navigator_test_only@127.0.0.1:55432/navigator_platform_db_1_test \
   pnpm --filter @navigator/db exec vitest run \
   src/approved-basic-countries-postgres.integration.test.ts
-docker stop navigator-platform-db-1-test
+
+navigator_cleanup_db_test
+trap - EXIT INT TERM
 ```
 
-验收证明 `0001_init` 已成功应用、真实事务故障全部回滚、六国串行导入两次仍为 Country=6 / ModuleCoverage=60 / MarketOverview=6、其余深层表/KnowledgeChunk/Lead=0，并逐国将数据库回读结果与 canonical publication 做深度相等比较。仅停止本流程创建的固定名容器；禁止连接生产库，禁止 `migrate reset`、`db push`、drop、truncate、`deleteMany` 或由测试执行任何破坏性清理。
+验收证明 `0001_init` 已成功应用、真实事务故障全部回滚、六国串行导入两次仍为 Country=6 / ModuleCoverage=60 / MarketOverview=6、其余深层表/KnowledgeChunk/Lead=0，并逐国将数据库回读结果与 canonical publication 做深度相等比较。清理只能使用本流程保存的 container ID，禁止按名称停止容器；禁止连接生产库，禁止 `migrate reset`、`db push`、drop、truncate、`deleteMany` 或由测试执行任何破坏性清理。
 
 ---
 
