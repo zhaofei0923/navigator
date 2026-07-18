@@ -14,11 +14,11 @@ MVP 到商业化初期的当前建设目标是经人工批准的国家先完成 
 |----------|----------|------|
 | Basic | 经人工批准的国家 | 全球国家池的统一入口与基础画像，包含 `ID` 的首次真实验证 |
 | Standard | 后续单独升级 | Basic 验收后才可经人工批准启动 |
-| Complete | 后续单独升级 | Basic 验收后才可经人工批准启动 |
+| Complete | 后续单独升级 | 首个深覆盖试点须先完成 Standard，再经新的人工批准启动 |
 
 所有国家使用同一套 10 模块结构，差异只体现在数据深度，不体现在页面结构。
 
-每个选定国家必须先完成其 `DATA-BASIC-<ISO2>` 任务卡并达到 Basic；只有在此后，才可由人工批准单独的 Standard 或 Complete 升级任务。禁止任何国家直接以 Standard 或 Complete 进入产品。
+每个选定国家必须先完成其 `DATA-BASIC-<ISO2>` 任务卡并达到 Basic。六国 BASIC 基线完成后，首个深覆盖试点按 Standard → Complete 两张独立任务卡推进，每一步均另行人工批准；禁止任何国家直接以 Standard 或 Complete 进入产品。
 
 ---
 
@@ -36,7 +36,25 @@ MVP 到商业化初期的当前建设目标是经人工批准的国家先完成 
 | 基础池 | MX | 墨西哥 | Basic | 北美近岸与新能源市场 | 待人工确认 |
 | 基础池 | AU | 澳大利亚 | Basic | 成熟能源市场与储能机会 | 待人工确认 |
 
-`ID` 是首个真实 Basic 验证国家；`VN`、`SA`、`AE`、`BR` 与其他候选国家同样必须先按 Basic 交付，再在独立、经人工批准的升级任务中决定是否推进 Standard 或 Complete。首批 30–50 个 Basic 国家清单、最终国家顺序和覆盖升级结论均属于业务优先级决策，必须由人工确认后再进入 seed 或后台录入。
+`ID` 是首个真实 Basic 验证国家；`VN`、`SA`、`AE`、`BR`、`ZA` 与其他候选国家同样必须先按 Basic 交付，再在独立、经人工批准的升级任务中决定是否推进 Standard 或 Complete。首批 30–50 个 Basic 国家清单、最终国家顺序和覆盖升级结论均属于业务优先级决策，必须由人工确认后再进入 seed 或后台录入。
+
+### 六国 BASIC 基线与下一阶段启动门槛（已完成）
+
+| 国家码 | active run | 当前覆盖 |
+|--------|------------|----------|
+| ID | `data-basic-id-20260711-r2` | BASIC |
+| VN | `data-basic-vn-20260715-r3` | BASIC |
+| SA | `data-basic-sa-20260717-r2` | BASIC |
+| AE | `data-basic-ae-20260717-r1` | BASIC |
+| BR | `data-basic-br-20260718-r2` | BASIC |
+| ZA | `data-basic-za-20260718-r2` | BASIC |
+
+这六个 canonical publication、批准回执和十模块占位共同构成 M0 完成证据。它们已经验证统一模型和跨国复制能力，因此：
+
+- 生产 PostgreSQL/Prisma 读取链路、NestJS API、运行治理、Admin 核心、鉴权与留资基础可以启动，不等待任何国家达到 COMPLETE。
+- 项目所有者已选择 `ID` 作为首个 Standard 试点，并批准 `DATA-STANDARD-ID` 与 M1 并行启动。
+- 该决定只批准试点选择与候选建设启动，不自动启用 AI，也不改变权限、计费或数据模型。来源、事实、双语文本、STANDARD 发布、`aiUsable`、真实 ID KnowledgeChunk 创建与可检索资格、COMPLETE 升级均须分别人工批准。
+- 详细依赖和任务切片以 [六国 BASIC 后里程碑设计](./superpowers/specs/2026-07-18-six-basic-platform-milestone-design.md) 与 [roadmap.md](./roadmap.md) 为准。
 
 ### SA r1 audit history and r2 Basic publication record
 
@@ -141,26 +159,34 @@ MVP 到商业化初期的当前建设目标是经人工批准的国家先完成 
 ### Standard
 
 - `market-overview`、`policy`、`risk`、`opportunities` 至少达到可展示状态。
-- 能支持基础 AI 咨询的政策/风险/机会知识片段。
+- 形成可供后续 AI 审核的政策/风险/机会知识内容，但达到 Standard 本身不自动创建或启用可检索知识片段。
 - 国家卡片能展示机会、风险、政策友好度等重点信号。
+- 首个深覆盖试点必须通过独立的 `DATA-STANDARD-<ISO2>` 任务，试点选择、来源、事实和发布分别受人工审核。
+- 真实 AI Beta 还需 `ai-advisor` 至少 20 个合格可检索片段、覆盖至少 3 个来源模块，并由人工批准正式 Prompt 与检索默认值。
 
 ### Complete
 
 - 10 个模块均达到可展示标准。
 - 项目、伙伴、中资企业、报告、AI 知识片段形成闭环。
 - 可支撑完整国家详情、AI 问答、报告下载与销售线索转化。
+- 首个 Complete 试点只能在同一国家 Standard 验收后，以新的 `DATA-COMPLETE-<ISO2>` 任务启动。
+- Complete 不是生产数据库、NestJS API、Admin 核心、鉴权或留资基础的前置条件。
+- 先验收一个 Complete 试点及 AI/会员受控 Beta，再决定如何逐国复制；不得自动批量升级其他 BASIC 国家。
 
 ---
 
 ## 4. 建设流程
 
-1. 人工确认国家优先级、建议试点顺序和 Basic 启动决定。
+1. 人工确认 Basic 国家优先级、采集顺序和每国启动决定。
 2. 按 [basic-country-collection.md](./basic-country-collection.md) 建立国家基础记录、10 个模块状态和可追溯的暂存产物。
 3. 录入或导入双语市场基础画像，并补齐元字段。
 4. 经人工审核完成 `draft -> pending -> published`；Basic 发布记录保持 `aiUsable = false`。
 5. 运行覆盖等级判定与数据质量检查，确认国家为 Basic。
 6. 通过代表性 Web 占位与基础画像验收后对外展示。
-7. 后续 Standard 或 Complete 升级以单独任务卡提交；仅已完成 `DATA-BASIC-<ISO2>` 并达到 Basic 的国家可升级，由人工决定是否启用合格的 published 数据用于 AI。
+7. 六国 BASIC 基线完成后启动 PLATFORM-DB-1 → PLATFORM-API-1 → PLATFORM-OPS-1；这条平台链路不等待 Complete。
+8. 已选定 `ID` 作为首个深覆盖试点，以独立 `DATA-STANDARD-ID` 任务与平台链路并行推进；来源、事实和发布分别审核，达到 Standard 不自动启用 AI。
+9. 平台与试点数据分别达到门槛后，AI 和会员/报告各以受控 Beta 任务启用，并分别经过 AI、权限和计费人工关口。
+10. 只有 Standard 试点与相关 Beta 验收后，才另行批准 `DATA-COMPLETE-<ISO2>`；完成一个闭环试点后再逐国拆卡复制。
 
 ---
 
@@ -171,6 +197,9 @@ MVP 到商业化初期的当前建设目标是经人工批准的国家先完成 
 - 首批 30–50 国家完整清单。
 - 国家建设优先级。
 - 国家覆盖等级升级结论。
-- Basic 试点顺序及每个国家的数据工作启动决定。
+- Basic 扩展顺序及每个国家的数据工作启动决定。
+- ID Standard 的来源、事实与发布决定，ID Complete 的启动和发布决定，以及未来其他深覆盖试点选择。
+- AI 正式 Prompt、检索默认值、aiUsable 决定与生产 Beta 启用。
+- 会员权益、价格、计费、真实受控资源与会员/报告 Beta 启用。
 - 是否新增国家计划字段到数据库。
 - 是否将商业评分或推荐等级作为持久化字段。

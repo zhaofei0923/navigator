@@ -13,6 +13,7 @@
 3. **人工确认关口**（AGENTS.md §11）在下文用 ⚠️ 标注，Codex 遇到必须停下等 Review。
 4. **两处待定项**（AI 系统 Prompt 正式文本、检索边界参数默认值）先用占位跑通管道，定稿后替换，不阻塞开发（见 [ai-advisor.md §4/§5](./ai-advisor.md)）。
 5. **当前任务集成路径**：经用户批准，默认执行“本地 feature 分支 → 独立 review → 合并到 `main` → merged-main 验证 → `git push origin main`”，不默认创建 PR。若以后改为 PR 工作流，适用 AGENTS.md 的“一张任务卡 = 一个 PR”规则；本路径不移除合并和推送验收。
+6. **六国 BASIC 后并行推进**：六个已批准 BASIC 国家构成平台化启动基线；生产数据库/API/Admin 核心不等待 COMPLETE。单国 STANDARD 试点可经独立人工批准后与平台底座并行，详见 [六国 BASIC 后里程碑设计](./superpowers/specs/2026-07-18-six-basic-platform-milestone-design.md)。
 
 ---
 
@@ -22,11 +23,23 @@
 graph LR
   P0[P0 地基] --> P1[P1 数据层]
   P1 --> P2[P2 Web 展示]
-  P2 --> P3[P3 AI 顾问]
-  P2 --> P4[P4 权限/会员/留资]
-  P3 --> P5[P5 Admin 后台]
-  P4 --> P5
-  P5 --> P6[P6 小程序/H5]
+  P1 --> M0[M0 六国 BASIC 已完成]
+  M0 --> PF
+  M0 --> SP[ID STANDARD 试点]
+  PF --> P3[P3 AI 管道与接口骨架]
+  SP --> AIB[AI 受控 Beta]
+  P3 --> AIB
+  PF --> P4[P4 权限/会员/留资]
+  PF --> P5C[P5 Admin 核心]
+  P3 --> P5A[P5 AI 运营]
+  P4 --> P5B[P5 报告与线索运营]
+  P4 --> MBB[会员/报告受控 Beta]
+  P5B --> MBB
+  SP --> CP[单国 COMPLETE 试点]
+  AIB --> CP
+  MBB --> CP
+  CP --> SCALE[逐国复制]
+  P5C --> P6[P6 小程序/H5]
 ```
 
 | 阶段 | 目标 | 主要依据文档 | 关口 |
@@ -34,10 +47,27 @@ graph LR
 | P0 地基 | 可运行骨架 + 共享枚举/双语工具 + 环境/CI/文档守卫 | env-config、i18n、testing、data-schema、product-brief | — |
 | P1 数据层 | 数据模型落地 + 数据治理校验 + Basic 首次交付 + 覆盖判定 | data-schema、coverage-levels、data-governance、indonesia-seed、country-rollout | ⚠️ |
 | P2 Web 展示 | 首页 / 国家 / AI 咨询 / 报告四板块 + i18n | product-brief、api-contract、coverage-levels、i18n | — |
+| P2.5 生产平台底座 | 六国数据进入 PostgreSQL/Prisma 生产读取链路 + NestJS API + 运行治理与容量基线 | data-schema、api-contract、env-config、testing、六国里程碑设计 | ⚠️ |
 | P3 AI 顾问 | RAG 管道 + 问答接口（占位边界） | ai-advisor | ⚠️ |
 | P4 权限/会员/留资 | 门控 + 报告下载 + 留资 | auth-membership | ⚠️ |
 | P5 Admin 后台 | 数据管理 + 审核发布 + AI/报告/线索运营 | api-contract、data-schema、data-governance | ⚠️ |
 | P6 小程序/H5 | 轻入口复用双语 | i18n | — |
+
+### 1.1 当前执行里程碑（2026-07-18）
+
+| 里程碑 | 当前状态 | 下一步 | 进入下一阶段的必要条件 |
+|--------|----------|--------|------------------------|
+| M0 六国 BASIC | **已完成** | 保持六国 canonical publication 与批准回执不可变 | ID、VN、SA、AE、BR、ZA 均恰好为 BASIC，且无 AI eligibility |
+| M1 生产平台底座 | **现在启动** | 依次实施 PLATFORM-DB-1、PLATFORM-API-1、PLATFORM-OPS-1 | 六国幂等导入；数据库/API 返回与 canonical JSON 等价；具备健康检查、可观测性和容量基线 |
+| M2 ID STANDARD 试点 | **已批准启动，与 M1 并行** | 创建并执行 `DATA-STANDARD-ID`，先做来源登记与 draft 候选 | ID 的 policy、risk、opportunities 达到可展示状态并通过 STANDARD 机器判定；来源、事实和发布分别审核；不自动启用 AI |
+| M3 Admin 与权限基础 | **M1 后启动** | P5-1、P5-2 与 P4-1、P4-3 按独立任务实施 | 审核发布闭环、服务端鉴权、留资加密均通过测试 |
+| M4 AI 受控 Beta | **骨架可在 M1 后开发，生产启用待门槛** | P3-1、P3-2；之后单独执行 AI Beta 启用卡 | 试点已达 STANDARD；ai-advisor 至少 20 个合格片段、覆盖至少 3 个来源模块；Prompt 与检索默认值人工确认 |
+| M5 会员与报告受控 Beta | **M3 后开发** | P4-2、P5-4 与真实受控资源试用 | 至少一个真实受控资源；服务端权限矩阵通过；权益与计费边界人工确认 |
+| M6 单国 COMPLETE 与复制 | **后续独立批准** | 先执行 `DATA-COMPLETE-<ISO2>`，再按国家拆卡复制 | 试点经独立任务达到 COMPLETE，且 AI/会员相关 Beta 已验收 |
+
+本次里程碑更新已由项目所有者追加选择 ID 并批准 `DATA-STANDARD-ID` 启动；该批准不等于批准具体来源、事实、STANDARD 发布、`aiUsable` 或 COMPLETE 升级。本次仍不修改数据模型、AI Prompt/检索边界、会员权益或计费，也不授权新增依赖或生产部署。
+
+来源、事实、双语文本、STANDARD 发布、`aiUsable`、真实 ID KnowledgeChunk 创建与可检索资格、COMPLETE 升级均须分别人工批准。
 
 ---
 
@@ -164,17 +194,17 @@ graph LR
 - 完成边界：精确完整 identity 与 hashes 记录在 [indonesia-seed.md](./indonesia-seed.md)。外部 datastore 的 legacy Complete 清理由单独批准的 `OPS-DATA-ID-BASIC-CLEANUP` 处理；本任务未执行删除或其他数据库破坏性操作。
 - 人工确认：是（项目所有者已明确批准上述 country/run/hash identity 与本原子发布任务）。
 
-#### DATA-BASIC-VN-COLLECT Vietnam Basic candidate collection（已完成）
+#### DATA-BASIC-VN-COLLECT Vietnam Basic candidate collection（已完成；r3 后续已发布）
 - 目标：针对项目所有者批准启动的 `vietnam` / `VN` / `data-basic-vn-20260715-r3` identity，使用两条越南官方 HTML/PDF 来源与四条 World Bank deterministic sources，生成可追溯、双语、model-free 的 Basic `draft` 候选。
 - 验收：候选恰好包含 `source-register.json`、`extracted-facts.json`、`market-overview.draft.json` 与 `review-report.json`；四个 SHA-256 分别为 `9a164b73048b290a2fd964a292158149d722adcd6edc54d4fea1d67f6cb879a3`、`ca66fb3f8ee67c69ae9f33b4d941bf84209311cee139b68ed0a84d15ea9b99ce`、`3aa83f37cf0177e043d3ed0d5493c6193cb68e9f8dd33c75a46958a0079b5a95`、`163107e63f1ae72288dc10c8ed0770f94f9b93bf3dd896e67f0870f588492a1e`。候选通过 v2 validator，状态为 `ready-for-human-review`，保持 `reviewStatus = draft`、`aiUsable = false`、`humanDecision = null`，来源检查全部通过且无 injection risk。
-- 完成边界：本卡仅提交 immutable staging candidate 与来源目录/测试，不创建 `data/vietnam/` canonical、批准回执、collection manifest、Prisma 记录、KnowledgeChunk、AI 索引或 C 端发布；因此越南尚未发布，也尚未形成可对外声明的 `BASIC` 覆盖。
-- 人工确认：国家启动已由项目所有者批准；候选事实、双语文本、发布及任何后续覆盖升级仍待人工分别确认。
+- 完成边界：本采集卡完成时仅提交 immutable staging candidate 与来源目录/测试，未创建 canonical 或发布；后续独立的 `DATA-BASIC-VN-PUBLISH` 已批准并完成，因此当前 VN 已发布 BASIC。本卡本身仍不产生 Prisma 记录、KnowledgeChunk 或 AI 索引。
+- 人工确认：国家启动与后续 r3 发布均已有各自批准；任何 Standard、Complete 或 AI 启用仍待新的人工决定。
 
-#### DATA-BASIC-SA-COLLECT Saudi Arabia r2 qualifier correction（已完成，待人工审核）
+#### DATA-BASIC-SA-COLLECT Saudi Arabia r2 qualifier correction（已完成；r2 后续已发布）
 - 目标：保留不可变的 `saudi-arabia` / `SA` / `data-basic-sa-20260717-r1` 审计历史；r1 永不得批准或发布，且不得作为任何批准决定或发布任务的输入；并以新鲜七源 capture 生成唯一可供审核的 `data-basic-sa-20260717-r2` Basic `draft` 候选，恢复官方对约 `92.5 GW` 和约 `340,430 GWh` 的限定词。
 - 验收：r1 的四个 artifact 继续锁定为 `source-register.json` `fcc3de285225f2e26a04f82b72e53caf69df605971fd2eb10b0eacbe2e884711`、`extracted-facts.json` `7a423661d5b7bd2d43c7f81b39131eeea47fb82cf62624343d976128eb4d36d1`、`market-overview.draft.json` `567821ee55b5fd04cf4db198ee8a25629ec459a8f4542ae57185d478b800c92a`、`review-report.json` `a375cc5b759f3e1b619a3c1826adb0eaad48c5779a44a816a387fd021e301ee9`；由于上述两个官方限定词缺失，r1 在批准前已 superseded，是不可变审计历史，永不得批准或发布，且不得作为任何批准决定或发布任务的输入。r2 绑定 catalog `2026-07-17.1` 与 SHA-256 `3c174b76efe8c637436c52f473911d6409d79ac2e057eb251bb860dba4c417e7`，并恰好包含 `source-register.json` `b242dc902b7002dc3a2cec1bd87703760d776ada2b5c301329543b1f5945353d`、`extracted-facts.json` `bd0df36ba29453e0d337ad8401310c443ff26686cc8efc06994902b017814072`、`market-overview.draft.json` `2a297d007279afb80baeb316581aca874738ce614443a2a7944ad576e32c6285`、`review-report.json` `c8677f1bac448aa87ec79e35f3ffb9fc5b15c615f2b47ab3072ed588e09e6f9d`。r2 的 source register 绑定七条新鲜 capture identity，v2 validator 为 valid 且 `ready-for-human-review`，有 7 个通过的 source checks、32 条 facts、零 blockers/errors/conflicts/missing/injection risks。
-- 完成边界：r2 保持 `reviewStatus = draft`、`aiUsable = false`、`humanDecision = null`；不创建 `data/saudi-arabia/` canonical、批准回执、collection manifest、Prisma 记录、KnowledgeChunk、AI 索引或 C 端发布。因此 Saudi Arabia 尚未发布，尚未形成可对外声明的 `BASIC` 覆盖，且不得用于 AI。
-- 人工确认：只有针对 r2 的独立人工发布决定获批后，才可创建和执行单独的 `DATA-BASIC-SA-PUBLISH` 任务。r1 是不可变审计历史，永不得批准或发布，且不得作为该决定或任何发布任务的输入；r2 也不授权 Standard、Complete 或 AI 启用。
+- 完成边界：本修正卡完成时 r2 仍为 draft，未创建 canonical 或发布；后续独立的 `DATA-BASIC-SA-PUBLISH` 已批准并完成，因此当前 SA 已发布 BASIC。r1 仍是永不得批准、发布或作为输入的不可变历史，SA 仍不得用于 AI。
+- 人工确认：r2 后续发布已有独立批准；任何 Standard、Complete 或 AI 启用仍须新的人工决定。
 
 #### DATA-BASIC-VN-PUBLISH Vietnam Basic atomic publication（已完成）
 - 目标：针对项目所有者明确批准的 `vietnam` / `VN` / `data-basic-vn-20260715-r3` identity 创建独立批准回执、确定性 canonical Basic mapping 与 manifest v2，并通过通用只读发布闸门原子提交。
@@ -224,6 +254,16 @@ graph LR
 - 验收：一国一任务卡、一分支、一审核周期，且仅合并一次到 `main`；合并后的 `main` 验证通过后，仅推送一次到 `origin/main`。数据先为 `draft`，仅在人工审核后发布；首次真实交付恰好为 `BASIC`，`market-overview` 外九个模块均为 `BUILDING`；Basic 数据保持 `aiUsable = false` 且不产生知识片段；通过仓库校验和代表性 Web 检查，确认基础画像正常渲染、`BUILDING` 模块显示占位。
 - 人工确认：是（国家启动、发布、最终 30–50 国清单、国家顺序和覆盖升级均由人工决定）。
 
+#### `DATA-STANDARD-ID` Indonesia Standard 深覆盖试点 ⚠️（已批准启动）
+- 目标：只对已发布 BASIC 的 `ID` 补齐 policy、risk、opportunities 等 Standard 必需数据；与 M1 并行，不得夹带平台代码或其他国家数据。
+- 验收：新增内容均为双语、可追溯且元字段完整，经独立审核发布；国家通过 STANDARD 机器判定；数据导入、Web/API、覆盖边界与回归测试通过；不得仅因达到 STANDARD 就自动生成 KnowledgeChunk 或开启 AI。
+- 人工确认：试点国家和候选建设启动已由项目所有者批准。来源、事实、双语文本、STANDARD 发布、`aiUsable`、真实 ID KnowledgeChunk 创建与可检索资格、COMPLETE 升级均须分别人工批准。
+
+#### `DATA-COMPLETE-<ISO2>` 单国 Complete 闭环试点 ⚠️
+- 目标：仅在同一国家的 STANDARD 试点验收后，以新任务补齐固定十模块，验证项目、伙伴、中资企业、策略、AI 和报告闭环。
+- 验收：国家通过 COMPLETE 机器判定；十模块均达到可展示状态；AI 与报告仍分别通过其生产启用和权限关口；结论可复用到其他 BASIC 国家，但不自动触发批量升级。
+- 人工确认：是（COMPLETE 启动、数据发布、AI/权限/计费边界均须按各自任务批准）。
+
 ### P2 — Web 展示
 
 #### P2-1 i18n 框架接入
@@ -251,7 +291,28 @@ graph LR
 - 验收：数据不足时显示建设中/证据不足；信号可追溯来源与更新时间；不新增持久化字段；单测覆盖派生规则。
 - 人工确认：否。
 
+### P2.5 — 生产平台底座 ⚠️
+
+> M0 六国 BASIC 已完成，P2.5 现在启动，不等待任何国家达到 COMPLETE。以下三张卡严格串行交付；单国 STANDARD 数据任务可在人工批准后与它们并行。
+
+#### PLATFORM-DB-1 六国生产数据读写底座
+- 目标：在现有统一数据模型内，将六国 approved BASIC canonical 数据接入 PostgreSQL/Prisma 生产读取链路，建立可重复执行的导入与回滚边界；canonical 文件仍是本阶段不可变的审计输入。
+- 验收：六国可幂等导入且重复执行不产生重复记录；数据库读取结果与 canonical JSON 在国家、覆盖、模块状态、元字段和双语字段上等价；单国失败不留下半成品；无审计包或 staging 数据进入业务表。
+- 人工确认：否（仅复用已批准 schema；任何模型变更、破坏性迁移或生产数据库操作须另行 ⚠️）。
+
+#### PLATFORM-API-1 NestJS 国家只读 API
+- 目标：按现有 api-contract 建立 NestJS /api/v1 服务边界，将国家列表、详情和模块 GET 接口从文件读取迁移到数据库读取；Next.js 只保留展示和 BFF 职责。
+- 验收：现有六国 API contract、中英文降级、BUILDING 占位和错误语义不变；契约测试对比迁移前后响应；服务端输入校验和 Prisma 参数化查询通过安全测试；可通过开关回退到已验证读取路径。
+- 人工确认：否（NestJS 已是固定技术栈；若需新增依赖、改变接口契约或模型，须单独 ⚠️）。
+
+#### PLATFORM-OPS-1 并发与运行治理基线
+- 目标：在数据库/API 链路上建立连接池、缓存边界、健康检查、结构化日志、指标、追踪和可重复负载测试；容量规划以峰值 RPS、读写比例、缓存命中率和 AI 请求占比为输入，不只按日访问量估算。
+- 验收：为日请求量 10 万、100 万、1000 万三档记录假设、峰值模型、p95/p99、错误率、数据库连接与资源水位；验证缓存失效和降级路径；产出单实例容量基线及横向扩容触发阈值，且不在测试中调用真实 AI 或外部来源。
+- 人工确认：否（只建立基线；Redis、队列、APM 等新依赖以及生产部署须单独 ⚠️）。
+
 ### P3 — AI 顾问 ⚠️
+
+> P3-1/P3-2 可在 P2.5 核心完成后用严格 fixtures 开发和验收，不等待 COMPLETE；这不等于生产启用。真实 AI Beta 必须另过 P3-3 闸门。
 
 #### P3-1 RAG 离线管道
 - 目标：按 [ai-advisor.md §2](./ai-advisor.md) 实现 published→过滤→分块→双语向量化→写 `KnowledgeChunk`；数据失效同步。
@@ -263,7 +324,14 @@ graph LR
 - 验收：回答含 sources/updatedAt/riskNote；空数据答 `ai.noData`；语言一致；注入防护、限流生效。
 - 人工确认：**是（系统 Prompt 正式文本、检索边界默认值待人工定稿，AGENTS.md §9/§11）** —— 先占位跑通，定稿后单独 PR 替换。
 
+#### P3-3 AI 受控 Beta 启用 ⚠️
+- 目标：只对已达 STANDARD 的试点国家启用小范围真实问答，验证数据失效、引用、语言、风险提示、注入防护和限流闭环。
+- 验收：ai-advisor 至少 20 个可检索 KnowledgeChunk，覆盖至少 3 个来源模块；每个片段同时满足 published、aiUsable=true、credibility!=UNVERIFIED；正式 Prompt 与 topK/minSimilarity/跨国跨模块默认值已有人工批准；关闭 aiUsable 或取消发布后立即不可检索；具备停止与回滚开关。
+- 人工确认：是（生产 AI、正式 Prompt 和检索默认值均属人工关口）。
+
 ### P4 — 权限 / 会员 / 留资 ⚠️
+
+> P4-1 与 P4-3 可在 P2.5 核心完成后按独立任务启动；报告下载和会员试用必须有真实受控资源，并继续等待权益与计费人工确认。
 
 #### P4-1 鉴权与门控
 - 目标：按 [auth-membership.md](./auth-membership.md) 实现 JWT 鉴权守卫 + 等级校验 + 门控矩阵。
@@ -280,7 +348,14 @@ graph LR
 - 验收：字段校验；加密写入；响应/日志无敏感明文。
 - 人工确认：否。
 
+#### P4-4 会员与报告受控 Beta ⚠️
+- 目标：用至少一个真实报告或数据包验证注册、鉴权、服务端权益判断、短时效下载和审计日志的完整闭环；不在本卡定义价格。
+- 验收：未登录返回 401、等级不足返回 403、授权用户仅取得绑定本人且短时有效的下载；真实文件地址不可枚举；敏感信息不进入响应或日志；具备撤销资源和停止试用的回滚路径。
+- 人工确认：是（真实权益、会员等级、价格和计费边界须在启动前批准）。
+
 ### P5 — Admin 后台
+
+> P5-1/P5-2 在 P2.5 核心完成后先行，不等待 AI 或会员全部完成；P5-3 依赖 P3，P5-4 依赖 P4 权益关口，P5-5 依赖 P4-3 留资链路。
 
 #### P5-1 数据管理工作台
 - 目标：Refine 后台管理国家、10 模块数据、标签与覆盖状态；支持 `textMode=raw` 双语编辑。
