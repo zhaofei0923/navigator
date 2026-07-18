@@ -10,7 +10,7 @@
 1. 所有密钥、连接串、第三方凭证一律通过环境变量注入，**禁止硬编码**。
 2. `.env` **不入库**（`.gitignore` 必含）；仓库提供 `.env.example` 作为字段模板（不含真实值）。
 3. 前端只允许暴露带公开前缀的变量（`NEXT_PUBLIC_*` / `TARO_APP_*`），**严禁**把服务端密钥标为公开前缀。
-4. 服务启动时校验必需变量（缺失即 fail-fast），校验逻辑集中在配置模块（NestJS `ConfigModule` + schema 校验）。
+4. 服务启动时校验必需变量（缺失即 fail-fast），校验逻辑使用不绑定第三方包的集中 schema validator，并由各服务使用 scoped parser。
 5. 日志中禁止打印任何密钥/连接串/用户联系方式（见 [testing.md](./testing.md) 与 data-schema §6）。
 
 ---
@@ -44,7 +44,16 @@
 | `SHADOW_DATABASE_URL` | — | Prisma 迁移影子库（本地/CI） |
 | `PGVECTOR_DIMENSION` | ✓ | 向量维度，须与 embedding 模型一致（见 [ai-advisor.md](./ai-advisor.md)） |
 
-### 2.3 认证 / 会员（配合 [auth-membership.md](./auth-membership.md)）
+### 2.3 API 国家读取（M1）
+| 变量 | 必需 | 说明 |
+|------|------|------|
+| `API_PORT` | ✓ | API 监听端口；范围为 `1024..65535`，本地模板为 `3100` |
+| `COUNTRY_READ_SOURCE` | — | `database`（默认）或显式 `canonical`；生产默认仅使用 `database` |
+| `CANONICAL_REPOSITORY_ROOT` | 仅 `canonical` | 已规范化的绝对仓库根路径；`database` source 会忽略该变量 |
+
+`database` source 仅要求 `DATABASE_URL`；`canonical` source 不要求 `DATABASE_URL`。API 的 scoped parser 只读取以上四项（含 `DATABASE_URL`），不会读取认证、AI 或留资变量。M1 固定监听 `127.0.0.1`，外部流量必须先进入同机 TLS reverse proxy 或 Next BFF。
+
+### 2.4 认证 / 会员（配合 [auth-membership.md](./auth-membership.md)）
 | 变量 | 必需 | 说明 |
 |------|------|------|
 | `AUTH_JWT_SECRET` | ✓ | JWT 签名密钥（服务端专用） |
@@ -52,7 +61,7 @@
 | `AUTH_SESSION_COOKIE_NAME` | — | 会话/语言偏好 Cookie 名 |
 | `LEAD_ENCRYPTION_KEY` | ✓ | 留资联系方式加密密钥（data-schema §6） |
 
-### 2.4 AI 顾问（RAG）
+### 2.5 AI 顾问（RAG）
 | 变量 | 必需 | 说明 |
 |------|------|------|
 | `AI_PROVIDER` | ✓ | LLM 提供方标识 |
@@ -61,7 +70,7 @@
 | `AI_EMBEDDING_MODEL` | ✓ | 向量化模型名（须与 `PGVECTOR_DIMENSION` 匹配） |
 | `AI_RATE_LIMIT_PER_MIN` | — | 单用户每分钟提问上限（默认见 ai-advisor.md） |
 
-### 2.5 前端公开变量
+### 2.6 前端公开变量
 | 变量 | 端 | 说明 |
 |------|----|------|
 | `NEXT_PUBLIC_API_BASE_URL` | Web | 前端调用的 API 基址 |
@@ -75,7 +84,7 @@
 
 ## 3. 启动校验
 
-- 后端在启动时用 schema（如 `zod` / class-validator）校验必需变量，缺失或格式错误 **fail-fast** 并输出**不含值**的错误（只报字段名）。
+- 后端在启动时用集中 schema validator 与服务 scoped parser 校验必需变量，缺失或格式错误 **fail-fast** 并输出**不含值**的错误（只报字段名）。
 - 校验清单必须与本文件 §2 保持一致；新增必需变量须同时更新校验 schema 与 `.env.example`。
 
 ---

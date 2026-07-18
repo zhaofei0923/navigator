@@ -72,6 +72,14 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      - name: Build API distribution
+        run: pnpm --filter @navigator/api build
+
+      - name: Smoke test API distribution
+        env:
+          CANONICAL_REPOSITORY_ROOT: ${{ github.workspace }}
+        run: pnpm --filter @navigator/api smoke:dist
+
       - name: Unit tests
         run: pnpm test
 
