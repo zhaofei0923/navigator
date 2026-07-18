@@ -121,6 +121,15 @@
       "emptyTitle": "No published data",
       "emptyDescription": "The module is active, but no published records are available for this view.",
       "fallbackNotice": "{count, plural, one {# field is not translated} other {# fields are not translated}}",
+      "riskCategory": {
+        "political": "Political",
+        "economic": "Economic",
+        "legal": "Legal",
+        "exchange-rate": "Exchange rate",
+        "operational": "Operational",
+        "social": "Social",
+        "environmental": "Environmental"
+      },
       "source": {
         "internalSample": "Internal sample data",
         "publishedKnowledge": "Published module knowledge",

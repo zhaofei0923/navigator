@@ -35,6 +35,24 @@ export const MODULE_COVERAGE_STATUSES = [
 ] as const;
 export type ModuleCoverageStatus = (typeof MODULE_COVERAGE_STATUSES)[number];
 
+export const RISK_CATEGORIES = [
+  "political",
+  "economic",
+  "legal",
+  "exchange-rate",
+  "operational",
+  "social",
+  "environmental",
+] as const;
+export type RiskCategory = (typeof RISK_CATEGORIES)[number];
+
+export function isRiskCategory(value: unknown): value is RiskCategory {
+  return (
+    typeof value === "string" &&
+    RISK_CATEGORIES.some((category) => category === value)
+  );
+}
+
 export const RISK_LEVELS = ["LOW", "MEDIUM", "HIGH"] as const;
 export type RiskLevel = (typeof RISK_LEVELS)[number];
 

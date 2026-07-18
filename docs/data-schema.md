@@ -119,6 +119,13 @@ interface LocalizedText {
 
 服务端检索管道必须强制该过滤，禁止在应用层放宽。详见 AGENTS.md 第 9 节与 [api-contract.md](./api-contract.md) 的 AI 接口约定。
 
+### 3.2 稳定记录身份（STANDARD 候选数据）
+
+- `policy`、`risk`、`opportunities` 的既有 `id` 字段是记录身份。新接收的 STANDARD 候选记录在进入候选管道时，使用 Node.js `crypto.randomUUID()` **仅生成一次**规范小写 UUID v4，并显式持久化。
+- 修订或后续候选批次必须显式沿用上一版记录的 `id`。`id` 不得由标题、数组顺序、内容哈希、来源 URL、国家或模块推导。
+- `id` 在适用记录集合内唯一；一个身份不得跨国家或模块复用、移动。
+- 本约定不要求数据库迁移：Prisma 继续使用现有 `String` 主键定义，STANDARD 候选写入时显式提供 UUID v4。既有数据身份不在本次约定中重写。
+
 ---
 
 ## 4. 顶层实体：Country（国家）
@@ -172,6 +179,7 @@ interface LocalizedText {
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
+| `id` | `string`（UUID v4） | STANDARD 候选记录的稳定不透明身份（见 §3.2） |
 | `title` | `LocalizedText` | 政策标题 |
 | `summary` | `LocalizedText` | 摘要 |
 | `body` | `LocalizedText` | 全文（Markdown） |
@@ -184,8 +192,9 @@ interface LocalizedText {
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
+| `id` | `string`（UUID v4） | STANDARD 候选记录的稳定不透明身份（见 §3.2） |
 | `title` | `LocalizedText` | 风险名称 |
-| `category` | `string` | 风险类别枚举（政治/经济/法律/汇率/运营/社会/环境） |
+| `category` | `RiskCategory` | 风险类别机器值（固定枚举见 §7.5，展示标签走 i18n） |
 | `level` | `'LOW' \| 'MEDIUM' \| 'HIGH'` | 风险等级 |
 | `description` | `LocalizedText` | 风险描述 |
 | `mitigation` | `LocalizedText` | 缓解建议 |
@@ -195,6 +204,7 @@ interface LocalizedText {
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
+| `id` | `string`（UUID v4） | STANDARD 候选记录的稳定不透明身份（见 §3.2） |
 | `title` | `LocalizedText` | 机会名称 |
 | `description` | `LocalizedText` | 描述 |
 | `marketSize` | `LocalizedText \| null` | 市场规模描述 |
@@ -338,6 +348,20 @@ tax           # 税收
 import-export # 进出口
 ```
 
+### 7.5 风险类别（riskCategory）
+
+以下值是非展示机器值，顺序与 `packages/shared-types` 保持一致。不得接受 `other`、大小写变体或任何未登记值；用户界面标签必须通过 i18n key 展示。
+
+```
+political    # 政治
+economic     # 经济
+legal        # 法律
+exchange-rate # 汇率
+operational  # 运营
+social       # 社会
+environmental # 环境
+```
+
 ---
 
 ## 8. 一致性检查清单（改模型时自检）
@@ -348,6 +372,7 @@ import-export # 进出口
 - [ ] 所有展示文本字段为 `LocalizedText`，非展示字段为单一值
 - [ ] 核心业务数据元字段齐全（§3）
 - [ ] 国家主键使用 ISO 3166-1 alpha-2
+- [ ] STANDARD 政策/风险/机会候选记录使用 §3.2 的稳定 UUID v4 身份
 - [ ] 覆盖等级与模块覆盖状态逻辑与 [coverage-levels.md](./coverage-levels.md) 一致
 - [ ] AI 检索过滤符合 §3.1 硬约束
 - [ ] 变更已在 PR 标注为「需人工确认」

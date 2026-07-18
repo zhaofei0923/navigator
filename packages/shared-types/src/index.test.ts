@@ -11,11 +11,23 @@ import {
   PROJECT_STATUSES,
   REGIONS,
   REVIEW_STATUSES,
+  RISK_CATEGORIES,
   RISK_LEVELS,
   TECH_TAGS,
+  isRiskCategory,
   pickLocale,
   type LocalizedText,
 } from "./index.js";
+
+const APPROVED_RISK_CATEGORIES = [
+  "political",
+  "economic",
+  "legal",
+  "exchange-rate",
+  "operational",
+  "social",
+  "environmental",
+] as const;
 
 describe("@navigator/shared-types", () => {
   test("returns zh text for zh-CN without fallback", () => {
@@ -150,5 +162,24 @@ describe("@navigator/shared-types", () => {
       "tax",
       "import-export",
     ]);
+
+    expect(RISK_CATEGORIES).toEqual(APPROVED_RISK_CATEGORIES);
+  });
+
+  test("accepts only the approved risk category tokens", () => {
+    for (const category of APPROVED_RISK_CATEGORIES) {
+      expect(isRiskCategory(category), category).toBe(true);
+    }
+    for (const rejected of [
+      "other",
+      "Political",
+      "exchange_rate",
+      "environment",
+      "",
+      null,
+      1,
+    ]) {
+      expect(isRiskCategory(rejected), String(rejected)).toBe(false);
+    }
   });
 });
