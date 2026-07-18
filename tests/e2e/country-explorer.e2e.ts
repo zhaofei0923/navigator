@@ -50,7 +50,9 @@ test("country explorer filters coverage and keeps coverage badges visible", asyn
   await expect(vietnamCard).toBeVisible();
   const saudiCard = page.getByRole("article", { name: /Saudi Arabia/ });
   await expect(saudiCard).toBeVisible();
-  await expect(page.getByText("3 countries")).toBeVisible();
+  const uaeCard = page.getByRole("article", { name: /United Arab Emirates/ });
+  await expect(uaeCard).toBeVisible();
+  await expect(page.getByText("4 countries")).toBeVisible();
 
   await page.getByRole("link", { name: /Indonesia/ }).click();
   await expect(page).toHaveURL(/\/en\/countries\/ID/);
@@ -113,6 +115,37 @@ test("Saudi Basic detail renders in English and Chinese without enabling AI", as
       .getByRole("heading", { exact: true, name: "沙特阿拉伯" })
       .locator("..")
       .getByText(/约为92.5吉瓦/),
+  ).toBeVisible();
+  await expect(page.getByText("数据建设中", { exact: true })).toHaveCount(9);
+});
+
+test("UAE Basic detail renders in English and Chinese without enabling AI", async ({
+  page,
+}) => {
+  await page.goto("/en/countries/AE");
+
+  await expect(
+    page.getByRole("heading", { exact: true, name: "United Arab Emirates" }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("heading", { exact: true, name: "United Arab Emirates" })
+      .locator("..")
+      .getByText(/generates 40 TWh per year/),
+  ).toBeVisible();
+  await expect(page.getByText("Data Building", { exact: true })).toHaveCount(9);
+
+  await page.getByRole("link", { name: "zh-CN" }).click();
+
+  await expect(page).toHaveURL(/\/zh-CN\/countries\/AE/);
+  await expect(
+    page.getByRole("heading", { exact: true, name: "阿拉伯联合酋长国" }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("heading", { exact: true, name: "阿拉伯联合酋长国" })
+      .locator("..")
+      .getByText(/每年发电40太瓦时/),
   ).toBeVisible();
   await expect(page.getByText("数据建设中", { exact: true })).toHaveCount(9);
 });

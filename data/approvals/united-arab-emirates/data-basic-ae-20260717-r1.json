@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "basic-country-publication-approval/v1",
+  "countryDirectory": "united-arab-emirates",
+  "countryCode": "AE",
+  "runId": "data-basic-ae-20260717-r1",
+  "submission": {
+    "fromReviewStatus": "draft",
+    "toReviewStatus": "pending",
+    "submittedAt": "2026-07-18T02:51:43.000Z"
+  },
+  "decision": "approved",
+  "reviewerId": "github:zhaofei0923",
+  "decidedAt": "2026-07-18T02:51:43.000Z",
+  "authorizedPublication": {
+    "coverageLevel": "BASIC",
+    "fromReviewStatus": "pending",
+    "toReviewStatus": "published",
+    "aiUsable": false
+  },
+  "artifactSha256": {
+    "source-register.json": "2430b3c80beb1d33de61aa0af82174d4c8a5d66ead95c38b4e6390e3f5cfd842",
+    "extracted-facts.json": "f26bea5b799e2b5e3014b90783438d28f292424e4a927504992cb1f3384639e7",
+    "market-overview.draft.json": "aa8ca2e01f0240abc7923cae991bf981a9d8982ff155c8ff9684b31db3255bfe",
+    "review-report.json": "35da3331817a19d59b5b7c0ca01036117ff10095cff5be863171367e3f504b5c"
+  }
+}

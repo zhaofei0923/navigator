@@ -16,6 +16,8 @@ const REPO_ROOT = fileURLToPath(new URL("../../../", import.meta.url)).replace(
 describe("approved Basic country publication import", () => {
   test.each([
     ["indonesia", "ID"],
+    ["saudi-arabia", "SA"],
+    ["united-arab-emirates", "AE"],
     ["vietnam", "VN"],
   ] as const)("builds an isolated country-generic plan from %s", (directory, code) => {
     const plan = buildApprovedBasicCountryPublicationImportPlan(REPO_ROOT, directory);

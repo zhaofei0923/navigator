@@ -207,6 +207,7 @@ describe("country explorer service", () => {
       "ID",
       "VN",
       "SA",
+      "AE",
     ]);
     expect(response.data[0]).toMatchObject({
       coverageLevel: "BASIC",
@@ -221,6 +222,11 @@ describe("country explorer service", () => {
     expect(response.data[2]).toMatchObject({
       coverageLevel: "BASIC",
       name: "Saudi Arabia",
+      region: "middle-east",
+    });
+    expect(response.data[3]).toMatchObject({
+      coverageLevel: "BASIC",
+      name: "United Arab Emirates",
       region: "middle-east",
     });
   });
@@ -242,7 +248,12 @@ describe("country explorer service", () => {
   test("filters countries by coverage level", () => {
     const result = filterCountryCatalog({ coverageLevel: "BASIC" });
 
-    expect(result.map((country) => country.code)).toEqual(["ID", "VN", "SA"]);
+    expect(result.map((country) => country.code)).toEqual([
+      "ID",
+      "VN",
+      "SA",
+      "AE",
+    ]);
     expect(filterCountryCatalog({ coverageLevel: "COMPLETE" })).toEqual([]);
   });
 
@@ -269,13 +280,14 @@ describe("country explorer service", () => {
         page: 1,
         pageSize: 20,
         textMode: "localized",
-        total: 3,
+        total: 4,
       },
     });
     expect(response.data.map((country) => country.name)).toEqual([
       "Indonesia",
       "Viet Nam",
       "Saudi Arabia",
+      "United Arab Emirates",
     ]);
     expect(response.data[0]).not.toHaveProperty("industryTags");
     expect(response.data[0]).not.toHaveProperty("techTags");
@@ -494,6 +506,31 @@ describe("country explorer service", () => {
       coverageLevel: "BASIC",
       name: "沙特阿拉伯",
       summary: expect.stringContaining("约为92.5吉瓦"),
+    });
+    expect(aiAdvisor).toMatchObject({
+      data: { moduleKey: "ai-advisor", status: "BUILDING", items: [] },
+      meta: { total: 0 },
+    });
+  });
+
+  test("serves published UAE data in both locales while AI remains BUILDING", () => {
+    const english = buildCountryDetailResponse("AE", { locale: "en" });
+    const chinese = buildCountryDetailResponse("AE", { locale: "zh-CN" });
+    const aiAdvisor = buildCountryModuleResponse("AE", "ai-advisor", {
+      locale: "en",
+    });
+
+    expect(english?.data).toMatchObject({
+      code: "AE",
+      coverageLevel: "BASIC",
+      name: "United Arab Emirates",
+      summary: expect.stringContaining("generates 40 TWh per year"),
+    });
+    expect(chinese?.data).toMatchObject({
+      code: "AE",
+      coverageLevel: "BASIC",
+      name: "阿拉伯联合酋长国",
+      summary: expect.stringContaining("每年发电40太瓦时"),
     });
     expect(aiAdvisor).toMatchObject({
       data: { moduleKey: "ai-advisor", status: "BUILDING", items: [] },
