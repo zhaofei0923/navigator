@@ -3,19 +3,21 @@ import {
   formatCountriesResponse,
   formatCountryDetailResponse,
   formatCountryModuleResponse,
+  type CountriesResponse,
+  type CountryDetailFilters,
+  type CountryDetailResponse,
+  type CountryFilters,
+  type CountryModuleFilters,
+  type CountryModuleResponse,
+  type TextMode,
 } from "@navigator/shared-types/country-runtime";
-import type {
-  CountryDetailFilters,
-  CountryFilters,
-  CountryModuleFilters,
-  TextMode,
-} from "@navigator/shared-types/country-api";
-import type { ModuleKey } from "@navigator/shared-types/schema";
 
 import {
   COUNTRY_READ_PROVIDER,
   type CountryReadProvider,
 } from "./country-read-provider.js";
+
+type CountryModuleKey = Parameters<typeof formatCountryModuleResponse>[1];
 
 @Injectable()
 export class CountriesService {
@@ -24,7 +26,10 @@ export class CountriesService {
     private readonly repository: CountryReadProvider,
   ) {}
 
-  async list(filters: CountryFilters, textMode: TextMode) {
+  async list(
+    filters: CountryFilters,
+    textMode: TextMode,
+  ): Promise<CountriesResponse> {
     return formatCountriesResponse(
       await this.repository.list(),
       filters,
@@ -36,7 +41,7 @@ export class CountriesService {
     code: string,
     filters: CountryDetailFilters,
     textMode: TextMode,
-  ) {
+  ): Promise<CountryDetailResponse | null> {
     return formatCountryDetailResponse(
       await this.repository.findByCode(code),
       filters,
@@ -46,10 +51,10 @@ export class CountriesService {
 
   async module(
     code: string,
-    moduleKey: ModuleKey,
+    moduleKey: CountryModuleKey,
     filters: CountryModuleFilters,
     textMode: TextMode,
-  ) {
+  ): Promise<CountryModuleResponse | null> {
     return formatCountryModuleResponse(
       await this.repository.findByCode(code),
       moduleKey,

@@ -12,6 +12,9 @@ import {
   parseApiCountryQuery,
   parseCountryCodeParam,
   parseModuleKeyParam,
+  type CountriesResponse,
+  type CountryDetailResponse,
+  type CountryModuleResponse,
 } from "@navigator/shared-types/country-runtime";
 
 import { CountriesService } from "./countries.service.js";
@@ -31,7 +34,7 @@ export class CountriesController {
   async list(
     @Req() request: RequestWithUrl,
     @Headers("accept-language") acceptLanguage?: string,
-  ) {
+  ): Promise<CountriesResponse> {
     const query = parseApiCountryQuery({
       acceptLanguage,
       searchParams: searchParamsFrom(request.url),
@@ -47,7 +50,7 @@ export class CountriesController {
     @Param("code") code: string,
     @Req() request: RequestWithUrl,
     @Headers("accept-language") acceptLanguage?: string,
-  ) {
+  ): Promise<CountryDetailResponse> {
     const query = parseApiCountryQuery({
       acceptLanguage,
       searchParams: searchParamsFrom(request.url),
@@ -72,7 +75,7 @@ export class CountriesController {
     @Param("moduleKey") moduleKey: string,
     @Req() request: RequestWithUrl,
     @Headers("accept-language") acceptLanguage?: string,
-  ) {
+  ): Promise<CountryModuleResponse> {
     const query = parseApiCountryQuery({
       acceptLanguage,
       searchParams: searchParamsFrom(request.url),

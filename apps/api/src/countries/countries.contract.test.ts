@@ -1,4 +1,5 @@
-import { dirname, resolve } from "node:path";
+import { readdir, readFile } from "node:fs/promises";
+import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { type INestApplication } from "@nestjs/common";
@@ -65,6 +66,25 @@ afterAll(async () => {
 });
 
 describe("Nest country read HTTP contract", () => {
+  test("keeps production API shared-types imports on the runtime-safe subpath", async () => {
+    const sourceRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+    const violations: string[] = [];
+
+    for (const sourcePath of await productionTypeScriptFiles(sourceRoot)) {
+      const source = await readFile(sourcePath, "utf8");
+      for (const match of source.matchAll(
+        /from\s+["'](@navigator\/shared-types\/[^"']+)["']/g,
+      )) {
+        const subpath = match[1];
+        if (subpath !== "@navigator/shared-types/country-runtime") {
+          violations.push(`${relative(sourceRoot, sourcePath)}: ${subpath}`);
+        }
+      }
+    }
+
+    expect(violations).toEqual([]);
+  });
+
   test.each(COUNTRY_ROUTE_GOLDEN_FIXTURES)(
     "$id preserves the pre-migration HTTP contract",
     async (fixture) => {
@@ -125,3 +145,16 @@ describe("Nest country read HTTP contract", () => {
     expect(serialized).not.toContain("db.internal");
   });
 });
+
+async function productionTypeScriptFiles(directory: string): Promise<string[]> {
+  const files: string[] = [];
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const entryPath = join(directory, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...await productionTypeScriptFiles(entryPath));
+    } else if (entry.name.endsWith(".ts") && !entry.name.endsWith(".test.ts")) {
+      files.push(entryPath);
+    }
+  }
+  return files;
+}

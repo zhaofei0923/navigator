@@ -7,44 +7,54 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const PORT = 31876;
+const COUNTRIES_REQUEST_TIMEOUT_MS = 1_000;
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(scriptDirectory, "../../..");
-const temporaryDirectory = await mkdtemp(join(tmpdir(), "navigator-api-smoke-"));
-let child;
-let exit;
 
-try {
-  await assertPortUnavailable(PORT);
-  child = spawn(process.execPath, [resolve(scriptDirectory, "../dist/main.js")], {
-    cwd: temporaryDirectory,
-    env: {
-      ...process.env,
-      API_PORT: String(PORT),
-      COUNTRY_READ_SOURCE: "canonical",
-      CANONICAL_REPOSITORY_ROOT: repositoryRoot,
-    },
-    stdio: "ignore",
-  });
+export async function runRuntimeSmoke() {
+  const temporaryDirectory = await mkdtemp(
+    join(tmpdir(), "navigator-api-smoke-"),
+  );
+  let child;
+  let exit;
 
-  exit = waitForExit(child);
-  await waitForCountriesResponse(PORT, child, exit);
-  assertChildRunning(child);
-  if (!child.kill("SIGTERM")) {
-    throw new Error("API_RUNTIME_SMOKE_SIGNAL_FAILED");
-  }
+  try {
+    await assertPortUnavailable(PORT);
+    child = spawn(process.execPath, [resolve(scriptDirectory, "../dist/main.js")], {
+      cwd: temporaryDirectory,
+      env: {
+        ...process.env,
+        API_PORT: String(PORT),
+        COUNTRY_READ_SOURCE: "canonical",
+        CANONICAL_REPOSITORY_ROOT: repositoryRoot,
+      },
+      stdio: "ignore",
+    });
 
-  const result = await exit;
-  if (result.code !== null || result.signal !== "SIGTERM") {
-    throw new Error("API_RUNTIME_SMOKE_EXIT_FAILED");
+    exit = waitForExit(child);
+    await waitForCountriesResponse(PORT, child, exit);
+    assertChildRunning(child);
+    if (!child.kill("SIGTERM")) {
+      throw new Error("API_RUNTIME_SMOKE_SIGNAL_FAILED");
+    }
+
+    const result = await exit;
+    if (result.code !== null || result.signal !== "SIGTERM") {
+      throw new Error("API_RUNTIME_SMOKE_EXIT_FAILED");
+    }
+  } finally {
+    if (child !== undefined && isChildRunning(child)) {
+      child.kill("SIGTERM");
+    }
+    if (exit !== undefined) {
+      await exit.catch(() => undefined);
+    }
+    await rm(temporaryDirectory, { recursive: true, force: true });
   }
-} finally {
-  if (child !== undefined && isChildRunning(child)) {
-    child.kill("SIGTERM");
-  }
-  if (exit !== undefined) {
-    await exit.catch(() => undefined);
-  }
-  await rm(temporaryDirectory, { recursive: true, force: true });
+}
+
+if (isEntrypoint()) {
+  await runRuntimeSmoke();
 }
 
 async function assertPortUnavailable(port) {
@@ -111,9 +121,31 @@ async function hasValidCountriesResponse(port) {
   return true;
 }
 
-function requestCountries(port) {
+export function requestCountries(
+  port,
+  timeoutMilliseconds = COUNTRIES_REQUEST_TIMEOUT_MS,
+) {
   return new Promise((resolveResponse) => {
-    const req = request(
+    let incomingResponse;
+    let req;
+    let settled = false;
+    const settle = (result) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      clearTimeout(timeout);
+      incomingResponse?.destroy();
+      req?.destroy();
+      resolveResponse(result);
+    };
+    const timeout = setTimeout(
+      () => settle(null),
+      Math.max(1, timeoutMilliseconds),
+    );
+    timeout.unref();
+
+    req = request(
       {
         agent: false,
         headers: { accept: "application/json" },
@@ -123,19 +155,30 @@ function requestCountries(port) {
         port,
       },
       (response) => {
+        incomingResponse = response;
         const chunks = [];
         response.setEncoding("utf8");
         response.on("data", (chunk) => chunks.push(chunk));
-        response.on("end", () => resolveResponse({
+        response.once("aborted", () => settle(null));
+        response.once("error", () => settle(null));
+        response.once("end", () => settle({
           body: chunks.join(""),
           contentType: response.headers["content-type"] ?? "",
           status: response.statusCode ?? 0,
         }));
       },
     );
-    req.once("error", () => resolveResponse(null));
+    req.once("error", () => settle(null));
     req.end();
   });
+}
+
+function isEntrypoint() {
+  const entrypoint = process.argv[1];
+  return (
+    entrypoint !== undefined &&
+    fileURLToPath(import.meta.url) === resolve(entrypoint)
+  );
 }
 
 function assertChildRunning(childProcess) {

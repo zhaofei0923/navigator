@@ -1,4 +1,9 @@
-import { Controller, Get, type INestApplication } from "@nestjs/common";
+import {
+  Controller,
+  Get,
+  HttpException,
+  type INestApplication,
+} from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
@@ -10,6 +15,21 @@ class ExplodingController {
   explode(): never {
     throw new Error(
       "SELECT secret at postgresql://user:password@db.internal:5432/navigator /home/kevin/navigator/data/staging embeddingZh fileUrl",
+    );
+  }
+
+  @Get("http-exception")
+  httpException(): never {
+    throw new HttpException(
+      {
+        error: {
+          code: "DATABASE_UNAVAILABLE",
+          message:
+            "SELECT secret at postgresql://user:password@db.internal:5432/navigator /home/kevin/navigator/data/staging",
+        },
+        success: false,
+      },
+      503,
     );
   }
 }
@@ -51,6 +71,24 @@ describe("ContractExceptionFilter", () => {
     });
     expect(JSON.stringify(body)).not.toMatch(
       /SELECT|postgresql|password|db\.internal|\/home\/|staging|embedding|fileUrl/,
+    );
+  });
+
+  test("does not pass through an untrusted HttpException body", async () => {
+    const response = await fetch(`${baseUrl}/explode/http-exception`);
+    const body: unknown = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(response.headers.get("content-type")).toMatch(/^application\/json\b/i);
+    expect(body).toEqual({
+      error: {
+        code: "INTERNAL_ERROR",
+        message: "Internal server error",
+      },
+      success: false,
+    });
+    expect(JSON.stringify(body)).not.toMatch(
+      /SELECT|postgresql|password|db\.internal|\/home\/|staging/,
     );
   });
 });
