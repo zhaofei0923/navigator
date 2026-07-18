@@ -5,8 +5,8 @@ import {
 } from "@navigator/shared-types/coverage";
 
 import type {
-  StandardCountrySyntheticFixture,
-  StandardFixtureMetadata,
+  StandardFixtureCoverageRecord,
+  StandardFixtureCoverageScenario,
 } from "./standard-fixture-contracts.js";
 
 export interface StandardFixtureMarketOverviewCoverage {
@@ -26,7 +26,7 @@ export interface StandardFixtureCoverageVerdict {
 }
 
 export function deriveStandardFixtureCoverage(
-  fixture: StandardCountrySyntheticFixture,
+  fixture: StandardFixtureCoverageScenario,
   input: StandardFixtureCoverageInput,
 ): StandardFixtureCoverageVerdict {
   validateMarketOverview(input.marketOverview);
@@ -55,7 +55,7 @@ export function deriveStandardFixtureCoverage(
   });
 }
 
-function visibleCount(records: readonly StandardFixtureMetadata[]): number {
+function visibleCount(records: readonly StandardFixtureCoverageRecord[]): number {
   return records.filter(
     (record) =>
       record.reviewStatus === "published" &&

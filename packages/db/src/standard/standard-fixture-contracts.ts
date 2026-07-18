@@ -13,13 +13,22 @@ export const STANDARD_COUNTRY_SYNTHETIC_FIXTURE_SCHEMA_VERSION =
 
 export type StandardFixtureLocalizedText = Readonly<LocalizedText>;
 
-export interface StandardFixtureMetadata {
+export interface StandardFixtureCoverageRecord {
+  readonly credibility: Credibility;
+  readonly reviewStatus: ReviewStatus;
+}
+
+export interface StandardFixtureCoverageScenario {
+  readonly policy: readonly StandardFixtureCoverageRecord[];
+  readonly risk: readonly StandardFixtureCoverageRecord[];
+  readonly opportunities: readonly StandardFixtureCoverageRecord[];
+}
+
+export interface StandardFixtureMetadata extends StandardFixtureCoverageRecord {
   readonly source: string;
   readonly sourceUrl: string | null;
   readonly collectedAt: string;
   readonly updatedAt: string;
-  readonly credibility: Credibility;
-  readonly reviewStatus: ReviewStatus;
   readonly aiUsable: false;
   readonly countryCode: string;
   readonly industryTags: readonly IndustryTag[];

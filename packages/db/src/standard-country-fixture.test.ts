@@ -2,7 +2,10 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, test } from "vitest";
 
-import type { StandardCountrySyntheticFixture } from "./standard/standard-fixture-contracts.js";
+import type {
+  StandardFixtureCoverageRecord,
+  StandardFixtureCoverageScenario,
+} from "./standard/standard-fixture-contracts.js";
 import { deriveStandardFixtureCoverage } from "./standard/standard-fixture-coverage.js";
 import { parseStandardCountryFixture } from "./standard/standard-fixture-parser.js";
 
@@ -322,6 +325,19 @@ describe("synthetic STANDARD country fixture parser", () => {
       );
     },
   );
+
+  test("checks duplicate record IDs before applying exact-one cardinality", () => {
+    const parserSource = readFileSync(STANDARD_SOURCE_URLS[1], "utf8");
+    const arrayGuard = parserSource.indexOf("if (!Array.isArray(value)) invalid();");
+    const duplicateGuard = parserSource.indexOf("if (ids.has(id)) invalid();");
+    const cardinalityGuard = parserSource.indexOf(
+      "if (parsed.length !== 1) invalid();",
+    );
+
+    expect(arrayGuard).toBeGreaterThan(-1);
+    expect(duplicateGuard).toBeGreaterThan(arrayGuard);
+    expect(cardinalityGuard).toBeGreaterThan(duplicateGuard);
+  });
 });
 
 describe("synthetic STANDARD country fixture coverage", () => {
@@ -355,12 +371,11 @@ describe("synthetic STANDARD country fixture coverage", () => {
     ["UNVERIFIED", { credibility: "UNVERIFIED" }],
   ] as const)("excludes %s records from every visible count", (_label, change) => {
     const parsed = parseStandardCountryFixture(readFixture());
-    const excluded = {
-      ...parsed,
+    const excluded: StandardFixtureCoverageScenario = {
       policy: [{ ...parsed.policy[0]!, ...change }],
       risk: [{ ...parsed.risk[0]!, ...change }],
       opportunities: [{ ...parsed.opportunities[0]!, ...change }],
-    } as StandardCountrySyntheticFixture;
+    };
 
     const verdict = deriveStandardFixtureCoverage(excluded, {
       marketOverview: { status: "PARTIAL", dataCount: 1 },
@@ -391,14 +406,14 @@ describe("synthetic STANDARD country fixture coverage", () => {
 
   test("never derives COMPLETE when only the four STANDARD modules are complete", () => {
     const parsed = parseStandardCountryFixture(readFixture());
-    const allDecisionListsComplete = ([
-      "policy",
-      "risk",
-      "opportunities",
-    ] as const).reduce(
-      (fixture, moduleKey) => fixtureWithRecordCount(fixture, moduleKey, 5),
-      parsed,
-    );
+    let allDecisionListsComplete: StandardFixtureCoverageScenario = parsed;
+    for (const moduleKey of ["policy", "risk", "opportunities"] as const) {
+      allDecisionListsComplete = fixtureWithRecordCount(
+        allDecisionListsComplete,
+        moduleKey,
+        5,
+      );
+    }
 
     const verdict = deriveStandardFixtureCoverage(allDecisionListsComplete, {
       marketOverview: { status: "COMPLETE", dataCount: 1 },
@@ -437,10 +452,10 @@ describe("synthetic STANDARD country fixture coverage", () => {
   test("is permutation-independent and does not mutate coverage inputs", () => {
     const parsed = parseStandardCountryFixture(readFixture());
     const fiveRecords = fixtureWithRecordCount(parsed, "policy", 5);
-    const reversed = {
+    const reversed: StandardFixtureCoverageScenario = {
       ...fiveRecords,
       policy: [...fiveRecords.policy].reverse(),
-    } as StandardCountrySyntheticFixture;
+    };
     const fixtureBefore = structuredClone(reversed);
     const input = { marketOverview: { status: "PARTIAL" as const, dataCount: 1 } };
     const inputBefore = structuredClone(input);
@@ -454,12 +469,17 @@ describe("synthetic STANDARD country fixture coverage", () => {
 
   test("never derives AI eligibility from a coverage-only forged AI flag", () => {
     const parsed = parseStandardCountryFixture(readFixture());
-    const forged = {
-      ...parsed,
-      policy: [{ ...parsed.policy[0]!, aiUsable: true }],
-      risk: [{ ...parsed.risk[0]!, aiUsable: true }],
-      opportunities: [{ ...parsed.opportunities[0]!, aiUsable: true }],
-    } as unknown as StandardCountrySyntheticFixture;
+    const forgedPolicy = { ...parsed.policy[0]!, aiUsable: true };
+    const forgedRisk = { ...parsed.risk[0]!, aiUsable: true };
+    const forgedOpportunity = {
+      ...parsed.opportunities[0]!,
+      aiUsable: true,
+    };
+    const forged: StandardFixtureCoverageScenario = {
+      policy: [forgedPolicy],
+      risk: [forgedRisk],
+      opportunities: [forgedOpportunity],
+    };
     const verdict = deriveStandardFixtureCoverage(forged, {
       marketOverview: { status: "PARTIAL", dataCount: 1 },
     });
@@ -627,18 +647,23 @@ function localizedField(
 }
 
 function fixtureWithRecordCount(
-  fixture: StandardCountrySyntheticFixture,
+  fixture: StandardFixtureCoverageScenario,
   moduleKey: "policy" | "risk" | "opportunities",
   count: number,
-): StandardCountrySyntheticFixture {
+): StandardFixtureCoverageScenario {
   const record = fixture[moduleKey][0];
-  const records = record === undefined
+  const records: StandardFixtureCoverageRecord[] = record === undefined
     ? []
-    : Array.from({ length: count }, (_, index) => ({
-      ...record,
-      fixtureRecordId: `${moduleKey}-coverage-only-${index}`,
+    : Array.from({ length: count }, () => ({
+      reviewStatus: record.reviewStatus,
+      credibility: record.credibility,
     }));
-  return { ...fixture, [moduleKey]: records } as StandardCountrySyntheticFixture;
+  return {
+    policy: moduleKey === "policy" ? records : fixture.policy,
+    risk: moduleKey === "risk" ? records : fixture.risk,
+    opportunities:
+      moduleKey === "opportunities" ? records : fixture.opportunities,
+  };
 }
 
 function moduleCoverage(

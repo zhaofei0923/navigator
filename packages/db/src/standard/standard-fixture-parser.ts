@@ -163,16 +163,18 @@ function parseModule<T>(
   countryCode: string,
   parseRecord: (record: Record<string, unknown>, countryCode: string) => T,
 ): T[] {
-  if (!Array.isArray(value) || value.length !== 1) invalid();
+  if (!Array.isArray(value)) invalid();
   const ids = new Set<string>();
-  return value.map((item) => {
+  const parsed = value.map((item) => {
     if (!hasExactOwnKeys(item, keys)) invalid();
-    const parsed = parseRecord(item, countryCode);
+    const record = parseRecord(item, countryCode);
     const id = requireFixtureRecordId(item.fixtureRecordId);
     if (ids.has(id)) invalid();
     ids.add(id);
-    return parsed;
+    return record;
   });
+  if (parsed.length !== 1) invalid();
+  return parsed;
 }
 
 function parseLocalizedText(value: unknown): StandardFixtureLocalizedText {
