@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vitest";
 
 import {
   MAX_COUNTRIES_PAGE_SIZE,
@@ -6,6 +6,7 @@ import {
   parseCountryCodeParam,
   parseModuleKeyParam,
   resolveCountryLocale,
+  type ParseCountryQueryInput,
 } from "./country-query.js";
 
 describe("country query parser", () => {
@@ -50,13 +51,22 @@ describe("country query parser", () => {
     ).toBe("zh-CN");
   });
 
-  test("honors the Web wrapper's already-resolved locale", () => {
-    const result = parseApiCountryQuery({
-      locale: "en",
+  test("does not let a legacy injected locale override Accept-Language", () => {
+    const legacyInjectedInput = {
+      acceptLanguage: "en-US,en;q=0.9",
+      locale: "zh-CN" as const,
       searchParams: new URLSearchParams(),
-    });
+    };
+
+    const result = parseApiCountryQuery(legacyInjectedInput);
 
     expect(result.filters.locale).toBe("en");
+    expect(resolveCountryLocale(legacyInjectedInput)).toBe("en");
+
+    type HasInjectedLocale = "locale" extends keyof ParseCountryQueryInput
+      ? true
+      : false;
+    expectTypeOf<HasInjectedLocale>().toEqualTypeOf<false>();
   });
 
   test("parses filters, all-match tag lists, pagination, and raw mode", () => {

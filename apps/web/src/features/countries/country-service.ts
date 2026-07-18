@@ -52,6 +52,7 @@ export type {
   CountryModuleCoverageSummary,
   CountryModuleFilters,
   CountryModuleResponse,
+  CountrySignalsBase,
   LocalizedCountriesResponse,
   LocalizedCountryCard,
   LocalizedCountryDetail,

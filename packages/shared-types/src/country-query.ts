@@ -19,7 +19,6 @@ export const TEXT_MODES = ["localized", "raw"] as const satisfies readonly TextM
 
 export interface ParseCountryQueryInput {
   acceptLanguage?: string | null | undefined;
-  locale?: Locale | undefined;
   searchParams: URLSearchParams;
 }
 
@@ -73,16 +72,11 @@ function parsePositiveInteger(
 
 export function resolveCountryLocale({
   acceptLanguage,
-  locale,
   searchParams,
 }: ParseCountryQueryInput): Locale {
   const queryLocale = parseEnum<Locale>(searchParams.get("locale"), LOCALES);
   if (queryLocale !== undefined) {
     return queryLocale;
-  }
-
-  if (locale !== undefined) {
-    return locale;
   }
 
   for (const item of (acceptLanguage ?? "").split(",")) {

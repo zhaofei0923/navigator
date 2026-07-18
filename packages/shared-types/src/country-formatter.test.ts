@@ -122,7 +122,11 @@ function richSnapshot(): CountryDataSnapshot {
       id: "market-1",
       keyIndicators: [
         {
+          authorizedPublication: true,
+          decision: "approved",
           label: { en: "", zh: "装机" },
+          reviewerId: "reviewer-private",
+          safeIndicatorNote: "visible",
           unit: "MW",
           value: "100",
           year: 2026,
@@ -138,13 +142,18 @@ function richSnapshot(): CountryDataSnapshot {
     policy: [
       {
         ...publicMeta,
-        approvalDecision: "approved",
-        artifacts: ["private"],
+        artifactSha256: "private-artifact-sha",
+        authorizedPublication: true,
+        decidedAt: "2026-01-16T01:00:00.000Z",
+        decision: "approved",
         embeddingEn: [0.1],
         fileUrl: "/private/report.pdf",
+        humanDecision: "publish",
         id: "policy-public",
-        nested: { cachePath: "/private/cache", safe: "visible" },
         policyType: "incentive",
+        reviewerId: "reviewer-private",
+        safeLookingSentinel: "must-not-cross-boundary",
+        submission: { id: "submission-private" },
         title: { en: "", zh: "支持政策" },
       },
       {
@@ -279,27 +288,59 @@ describe("country response formatter", () => {
     expect(policy?.data._i18nFallback).toEqual(["items[0].title"]);
   });
 
-  test("filters non-public records and recursively redacts sensitive fields", () => {
-    const response = formatCountryModuleResponse(
+  test("filters non-public records and fail-closes public response fields", () => {
+    const rawPolicy = formatCountryModuleResponse(
       richSnapshot(),
       "policy",
       { locale: "en" },
       "raw",
     );
-    const serialized = JSON.stringify(response);
+    const localizedPolicy = formatCountryModuleResponse(
+      richSnapshot(),
+      "policy",
+      { locale: "en" },
+    );
+    const rawMarket = formatCountryModuleResponse(
+      richSnapshot(),
+      "market-overview",
+      { locale: "en" },
+      "raw",
+    );
+    const localizedMarket = formatCountryModuleResponse(
+      richSnapshot(),
+      "market-overview",
+      { locale: "en" },
+    );
 
-    expect(response?.meta.total).toBe(1);
-    expect(response?.data.items?.map(({ id }) => id)).toEqual(["policy-public"]);
-    expect(response?.data.items?.[0]).toMatchObject({ nested: { safe: "visible" } });
+    expect(rawPolicy?.meta.total).toBe(1);
+    expect(rawPolicy?.data.items?.map(({ id }) => id)).toEqual(["policy-public"]);
+    expect(rawMarket?.data.item).toMatchObject({
+      keyIndicators: [{ safeIndicatorNote: "visible" }],
+    });
+    expect(localizedMarket?.data.item).toMatchObject({
+      keyIndicators: [{ safeIndicatorNote: "visible" }],
+    });
     for (const forbidden of [
-      "approvalDecision",
-      "artifacts",
-      "cachePath",
+      "artifactSha256",
+      "authorizedPublication",
+      "decidedAt",
+      "decision",
       "embeddingEn",
       "embeddingZh",
       "fileUrl",
+      "humanDecision",
+      "reviewerId",
+      "safeLookingSentinel",
+      "submission",
     ]) {
-      expect(serialized).not.toContain(forbidden);
+      for (const response of [
+        rawPolicy,
+        localizedPolicy,
+        rawMarket,
+        localizedMarket,
+      ]) {
+        expect(JSON.stringify(response)).not.toContain(forbidden);
+      }
     }
   });
 

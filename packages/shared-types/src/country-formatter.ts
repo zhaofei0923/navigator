@@ -54,6 +54,78 @@ const PUBLIC_CREDIBILITIES = [
 ] as const satisfies readonly Credibility[];
 const MAX_MODULE_PAGE_SIZE = 100;
 
+const COMMON_PUBLIC_RESPONSE_KEYS: ReadonlySet<string> = new Set([
+  "aiUsable",
+  "collectedAt",
+  "countryCode",
+  "credibility",
+  "id",
+  "industryTags",
+  "reviewStatus",
+  "source",
+  "sourceUrl",
+  "techTags",
+  "updatedAt",
+]);
+
+const MODULE_PUBLIC_RESPONSE_KEYS = {
+  "ai-advisor": new Set([
+    "content",
+    "sourceId",
+    "sourceModule",
+    "usableChunkCount",
+    "usableSourceModules",
+  ]),
+  "chinese-companies": new Set([
+    "businessScope",
+    "caseStudy",
+    "entryYear",
+    "industry",
+    "name",
+  ]),
+  "entry-strategy": new Set(["overview", "recommendedMode", "steps"]),
+  "market-overview": new Set([
+    "energyDemand",
+    "gdp",
+    "gdpGrowth",
+    "keyIndicators",
+    "overview",
+    "population",
+    "renewableTarget",
+  ]),
+  opportunities: new Set([
+    "description",
+    "marketSize",
+    "timeWindow",
+    "title",
+  ]),
+  partners: new Set(["contactHint", "description", "name", "partnerType"]),
+  policy: new Set([
+    "authority",
+    "body",
+    "effectiveDate",
+    "policyType",
+    "summary",
+    "title",
+  ]),
+  projects: new Set([
+    "capacity",
+    "description",
+    "investment",
+    "location",
+    "name",
+    "status",
+  ]),
+  reports: new Set(["abstract", "accessLevel", "publishedAt", "title"]),
+  risk: new Set([
+    "category",
+    "description",
+    "level",
+    "mitigation",
+    "title",
+  ]),
+} satisfies Readonly<Record<ModuleKey, ReadonlySet<string>>>;
+
 export const COUNTRY_REGION_DISPLAY_ORDER = [
   "southeast-asia",
   "south-asia",
@@ -69,19 +141,29 @@ const SENSITIVE_RESPONSE_KEYS = new Set([
   "approvalStatus",
   "approvedAt",
   "approvedBy",
+  "artifactSha256",
   "artifacts",
+  "authorizedPublication",
   "boundaryVerdict",
   "cachePath",
   "collectionManifest",
+  "constructor",
+  "decidedAt",
+  "decision",
   "embeddingEn",
   "embeddingZh",
   "extractedFacts",
   "fileUrl",
+  "humanDecision",
   "publicationManifest",
+  "prototype",
   "rawCache",
+  "reviewerId",
   "reviewReport",
   "sourceRegister",
   "stages",
+  "submission",
+  "__proto__",
 ]);
 
 function isJsonObject(value: JsonValue | undefined): value is JsonObject {
@@ -602,19 +684,24 @@ function sanitizeJsonValue(value: JsonValue): JsonValue {
 
 function sanitizeModuleRecord(
   record: JsonObject,
-  moduleKey?: ModuleKey,
+  moduleKey: ModuleKey,
 ): JsonObject {
-  const sanitized = sanitizeJsonValue(record);
-  if (!isJsonObject(sanitized)) {
-    throw new Error("Invalid country snapshot: module record");
-  }
+  const isReadinessRecord =
+    moduleKey === "ai-advisor" && record.id === "ai-advisor-readiness";
 
-  if (moduleKey === "ai-advisor" && sanitized.id !== "ai-advisor-readiness") {
-    return Object.fromEntries(
-      Object.entries(sanitized).filter(([key]) => key !== "content"),
-    );
-  }
-  return sanitized;
+  return Object.fromEntries(
+    Object.entries(record)
+      .filter(([key]) => {
+        if (
+          !COMMON_PUBLIC_RESPONSE_KEYS.has(key) &&
+          !MODULE_PUBLIC_RESPONSE_KEYS[moduleKey].has(key)
+        ) {
+          return false;
+        }
+        return moduleKey !== "ai-advisor" || key !== "content" || isReadinessRecord;
+      })
+      .map(([key, value]) => [key, sanitizeJsonValue(value)]),
+  );
 }
 
 function localizeValue(

@@ -14,6 +14,7 @@ import {
   getFilterOptions,
   localizeCountryCard,
 } from "./country-service.js";
+import type { CountrySignalsBase } from "./country-service.js";
 import type {
   CountryModuleDataRegistry,
   CountryModuleDataSeed,
@@ -184,6 +185,23 @@ function publicRecordWithoutCredibility(
 }
 
 describe("country explorer service", () => {
+  test("retains the CountrySignalsBase Web compatibility export", () => {
+    const compatible: CountrySignalsBase = {
+      opportunityLevel: "DATA_BUILDING",
+      policyFriendliness: "DATA_BUILDING",
+      recommendedPriority: "DATA_BUILDING",
+      riskLevel: "DATA_BUILDING",
+      sourceCount: 0,
+      sources: [],
+      updatedAt: "2026-01-15T00:00:00Z",
+    };
+
+    expect(compatible.sourceCount).toBe(0);
+    expect(readSource("./country-service.ts")).toMatch(
+      /export type \{[\s\S]*\bCountrySignalsBase,/,
+    );
+  });
+
   test("checks P1-6D response fields by own key rather than business text", () => {
     expect(() =>
       expectNoP1_6DFields({
