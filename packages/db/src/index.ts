@@ -8,6 +8,10 @@ export {
 } from "./seed/approved-basic-country-import.js";
 export { preflightBasicCountryActivation } from "./seed/basic-country-activation-preflight.js";
 export {
+  BasicCountryImportError,
+  importPreparedApprovedBasicCountry,
+} from "./runtime/basic-country-import-runtime.js";
+export {
   BASIC_COLLECTION_AUDIT_SCHEMA_VERSION,
   BASIC_COLLECTION_BLOCKER_CODES,
 } from "./collection/basic-collection-contracts.js";
@@ -88,6 +92,12 @@ export type {
   BasicActivationScope,
   BasicCountryActivationPreflightResult,
 } from "./seed/basic-country-activation-preflight.js";
+export type {
+  BasicCountryImportErrorCode,
+  BasicCountryImportResult,
+  BasicCountryImportTransaction,
+  BasicCountryImportTransactionPort,
+} from "./runtime/basic-country-import-runtime.js";
 export type {
   BasicRawCaptureResult,
 } from "./collection/basic-raw-capture.js";
