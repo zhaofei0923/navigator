@@ -52,7 +52,9 @@ test("country explorer filters coverage and keeps coverage badges visible", asyn
   await expect(saudiCard).toBeVisible();
   const uaeCard = page.getByRole("article", { name: /United Arab Emirates/ });
   await expect(uaeCard).toBeVisible();
-  await expect(page.getByText("4 countries")).toBeVisible();
+  const brazilCard = page.getByRole("article", { name: /Brazil/ });
+  await expect(brazilCard).toBeVisible();
+  await expect(page.getByText("5 countries")).toBeVisible();
 
   await page.getByRole("link", { name: /Indonesia/ }).click();
   await expect(page).toHaveURL(/\/en\/countries\/ID/);
@@ -146,6 +148,37 @@ test("UAE Basic detail renders in English and Chinese without enabling AI", asyn
       .getByRole("heading", { exact: true, name: "阿拉伯联合酋长国" })
       .locator("..")
       .getByText(/每年发电40太瓦时/),
+  ).toBeVisible();
+  await expect(page.getByText("数据建设中", { exact: true })).toHaveCount(9);
+});
+
+test("Brazil Basic detail renders in English and Chinese without enabling AI", async ({
+  page,
+}) => {
+  await page.goto("/en/countries/BR");
+
+  await expect(
+    page.getByRole("heading", { exact: true, name: "Brazil" }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("heading", { exact: true, name: "Brazil" })
+      .locator("..")
+      .getByText(/final electricity consumption grew 2.7% year on year in 2025/i),
+  ).toBeVisible();
+  await expect(page.getByText("Data Building", { exact: true })).toHaveCount(9);
+
+  await page.getByRole("link", { name: "zh-CN" }).click();
+
+  await expect(page).toHaveURL(/\/zh-CN\/countries\/BR/);
+  await expect(
+    page.getByRole("heading", { exact: true, name: "巴西" }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("heading", { exact: true, name: "巴西" })
+      .locator("..")
+      .getByText(/2025年最终电力消费同比增长2.7%/),
   ).toBeVisible();
   await expect(page.getByText("数据建设中", { exact: true })).toHaveCount(9);
 });

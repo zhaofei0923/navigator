@@ -1,0 +1,8 @@
+{
+  "schemaVersion": "basic-country-publication-manifest/v2",
+  "activeRunId": "data-basic-br-20260718-r2",
+  "mappingVersion": "basic-country-canonical/v2",
+  "auditBundlePath": "data/staging/brazil/data-basic-br-20260718-r2",
+  "approvalReceiptPath": "data/approvals/brazil/data-basic-br-20260718-r2.json",
+  "approvalReceiptSha256": "47136fb4516cc6d7a2fe4c104542f184c8190201ba6e5b772b796d55f215cf01"
+}

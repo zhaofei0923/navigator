@@ -334,8 +334,15 @@ describe("Brazil Basic r1 candidate", () => {
       createHash("sha256").update(readFileSync(join(stagingDirectory, name))).digest("hex"),
     ]))).toEqual(ARTIFACT_HASHES);
     expect(existsSync(join(stagingDirectory, "collection-manifest.json"))).toBe(false);
-    expect(existsSync(join(REPO_ROOT, "data", COUNTRY_DIRECTORY))).toBe(false);
-    expect(existsSync(join(REPO_ROOT, "data", "approvals", COUNTRY_DIRECTORY))).toBe(false);
+    expect(existsSync(join(REPO_ROOT, "data", COUNTRY_DIRECTORY))).toBe(true);
+    expect(existsSync(join(REPO_ROOT, "data", "approvals", COUNTRY_DIRECTORY))).toBe(true);
+    expect(existsSync(join(
+      REPO_ROOT,
+      "data",
+      "approvals",
+      COUNTRY_DIRECTORY,
+      `${RUN_ID}.json`,
+    ))).toBe(false);
   });
 });
 

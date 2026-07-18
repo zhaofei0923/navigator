@@ -1,8 +1,8 @@
-# brazil-seed.md - Brazil Basic candidate handoff
+# brazil-seed.md - Brazil Basic publication record
 
-`data-basic-br-20260718-r2` is the sole current Brazil Basic candidate. It is a
-draft-only audit bundle under `data/staging/brazil/`; it is not canonical data,
-an approval receipt, or a publication manifest. Its controls remain
+`data/brazil/` is the approved canonical `BASIC` publication derived from
+`data-basic-br-20260718-r2`. The immutable candidate remains a four-file,
+draft-only audit bundle under `data/staging/brazil/`, with
 `reviewStatus = draft`, `aiUsable = false`, and `humanDecision = null`.
 
 `data-basic-br-20260717-r1` was rejected by independent review. Preserve r1
@@ -15,6 +15,9 @@ to a later run.
 | run ID | `data-basic-br-20260718-r2` |
 | catalog | `2026-07-17.2` / `6d4c6a27367eb36e4fe20df8fe78a9c9a9e865f84af563a22e31069c176d6f0a` |
 | validation | 6 sources, 32 facts, zero blockers, ready for human review |
+| reviewer | `github:zhaofei0923` |
+| submitted / decided | `2026-07-18T02:51:43.000Z` |
+| publication boundary | `coverageLevel = BASIC`; `aiUsable = false` |
 
 ## Current r2 candidate artifacts
 
@@ -24,6 +27,23 @@ to a later run.
 | `extracted-facts.json` | `6c8cb2023f9b2e41afc06bc6d129db7289d7b6b81b2af8171f3eeac3681918d2` |
 | `market-overview.draft.json` | `2fcfa2d31c616ec99876a268330fd0c73e07e63c6a1fd1b0402de7927c1099e2` |
 | `review-report.json` | `645e074ba71650fa250d792245fe0397f0f0b678292abce71744350c2fc3511e` |
+
+## Approved publication artifacts
+
+The external approval receipt is
+`data/approvals/brazil/data-basic-br-20260718-r2.json`, with SHA-256:
+
+```text
+47136fb4516cc6d7a2fe4c104542f184c8190201ba6e5b772b796d55f215cf01
+```
+
+The canonical directory contains exactly three files:
+
+| Canonical artifact | SHA-256 |
+| --- | --- |
+| `country.json` | `1a472079dc82589e50f4ed05885c9161d90f4b42e115c7852c69c8da7593d6e5` |
+| `market-overview.json` | `79b76a56d878493ec91ba774f156301a6d85c688ae51c8aaf7ac71384a5db53a` |
+| `collection-manifest.json` | `ff6f8a99e369f1fadf560858332c8589f1d6a8eb72e0d2751acf540cdb6f3421` |
 
 ## Fresh r2 captures
 
@@ -64,8 +84,8 @@ GDP growth `2.2857464902475%`, and population `212,812,405`, all for 2025.
   solar PV and wind generation/capacity values. The non-null uncertainty alone
   records that no exact registered product-level subtype is supported; there is
   no direct document `techTags` observation.
-- The candidate makes no market-opportunity claim. Human review is still
-  required before any separate approval or publication run.
+- The approved publication makes no market-opportunity claim and adds no fact,
+  translation, indicator, or tag beyond the reviewed r2 candidate.
 
 ## Rejected r1 history
 
@@ -79,5 +99,21 @@ The rejected r1 candidate remains in
 | `market-overview.draft.json` | `10f1d093f4fc76bd6d50082ef3a4a353ee9218d7a4ec6578433cd343de4c60a9` |
 | `review-report.json` | `9c6886c4f855cb8e7053b6b5e5c33a42fc8eed65ef0cc71717ad83f6fc42b43d` |
 
-The preserved r1 candidate test SHA-256 is
-`1cac85b95faa8017b0504581827d5aadb4a8f01b16a77b0833d2da0fe3f70099`.
+The publication-aware r1 candidate test SHA-256 is
+`579c965909056b9b21c66a5d346941c898b8cc908445ba8a31e1bb87433567b8`.
+Only its repository-state expectations changed to require the r2 canonical
+publication while continuing to require that no r1 approval receipt exists;
+the four rejected r1 candidate artifacts remain byte-identical.
+
+## Publication boundary
+
+`data-basic-br-20260718-r2` is the only active Brazil publication. Its canonical
+market overview is deep-equal to the r2 draft except for
+`reviewStatus = published`; `aiUsable` remains `false`. Brazil derives exactly
+`BASIC`: `market-overview` is `COMPLETE` with one record, and all other nine
+fixed modules are `BUILDING` with zero records.
+
+No KnowledgeChunk, AI-eligible ID, deep-module record, external datastore write,
+or `STANDARD` / `COMPLETE` authorization is part of this publication. Any data
+correction requires a new run, candidate, and approval receipt. Any coverage or
+AI upgrade requires a separate explicit human decision.
