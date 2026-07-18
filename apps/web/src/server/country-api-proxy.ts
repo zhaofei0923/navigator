@@ -65,6 +65,7 @@ export async function proxyCountryApi(
       timeout,
     ]);
   } catch {
+    abortController.abort();
     return internalErrorResponse();
   } finally {
     if (timeoutId !== undefined) {
@@ -90,11 +91,12 @@ async function fetchAndConvertResponse(
     (upstream.status >= 300 && upstream.status < 400) ||
     !isJsonContentType(upstream.headers.get("content-type"))
   ) {
+    cancelBodyBestEffort(upstream.body);
     throw new Error("UNSAFE_UPSTREAM_RESPONSE");
   }
 
-  const body = await readBoundedJson(upstream);
-  return new Response(JSON.stringify(body), {
+  const body = await readBoundedJsonBytes(upstream);
+  return new Response(body, {
     status: upstream.status,
     headers: forwardedResponseHeaders(upstream.headers),
   });
@@ -179,13 +181,14 @@ function isJsonContentType(value: string | null): boolean {
     (mediaType?.startsWith("application/") === true && mediaType.endsWith("+json"));
 }
 
-async function readBoundedJson(response: Response): Promise<unknown> {
+async function readBoundedJsonBytes(response: Response): Promise<ArrayBuffer> {
   const declaredLength = response.headers.get("content-length");
   if (
     declaredLength !== null &&
     Number.isFinite(Number(declaredLength)) &&
     Number(declaredLength) > MAX_RESPONSE_BYTES
   ) {
+    cancelBodyBestEffort(response.body);
     throw new Error("UPSTREAM_RESPONSE_TOO_LARGE");
   }
   if (response.body === null) {
@@ -196,25 +199,52 @@ async function readBoundedJson(response: Response): Promise<unknown> {
   const chunks: Uint8Array[] = [];
   let size = 0;
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    size += value.byteLength;
-    if (size > MAX_RESPONSE_BYTES) {
-      await reader.cancel();
-      throw new Error("UPSTREAM_RESPONSE_TOO_LARGE");
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > MAX_RESPONSE_BYTES) {
+        throw new Error("UPSTREAM_RESPONSE_TOO_LARGE");
+      }
+      chunks.push(value);
     }
-    chunks.push(value);
+  } catch (error) {
+    cancelReaderBestEffort(reader);
+    throw error;
   }
 
-  const bytes = new Uint8Array(size);
+  const buffer = new ArrayBuffer(size);
+  const bytes = new Uint8Array(buffer);
   let offset = 0;
   for (const chunk of chunks) {
     bytes.set(chunk, offset);
     offset += chunk.byteLength;
   }
 
-  return JSON.parse(new TextDecoder().decode(bytes)) as unknown;
+  JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+  return buffer;
+}
+
+function cancelBodyBestEffort(
+  body: ReadableStream<Uint8Array> | null,
+): void {
+  if (body === null || body.locked) return;
+  try {
+    void body.cancel().catch(() => undefined);
+  } catch {
+    // Cancellation is cleanup only; the fixed proxy error remains authoritative.
+  }
+}
+
+function cancelReaderBestEffort(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+): void {
+  try {
+    void reader.cancel().catch(() => undefined);
+  } catch {
+    // Cancellation is cleanup only; the fixed proxy error remains authoritative.
+  }
 }
 
 function internalErrorResponse(): Response {

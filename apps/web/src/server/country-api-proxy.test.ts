@@ -28,6 +28,8 @@ const INTERNAL_ERROR_BODY = {
   success: false,
 };
 
+const PROTECTION_TIMEOUT = Symbol("protection-timeout");
+
 afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
@@ -90,6 +92,46 @@ describe("proxyCountryApi", () => {
     expect(await response.json()).toEqual({ data: { code: "ID" }, success: true });
   });
 
+  test("preserves the exact valid JSON bytes without rounding large integers", async () => {
+    const upstreamBody = [
+      "{",
+      '  "largeInteger": 9007199254740993,',
+      '  "formatted" : [ 1,  2 ]',
+      "}",
+      "",
+    ].join("\n");
+    const fetcher = vi.fn(async () =>
+      new Response(upstreamBody, {
+        status: 207,
+        headers: {
+          "content-type": "application/json; charset=utf-8",
+          traceparent: "00-cccccccccccccccccccccccccccccccc-dddddddddddddddd-01",
+          "x-request-id": "exact-body-request-id",
+          "X-Navigator-Cache": "hit",
+          "X-Navigator-Data-Stale": "0",
+        },
+      }),
+    );
+
+    const response = await proxyCountryApi(
+      new Request("https://navigator.test/api/v1/countries"),
+      { kind: "list", query },
+      { environment, fetcher },
+    );
+
+    expect(response.status).toBe(207);
+    expect(response.headers.get("content-type")).toBe(
+      "application/json; charset=utf-8",
+    );
+    expect(response.headers.get("traceparent")).toBe(
+      "00-cccccccccccccccccccccccccccccccc-dddddddddddddddd-01",
+    );
+    expect(response.headers.get("x-request-id")).toBe("exact-body-request-id");
+    expect(response.headers.get("x-navigator-cache")).toBe("hit");
+    expect(response.headers.get("x-navigator-data-stale")).toBe("0");
+    expect(await response.text()).toBe(upstreamBody);
+  });
+
   test("encodes every path segment instead of allowing path injection", async () => {
     const fetcher = vi.fn(async () =>
       new Response(JSON.stringify({ success: true }), {
@@ -147,6 +189,72 @@ describe("proxyCountryApi", () => {
 
     expect(response.status).toBe(500);
     expect(response.headers.get("content-type")).toMatch(/^application\/json\b/i);
+    expect(await response.json()).toEqual(INTERNAL_ERROR_BODY);
+  });
+
+  test.each([
+    {
+      name: "redirect",
+      status: 302,
+      headers: { "content-type": "application/json" },
+    },
+    {
+      name: "non-JSON",
+      status: 200,
+      headers: { "content-type": "text/plain" },
+    },
+    {
+      name: "declared oversized",
+      status: 200,
+      headers: {
+        "content-length": String(2 * 1024 * 1024 + 1),
+        "content-type": "application/json",
+      },
+    },
+  ])("aborts and cancels a $name streaming upstream without awaiting cancel", async ({
+    status,
+    headers,
+  }) => {
+    vi.useFakeTimers();
+    let cancelled = false;
+    let forwardedSignal: AbortSignal | null = null;
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode("partial"));
+      },
+      cancel() {
+        cancelled = true;
+        return new Promise<void>(() => undefined);
+      },
+    });
+    const upstream = new Response(stream, { status, headers });
+    const fetcher = vi.fn(
+      async (_input: string | URL | Request, init?: RequestInit) => {
+        forwardedSignal = init?.signal ?? null;
+        return upstream;
+      },
+    );
+
+    const responseOrTimeout = Promise.race([
+      proxyCountryApi(
+        new Request("https://navigator.test/api/v1/countries"),
+        { kind: "list", query },
+        { environment, fetcher },
+      ),
+      new Promise<typeof PROTECTION_TIMEOUT>((resolve) => {
+        setTimeout(() => resolve(PROTECTION_TIMEOUT), 100);
+      }),
+    ]);
+    await vi.advanceTimersByTimeAsync(100);
+    const response = await responseOrTimeout;
+
+    expect(response).not.toBe(PROTECTION_TIMEOUT);
+    if (!(response instanceof Response)) {
+      throw new Error("PROXY_CLEANUP_TIMEOUT");
+    }
+    expect(cancelled).toBe(true);
+    expect((forwardedSignal as AbortSignal | null)?.aborted).toBe(true);
+    expect(response.status).toBe(500);
     expect(await response.json()).toEqual(INTERNAL_ERROR_BODY);
   });
 
