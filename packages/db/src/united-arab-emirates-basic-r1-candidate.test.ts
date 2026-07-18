@@ -701,8 +701,8 @@ describe("United Arab Emirates Basic r1 candidate", () => {
     expect(readdirSync(candidateDirectory).sort(compareText)).toEqual(ARTIFACT_NAMES);
     expect(hashArtifacts(candidateDirectory, ARTIFACT_NAMES)).toEqual(ARTIFACT_SHA256);
     expect(existsSync(join(candidateDirectory, "collection-manifest.json"))).toBe(false);
-    expect(existsSync(join(REPO_ROOT, "data", COUNTRY_DIRECTORY))).toBe(false);
-    expect(existsSync(join(REPO_ROOT, "data", "approvals", COUNTRY_DIRECTORY))).toBe(false);
+    expect(existsSync(join(REPO_ROOT, "data", COUNTRY_DIRECTORY))).toBe(true);
+    expect(existsSync(join(REPO_ROOT, "data", "approvals", COUNTRY_DIRECTORY))).toBe(true);
   });
 });
 

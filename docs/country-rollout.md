@@ -29,7 +29,7 @@ MVP 到商业化初期的当前建设目标是经人工批准的国家先完成 
 | 首次真实验证 | ID | 印度尼西亚 | Basic | 验证 Basic 十模块骨架与人工发布闸门 | 已发布 Basic |
 | 扩展 | VN | 越南 | Basic | 已按批准的 v2 candidate 发布基础画像；后续覆盖升级仍须独立人工决定 | 已发布 Basic |
 | 扩展 | SA | 沙特阿拉伯 | Basic | r1 是不可变审计历史，永不得批准或发布，且不得作为任何批准决定或发布任务的输入；r2 是唯一 active publication，后续覆盖升级仍须独立人工批准 | 已发布 Basic |
-| 扩展 | AE | 阿联酋 | Basic | 先完成统一基础画像；后续覆盖升级另行人工批准 | 待人工确认 |
+| 扩展 | AE | 阿联酋 | Basic | 已按批准的 r1 v2 candidate 发布基础画像；后续覆盖升级仍须独立人工决定 | 已发布 Basic |
 | 扩展 | BR | 巴西 | Basic | 先完成统一基础画像；后续覆盖升级另行人工批准 | 待人工确认 |
 | 基础池 | KE | 肯尼亚 | Basic | 非洲示范市场 | 待人工确认 |
 | 基础池 | ZA | 南非 | Basic | 非洲重点能源市场 | 待人工确认 |
@@ -47,6 +47,27 @@ MVP 到商业化初期的当前建设目标是经人工批准的国家先完成 
 - 项目所有者已明确批准 `saudi-arabia` / `SA` / `data-basic-sa-20260717-r2`，reviewer 为 `github:zhaofei0923`，submitted / decided 均为 `2026-07-17T13:21:53.000Z`。独立批准回执 SHA-256 为 `b09aca2ea28e507977ab977246acdf0fc61c17337ddd7646e6b17b516b2ee5bc`。
 - `data/saudi-arabia/` canonical publication 恰好包含 `country.json` (`0ea252d57e178f328435f87ba7b732f75137734d31ad4449dcf62a987d536db7`)、`market-overview.json` (`bd772ce5ba20b70920a85c54845a1683444ebe06aa258e16331f237399cb1037`) 与 `collection-manifest.json` (`40c26ae8199e2475577a60e909859eb6b025e447e76968bcc35af3fc75f4c71a`)。覆盖恰好为 `BASIC`，市场概览是唯一 `COMPLETE` 模块，其余九模块均为 `BUILDING`/零项，且 `aiUsable = false`。
 - r1 仍是不可变审计历史，永不得批准或发布，且不得作为任何批准决定或发布任务的输入；r2 的本次 Basic 发布不授权 Standard、Complete、AI 或深度模块。任何后续升级均须单独取得人工批准。
+
+### AE r1 Basic publication record
+
+- 获批准并成为唯一 active publication 的是 `united-arab-emirates` / `AE` /
+  `data-basic-ae-20260717-r1`。其 immutable candidate 四文件 SHA-256 为
+  `source-register.json` `2430b3c80beb1d33de61aa0af82174d4c8a5d66ead95c38b4e6390e3f5cfd842`、
+  `extracted-facts.json` `f26bea5b799e2b5e3014b90783438d28f292424e4a927504992cb1f3384639e7`、
+  `market-overview.draft.json` `aa8ca2e01f0240abc7923cae991bf981a9d8982ff155c8ff9684b31db3255bfe`
+  与 `review-report.json` `35da3331817a19d59b5b7c0ca01036117ff10095cff5be863171367e3f504b5c`。
+- 项目所有者已明确批准该 identity，reviewer 为 `github:zhaofei0923`，submitted /
+  decided 均为 `2026-07-18T02:51:43.000Z`。独立批准回执 SHA-256 为
+  `41b2f9c18e27a77c3129125cb50d3d88fa7405ffb8729e3e97f593efab3341f4`。
+- `data/united-arab-emirates/` canonical publication 恰好包含 `country.json`
+  (`425d1ab993230698341a6972f1c671b2dcb68386e2c2809498400a5e4cfb9257`)、
+  `market-overview.json` (`aaf5fbf982ae757c90d50beb8e473190f3e7b5eceb68529bf8868ce98ac250fa`)
+  与 `collection-manifest.json`
+  (`20f44483962a6ee5b46de281ddff9768cc1fbe9ca4c50a8e46b21a031265e984`)。
+  覆盖恰好为 `BASIC`，市场概览是唯一 `COMPLETE` 模块，其余九模块均为
+  `BUILDING`/零项，且 `aiUsable = false`。
+- candidate bytes 未因发布而改变。本次 Basic 发布不授权 Standard、Complete、
+  AI 或深度模块；任何修正必须创建新 run，任何后续升级均须另行人工批准。
 
 ---
 

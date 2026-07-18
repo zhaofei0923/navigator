@@ -24,7 +24,12 @@ describe("GET /api/v1/countries", () => {
 
     expect(response.status).toBe(200);
     expect(body.success).toBe(true);
-    expect(body.data.map(({ code }) => code)).toEqual(["ID", "VN", "SA"]);
+    expect(body.data.map(({ code }) => code)).toEqual([
+      "ID",
+      "VN",
+      "SA",
+      "AE",
+    ]);
     expect(body.data[1]).toEqual(
       expect.objectContaining({
         code: "VN",
@@ -45,6 +50,13 @@ describe("GET /api/v1/countries", () => {
         code: "SA",
         coverageLevel: "BASIC",
         name: "Saudi Arabia",
+      }),
+    );
+    expect(body.data[3]).toEqual(
+      expect.objectContaining({
+        code: "AE",
+        coverageLevel: "BASIC",
+        name: "United Arab Emirates",
       }),
     );
   });
@@ -91,6 +103,7 @@ describe("GET /api/v1/countries", () => {
       "Indonesia",
       "Viet Nam",
       "Saudi Arabia",
+      "United Arab Emirates",
     ]);
   });
 
@@ -115,6 +128,10 @@ describe("GET /api/v1/countries", () => {
     expect(body.data[2]?.name).toEqual({
       zh: "沙特阿拉伯",
       en: "Saudi Arabia",
+    });
+    expect(body.data[3]?.name).toEqual({
+      zh: "阿拉伯联合酋长国",
+      en: "United Arab Emirates",
     });
   });
 

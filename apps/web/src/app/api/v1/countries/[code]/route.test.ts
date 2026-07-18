@@ -175,6 +175,44 @@ describe("GET /api/v1/countries/:code", () => {
       .toHaveLength(9);
   });
 
+  test("returns the UAE published Basic detail in both locales", async () => {
+    const englishResponse = await GET(
+      new Request("https://navigator.test/api/v1/countries/AE?locale=en"),
+      { params: Promise.resolve({ code: "AE" }) },
+    );
+    const chineseResponse = await GET(
+      new Request("https://navigator.test/api/v1/countries/AE?locale=zh-CN"),
+      { params: Promise.resolve({ code: "AE" }) },
+    );
+    const english = (await englishResponse.json()) as {
+      data: {
+        code: string;
+        name: string;
+        summary: string;
+        moduleCoverage: Array<{ status: string }>;
+      };
+    };
+    const chinese = (await chineseResponse.json()) as {
+      data: { code: string; name: string; summary: string };
+    };
+
+    expect(englishResponse.status).toBe(200);
+    expect(chineseResponse.status).toBe(200);
+    expect(english.data).toMatchObject({
+      code: "AE",
+      name: "United Arab Emirates",
+      summary: expect.stringContaining("generates 40 TWh per year"),
+    });
+    expect(chinese.data).toMatchObject({
+      code: "AE",
+      name: "阿拉伯联合酋长国",
+      summary: expect.stringContaining("每年发电40太瓦时"),
+    });
+    expect(
+      english.data.moduleCoverage.filter(({ status }) => status === "BUILDING"),
+    ).toHaveLength(9);
+  });
+
   test("keeps the route outside the P1-6D audit boundary", () => {
     const sources = [
       readFileSync(new URL("./route.ts", import.meta.url), "utf8"),

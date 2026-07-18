@@ -1,8 +1,8 @@
-# uae-seed.md - 阿联酋真实 Basic 候选记录
+# uae-seed.md - 阿联酋真实 Basic 发布记录
 
-> `data/staging/united-arab-emirates/data-basic-ae-20260717-r1/` 是
-> `DATA-BASIC-AE-COLLECT` 生成的首次真实 `BASIC` 候选，仅供人工审核。
-> 本任务不批准、不发布，也不创建 canonical、approval 或 publication manifest。
+> `data/united-arab-emirates/` 是 `DATA-BASIC-AE-PUBLISH` 交付的已批准真实
+> `BASIC` canonical publication。它沿用统一 Basic v2 发布闸门，不包含国家特例、
+> 深度模块或 AI 资格。
 
 | 项目 | 精确值 |
 |------|--------|
@@ -12,7 +12,9 @@
 | `runId` | `data-basic-ae-20260717-r1` |
 | source catalog | `2026-07-17.2` |
 | validator | `7` sources / `32` facts / ready for human review |
-| review gate | `reviewStatus = draft`; `aiUsable = false`; `humanDecision = null` |
+| reviewer | `github:zhaofei0923` |
+| submitted / decided | `2026-07-18T02:51:43.000Z` |
+| publication boundary | `coverageLevel = BASIC`; `aiUsable = false` |
 
 候选目录恰好包含四个不可变文件：
 
@@ -22,6 +24,22 @@
 | `extracted-facts.json` | `f26bea5b799e2b5e3014b90783438d28f292424e4a927504992cb1f3384639e7` |
 | `market-overview.draft.json` | `aa8ca2e01f0240abc7923cae991bf981a9d8982ff155c8ff9684b31db3255bfe` |
 | `review-report.json` | `35da3331817a19d59b5b7c0ca01036117ff10095cff5be863171367e3f504b5c` |
+
+独立批准回执为
+`data/approvals/united-arab-emirates/data-basic-ae-20260717-r1.json`，其
+SHA-256 为：
+
+```text
+41b2f9c18e27a77c3129125cb50d3d88fa7405ffb8729e3e97f593efab3341f4
+```
+
+canonical 三文件的 SHA-256 为：
+
+| Canonical artifact | SHA-256 |
+|--------------------|---------|
+| `country.json` | `425d1ab993230698341a6972f1c671b2dcb68386e2c2809498400a5e4cfb9257` |
+| `market-overview.json` | `aaf5fbf982ae757c90d50beb8e473190f3e7b5eceb68529bf8868ce98ac250fa` |
+| `collection-manifest.json` | `20f44483962a6ee5b46de281ddff9768cc1fbe9ca4c50a8e46b21a031265e984` |
 
 ## Fresh raw-v2 绑定
 
@@ -53,5 +71,13 @@
   独立的 reviewed `industryTags` taxonomy observation 仅证明来源没有支持任何
   已注册的产品级技术子类型，不构成 `techTags` catalog ownership。
 
-本候选不得进入 AI 检索，也不得作为已批准或已发布数据引用。人工若要求修改
-事实、翻译、来源绑定或元字段，必须创建新的 run；当前 r1 四文件保持不可变。
+`data/united-arab-emirates/` 必须且只能包含 `country.json`、
+`market-overview.json` 与 `collection-manifest.json`。r1 是唯一 active
+publication，并将阿联酋发布为恰好 `BASIC`：市场概览是唯一 `COMPLETE` 对象记录，
+其余九模块均为 `BUILDING`/零项；`aiUsable = false`，不生成知识片段、不进入 AI
+检索。
+
+immutable candidate 继续保持 `reviewStatus = draft`、`aiUsable = false`、
+`humanDecision = null` 且恰好四文件。本次发布不授权 `STANDARD`、`COMPLETE`、
+AI 或任何深度模块；任何事实、翻译或元字段修正都必须新建 run、candidate 与回执，
+任何覆盖升级也必须另行取得人工批准。
