@@ -47,6 +47,182 @@ afterEach(() => {
 });
 
 describe("Basic editorial evidence materializer", () => {
+  test("materializes empty tech tags from one reviewed industry-tag observation", () => {
+    const source = sourceRecord("structured-source", {
+      evidenceLocators: ["json:/industry-tags"],
+    });
+    const rawValue = ["solar", "wind"];
+    const result = materializeBasicEditorialFacts(input({
+      editorial: editorialInput([
+        item("marketOverview.techTags", [], [
+          evidence(source.sourceId, "json:/industry-tags", rawValue),
+        ], "No exact registered product-level subtype is supported."),
+      ]),
+      reviewedSources: register([source]),
+      structuredEditorialEvidence: [structuredEvidence(
+        source.sourceId,
+        "marketOverview.industryTags",
+        "json:/industry-tags",
+        rawValue,
+      )],
+      sourceChecks: [check(source.sourceId)],
+    }));
+
+    expect(result.facts).toHaveLength(1);
+    expect(result.facts[0]).toMatchObject({
+      fieldPath: "marketOverview.techTags",
+      extractionMethod: "manual",
+      uncertainty: "No exact registered product-level subtype is supported.",
+    });
+    expect(result.facts[0]?.evidence).toEqual([{
+      sourceId: source.sourceId,
+      locator: "json:/industry-tags",
+      rawValue,
+      normalizedValue: [],
+      unit: null,
+      year: null,
+    }]);
+    expect(result.consumedEvidence).toEqual([{
+      sourceId: source.sourceId,
+      fieldPath: "marketOverview.techTags",
+      locator: "json:/industry-tags",
+    }]);
+  });
+
+  test.each([
+    ["non-empty tech tags", ["pv-module"], "No exact registered product-level subtype is supported."],
+    ["missing uncertainty", [], null],
+  ])("rejects the industry-tag bridge with %s", (_label, normalizedValue, uncertainty) => {
+    const source = sourceRecord("structured-source", {
+      evidenceLocators: ["json:/industry-tags"],
+    });
+
+    expectInvalid(input({
+      editorial: editorialInput([
+        item("marketOverview.techTags", normalizedValue, [
+          evidence(source.sourceId, "json:/industry-tags", ["solar"]),
+        ], uncertainty),
+      ]),
+      reviewedSources: register([source]),
+      structuredEditorialEvidence: [structuredEvidence(
+        source.sourceId,
+        "marketOverview.industryTags",
+        "json:/industry-tags",
+        ["solar"],
+      )],
+      sourceChecks: [check(source.sourceId)],
+    }));
+  });
+
+  test.each([
+    ["a different editorial path", "country.summary"],
+    ["a source fact instead of editorial evidence", null],
+  ])("rejects empty tech tags backed by %s", (_label, evidencePath) => {
+    const source = sourceRecord("structured-source", {
+      evidenceLocators: ["json:/industry-tags"],
+    });
+    const preliminaryFacts = evidencePath === null
+      ? facts(materializeBasicSourceFactsV2([{
+        sourceId: source.sourceId,
+        fieldPath: "marketOverview.population",
+        locator: "json:/industry-tags",
+        rawValue: "100",
+        normalizedValue: 100,
+        unit: "people",
+        year: 2025,
+        uncertainty: null,
+      }], "deterministic"))
+      : facts([]);
+
+    expectInvalid(input({
+      editorial: editorialInput([
+        item("marketOverview.techTags", [], [
+          evidence(source.sourceId, "json:/industry-tags", ["solar"]),
+        ], "No exact registered product-level subtype is supported."),
+      ]),
+      reviewedSources: register([source]),
+      preliminaryFacts,
+      structuredEditorialEvidence: evidencePath === null ? [] : [structuredEvidence(
+        source.sourceId,
+        evidencePath,
+        "json:/industry-tags",
+        ["solar"],
+      )],
+      sourceChecks: [check(source.sourceId)],
+    }));
+  });
+
+  test("rejects reuse of one industry-tag observation for industry and empty tech tags", () => {
+    const source = sourceRecord("structured-source", {
+      evidenceLocators: ["json:/industry-tags"],
+    });
+    const sharedEvidence = evidence(source.sourceId, "json:/industry-tags", ["solar"]);
+
+    expectInvalid(input({
+      editorial: editorialInput([
+        item("marketOverview.industryTags", ["solar"], [sharedEvidence]),
+        item("marketOverview.techTags", [], [sharedEvidence],
+          "No exact registered product-level subtype is supported."),
+      ]),
+      reviewedSources: register([source]),
+      structuredEditorialEvidence: [structuredEvidence(
+        source.sourceId,
+        "marketOverview.industryTags",
+        "json:/industry-tags",
+        ["solar"],
+      )],
+      sourceChecks: [check(source.sourceId)],
+    }));
+  });
+
+  test.each([
+    ["a failed source check", [{
+      sourceId: "structured-source", status: "failed" as const, notes: "Review failed",
+    }], []],
+    ["a recorded injection risk", [check("structured-source")], [risk("structured-source")]],
+  ])("rejects empty tech tags backed by %s", (_label, sourceChecks, injectionRisks) => {
+    const source = sourceRecord("structured-source", {
+      evidenceLocators: ["json:/industry-tags"],
+    });
+
+    expectInvalid(input({
+      editorial: editorialInput([
+        item("marketOverview.techTags", [], [
+          evidence(source.sourceId, "json:/industry-tags", ["solar"]),
+        ], "No exact registered product-level subtype is supported."),
+      ]),
+      reviewedSources: register([source]),
+      structuredEditorialEvidence: [structuredEvidence(
+        source.sourceId,
+        "marketOverview.industryTags",
+        "json:/industry-tags",
+        ["solar"],
+      )],
+      sourceChecks,
+      injectionRisks,
+    }));
+  });
+
+  test("rejects an unconsumed industry-tag observation alongside the empty-tech bridge", () => {
+    const source = sourceRecord("structured-source", {
+      evidenceLocators: ["json:/industry-tags", "json:/other-industry-tags"],
+    });
+
+    expectInvalid(input({
+      editorial: editorialInput([
+        item("marketOverview.techTags", [], [
+          evidence(source.sourceId, "json:/industry-tags", ["solar"]),
+        ], "No exact registered product-level subtype is supported."),
+      ]),
+      reviewedSources: register([source]),
+      structuredEditorialEvidence: [
+        structuredEvidence(source.sourceId, "marketOverview.industryTags", "json:/industry-tags", ["solar"]),
+        structuredEvidence(source.sourceId, "marketOverview.industryTags", "json:/other-industry-tags", ["wind"]),
+      ],
+      sourceChecks: [check(source.sourceId)],
+    }));
+  });
+
   test("binds structured-only evidence with normalized values and uncertainty", () => {
     const source = sourceRecord("structured-source");
     const rawValue = {

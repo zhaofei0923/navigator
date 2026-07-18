@@ -91,6 +91,28 @@ every consumed source must be `open`, not `UNVERIFIED`, have
 injection risk. Missing, foreign, duplicate, unreviewed, inactive, risky, or
 identity/catalog/capture-provenance drift fails closed.
 
+### Native Empty-Tech-Taxonomy Helper
+
+The normal same-path evidence rule above remains unchanged. Only when an
+editorial `marketOverview.techTags` item has `normalizedValue = []`, nonempty
+evidence, and an explicit non-null uncertainty explaining that no exact
+registered product-level subtype is supported, Editorial may instead consume
+one matching, unconsumed structured or branded-document editorial-evidence
+observation whose actual `fieldPath` is `marketOverview.industryTags`. The
+`sourceId`, locator, and canonical finite-JSON `rawValue` must still match
+exactly, and the existing reviewed-source, passed-check, open-access,
+credibility, and injection-risk checks remain mandatory.
+
+This is an Editorial-only evidence-binding exception, not catalog ownership.
+It cannot create nonempty `techTags`, any other field, or an observation from
+a source fact. It consumes the actual `industryTags` observation key, so one
+observation cannot support both `industryTags` and `techTags`, and no reviewed
+observation may remain unconsumed. The resulting ordinary output is a manual
+editorial fact backed by reviewed source evidence. It has field path
+`marketOverview.techTags`, carries `normalizedValue = []`, and retains the
+reviewed locator and raw value; downstream validators and audits therefore
+remain unchanged.
+
 The branded document provenance is not transferable by spread or JSON clone.
 Its frozen `captureBindings` are unique and source-ID sorted:
 
