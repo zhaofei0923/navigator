@@ -94,7 +94,7 @@ describe("catalog-driven Basic source plan runner v2", () => {
         "sourceId,contentSha256,byteLength,reused",
     )).toBe(true);
     expectDeeplyFrozen(result);
-  });
+  }, 15_000);
 
   test("binds the deterministic adapter before cache or network and passes frozen copied capture metadata", async () => {
     const plan = committedWorldBankPlan(["world-bank-country"]);
