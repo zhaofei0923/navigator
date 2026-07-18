@@ -3,7 +3,16 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "exports": {
+    "./country-read-runtime": {
+      "types": "./src/read/country-read-runtime.ts",
+      "development": "./src/read/country-read-runtime.ts",
+      "default": "./dist/read/country-read-runtime.js"
+    }
+  },
   "scripts": {
+    "prebuild": "pnpm --filter @navigator/shared-types build",
+    "build": "tsc --project tsconfig.build.json",
     "build:basic-candidate-native": "node scripts/build-basic-candidate-native.mjs",
     "lint": "tsc --project tsconfig.json --noEmit --pretty false",
     "prisma": "prisma",
