@@ -30,6 +30,7 @@ describe("GET /api/v1/countries", () => {
       "SA",
       "AE",
       "BR",
+      "ZA",
     ]);
     expect(body.data[1]).toEqual(
       expect.objectContaining({
@@ -65,6 +66,13 @@ describe("GET /api/v1/countries", () => {
         code: "BR",
         coverageLevel: "BASIC",
         name: "Brazil",
+      }),
+    );
+    expect(body.data[5]).toEqual(
+      expect.objectContaining({
+        code: "ZA",
+        coverageLevel: "BASIC",
+        name: "South Africa",
       }),
     );
   });
@@ -113,6 +121,7 @@ describe("GET /api/v1/countries", () => {
       "Saudi Arabia",
       "United Arab Emirates",
       "Brazil",
+      "South Africa",
     ]);
   });
 
@@ -143,6 +152,7 @@ describe("GET /api/v1/countries", () => {
       en: "United Arab Emirates",
     });
     expect(body.data[4]?.name).toEqual({ zh: "巴西", en: "Brazil" });
+    expect(body.data[5]?.name).toEqual({ zh: "南非", en: "South Africa" });
   });
 
   test("caps pageSize at the documented maximum", async () => {

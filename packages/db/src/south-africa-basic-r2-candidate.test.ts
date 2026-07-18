@@ -295,8 +295,22 @@ describe("South Africa Basic r2 candidate", () => {
     expect(readdirSync(directory).sort(compareText)).toEqual(Object.keys(R2_ARTIFACT_HASHES));
     expect(hashArtifacts(directory, Object.keys(R2_ARTIFACT_HASHES))).toEqual(R2_ARTIFACT_HASHES);
     expect(existsSync(join(directory, "collection-manifest.json"))).toBe(false);
-    expect(existsSync(join(REPO_ROOT, "data", COUNTRY_DIRECTORY))).toBe(false);
-    expect(existsSync(join(REPO_ROOT, "data", "approvals", COUNTRY_DIRECTORY))).toBe(false);
+    expect(existsSync(join(REPO_ROOT, "data", COUNTRY_DIRECTORY))).toBe(true);
+    expect(existsSync(join(REPO_ROOT, "data", "approvals", COUNTRY_DIRECTORY))).toBe(true);
+    expect(existsSync(join(
+      REPO_ROOT,
+      "data",
+      "approvals",
+      COUNTRY_DIRECTORY,
+      `${R1_RUN_ID}.json`,
+    ))).toBe(false);
+    expect(existsSync(join(
+      REPO_ROOT,
+      "data",
+      "approvals",
+      COUNTRY_DIRECTORY,
+      `${R2_RUN_ID}.json`,
+    ))).toBe(true);
   });
 });
 

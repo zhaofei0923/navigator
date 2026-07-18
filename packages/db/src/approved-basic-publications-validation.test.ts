@@ -20,10 +20,11 @@ describe("approved Basic publications build validation", () => {
         "brazil",
         "indonesia",
         "saudi-arabia",
+        "south-africa",
         "united-arab-emirates",
         "vietnam",
       ],
-      countryCodes: ["BR", "ID", "SA", "AE", "VN"],
+      countryCodes: ["BR", "ID", "SA", "ZA", "AE", "VN"],
     });
   });
 

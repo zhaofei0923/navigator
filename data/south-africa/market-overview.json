@@ -1,0 +1,63 @@
+{
+  "overview": {
+    "zh": "Eskom在2025财年的售电量为189.7太瓦时，Eskom口径送出电量为195,702吉瓦时。《综合资源计划2025》的当前基础包括已投运、在建及视为于2025年投运的容量，其中风电5,344兆瓦、并网太阳能3,646兆瓦；2023年RMIPPPP公告的两个混合可再生能源项目共203兆瓦，采用光伏、陆上风电和储能。",
+    "en": "Eskom reported 189.7 TWh of sales volumes and 195,702 GWh of Eskom-only energy sent out in FY2025. The Integrated Resource Plan 2025 current base includes installed, under-construction, and deemed-online-in-2025 capacity, including 5,344 MW of wind and 3,646 MW of grid-tied solar; a 2023 RMIPPPP announcement covered two hybrid renewable projects totaling 203 MW using solar PV, onshore wind, and battery storage."
+  },
+  "population": 64747319,
+  "gdp": 427184325997.307,
+  "gdpGrowth": 1.11462608103956,
+  "energyDemand": {
+    "zh": "Eskom在2025财年的售电量为189.7太瓦时，2024财年为183.3太瓦时，同比增长3.5%。Eskom口径送出电量为195,702吉瓦时，2024财年为184,576吉瓦时。",
+    "en": "Eskom sales volumes were 189.7 TWh in FY2025 versus 183.3 TWh in FY2024, a 3.5% increase. Eskom-only energy sent out was 195,702 GWh versus 184,576 GWh."
+  },
+  "renewableTarget": {
+    "zh": "《综合资源计划2025》的平衡方案提出，2026至2042年累计规划新增太阳能28,713兆瓦、风电43,041兆瓦。这些数值是规划中的累计新增容量，不代表已建成或已采购容量。",
+    "en": "The Integrated Resource Plan 2025 balanced plan sets cumulative planned additions of 28,713 MW of solar and 43,041 MW of wind for 2026-2042. These are planned cumulative additions, not built or procured capacity."
+  },
+  "keyIndicators": [
+    {
+      "label": {
+        "zh": "Eskom售电量",
+        "en": "Eskom electricity sales volume"
+      },
+      "value": "189.7",
+      "unit": "TWh",
+      "year": 2025
+    },
+    {
+      "label": {
+        "zh": "Eskom口径送出电量",
+        "en": "Eskom-only energy sent out"
+      },
+      "value": "195702",
+      "unit": "GWh",
+      "year": 2025
+    },
+    {
+      "label": {
+        "zh": "2026至2042年累计规划新增风电",
+        "en": "Cumulative planned wind additions, 2026-2042"
+      },
+      "value": "43041",
+      "unit": "MW",
+      "year": 2042
+    }
+  ],
+  "source": "Government of South Africa",
+  "sourceUrl": "https://www.gov.za/sites/default/files/gcis_document/202510/53596gon6767.pdf",
+  "collectedAt": "2026-07-18T01:24:37.309Z",
+  "updatedAt": "2025-10-28T00:00:00.000Z",
+  "credibility": "OFFICIAL",
+  "reviewStatus": "published",
+  "aiUsable": false,
+  "countryCode": "ZA",
+  "industryTags": [
+    "grid",
+    "solar",
+    "storage",
+    "wind"
+  ],
+  "techTags": [
+    "onshore-wind"
+  ]
+}

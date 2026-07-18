@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "basic-country-publication-approval/v1",
+  "countryDirectory": "south-africa",
+  "countryCode": "ZA",
+  "runId": "data-basic-za-20260718-r2",
+  "submission": {
+    "fromReviewStatus": "draft",
+    "toReviewStatus": "pending",
+    "submittedAt": "2026-07-18T02:51:43.000Z"
+  },
+  "decision": "approved",
+  "reviewerId": "github:zhaofei0923",
+  "decidedAt": "2026-07-18T02:51:43.000Z",
+  "authorizedPublication": {
+    "coverageLevel": "BASIC",
+    "fromReviewStatus": "pending",
+    "toReviewStatus": "published",
+    "aiUsable": false
+  },
+  "artifactSha256": {
+    "source-register.json": "7a99e47484e038a708201981035da50de7309f09ede5ab235ad4f32151001e3f",
+    "extracted-facts.json": "dc8387ad8569037d799e59b0be8502647bf2719d7b9395962d56901f9df1250c",
+    "market-overview.draft.json": "16ea4b33672b0c5ff4ad025eca1ca8d2ca0ceb36f95bf8c8f8d7da93c6b91536",
+    "review-report.json": "f73b93f10e3dc0d40eac7f918745bde855f11d49fed5a0259ea2fefa27e92a33"
+  }
+}
