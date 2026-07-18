@@ -2,8 +2,9 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
+import { worldBankCountryAdapter } from "./collection/adapters/world-bank-country.js";
 import type {
   BasicInjectionRisk,
   BasicSourceRecord,
@@ -32,6 +33,7 @@ import {
 } from "./collection/basic-source-review-parser.js";
 import type { BasicSourceTransportV2 } from "./collection/basic-source-v2-contracts.js";
 import { materializeBasicSourceFactsV2 } from "./collection/basic-v2-fact-materializer.js";
+import { validateBasicV2FactOwnership } from "./collection/basic-v2-fact-ownership.js";
 
 const ERROR = "basic reviewed materialization is invalid";
 const RUN_ID = "run-20260713";
@@ -41,6 +43,13 @@ const CATALOG_SHA256 =
   "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789";
 const DETERMINISTIC_SHA256 =
   "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+const EMPTY_TECH_TAGS_UNCERTAINTY =
+  "No exact registered product-level subtype is supported.";
+const EMPTY_TECH_TAGS_RAW_VALUE = "solar,storage";
+const STRUCTURED_EMPTY_TECH_TAGS_LOCATOR =
+  "json:/market-overview/industry-tags/tech-taxonomy";
+const DOCUMENT_EMPTY_TECH_TAGS_LOCATOR =
+  "html:section=industry-tags;detail=tech-taxonomy";
 const REQUIRED_EDITORIAL_PATHS = [
   "country.region",
   "country.summary",
@@ -63,6 +72,7 @@ const DERIVED_PATHS = [
 const roots = new Set<string>();
 
 afterEach(() => {
+  vi.restoreAllMocks();
   for (const root of roots) rmSync(root, { recursive: true, force: true });
   roots.clear();
 });
@@ -117,6 +127,31 @@ describe("Basic reviewed v2 materialization", () => {
     ]);
     expect(result.injectionRisks).toEqual([]);
     expectDeeplyFrozen(result);
+  });
+
+  test("materializes empty tech tags through a catalog-limited structured production run", async () => {
+    const fixture = await structuredIndustryTagsFixture();
+    const input = {
+      preliminary: fixture.preliminary,
+      structuredReview: structuredReview(fixture.preliminary),
+      documentResult: null,
+      editorial: structuredIndustryTagsEditorial(fixture.preliminary),
+    };
+
+    const result = materializeBasicReviewedRunV2(input);
+
+    expectTaxonomyOwnership(fixture.plan);
+    expectEmptyTechTagsMaterialization(
+      result,
+      "world-bank-country",
+      STRUCTURED_EMPTY_TECH_TAGS_LOCATOR,
+    );
+  });
+
+  test("rejects direct structured tech-tags evidence outside industry-only catalog ownership", async () => {
+    await expect(structuredIndustryTagsFixture(true)).rejects.toThrow(
+      "basic source plan run is invalid",
+    );
   });
 
   test("rejects empty editorial items and every missing required static editorial path", () => {
@@ -267,6 +302,51 @@ describe("Basic reviewed v2 materialization", () => {
     expect(result.materialization.receipts).toEqual(fixture.preliminary.receipts);
     expect(result.sourceChecks).toEqual(fixture.result.sourceChecks);
     expectDeeplyFrozen(result);
+  });
+
+  test("materializes empty tech tags through catalog-limited branded document evidence", async () => {
+    const fixture = await documentFixture(
+      "reviewed fixture",
+      false,
+      false,
+      null,
+      false,
+      { emptyTechTagsFromIndustryTags: true },
+    );
+    const editorialInput = editorial(fixture.preliminary, [emptyTechTagsItem(
+      "official-html",
+      DOCUMENT_EMPTY_TECH_TAGS_LOCATOR,
+    )]);
+    const input = {
+      preliminary: fixture.preliminary,
+      structuredReview: null,
+      documentResult: fixture.result,
+      editorial: editorialInput,
+    };
+
+    const result = materializeBasicReviewedRunV2(input);
+
+    expectTaxonomyOwnership(fixture.plan);
+    expectEmptyTechTagsMaterialization(
+      result,
+      "official-html",
+      DOCUMENT_EMPTY_TECH_TAGS_LOCATOR,
+    );
+    expectInvalid({ ...input, documentResult: { ...fixture.result } });
+  });
+
+  test("rejects direct document tech-tags evidence outside industry-only catalog ownership", async () => {
+    await expect(documentFixture(
+      "reviewed fixture",
+      false,
+      false,
+      null,
+      false,
+      {
+        emptyTechTagsFromIndustryTags: true,
+        directTechTagsObservation: true,
+      },
+    )).rejects.toThrow("basic document evidence materialization is invalid");
   });
 
   test("builds a source-ID-sorted mixed union with complete review ownership", async () => {
@@ -624,6 +704,164 @@ function sourceRecord(
   };
 }
 
+async function structuredIndustryTagsFixture(
+  directTechTagsObservation = false,
+): Promise<Readonly<{
+  plan: BasicSourceExecutionPlan;
+  preliminary: BasicPreliminarySourceRunV2;
+}>> {
+  const definitions = structuredIndustryTagsDefinitions();
+  const catalog = parseBasicSourceCatalog({
+    schemaVersion: "basic-source-catalog/v1",
+    catalogVersion: CATALOG_VERSION,
+    sources: [{
+      sourceId: "world-bank-country",
+      sourceName: "World Bank",
+      sourceFamily: "international-organization",
+      credibility: "OFFICIAL",
+      format: "json",
+      countryScope: "all",
+      requestTemplate: {
+        origin: "https://api.worldbank.org",
+        pathSegments: [
+          { kind: "literal", value: "v2" },
+          { kind: "literal", value: "country" },
+          { kind: "placeholder", value: "countryCode" },
+        ],
+        query: [{ name: "format", value: { kind: "literal", value: "json" } }],
+      },
+      accept: "application/json",
+      approvedOrigins: ["https://api.worldbank.org"],
+      allowedQueryParameters: ["format"],
+      accessMode: "open",
+      licenseName: "Creative Commons Attribution 4.0 International (CC BY 4.0)",
+      licenseUrl: "https://datacatalog.worldbank.org/public-licenses",
+      attribution: "World Bank",
+      refreshCadence: "annual",
+      adapterId: "world-bank-country",
+      adapterVersion: "1.0.0",
+      adapterKind: "deterministic",
+      fieldPaths: [
+        "country.code",
+        "country.name",
+        ...definitions.map(({ fieldPath }) => fieldPath),
+      ].sort(),
+    }],
+    countryMappings: [],
+  });
+  const plan = createBasicSourceExecutionPlan({
+    catalog,
+    countryCode: COUNTRY_CODE,
+    sourceIds: ["world-bank-country"],
+  });
+  vi.spyOn(worldBankCountryAdapter, "extract").mockReturnValue({
+    publishedAt: "2026-07-01T00:00:00.000Z",
+    promptInjectionRisk: "none",
+    accessNotes: null,
+    observations: [
+      {
+        fieldPath: "country.code",
+        locator: "json:/country/code",
+        rawValue: COUNTRY_CODE,
+        normalizedValue: COUNTRY_CODE,
+        unit: null,
+        year: null,
+        uncertainty: null,
+      },
+      {
+        fieldPath: "country.name",
+        locator: "json:/country/name",
+        rawValue: "Indonesia",
+        normalizedValue: { zh: "", en: "Indonesia" },
+        unit: null,
+        year: null,
+        uncertainty: null,
+      },
+      ...definitions.map((definition) => ({
+        fieldPath: definition.fieldPath,
+        locator: definition.locator,
+        rawValue: definition.rawValue,
+        normalizedValue: definition.normalizedValue,
+        unit: null,
+        year: null,
+        uncertainty: null,
+      })),
+      {
+        fieldPath: directTechTagsObservation
+          ? "marketOverview.techTags"
+          : "marketOverview.industryTags",
+        locator: STRUCTURED_EMPTY_TECH_TAGS_LOCATOR,
+        rawValue: EMPTY_TECH_TAGS_RAW_VALUE,
+        normalizedValue: ["solar", "storage"],
+        unit: null,
+        year: null,
+        uncertainty: null,
+      },
+    ],
+  });
+  const root = mkdtempSync(join(tmpdir(), "navigator-v2-structured-tech-tags-"));
+  roots.add(root);
+  const transport: BasicSourceTransportV2 = {
+    async execute(request) {
+      return {
+        status: 200,
+        finalUrl: request.url,
+        redirectChain: [],
+        contentType: "application/json",
+        retrievedAt: "2026-07-13T01:00:00.000Z",
+        body: bytes(new TextEncoder().encode("{}")),
+      };
+    },
+  };
+  return {
+    plan,
+    preliminary: await runBasicSourceExecutionPlanV2({
+      repoRoot: root,
+      countryCode: COUNTRY_CODE,
+      runId: RUN_ID,
+      plan,
+      transport,
+    }),
+  };
+}
+
+function structuredIndustryTagsDefinitions() {
+  return requiredEditorialDefinitions()
+    .filter(({ fieldPath }) => fieldPath !== "marketOverview.techTags")
+    .map((definition) => ({
+      ...definition,
+      locator: definition.locator.replace("html:section=", "json:/market-overview/"),
+    }));
+}
+
+function structuredIndustryTagsEditorial(
+  preliminary: BasicPreliminarySourceRunV2,
+): BasicCountryEditorialInput {
+  return editorial(preliminary, [
+    {
+      fieldPath: "country.name",
+      normalizedValue: { zh: "印度尼西亚", en: "Indonesia" },
+      evidence: [editorialEvidence(
+        "world-bank-country",
+        "json:/country/name",
+        "Indonesia",
+      )],
+      uncertainty: null,
+    },
+    ...structuredIndustryTagsDefinitions().map((definition) => ({
+      fieldPath: definition.fieldPath,
+      normalizedValue: definition.normalizedValue,
+      evidence: [editorialEvidence(
+        "world-bank-country",
+        definition.locator,
+        definition.rawValue,
+      )],
+      uncertainty: null,
+    })),
+    emptyTechTagsItem("world-bank-country", STRUCTURED_EMPTY_TECH_TAGS_LOCATOR),
+  ]);
+}
+
 function structuredPreliminary(
   fieldPath = "country.name",
   normalizedValue: BasicExtractedFactsV2["facts"][number]["evidence"][number]["normalizedValue"] = {
@@ -810,6 +1048,8 @@ interface DocumentFixtureOverrides {
   readonly filename?: string;
   readonly retrievedAt?: string;
   readonly countryCodeFact?: boolean;
+  readonly emptyTechTagsFromIndustryTags?: boolean;
+  readonly directTechTagsObservation?: boolean;
 }
 
 async function documentFixture(
@@ -821,6 +1061,8 @@ async function documentFixture(
   overrides: DocumentFixtureOverrides = {},
 ): Promise<DocumentFixture> {
   const withCountryCode = overrides.countryCodeFact ?? true;
+  const emptyTechTagsFromIndustryTags =
+    overrides.emptyTechTagsFromIndustryTags ?? false;
   const catalog = parseBasicSourceCatalog({
     schemaVersion: "basic-source-catalog/v1",
     catalogVersion: CATALOG_VERSION,
@@ -853,7 +1095,8 @@ async function documentFixture(
       adapterKind: "manual-document",
       fieldPaths: [
         ...(withCountryCode ? ["country.code"] : []),
-        ...REQUIRED_EDITORIAL_PATHS,
+        ...REQUIRED_EDITORIAL_PATHS.filter((fieldPath) =>
+          !emptyTechTagsFromIndustryTags || fieldPath !== "marketOverview.techTags"),
         ...(withPopulation ? ["marketOverview.population"] : []),
       ].sort(),
     }, ...(withSecondSource ? [{
@@ -947,7 +1190,10 @@ async function documentFixture(
         year: null,
         uncertainty: null,
       }] : []),
-      ...requiredDocumentEditorialObservations(),
+      ...requiredDocumentEditorialObservations(
+        emptyTechTagsFromIndustryTags,
+        overrides.directTechTagsObservation ?? false,
+      ),
       ...(withPopulation ? [{
         usage: "source-fact" as const,
         fieldPath: "marketOverview.population",
@@ -1019,6 +1265,18 @@ async function documentFixture(
 
 function documentEditorial(fixture: DocumentFixture): BasicCountryEditorialInput {
   return editorial(fixture.preliminary, [documentSummaryItem()]);
+}
+
+function emptyTechTagsItem(
+  sourceId: string,
+  locator: string,
+): BasicCountryEditorialInput["items"][number] {
+  return {
+    fieldPath: "marketOverview.techTags",
+    normalizedValue: [],
+    evidence: [editorialEvidence(sourceId, locator, EMPTY_TECH_TAGS_RAW_VALUE)],
+    uncertainty: EMPTY_TECH_TAGS_UNCERTAINTY,
+  };
 }
 
 function requiredEditorialDefinitions(): readonly Readonly<{
@@ -1100,13 +1358,30 @@ function requiredEditorialEvidence(
     .join("\0").localeCompare([right.sourceId, right.fieldPath, right.locator].join("\0")));
 }
 
-function requiredDocumentEditorialObservations() {
-  return requiredEditorialDefinitions().map((definition) => ({
+function requiredDocumentEditorialObservations(
+  emptyTechTagsFromIndustryTags = false,
+  directTechTagsObservation = false,
+) {
+  const observations = requiredEditorialDefinitions()
+    .filter((definition) =>
+      !emptyTechTagsFromIndustryTags || definition.fieldPath !== "marketOverview.techTags")
+    .map((definition) => ({
     usage: "editorial-evidence" as const,
     fieldPath: definition.fieldPath,
     locator: definition.locator,
     rawValue: definition.rawValue,
   }));
+  if (emptyTechTagsFromIndustryTags) {
+    observations.push({
+      usage: "editorial-evidence",
+      fieldPath: directTechTagsObservation
+        ? "marketOverview.techTags"
+        : "marketOverview.industryTags",
+      locator: DOCUMENT_EMPTY_TECH_TAGS_LOCATOR,
+      rawValue: EMPTY_TECH_TAGS_RAW_VALUE,
+    });
+  }
+  return observations;
 }
 
 async function mixedInput(): Promise<ReviewedInput> {
@@ -1138,6 +1413,48 @@ async function* bytes(value: Uint8Array): AsyncIterable<Uint8Array> {
 
 function expectInvalid(value: unknown): void {
   expect(() => materializeBasicReviewedRunV2(value as ReviewedInput)).toThrow(ERROR);
+}
+
+function expectTaxonomyOwnership(plan: BasicSourceExecutionPlan): void {
+  expect(plan.sources[0]?.source.fieldPaths.filter((fieldPath) =>
+    fieldPath === "marketOverview.industryTags" ||
+    fieldPath === "marketOverview.techTags"))
+    .toEqual(["marketOverview.industryTags"]);
+}
+
+function expectEmptyTechTagsMaterialization(
+  result: ReturnType<typeof materializeBasicReviewedRunV2>,
+  sourceId: string,
+  locator: string,
+): void {
+  expect(result.materialization.extractedFacts.facts.find(
+    ({ fieldPath }) => fieldPath === "marketOverview.techTags",
+  )).toMatchObject({
+    fieldPath: "marketOverview.techTags",
+    status: "candidate",
+    extractionMethod: "manual",
+    uncertainty: EMPTY_TECH_TAGS_UNCERTAINTY,
+    evidence: [{
+      sourceId,
+      locator,
+      rawValue: EMPTY_TECH_TAGS_RAW_VALUE,
+      normalizedValue: [],
+      unit: null,
+      year: null,
+    }],
+  });
+  expect(validateBasicV2FactOwnership(
+    result.materialization.extractedFacts.facts,
+  )).toEqual([]);
+  expect(result.materialization.sourceRegister.sources.find(
+    (source) => source.sourceId === sourceId,
+  )?.evidenceLocators).toContain(locator);
+  expect(result.sourceChecks).toContainEqual({
+    sourceId,
+    status: "passed",
+    notes: null,
+  });
+  expectDeeplyFrozen(result);
 }
 
 function withForbiddenRuntimeSentinels<T>(callback: () => T): T {

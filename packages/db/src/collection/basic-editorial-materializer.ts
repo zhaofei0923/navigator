@@ -161,8 +161,8 @@ export function materializeBasicEditorialFacts(
       const ordinary = ordinaryByField.get(item.fieldPath) ?? [];
       if (ordinaryByField.has(item.fieldPath)) invalid();
       for (const evidence of item.evidence) {
-        const key = evidenceKey({ ...evidence, fieldPath: item.fieldPath });
-        if (!evidenceByKey.has(key) || consumedKeys.has(key)) invalid();
+        const key = resolveEditorialEvidenceKey(item, evidence, evidenceByKey);
+        if (key === null || consumedKeys.has(key)) invalid();
         requireConsumable(evidence.sourceId, sourceById, checkById, riskySourceIds);
         consumedKeys.add(key);
         ordinary.push({
@@ -583,6 +583,26 @@ function preliminaryNameText(
 
 function evidenceKey(value: BasicStructuredEditorialEvidenceObservation): string {
   return [value.sourceId, value.fieldPath, value.locator, canonicalJson(value.rawValue)].join("\0");
+}
+
+function resolveEditorialEvidenceKey(
+  item: BasicCountryEditorialInput["items"][number],
+  evidence: BasicCountryEditorialInput["items"][number]["evidence"][number],
+  evidenceByKey: ReadonlyMap<string, BasicStructuredEditorialEvidenceObservation>,
+): string | null {
+  const samePathKey = evidenceKey({ ...evidence, fieldPath: item.fieldPath });
+  if (evidenceByKey.has(samePathKey)) return samePathKey;
+  if (
+    item.fieldPath !== "marketOverview.techTags" ||
+    !Array.isArray(item.normalizedValue) ||
+    item.normalizedValue.length !== 0 ||
+    item.uncertainty === null
+  ) return null;
+  const industryTagsKey = evidenceKey({
+    ...evidence,
+    fieldPath: "marketOverview.industryTags",
+  });
+  return evidenceByKey.has(industryTagsKey) ? industryTagsKey : null;
 }
 
 function nameEvidenceKey(value: { sourceId: string; locator: string; rawValue: BasicCollectionJsonValue }): string {

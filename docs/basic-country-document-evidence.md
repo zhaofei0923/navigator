@@ -181,6 +181,14 @@ not accepted from either variant. Each observation must be in the source's
 catalog `fieldPaths`, be finite JSON, be uniquely identified by `fieldPath` +
 NUL + `locator`, and be in strict ascending order by that identity.
 
+Catalog field ownership remains exact at this boundary. In particular, an
+`marketOverview.industryTags` editorial-evidence observation does not grant
+the source `marketOverview.techTags` ownership, and a `techTags` observation
+outside the catalog's `fieldPaths` continues to fail here. Editorial may later
+apply only its documented empty-tech-taxonomy evidence-binding helper to an
+already reviewed `industryTags` intermediate; this materializer neither
+creates that helper output nor relaxes catalog checks.
+
 Locators are manually reviewed positions, never inferred from URLs or raw
 bytes:
 
