@@ -4,11 +4,20 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./country-api": "./src/country-api.ts",
+    "./country-formatter": "./src/country-formatter.ts",
+    "./country-query": "./src/country-query.ts",
+    "./country-runtime": {
+      "types": "./src/country-runtime.ts",
+      "development": "./src/country-runtime.ts",
+      "default": "./dist/country-runtime.js"
+    },
     "./coverage": "./src/coverage.ts",
     "./i18n": "./src/i18n.ts",
     "./schema": "./src/schema.ts"
   },
   "scripts": {
+    "build": "tsc --project tsconfig.build.json",
     "lint": "tsc --project tsconfig.json --noEmit --pretty false",
     "typecheck": "tsc --project tsconfig.json --noEmit --pretty false",
     "test": "vitest run"
