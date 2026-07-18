@@ -109,6 +109,8 @@ describe("tracked TypeScript command hook", () => {
     const childSource = `
       import { runApprovedBasicCountriesPrismaImportCli } from ${JSON.stringify(cliModule)};
       const emptyCount = () => ({ count: async () => 0 });
+      let clientCreations = 0;
+      let disconnects = 0;
       const client = {
         async $transaction(run) {
           let country = null;
@@ -143,14 +145,28 @@ describe("tracked TypeScript command hook", () => {
           };
           return run(transaction);
         },
-        async $disconnect() {},
+        async $disconnect() {
+          disconnects += 1;
+          if (disconnects > 1) {
+            throw new Error("FAKE_CLIENT_DISCONNECTED_MORE_THAN_ONCE");
+          }
+        },
       };
       const status = await runApprovedBasicCountriesPrismaImportCli([], {
         repoRoot: process.cwd(),
-        createClient: () => client,
+        createClient: () => {
+          clientCreations += 1;
+          if (clientCreations > 1) {
+            throw new Error("FAKE_CLIENT_CONSTRUCTED_MORE_THAN_ONCE");
+          }
+          return client;
+        },
         stdout: (line) => process.stdout.write(line),
         stderr: (line) => process.stderr.write(line),
       });
+      if (clientCreations !== 1 || disconnects !== 1) {
+        throw new Error("FAKE_CLIENT_LIFECYCLE_MISMATCH");
+      }
       process.exitCode = status;
     `;
     const result = spawnSync("node", [
