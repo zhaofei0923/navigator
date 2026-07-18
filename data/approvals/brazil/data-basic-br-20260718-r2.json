@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "basic-country-publication-approval/v1",
+  "countryDirectory": "brazil",
+  "countryCode": "BR",
+  "runId": "data-basic-br-20260718-r2",
+  "submission": {
+    "fromReviewStatus": "draft",
+    "toReviewStatus": "pending",
+    "submittedAt": "2026-07-18T02:51:43.000Z"
+  },
+  "decision": "approved",
+  "reviewerId": "github:zhaofei0923",
+  "decidedAt": "2026-07-18T02:51:43.000Z",
+  "authorizedPublication": {
+    "coverageLevel": "BASIC",
+    "fromReviewStatus": "pending",
+    "toReviewStatus": "published",
+    "aiUsable": false
+  },
+  "artifactSha256": {
+    "source-register.json": "22b7800d29ad39408e62c2c84d78c643b3d70ed081dca528a15708c895bfced5",
+    "extracted-facts.json": "6c8cb2023f9b2e41afc06bc6d129db7289d7b6b81b2af8171f3eeac3681918d2",
+    "market-overview.draft.json": "2fcfa2d31c616ec99876a268330fd0c73e07e63c6a1fd1b0402de7927c1099e2",
+    "review-report.json": "645e074ba71650fa250d792245fe0397f0f0b678292abce71744350c2fc3511e"
+  }
+}

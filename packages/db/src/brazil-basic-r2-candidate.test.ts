@@ -74,7 +74,7 @@ const R1_ARTIFACT_HASHES = {
   "source-register.json": "1416669e59c990c08064df9045855b4940818853aeaa2cae31289f3352b92f0a",
 } as const;
 const R1_TEST_SHA256 =
-  "1cac85b95faa8017b0504581827d5aadb4a8f01b16a77b0833d2da0fe3f70099";
+  "579c965909056b9b21c66a5d346941c898b8cc908445ba8a31e1bb87433567b8";
 const R2_ARTIFACT_HASHES = {
   "extracted-facts.json": "6c8cb2023f9b2e41afc06bc6d129db7289d7b6b81b2af8171f3eeac3681918d2",
   "market-overview.draft.json": "2fcfa2d31c616ec99876a268330fd0c73e07e63c6a1fd1b0402de7927c1099e2",
@@ -160,7 +160,7 @@ const INDICATOR_PATHS = INDICATORS.flatMap((_indicator, index) => [
 ]);
 
 describe("Brazil Basic r2 correction candidate", () => {
-  test("preserves rejected r1 bytes and candidate test as immutable history", () => {
+  test("preserves rejected r1 bytes and locks its publication-aware test", () => {
     expect(artifactHashes(R1_RUN_ID, R1_ARTIFACT_HASHES)).toEqual(R1_ARTIFACT_HASHES);
     expect(fileSha256(join(
       REPO_ROOT,
@@ -411,8 +411,22 @@ describe("Brazil Basic r2 correction candidate", () => {
       R2_ARTIFACT_HASHES,
     );
     expect(existsSync(join(stagingDirectory, "collection-manifest.json"))).toBe(false);
-    expect(existsSync(join(REPO_ROOT, "data", COUNTRY_DIRECTORY))).toBe(false);
-    expect(existsSync(join(REPO_ROOT, "data", "approvals", COUNTRY_DIRECTORY))).toBe(false);
+    expect(existsSync(join(REPO_ROOT, "data", COUNTRY_DIRECTORY))).toBe(true);
+    expect(existsSync(join(REPO_ROOT, "data", "approvals", COUNTRY_DIRECTORY))).toBe(true);
+    expect(existsSync(join(
+      REPO_ROOT,
+      "data",
+      "approvals",
+      COUNTRY_DIRECTORY,
+      `${R1_RUN_ID}.json`,
+    ))).toBe(false);
+    expect(existsSync(join(
+      REPO_ROOT,
+      "data",
+      "approvals",
+      COUNTRY_DIRECTORY,
+      `${R2_RUN_ID}.json`,
+    ))).toBe(true);
   });
 });
 

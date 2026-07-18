@@ -17,12 +17,13 @@ describe("approved Basic publications build validation", () => {
   test("validates every canonical country directory through the publication gate", () => {
     expect(validateApprovedBasicCountryPublications(REPO_ROOT)).toEqual({
       countryDirectories: [
+        "brazil",
         "indonesia",
         "saudi-arabia",
         "united-arab-emirates",
         "vietnam",
       ],
-      countryCodes: ["ID", "SA", "AE", "VN"],
+      countryCodes: ["BR", "ID", "SA", "AE", "VN"],
     });
   });
 

@@ -208,6 +208,7 @@ describe("country explorer service", () => {
       "VN",
       "SA",
       "AE",
+      "BR",
     ]);
     expect(response.data[0]).toMatchObject({
       coverageLevel: "BASIC",
@@ -228,6 +229,11 @@ describe("country explorer service", () => {
       coverageLevel: "BASIC",
       name: "United Arab Emirates",
       region: "middle-east",
+    });
+    expect(response.data[4]).toMatchObject({
+      coverageLevel: "BASIC",
+      name: "Brazil",
+      region: "latin-america",
     });
   });
 
@@ -253,6 +259,7 @@ describe("country explorer service", () => {
       "VN",
       "SA",
       "AE",
+      "BR",
     ]);
     expect(filterCountryCatalog({ coverageLevel: "COMPLETE" })).toEqual([]);
   });
@@ -264,6 +271,9 @@ describe("country explorer service", () => {
     });
 
     expect(result.map((country) => country.code)).toEqual(["ID", "VN"]);
+    expect(filterCountryCatalog({ region: "latin-america" }).map(
+      (country) => country.code,
+    )).toEqual(["BR"]);
     expect(filterCountryCatalog({ techTags: ["pv-module"] })).toEqual([]);
   });
 
@@ -280,7 +290,7 @@ describe("country explorer service", () => {
         page: 1,
         pageSize: 20,
         textMode: "localized",
-        total: 4,
+        total: 5,
       },
     });
     expect(response.data.map((country) => country.name)).toEqual([
@@ -288,6 +298,7 @@ describe("country explorer service", () => {
       "Viet Nam",
       "Saudi Arabia",
       "United Arab Emirates",
+      "Brazil",
     ]);
     expect(response.data[0]).not.toHaveProperty("industryTags");
     expect(response.data[0]).not.toHaveProperty("techTags");
@@ -436,7 +447,7 @@ describe("country explorer service", () => {
   test("exposes filter options from the catalog", () => {
     expect(getFilterOptions()).toMatchObject({
       coverageLevels: ["BASIC", "STANDARD", "COMPLETE"],
-      regions: ["southeast-asia", "middle-east"],
+      regions: ["southeast-asia", "middle-east", "latin-america"],
       industryTags: ["solar", "wind", "storage", "grid"],
       techTags: ["onshore-wind", "offshore-wind"],
     });
@@ -531,6 +542,33 @@ describe("country explorer service", () => {
       coverageLevel: "BASIC",
       name: "阿拉伯联合酋长国",
       summary: expect.stringContaining("每年发电40太瓦时"),
+    });
+    expect(aiAdvisor).toMatchObject({
+      data: { moduleKey: "ai-advisor", status: "BUILDING", items: [] },
+      meta: { total: 0 },
+    });
+  });
+
+  test("serves published Brazil data in both locales while AI remains BUILDING", () => {
+    const english = buildCountryDetailResponse("BR", { locale: "en" });
+    const chinese = buildCountryDetailResponse("BR", { locale: "zh-CN" });
+    const aiAdvisor = buildCountryModuleResponse("BR", "ai-advisor", {
+      locale: "en",
+    });
+
+    expect(english?.data).toMatchObject({
+      code: "BR",
+      coverageLevel: "BASIC",
+      name: "Brazil",
+      summary: expect.stringContaining(
+        "final electricity consumption grew 2.7% year on year in 2025",
+      ),
+    });
+    expect(chinese?.data).toMatchObject({
+      code: "BR",
+      coverageLevel: "BASIC",
+      name: "巴西",
+      summary: expect.stringContaining("2025年最终电力消费同比增长2.7%"),
     });
     expect(aiAdvisor).toMatchObject({
       data: { moduleKey: "ai-advisor", status: "BUILDING", items: [] },

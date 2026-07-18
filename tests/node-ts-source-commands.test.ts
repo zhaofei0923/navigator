@@ -62,6 +62,7 @@ describe("tracked TypeScript command hook", () => {
 
   test("runs the approved Basic publication import command for every published country", () => {
     for (const countryDirectory of [
+      "brazil",
       "indonesia",
       "saudi-arabia",
       "united-arab-emirates",
@@ -93,7 +94,7 @@ describe("tracked TypeScript command hook", () => {
 
     expect(result.status, result.stderr).toBe(0);
     expect(result.stdout).toContain(
-      '{"countryDirectories":["indonesia","saudi-arabia","united-arab-emirates","vietnam"],"countryCodes":["ID","SA","AE","VN"]}',
+      '{"countryDirectories":["brazil","indonesia","saudi-arabia","united-arab-emirates","vietnam"],"countryCodes":["BR","ID","SA","AE","VN"]}',
     );
   }, 30_000);
 });

@@ -30,7 +30,7 @@ MVP 到商业化初期的当前建设目标是经人工批准的国家先完成 
 | 扩展 | VN | 越南 | Basic | 已按批准的 v2 candidate 发布基础画像；后续覆盖升级仍须独立人工决定 | 已发布 Basic |
 | 扩展 | SA | 沙特阿拉伯 | Basic | r1 是不可变审计历史，永不得批准或发布，且不得作为任何批准决定或发布任务的输入；r2 是唯一 active publication，后续覆盖升级仍须独立人工批准 | 已发布 Basic |
 | 扩展 | AE | 阿联酋 | Basic | 已按批准的 r1 v2 candidate 发布基础画像；后续覆盖升级仍须独立人工决定 | 已发布 Basic |
-| 扩展 | BR | 巴西 | Basic | 先完成统一基础画像；后续覆盖升级另行人工批准 | 待人工确认 |
+| 扩展 | BR | 巴西 | Basic | r1 为已拒绝的不可变审计历史；r2 是唯一 active publication，后续覆盖升级仍须独立人工批准 | 已发布 Basic |
 | 基础池 | KE | 肯尼亚 | Basic | 非洲示范市场 | 待人工确认 |
 | 基础池 | ZA | 南非 | Basic | 非洲重点能源市场 | 待人工确认 |
 | 基础池 | MX | 墨西哥 | Basic | 北美近岸与新能源市场 | 待人工确认 |
@@ -68,6 +68,32 @@ MVP 到商业化初期的当前建设目标是经人工批准的国家先完成 
   `BUILDING`/零项，且 `aiUsable = false`。
 - candidate bytes 未因发布而改变。本次 Basic 发布不授权 Standard、Complete、
   AI 或深度模块；任何修正必须创建新 run，任何后续升级均须另行人工批准。
+
+### BR r1 audit history and r2 Basic publication record
+
+- `data-basic-br-20260717-r1` 是已拒绝的不可变审计历史，永不得批准、发布或作为
+  后续发布输入；该 run 的四个 artifact hashes 继续记录在
+  [brazil-seed.md](./brazil-seed.md)，且不存在 r1 approval receipt。
+- 获批准并成为唯一 active publication 的是 `brazil` / `BR` /
+  `data-basic-br-20260718-r2`。其 immutable candidate 四文件 SHA-256 为
+  `source-register.json` `22b7800d29ad39408e62c2c84d78c643b3d70ed081dca528a15708c895bfced5`、
+  `extracted-facts.json` `6c8cb2023f9b2e41afc06bc6d129db7289d7b6b81b2af8171f3eeac3681918d2`、
+  `market-overview.draft.json` `2fcfa2d31c616ec99876a268330fd0c73e07e63c6a1fd1b0402de7927c1099e2`
+  与 `review-report.json` `645e074ba71650fa250d792245fe0397f0f0b678292abce71744350c2fc3511e`。
+- 项目所有者已明确批准该 identity，reviewer 为 `github:zhaofei0923`，submitted /
+  decided 均为 `2026-07-18T02:51:43.000Z`。独立批准回执 SHA-256 为
+  `47136fb4516cc6d7a2fe4c104542f184c8190201ba6e5b772b796d55f215cf01`。
+- `data/brazil/` canonical publication 恰好包含 `country.json`
+  (`1a472079dc82589e50f4ed05885c9161d90f4b42e115c7852c69c8da7593d6e5`)、
+  `market-overview.json` (`79b76a56d878493ec91ba774f156301a6d85c688ae51c8aaf7ac71384a5db53a`)
+  与 `collection-manifest.json`
+  (`ff6f8a99e369f1fadf560858332c8589f1d6a8eb72e0d2751acf540cdb6f3421`)。
+  覆盖恰好为 `BASIC`，市场概览是唯一 `COMPLETE` 模块，其余九模块均为
+  `BUILDING`/零项，且 `aiUsable = false`。
+- canonical 保留 2025 年最终电力消费同比增长 `2.7%`、太阳能光伏装机
+  `64,793 MW` 和风电装机 `34,707 MW`；排除不可比的 `86.8` / `86.6` 口径和
+  非总量的 `20.4 TWh`。2030 项仅是全国能源矩阵定性目标，`techTags = []`。
+  本次发布不授权 Standard、Complete、AI 或深度模块。
 
 ---
 
