@@ -58,7 +58,7 @@ graph LR
 | 里程碑 | 当前状态 | 下一步 | 进入下一阶段的必要条件 |
 |--------|----------|--------|------------------------|
 | M0 六国 BASIC | **已完成** | 保持六国 canonical publication 与批准回执不可变 | ID、VN、SA、AE、BR、ZA 均恰好为 BASIC，且无 AI eligibility |
-| M1 生产平台底座 | **进行中：PLATFORM-DB-1 已完成，PLATFORM-API-1 未完成** | 等待 Gate 0 对精确 NestJS 依赖集合的人工批准；批准后完成 PLATFORM-API-1 任务 3–6，再启动 PLATFORM-OPS-1 | 六国幂等导入；数据库/API 返回与 canonical JSON 等价；具备健康检查、可观测性和容量基线 |
+| M1 生产平台底座 | **进行中：PLATFORM-DB-1 已完成，PLATFORM-API-1 未完成** | 等待 Gate 0 对精确 NestJS 依赖集合的人工批准；批准后完成 PLATFORM-API-1 任务 3–8，再启动 PLATFORM-OPS-1 | 六国幂等导入；数据库/API 返回与 canonical JSON 等价；具备健康检查、可观测性和容量基线 |
 | M2 ID STANDARD 试点 | **与 M1 并行进行中：安全合成 fixture 切片已完成** | 在独立人工关口下再推进真实来源登记、事实与双语文本候选；STANDARD 发布另行批准，当前 ID 仍为真实 BASIC | ID 的 policy、risk、opportunities 达到可展示状态并通过 STANDARD 机器判定；来源、事实和发布分别审核；不自动启用 AI |
 | M3 Admin 与权限基础 | **M1 后启动** | P5-1、P5-2 与 P4-1、P4-3 按独立任务实施 | 审核发布闭环、服务端鉴权、留资加密均通过测试 |
 | M4 AI 受控 Beta | **骨架可在 M1 后开发，生产启用待门槛** | P3-1、P3-2；之后单独执行 AI Beta 启用卡 | 试点已达 STANDARD；ai-advisor 至少 20 个合格片段、覆盖至少 3 个来源模块；Prompt 与检索默认值人工确认 |
@@ -306,13 +306,13 @@ graph LR
 - 目标：按现有 api-contract 建立 NestJS /api/v1 服务边界，将国家列表、详情和模块 GET 接口从文件读取迁移到数据库读取；Next.js 只保留展示和 BFF 职责。
 - 验收：现有六国 API contract、中英文降级、BUILDING 占位和错误语义不变；契约测试对比迁移前后响应；服务端输入校验和 Prisma 参数化查询通过安全测试；可通过开关回退到已验证读取路径。
 - 人工确认：否（NestJS 已是固定技术栈；若需新增依赖、改变接口契约或模型，须单独 ⚠️）。
-- 2026-07-18 进度：无新增依赖的任务 1–2 已完成，本卡仍未完成。下一步必须先取得 Gate 0 对 `@nestjs/common@11.1.28`、`@nestjs/core@11.1.28`、`@nestjs/platform-express@11.1.28`、`reflect-metadata@0.2.2`、`rxjs@7.8.2` 与开发依赖 `@nestjs/testing@11.1.28` 的精确人工批准；批准前不得安装依赖或执行任务 3–6。
+- 2026-07-18 进度：无新增依赖的任务 1–2 已完成，本卡仍未完成。下一步必须先取得 Gate 0 对 `@nestjs/common@11.1.28`、`@nestjs/core@11.1.28`、`@nestjs/platform-express@11.1.28`、`reflect-metadata@0.2.2`、`rxjs@7.8.2` 与开发依赖 `@nestjs/testing@11.1.28` 的精确人工批准；批准前不得安装依赖或执行任务 3–8。
 
 #### PLATFORM-OPS-1 并发与运行治理基线
 - 目标：在数据库/API 链路上建立连接池、缓存边界、健康检查、结构化日志、指标、追踪和可重复负载测试；容量规划以峰值 RPS、读写比例、缓存命中率和 AI 请求占比为输入，不只按日访问量估算。
 - 验收：为日请求量 10 万、100 万、1000 万三档记录假设、峰值模型、p95/p99、错误率、数据库连接与资源水位；验证缓存失效和降级路径；产出单实例容量基线及横向扩容触发阈值，且不在测试中调用真实 AI 或外部来源。
 - 人工确认：否（只建立基线；Redis、队列、APM 等新依赖以及生产部署须单独 ⚠️）。
-- 2026-07-18 进度：尚未启动；严格等待 PLATFORM-API-1 任务 3–6 完成后再实施，继续保持 DB → API → OPS 串行顺序。
+- 2026-07-18 进度：尚未启动；严格等待 PLATFORM-API-1 任务 3–8 完成后再实施，继续保持 DB → API → OPS 串行顺序。
 
 ### P3 — AI 顾问 ⚠️
 
