@@ -65,6 +65,7 @@ describe("tracked TypeScript command hook", () => {
       "brazil",
       "indonesia",
       "saudi-arabia",
+      "south-africa",
       "united-arab-emirates",
       "vietnam",
     ]) {
@@ -94,7 +95,7 @@ describe("tracked TypeScript command hook", () => {
 
     expect(result.status, result.stderr).toBe(0);
     expect(result.stdout).toContain(
-      '{"countryDirectories":["brazil","indonesia","saudi-arabia","united-arab-emirates","vietnam"],"countryCodes":["BR","ID","SA","AE","VN"]}',
+      '{"countryDirectories":["brazil","indonesia","saudi-arabia","south-africa","united-arab-emirates","vietnam"],"countryCodes":["BR","ID","SA","ZA","AE","VN"]}',
     );
   }, 30_000);
 });

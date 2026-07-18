@@ -209,6 +209,7 @@ describe("country explorer service", () => {
       "SA",
       "AE",
       "BR",
+      "ZA",
     ]);
     expect(response.data[0]).toMatchObject({
       coverageLevel: "BASIC",
@@ -235,6 +236,11 @@ describe("country explorer service", () => {
       name: "Brazil",
       region: "latin-america",
     });
+    expect(response.data[5]).toMatchObject({
+      coverageLevel: "BASIC",
+      name: "South Africa",
+      region: "africa",
+    });
   });
 
   test("keeps module coverage from the seed data", () => {
@@ -260,6 +266,7 @@ describe("country explorer service", () => {
       "SA",
       "AE",
       "BR",
+      "ZA",
     ]);
     expect(filterCountryCatalog({ coverageLevel: "COMPLETE" })).toEqual([]);
   });
@@ -274,6 +281,12 @@ describe("country explorer service", () => {
     expect(filterCountryCatalog({ region: "latin-america" }).map(
       (country) => country.code,
     )).toEqual(["BR"]);
+    expect(filterCountryCatalog({ region: "africa" }).map(
+      (country) => country.code,
+    )).toEqual(["ZA"]);
+    expect(filterCountryCatalog({ techTags: ["onshore-wind"] }).map(
+      (country) => country.code,
+    )).toEqual(["VN", "ZA"]);
     expect(filterCountryCatalog({ techTags: ["pv-module"] })).toEqual([]);
   });
 
@@ -290,7 +303,7 @@ describe("country explorer service", () => {
         page: 1,
         pageSize: 20,
         textMode: "localized",
-        total: 5,
+        total: 6,
       },
     });
     expect(response.data.map((country) => country.name)).toEqual([
@@ -299,6 +312,7 @@ describe("country explorer service", () => {
       "Saudi Arabia",
       "United Arab Emirates",
       "Brazil",
+      "South Africa",
     ]);
     expect(response.data[0]).not.toHaveProperty("industryTags");
     expect(response.data[0]).not.toHaveProperty("techTags");
@@ -447,7 +461,7 @@ describe("country explorer service", () => {
   test("exposes filter options from the catalog", () => {
     expect(getFilterOptions()).toMatchObject({
       coverageLevels: ["BASIC", "STANDARD", "COMPLETE"],
-      regions: ["southeast-asia", "middle-east", "latin-america"],
+      regions: ["southeast-asia", "middle-east", "africa", "latin-america"],
       industryTags: ["solar", "wind", "storage", "grid"],
       techTags: ["onshore-wind", "offshore-wind"],
     });
@@ -569,6 +583,33 @@ describe("country explorer service", () => {
       coverageLevel: "BASIC",
       name: "巴西",
       summary: expect.stringContaining("2025年最终电力消费同比增长2.7%"),
+    });
+    expect(aiAdvisor).toMatchObject({
+      data: { moduleKey: "ai-advisor", status: "BUILDING", items: [] },
+      meta: { total: 0 },
+    });
+  });
+
+  test("serves published South Africa data in both locales while AI remains BUILDING", () => {
+    const english = buildCountryDetailResponse("ZA", { locale: "en" });
+    const chinese = buildCountryDetailResponse("ZA", { locale: "zh-CN" });
+    const aiAdvisor = buildCountryModuleResponse("ZA", "ai-advisor", {
+      locale: "en",
+    });
+
+    expect(english?.data).toMatchObject({
+      code: "ZA",
+      coverageLevel: "BASIC",
+      name: "South Africa",
+      summary: expect.stringContaining(
+        "195,702 GWh of Eskom-only energy sent out",
+      ),
+    });
+    expect(chinese?.data).toMatchObject({
+      code: "ZA",
+      coverageLevel: "BASIC",
+      name: "南非",
+      summary: expect.stringContaining("Eskom口径送出电量为195,702吉瓦时"),
     });
     expect(aiAdvisor).toMatchObject({
       data: { moduleKey: "ai-advisor", status: "BUILDING", items: [] },

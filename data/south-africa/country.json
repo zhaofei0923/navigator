@@ -1,0 +1,77 @@
+{
+  "code": "ZA",
+  "name": {
+    "en": "South Africa",
+    "zh": "南非"
+  },
+  "summary": {
+    "en": "South Africa's power system is served by Eskom as its principal grid operator. Eskom reported 189.7 TWh of sales volumes and 195,702 GWh of Eskom-only energy sent out in FY2025. The government Integrated Resource Plan 2025, published on 28 October 2025, states that its current base includes installed, under-construction, and deemed-online-in-2025 capacity, including 5,344 MW of wind and 3,646 MW of grid-tied solar; it sets cumulative planned additions of 43,041 MW of wind and 28,713 MW of solar for 2026-2042. A 2023 announcement covered two hybrid renewable projects totaling 203 MW using solar PV, onshore wind, and battery storage.",
+    "zh": "南非电力系统以Eskom为主要电网运营商。Eskom在2025财年的售电量为189.7太瓦时，Eskom口径送出电量为195,702吉瓦时。2025年10月28日发布的政府《综合资源计划2025》显示，当前基础包括已投运、在建及视为于2025年投运的容量，其中风电5,344兆瓦、并网太阳能3,646兆瓦；该计划提出2026至2042年累计规划新增风电43,041兆瓦和太阳能28,713兆瓦。2023年公告的两个混合可再生能源项目总计203兆瓦，采用光伏、陆上风电和储能技术。"
+  },
+  "region": "africa",
+  "flagEmoji": "🇿🇦",
+  "updatedAt": "2025-10-28T00:00:00.000Z",
+  "coverageLevel": "BASIC",
+  "moduleCoverage": [
+    {
+      "moduleKey": "market-overview",
+      "status": "COMPLETE",
+      "dataCount": 1,
+      "updatedAt": "2025-10-28T00:00:00.000Z"
+    },
+    {
+      "moduleKey": "policy",
+      "status": "BUILDING",
+      "dataCount": 0,
+      "updatedAt": "2025-10-28T00:00:00.000Z"
+    },
+    {
+      "moduleKey": "risk",
+      "status": "BUILDING",
+      "dataCount": 0,
+      "updatedAt": "2025-10-28T00:00:00.000Z"
+    },
+    {
+      "moduleKey": "opportunities",
+      "status": "BUILDING",
+      "dataCount": 0,
+      "updatedAt": "2025-10-28T00:00:00.000Z"
+    },
+    {
+      "moduleKey": "projects",
+      "status": "BUILDING",
+      "dataCount": 0,
+      "updatedAt": "2025-10-28T00:00:00.000Z"
+    },
+    {
+      "moduleKey": "partners",
+      "status": "BUILDING",
+      "dataCount": 0,
+      "updatedAt": "2025-10-28T00:00:00.000Z"
+    },
+    {
+      "moduleKey": "chinese-companies",
+      "status": "BUILDING",
+      "dataCount": 0,
+      "updatedAt": "2025-10-28T00:00:00.000Z"
+    },
+    {
+      "moduleKey": "entry-strategy",
+      "status": "BUILDING",
+      "dataCount": 0,
+      "updatedAt": "2025-10-28T00:00:00.000Z"
+    },
+    {
+      "moduleKey": "ai-advisor",
+      "status": "BUILDING",
+      "dataCount": 0,
+      "updatedAt": "2025-10-28T00:00:00.000Z"
+    },
+    {
+      "moduleKey": "reports",
+      "status": "BUILDING",
+      "dataCount": 0,
+      "updatedAt": "2025-10-28T00:00:00.000Z"
+    }
+  ]
+}

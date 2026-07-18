@@ -54,7 +54,9 @@ test("country explorer filters coverage and keeps coverage badges visible", asyn
   await expect(uaeCard).toBeVisible();
   const brazilCard = page.getByRole("article", { name: /Brazil/ });
   await expect(brazilCard).toBeVisible();
-  await expect(page.getByText("5 countries")).toBeVisible();
+  const southAfricaCard = page.getByRole("article", { name: /South Africa/ });
+  await expect(southAfricaCard).toBeVisible();
+  await expect(page.getByText("6 countries")).toBeVisible();
 
   await page.getByRole("link", { name: /Indonesia/ }).click();
   await expect(page).toHaveURL(/\/en\/countries\/ID/);
@@ -179,6 +181,37 @@ test("Brazil Basic detail renders in English and Chinese without enabling AI", a
       .getByRole("heading", { exact: true, name: "巴西" })
       .locator("..")
       .getByText(/2025年最终电力消费同比增长2.7%/),
+  ).toBeVisible();
+  await expect(page.getByText("数据建设中", { exact: true })).toHaveCount(9);
+});
+
+test("South Africa Basic detail renders in English and Chinese without enabling AI", async ({
+  page,
+}) => {
+  await page.goto("/en/countries/ZA");
+
+  await expect(
+    page.getByRole("heading", { exact: true, name: "South Africa" }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("heading", { exact: true, name: "South Africa" })
+      .locator("..")
+      .getByText(/195,702 GWh of Eskom-only energy sent out/),
+  ).toBeVisible();
+  await expect(page.getByText("Data Building", { exact: true })).toHaveCount(9);
+
+  await page.getByRole("link", { name: "zh-CN" }).click();
+
+  await expect(page).toHaveURL(/\/zh-CN\/countries\/ZA/);
+  await expect(
+    page.getByRole("heading", { exact: true, name: "南非" }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("heading", { exact: true, name: "南非" })
+      .locator("..")
+      .getByText(/Eskom口径送出电量为195,702吉瓦时/),
   ).toBeVisible();
   await expect(page.getByText("数据建设中", { exact: true })).toHaveCount(9);
 });

@@ -18,6 +18,7 @@ describe("approved Basic country publication import", () => {
     ["brazil", "BR"],
     ["indonesia", "ID"],
     ["saudi-arabia", "SA"],
+    ["south-africa", "ZA"],
     ["united-arab-emirates", "AE"],
     ["vietnam", "VN"],
   ] as const)("builds an isolated country-generic plan from %s", (directory, code) => {

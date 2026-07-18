@@ -32,7 +32,7 @@ MVP 到商业化初期的当前建设目标是经人工批准的国家先完成 
 | 扩展 | AE | 阿联酋 | Basic | 已按批准的 r1 v2 candidate 发布基础画像；后续覆盖升级仍须独立人工决定 | 已发布 Basic |
 | 扩展 | BR | 巴西 | Basic | r1 为已拒绝的不可变审计历史；r2 是唯一 active publication，后续覆盖升级仍须独立人工批准 | 已发布 Basic |
 | 基础池 | KE | 肯尼亚 | Basic | 非洲示范市场 | 待人工确认 |
-| 基础池 | ZA | 南非 | Basic | 非洲重点能源市场 | 待人工确认 |
+| 扩展 | ZA | 南非 | Basic | r1 为已拒绝的不可变审计历史；r2 是唯一 active publication，后续覆盖升级仍须独立人工批准 | 已发布 Basic |
 | 基础池 | MX | 墨西哥 | Basic | 北美近岸与新能源市场 | 待人工确认 |
 | 基础池 | AU | 澳大利亚 | Basic | 成熟能源市场与储能机会 | 待人工确认 |
 
@@ -94,6 +94,35 @@ MVP 到商业化初期的当前建设目标是经人工批准的国家先完成 
   `64,793 MW` 和风电装机 `34,707 MW`；排除不可比的 `86.8` / `86.6` 口径和
   非总量的 `20.4 TWh`。2030 项仅是全国能源矩阵定性目标，`techTags = []`。
   本次发布不授权 Standard、Complete、AI 或深度模块。
+
+### ZA r1 audit history and r2 Basic publication record
+
+- `data-basic-za-20260717-r1` 是已拒绝的不可变审计历史，永不得批准、发布或作为
+  后续发布输入；其四文件 identity 继续由 candidate lock 保留，且不存在 r1
+  approval receipt。
+- 获批准并成为唯一 active publication 的是 `south-africa` / `ZA` /
+  `data-basic-za-20260718-r2`。其 immutable candidate 四文件 SHA-256 为
+  `source-register.json` `7a99e47484e038a708201981035da50de7309f09ede5ab235ad4f32151001e3f`、
+  `extracted-facts.json` `dc8387ad8569037d799e59b0be8502647bf2719d7b9395962d56901f9df1250c`、
+  `market-overview.draft.json` `16ea4b33672b0c5ff4ad025eca1ca8d2ca0ceb36f95bf8c8f8d7da93c6b91536`
+  与 `review-report.json` `f73b93f10e3dc0d40eac7f918745bde855f11d49fed5a0259ea2fefa27e92a33`。
+- 项目所有者已明确批准该 identity，reviewer 为 `github:zhaofei0923`，submitted /
+  decided 均为 `2026-07-18T02:51:43.000Z`。独立批准回执 SHA-256 为
+  `5e82bf08c86218c9b141d17b9f17bbadf7ca1a6f5634058abafb89e14e065e56`。
+- `data/south-africa/` canonical publication 恰好包含 `country.json`
+  (`44249f810ff09bdfbaf2d4e53c99412df7e10f245872aa8bac3c52a6e6a7270c`)、
+  `market-overview.json` (`3a45fd2eeba92cd8cb3f85f1ed6b492ffe2fe28defadab619d61450769657f77`)
+  与 `collection-manifest.json`
+  (`26b338493345f432f84420d50ef3acafbc2974d96bc24036f7d049b01401065c`)。
+  覆盖恰好为 `BASIC`，市场概览是唯一 `COMPLETE` 模块，其余九模块均为
+  `BUILDING`/零项，且 `aiUsable = false`。
+- canonical 保留 FY2025 Eskom 售电量 `189.7 TWh` 与 Eskom 口径送出电量
+  `195,702 GWh`；后者不表述为自发电量，也不添加 pumping 或 wheeling 限定。
+  `43,041 MW` 是 2026-2042 年累计规划新增风电，年份为 2042，不是当前、已建或
+  已采购容量；当前基础中的 `5,344 MW` 风电和 `3,646 MW` 并网太阳能包括已投运、
+  在建及视为于 2025 年投运的容量。IRP 更新时间为 `2025-10-28T00:00:00.000Z`，
+  `techTags = ["onshore-wind"]` 仅由 RMIPPPP 明确支持。本次发布不授权 Standard、
+  Complete、AI 或深度模块。
 
 ---
 
