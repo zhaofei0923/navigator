@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import {
   COUNTRY_FALLBACK_GOLDEN,
@@ -19,27 +19,54 @@ import { GET as getCountries } from "./route.js";
 import { GET as getCountryDetail } from "./[code]/route.js";
 import { GET as getCountryModule } from "./[code]/modules/[moduleKey]/route.js";
 
+beforeEach(() => {
+  vi.stubEnv("API_INTERNAL_BASE_URL", "http://127.0.0.1:3100/api/v1");
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.restoreAllMocks();
+});
+
 async function invokeGoldenFixture(
   fixture: CountryRouteGoldenFixture,
 ) {
+  const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+    new Response(JSON.stringify(fixture.expectedBody), {
+      status: fixture.expectedStatus,
+      headers: { "content-type": "application/json; charset=utf-8" },
+    }),
+  );
   const request = new Request(
     `https://navigator.test${fixture.requestPath}`,
     fixture.headers === undefined ? {} : { headers: fixture.headers },
   );
-  if (fixture.route === "list") {
-    return getCountries(request);
+  try {
+    let response: Response;
+    if (fixture.route === "list") {
+      response = await getCountries(request);
+    } else if (fixture.route === "detail") {
+      response = await getCountryDetail(request, {
+        params: Promise.resolve({ code: fixture.params?.code ?? "" }),
+      });
+    } else {
+      response = await getCountryModule(request, {
+        params: Promise.resolve({
+          code: fixture.params?.code ?? "",
+          moduleKey: fixture.params?.moduleKey ?? "",
+        }),
+      });
+    }
+
+    if (fixture.expectedStatus === 400) {
+      expect(fetchSpy).not.toHaveBeenCalled();
+    } else {
+      expect(fetchSpy).toHaveBeenCalledOnce();
+    }
+    return response;
+  } finally {
+    fetchSpy.mockRestore();
   }
-  if (fixture.route === "detail") {
-    return getCountryDetail(request, {
-      params: Promise.resolve({ code: fixture.params?.code ?? "" }),
-    });
-  }
-  return getCountryModule(request, {
-    params: Promise.resolve({
-      code: fixture.params?.code ?? "",
-      moduleKey: fixture.params?.moduleKey ?? "",
-    }),
-  });
 }
 
 describe("pre-migration country route golden matrix", () => {

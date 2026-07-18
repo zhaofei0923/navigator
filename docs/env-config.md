@@ -50,8 +50,11 @@
 | `API_PORT` | ✓ | API 监听端口；范围为 `1024..65535`，本地模板为 `3100` |
 | `COUNTRY_READ_SOURCE` | — | `database`（默认）或显式 `canonical`；生产默认仅使用 `database` |
 | `CANONICAL_REPOSITORY_ROOT` | 仅 `canonical` | 已规范化的绝对仓库根路径；`database` source 会忽略该变量 |
+| `API_INTERNAL_BASE_URL` | Web ✓ | Next BFF 到 Nest 的服务端专用基址；本地模板为 `http://127.0.0.1:3100/api/v1` |
 
-`database` source 仅要求 `DATABASE_URL`；`canonical` source 不要求 `DATABASE_URL`。API 的 scoped parser 只读取以上四项（含 `DATABASE_URL`），不会读取认证、AI 或留资变量。M1 固定监听 `127.0.0.1`，外部流量必须先进入同机 TLS reverse proxy 或 Next BFF。
+`database` source 仅要求 `DATABASE_URL`；`canonical` source 不要求 `DATABASE_URL`。API 的 scoped parser 只读取 `API_PORT`、`COUNTRY_READ_SOURCE`、`CANONICAL_REPOSITORY_ROOT` 与 `DATABASE_URL`，不会读取 Web BFF、认证、AI 或留资变量。M1 固定监听 `127.0.0.1`，外部流量必须先进入同机 TLS reverse proxy 或 Next BFF。
+
+Web 的 scoped parser 只读取 `NODE_ENV` 与 `API_INTERNAL_BASE_URL`，不会要求数据库、认证、留资或 AI 变量。内部基址只允许 `http` / `https`，不得携带 credentials、query 或 hash；生产环境的明文 `http` 仅允许字面 IP loopback `127.0.0.1` / `::1`，其他主机必须使用 `https`。该变量无公开前缀，只允许在 Node 服务端 instrumentation、BFF 与 SSR server code 中读取，禁止进入客户端 bundle。
 
 ### 2.4 认证 / 会员（配合 [auth-membership.md](./auth-membership.md)）
 | 变量 | 必需 | 说明 |

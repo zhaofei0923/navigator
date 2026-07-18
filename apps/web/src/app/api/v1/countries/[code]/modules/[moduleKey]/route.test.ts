@@ -1,136 +1,70 @@
-import { describe, expect, test } from "vitest";
+import { readFileSync } from "node:fs";
+
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { GET } from "./route.js";
 
-const BUILDING_MODULE_KEYS = [
-  "policy",
-  "risk",
-  "opportunities",
-  "projects",
-  "partners",
-  "chinese-companies",
-  "entry-strategy",
-  "ai-advisor",
-  "reports",
-] as const;
+beforeEach(() => {
+  vi.stubEnv("API_INTERNAL_BASE_URL", "http://127.0.0.1:3100/api/v1");
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.restoreAllMocks();
+});
 
 describe("GET /api/v1/countries/:code/modules/:moduleKey", () => {
-  test.each(
-    BUILDING_MODULE_KEYS.flatMap((moduleKey) =>
-      (["localized", "raw"] as const).map((textMode) => [
-        moduleKey,
-        textMode,
-      ] as const),
-    ),
-  )("returns a BUILDING placeholder for %s in %s mode", async (moduleKey, textMode) => {
+  test("proxies only a shared-validated module path and normalized query", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({ data: { moduleKey: "policy" }, success: true }),
+        { headers: { "content-type": "application/json" } },
+      ),
+    );
+
     const response = await GET(
       new Request(
-        `https://navigator.test/api/v1/countries/ID/modules/${moduleKey}?locale=en&textMode=${textMode}`,
+        "https://navigator.test/api/v1/countries/id/modules/policy?locale=en&page=2",
       ),
-      { params: Promise.resolve({ code: "ID", moduleKey }) },
+      { params: Promise.resolve({ code: "id", moduleKey: "policy" }) },
     );
-    const body = (await response.json()) as {
-      success: boolean;
-      data: {
-        items: unknown[];
-        item?: unknown;
-        moduleKey: string;
-        status: string;
-        _i18nFallback?: string[];
-      };
-      meta: {
-        locale: string;
-        page: number;
-        pageSize: number;
-        textMode: string;
-        total: number;
-      };
-    };
 
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "http://127.0.0.1:3100/api/v1/countries/ID/modules/policy?locale=en&page=2&pageSize=20&textMode=localized",
+      expect.objectContaining({ method: "GET", redirect: "manual" }),
+    );
     expect(response.status).toBe(200);
-    expect(body.success).toBe(true);
-    expect(body.data).toMatchObject({
-      moduleKey,
-      status: "BUILDING",
+    expect(await response.json()).toEqual({
+      data: { moduleKey: "policy" },
+      success: true,
     });
-    expect(body.meta).toMatchObject({
-      locale: "en",
-      page: 1,
-      pageSize: 20,
-      textMode,
-      total: 0,
+  });
+
+  test("rejects an invalid module key before contacting Nest", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const response = await GET(
+      new Request(
+        "https://navigator.test/api/v1/countries/ID/modules/bad-module?locale=en",
+      ),
+      { params: Promise.resolve({ code: "ID", moduleKey: "bad-module" }) },
+    );
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      error: {
+        code: "VALIDATION_ERROR",
+        details: { moduleKey: "bad-module" },
+        message: "Invalid country module query",
+      },
+      success: false,
     });
-    expect(body.data.items).toEqual([]);
-    expect(body.data).not.toHaveProperty("item");
-    if (textMode === "localized") {
-      expect(body.data._i18nFallback).toEqual([]);
-    } else {
-      expect(body.data).not.toHaveProperty("_i18nFallback");
-    }
-    expect(JSON.stringify(body)).not.toContain("id_pol_001");
-    expect(JSON.stringify(body)).not.toContain("id_pol_anti_draft_001");
   });
 
-  test("returns raw object module item", async () => {
-    const response = await GET(
-      new Request(
-        "https://navigator.test/api/v1/countries/ID/modules/market-overview?locale=en&textMode=raw",
-      ),
-      { params: Promise.resolve({ code: "ID", moduleKey: "market-overview" }) },
-    );
-    const body = (await response.json()) as {
-      data: {
-        item: { overview: { zh: string; en: string } };
-        _i18nFallback?: string[];
-      };
-      meta: { textMode: string };
-    };
+  test("contains no local country data source imports", () => {
+    const source = readFileSync(new URL("./route.ts", import.meta.url), "utf8");
 
-    expect(response.status).toBe(200);
-    expect(body.meta.textMode).toBe("raw");
-    expect(body.data.item.overview.en).toContain(
-      "Installed renewable capacity reached 15,630 MW",
-    );
-    expect(body.data._i18nFallback).toBeUndefined();
-  });
-
-  test.each([
-    ["moduleKey", "bad-module", 400, "VALIDATION_ERROR"],
-    ["locale", "fr", 400, "VALIDATION_ERROR"],
-    ["page", "0", 400, "VALIDATION_ERROR"],
-  ])("validates %s values", async (key, value, status, code) => {
-    const moduleKey = key === "moduleKey" ? value : "policy";
-    const query = key === "moduleKey" ? "locale=en" : `${key}=${value}`;
-    const response = await GET(
-      new Request(
-        `https://navigator.test/api/v1/countries/ID/modules/${moduleKey}?${query}`,
-      ),
-      { params: Promise.resolve({ code: "ID", moduleKey }) },
-    );
-    const body = (await response.json()) as {
-      error: { code: string };
-      success: boolean;
-    };
-
-    expect(response.status).toBe(status);
-    expect(body.success).toBe(false);
-    expect(body.error.code).toBe(code);
-  });
-
-  test("returns NOT_FOUND for unknown country code", async () => {
-    const response = await GET(
-      new Request(
-        "https://navigator.test/api/v1/countries/ZZ/modules/policy?locale=en",
-      ),
-      { params: Promise.resolve({ code: "ZZ", moduleKey: "policy" }) },
-    );
-    const body = (await response.json()) as {
-      error: { code: string };
-      success: boolean;
-    };
-
-    expect(response.status).toBe(404);
-    expect(body.success).toBe(false);
-    expect(body.error.code).toBe("NOT_FOUND");
+    expect(source).not.toMatch(/country-(?:seed-registry|service)/);
+    expect(source).not.toMatch(/canonical|\.json["']/);
   });
 });

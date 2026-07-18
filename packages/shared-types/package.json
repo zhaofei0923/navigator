@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./env": "./src/env.ts",
     "./country-api": "./src/country-api.ts",
     "./country-formatter": "./src/country-formatter.ts",
     "./country-query": "./src/country-query.ts",

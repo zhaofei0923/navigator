@@ -23,6 +23,11 @@ export interface AppEnvConfig {
   taroAppApiBaseUrl: string | undefined;
 }
 
+export interface WebEnvConfig {
+  nodeEnv: NodeEnv;
+  apiInternalBaseUrl: string;
+}
+
 export class EnvValidationError extends Error {
   constructor(public readonly variables: readonly string[]) {
     super(`Invalid environment variables: ${variables.join(", ")}`);
@@ -139,6 +144,69 @@ export function validateEnv(
     nextPublicDefaultLocale,
     taroAppApiBaseUrl: blankToUndefined(env.TARO_APP_API_BASE_URL),
   };
+}
+
+export function validateWebEnv(
+  env: Readonly<Record<string, string | undefined>>,
+): WebEnvConfig {
+  const invalidVariables = new Set<string>();
+  const nodeEnv = env.NODE_ENV;
+  const apiInternalBaseUrl = env.API_INTERNAL_BASE_URL;
+
+  if (!isOneOf(nodeEnv, NODE_ENV_VALUES)) {
+    invalidVariables.add("NODE_ENV");
+  }
+  if (!isValidInternalApiBaseUrl(apiInternalBaseUrl, nodeEnv)) {
+    invalidVariables.add("API_INTERNAL_BASE_URL");
+  }
+
+  if (invalidVariables.size > 0) {
+    throw new EnvValidationError([...invalidVariables].sort());
+  }
+
+  return {
+    nodeEnv: nodeEnv as NodeEnv,
+    apiInternalBaseUrl: apiInternalBaseUrl as string,
+  };
+}
+
+function isValidInternalApiBaseUrl(
+  value: string | undefined,
+  nodeEnv: string | undefined,
+): boolean {
+  if (isBlank(value)) return false;
+  const authorityStart = value.indexOf("://") + 3;
+  const pathStart = value.indexOf("/", authorityStart);
+  const authority = value.slice(
+    authorityStart,
+    pathStart === -1 ? value.length : pathStart,
+  );
+  if (value.includes("?") || value.includes("#") || authority.includes("@")) {
+    return false;
+  }
+
+  try {
+    const url = new URL(value);
+    if (
+      (url.protocol !== "http:" && url.protocol !== "https:") ||
+      url.username !== "" ||
+      url.password !== "" ||
+      url.search !== "" ||
+      url.hash !== ""
+    ) {
+      return false;
+    }
+
+    if (nodeEnv !== "production" || url.protocol === "https:") {
+      return true;
+    }
+
+    return /^http:\/\/(?:127\.0\.0\.1|\[::1\])(?::[0-9]+)?(?:\/|$)/.test(
+      value,
+    );
+  } catch {
+    return false;
+  }
 }
 
 function addPublicSecretLeaks(

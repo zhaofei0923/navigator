@@ -1,6 +1,10 @@
 import { describe, expect, test } from "vitest";
 
-import { EnvValidationError, validateEnv } from "./env.js";
+import {
+  EnvValidationError,
+  validateEnv,
+  validateWebEnv,
+} from "./env.js";
 
 const validEnv = {
   NODE_ENV: "development",
@@ -71,5 +75,86 @@ describe("validateEnv", () => {
         TARO_APP_AUTH_JWT_SECRET: "leaked-secret",
       }),
     ).toThrowError(/NEXT_PUBLIC_AI_API_KEY/);
+  });
+});
+
+describe("validateWebEnv", () => {
+  test("returns only the Web server configuration", () => {
+    expect(
+      validateWebEnv({
+        NODE_ENV: "development",
+        API_INTERNAL_BASE_URL: "http://127.0.0.1:3100/api/v1",
+      }),
+    ).toEqual({
+      nodeEnv: "development",
+      apiInternalBaseUrl: "http://127.0.0.1:3100/api/v1",
+    });
+  });
+
+  test.each([
+    "https://api.internal.example/api/v1",
+    "http://127.0.0.1:3100/api/v1",
+    "http://[::1]:3100/api/v1",
+  ])("accepts a production-safe internal API URL: %s", (baseUrl) => {
+    expect(
+      validateWebEnv({
+        NODE_ENV: "production",
+        API_INTERNAL_BASE_URL: baseUrl,
+      }).apiInternalBaseUrl,
+    ).toBe(baseUrl);
+  });
+
+  test.each([
+    ["development", undefined],
+    ["development", "ftp://127.0.0.1:3100/api/v1"],
+    ["development", "http://user:secret@127.0.0.1:3100/api/v1"],
+    ["development", "http://@127.0.0.1:3100/api/v1"],
+    ["development", "http://127.0.0.1:3100/api/v1?target=evil"],
+    ["development", "http://127.0.0.1:3100/api/v1?"],
+    ["development", "http://127.0.0.1:3100/api/v1#fragment"],
+    ["development", "http://127.0.0.1:3100/api/v1#"],
+    ["production", "http://api.internal.example/api/v1"],
+    ["production", "http://localhost:3100/api/v1"],
+    ["production", "http://127.1:3100/api/v1"],
+    ["production", "http://127.0.0.1.example/api/v1"],
+  ])("rejects an unsafe %s internal API URL", (nodeEnv, baseUrl) => {
+    const secret = baseUrl ?? "missing-secret-value";
+    expect(() =>
+      validateWebEnv({
+        NODE_ENV: nodeEnv,
+        API_INTERNAL_BASE_URL: baseUrl,
+      }),
+    ).toThrowError(/API_INTERNAL_BASE_URL/);
+    expect(() =>
+      validateWebEnv({
+        NODE_ENV: nodeEnv,
+        API_INTERNAL_BASE_URL: baseUrl,
+      }),
+    ).not.toThrowError(secret);
+  });
+
+  test("reads no database, authentication, lead, or AI variables", () => {
+    const environment = new Proxy(
+      {
+        NODE_ENV: "development",
+        API_INTERNAL_BASE_URL: "http://127.0.0.1:3100/api/v1",
+      },
+      {
+        get(target, property, receiver) {
+          if (
+            typeof property === "string" &&
+            !["NODE_ENV", "API_INTERNAL_BASE_URL"].includes(property)
+          ) {
+            throw new Error(`UNRELATED_ENV_READ:${property}`);
+          }
+          return Reflect.get(target, property, receiver);
+        },
+      },
+    );
+
+    expect(validateWebEnv(environment)).toEqual({
+      nodeEnv: "development",
+      apiInternalBaseUrl: "http://127.0.0.1:3100/api/v1",
+    });
   });
 });
