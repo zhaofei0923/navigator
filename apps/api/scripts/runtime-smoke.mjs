@@ -1,4 +1,5 @@
 import { mkdtemp, rm } from "node:fs/promises";
+import { request } from "node:http";
 import { createConnection } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -26,7 +27,7 @@ try {
   });
 
   exit = waitForExit(child);
-  await waitForListener(PORT, child, exit);
+  await waitForCountriesResponse(PORT, child, exit);
   assertChildRunning(child);
   if (!child.kill("SIGTERM")) {
     throw new Error("API_RUNTIME_SMOKE_SIGNAL_FAILED");
@@ -59,10 +60,10 @@ function waitForExit(childProcess) {
   });
 }
 
-async function waitForListener(port, childProcess, exitPromise) {
+async function waitForCountriesResponse(port, childProcess, exitPromise) {
   const deadline = Date.now() + 10_000;
   while (Date.now() < deadline) {
-    if (await canConnect(port)) {
+    if (await hasValidCountriesResponse(port)) {
       assertChildRunning(childProcess);
       return;
     }
@@ -71,10 +72,70 @@ async function waitForListener(port, childProcess, exitPromise) {
       delay(100).then(() => ({ type: "retry" })),
     ]);
     if (result.type === "exit") {
-      throw new Error("API_RUNTIME_SMOKE_LISTENER_FAILED");
+      throw new Error("API_RUNTIME_SMOKE_COUNTRIES_FAILED");
     }
   }
-  throw new Error("API_RUNTIME_SMOKE_LISTENER_TIMEOUT");
+  throw new Error("API_RUNTIME_SMOKE_COUNTRIES_TIMEOUT");
+}
+
+async function hasValidCountriesResponse(port) {
+  const response = await requestCountries(port);
+  if (response === null) {
+    return false;
+  }
+
+  if (response.status !== 200) {
+    throw new Error("API_RUNTIME_SMOKE_COUNTRIES_STATUS");
+  }
+  if (!/^application\/json\b/i.test(response.contentType)) {
+    throw new Error("API_RUNTIME_SMOKE_COUNTRIES_CONTENT_TYPE");
+  }
+
+  let body;
+  try {
+    body = JSON.parse(response.body);
+  } catch {
+    throw new Error("API_RUNTIME_SMOKE_COUNTRIES_ENVELOPE");
+  }
+  if (
+    body === null ||
+    typeof body !== "object" ||
+    body.success !== true ||
+    !Array.isArray(body.data) ||
+    body.meta === null ||
+    typeof body.meta !== "object" ||
+    body.meta.locale !== "en"
+  ) {
+    throw new Error("API_RUNTIME_SMOKE_COUNTRIES_ENVELOPE");
+  }
+  return true;
+}
+
+function requestCountries(port) {
+  return new Promise((resolveResponse) => {
+    const req = request(
+      {
+        agent: false,
+        headers: { accept: "application/json" },
+        host: "127.0.0.1",
+        method: "GET",
+        path: "/api/v1/countries?locale=en",
+        port,
+      },
+      (response) => {
+        const chunks = [];
+        response.setEncoding("utf8");
+        response.on("data", (chunk) => chunks.push(chunk));
+        response.on("end", () => resolveResponse({
+          body: chunks.join(""),
+          contentType: response.headers["content-type"] ?? "",
+          status: response.statusCode ?? 0,
+        }));
+      },
+    );
+    req.once("error", () => resolveResponse(null));
+    req.end();
+  });
 }
 
 function assertChildRunning(childProcess) {

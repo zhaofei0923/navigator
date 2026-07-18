@@ -1,7 +1,10 @@
 import { Global, Module, type DynamicModule } from "@nestjs/common";
+import { APP_FILTER } from "@nestjs/core";
 import type { CountryReadRepository } from "@navigator/shared-types/country-runtime";
 
 import type { ApiConfig } from "./api-config.js";
+import { ContractExceptionFilter } from "./common/contract-exception.filter.js";
+import { CountriesModule } from "./countries/countries.module.js";
 import {
   API_CONFIG,
   COUNTRY_READ_REPOSITORY,
@@ -16,6 +19,7 @@ export class AppModule {
   static register(config: ApiConfig): DynamicModule {
     return {
       module: AppModule,
+      imports: [CountriesModule],
       providers: [
         { provide: API_CONFIG, useValue: config },
         {
@@ -30,6 +34,7 @@ export class AppModule {
             runtimeProvider: CountryReadRuntimeProvider,
           ): CountryReadRepository => runtimeProvider.repository,
         },
+        { provide: APP_FILTER, useClass: ContractExceptionFilter },
       ],
       exports: [COUNTRY_READ_REPOSITORY],
     };

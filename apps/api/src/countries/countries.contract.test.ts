@@ -1,0 +1,127 @@
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { type INestApplication } from "@nestjs/common";
+import { Test } from "@nestjs/testing";
+import { createApprovedPublicationCountryReadRuntime } from "@navigator/db/country-read-runtime";
+import type { CountryReadRepository } from "@navigator/shared-types/country-runtime";
+import {
+  COUNTRY_ROUTE_FORBIDDEN_BODY_FRAGMENTS,
+  COUNTRY_ROUTE_GOLDEN_FIXTURES,
+} from "@navigator/shared-types/test-support/country-route-golden";
+import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
+
+import { AppModule } from "../app.module.js";
+import { configureApplication } from "../main.js";
+import { COUNTRY_READ_REPOSITORY } from "../runtime/country-read-runtime.provider.js";
+
+const repositoryRoot = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  "../../../..",
+);
+const runtime = createApprovedPublicationCountryReadRuntime({ repositoryRoot });
+const repository: CountryReadRepository = {
+  findByCode: vi.fn((code: string) => runtime.repository.findByCode(code)),
+  list: vi.fn(() => runtime.repository.list()),
+};
+const forbiddenResponseFragments = [
+  ...COUNTRY_ROUTE_FORBIDDEN_BODY_FRAGMENTS,
+  "postgresql://",
+  "SELECT ",
+  "/home/",
+  "\\\\Users\\\\",
+] as const;
+
+let app: INestApplication;
+let baseUrl: string;
+
+beforeAll(async () => {
+  const module = await Test.createTestingModule({
+    imports: [
+      AppModule.register({
+        port: 3100,
+        countryReadSource: "canonical",
+        canonicalRepositoryRoot: repositoryRoot,
+      }),
+    ],
+  })
+    .overrideProvider(COUNTRY_READ_REPOSITORY)
+    .useValue(repository)
+    .compile();
+
+  app = module.createNestApplication();
+  configureApplication(app);
+  await app.listen(0, "127.0.0.1");
+  const address = app.getHttpServer().address();
+  if (address === null || typeof address === "string") {
+    throw new Error("TEST_HTTP_ADDRESS_UNAVAILABLE");
+  }
+  baseUrl = `http://127.0.0.1:${address.port}`;
+});
+
+afterAll(async () => {
+  await app.close();
+  await runtime.close();
+});
+
+describe("Nest country read HTTP contract", () => {
+  test.each(COUNTRY_ROUTE_GOLDEN_FIXTURES)(
+    "$id preserves the pre-migration HTTP contract",
+    async (fixture) => {
+      vi.mocked(repository.list).mockClear();
+      vi.mocked(repository.findByCode).mockClear();
+
+      const requestInit =
+        "headers" in fixture && fixture.headers !== undefined
+          ? { headers: fixture.headers }
+          : undefined;
+      const response = await fetch(
+        `${baseUrl}${fixture.requestPath}`,
+        requestInit,
+      );
+      const body: unknown = await response.json();
+
+      expect(response.status).toBe(fixture.expectedStatus);
+      expect(response.headers.get("content-type")).toMatch(/^application\/json\b/i);
+      expect(body).toEqual(fixture.expectedBody);
+
+      if (fixture.expectedStatus === 400) {
+        expect(repository.list).not.toHaveBeenCalled();
+        expect(repository.findByCode).not.toHaveBeenCalled();
+      }
+      if (response.ok) {
+        const serialized = JSON.stringify(body);
+        for (const forbidden of forbiddenResponseFragments) {
+          expect(serialized).not.toContain(forbidden);
+        }
+      }
+    },
+  );
+
+  test("maps repository failures to a fixed, non-leaking 500 envelope", async () => {
+    vi.mocked(repository.list).mockRejectedValueOnce(
+      new Error(
+        "SELECT secret FROM country at postgresql://user:password@db.internal:5432/navigator /home/kevin/navigator/data/staging embeddingEn fileUrl",
+      ),
+    );
+
+    const response = await fetch(`${baseUrl}/api/v1/countries?locale=en`);
+    const body: unknown = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(response.headers.get("content-type")).toMatch(/^application\/json\b/i);
+    expect(body).toEqual({
+      error: {
+        code: "INTERNAL_ERROR",
+        message: "Internal server error",
+      },
+      success: false,
+    });
+    const serialized = JSON.stringify(body);
+    for (const forbidden of forbiddenResponseFragments) {
+      expect(serialized).not.toContain(forbidden);
+    }
+    expect(serialized).not.toContain("password");
+    expect(serialized).not.toContain("db.internal");
+  });
+});
