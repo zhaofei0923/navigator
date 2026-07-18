@@ -1,4 +1,10 @@
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -6,7 +12,10 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, test } from "vitest";
 
 import { loadApprovedBasicCountryPublicationV2 } from "./collection/basic-publication-loader.js";
-import { validateApprovedBasicCountryPublications } from "./seed/approved-basic-publications-validation.js";
+import {
+  discoverApprovedBasicCountryDirectories,
+  validateApprovedBasicCountryPublications,
+} from "./seed/approved-basic-publications-validation.js";
 
 const REPO_ROOT = fileURLToPath(new URL("../../../", import.meta.url)).replace(
   /\/$/u,
@@ -14,6 +23,41 @@ const REPO_ROOT = fileURLToPath(new URL("../../../", import.meta.url)).replace(
 );
 
 describe("approved Basic publications build validation", () => {
+  test("discovers only safe country directories in deterministic order", () => {
+    const repoRoot = mkdtempSync(join(tmpdir(), "navigator-publications-"));
+    try {
+      mkdirSync(join(repoRoot, "data"));
+      mkdirSync(join(repoRoot, "data", "zeta"));
+      mkdirSync(join(repoRoot, "data", "alpha"));
+      mkdirSync(join(repoRoot, "data", "approvals"));
+      mkdirSync(join(repoRoot, "data", "staging"));
+      mkdirSync(join(repoRoot, "data", ".hidden"));
+      writeFileSync(join(repoRoot, "data", "not-a-directory"), "ignored");
+
+      expect(discoverApprovedBasicCountryDirectories(repoRoot)).toEqual([
+        "alpha",
+        "zeta",
+      ]);
+    } finally {
+      rmSync(repoRoot, { force: true, recursive: true });
+    }
+  });
+
+  test("rejects symlinked country directories during discovery", () => {
+    const repoRoot = mkdtempSync(join(tmpdir(), "navigator-publications-"));
+    try {
+      mkdirSync(join(repoRoot, "data"));
+      mkdirSync(join(repoRoot, "outside"));
+      symlinkSync(join(repoRoot, "outside"), join(repoRoot, "data", "linked"));
+
+      expect(() => discoverApprovedBasicCountryDirectories(repoRoot)).toThrow(
+        "Approved Basic publications data directory is invalid",
+      );
+    } finally {
+      rmSync(repoRoot, { force: true, recursive: true });
+    }
+  });
+
   test("validates every canonical country directory through the publication gate", () => {
     expect(validateApprovedBasicCountryPublications(REPO_ROOT)).toEqual({
       countryDirectories: [

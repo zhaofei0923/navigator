@@ -12,11 +12,9 @@ export interface ApprovedBasicPublicationsValidationResult {
   readonly countryCodes: readonly string[];
 }
 
-export function validateApprovedBasicCountryPublications(
+export function discoverApprovedBasicCountryDirectories(
   repoRoot: string,
-  loadPublication: typeof loadApprovedBasicCountryPublicationV2 =
-    loadApprovedBasicCountryPublicationV2,
-): ApprovedBasicPublicationsValidationResult {
+): readonly string[] {
   if (!isNormalizedAbsolutePath(repoRoot)) {
     throw new Error("Approved Basic publications repository root is invalid");
   }
@@ -39,15 +37,28 @@ export function validateApprovedBasicCountryPublications(
     .map((entry) => entry.name)
     .sort(compareText);
 
+  for (const countryDirectory of countryDirectories) {
+    if (!SAFE_COUNTRY_DIRECTORY.test(countryDirectory)) {
+      throw new Error("Approved Basic publication directory is invalid");
+    }
+  }
+
+  return Object.freeze(countryDirectories);
+}
+
+export function validateApprovedBasicCountryPublications(
+  repoRoot: string,
+  loadPublication: typeof loadApprovedBasicCountryPublicationV2 =
+    loadApprovedBasicCountryPublicationV2,
+): ApprovedBasicPublicationsValidationResult {
+  const countryDirectories = discoverApprovedBasicCountryDirectories(repoRoot);
+
   if (countryDirectories.length === 0) {
     throw new Error("No approved Basic country publications found");
   }
 
   const seenCountryCodes = new Set<string>();
   const countryCodes = countryDirectories.map((countryDirectory) => {
-    if (!SAFE_COUNTRY_DIRECTORY.test(countryDirectory)) {
-      throw new Error("Approved Basic publication directory is invalid");
-    }
     const publication = loadPublication(repoRoot, countryDirectory);
     if (!publication.valid) {
       throw new Error(

@@ -5,8 +5,11 @@ import { describe, expect, test } from "vitest";
 
 import {
   buildApprovedBasicCountryPublicationImportPlan,
+  isPreparedApprovedBasicCountryImportFromLoader,
   parseApprovedBasicCountryPublicationImportArgs,
+  prepareApprovedBasicCountryImport,
 } from "./seed/approved-basic-country-import.js";
+import { loadApprovedBasicCountryPublicationV2 } from "./collection/basic-publication-loader.js";
 
 const REPO_ROOT = fileURLToPath(new URL("../../../", import.meta.url)).replace(
   /\/$/u,
@@ -14,6 +17,53 @@ const REPO_ROOT = fileURLToPath(new URL("../../../", import.meta.url)).replace(
 );
 
 describe("approved Basic country publication import", () => {
+  test("prepares canonical data and a 12-operation plan from one loader snapshot", () => {
+    const publication = loadApprovedBasicCountryPublicationV2(
+      REPO_ROOT,
+      "indonesia",
+    );
+    if (!publication.valid) {
+      throw new Error("Indonesia fixture publication must be valid");
+    }
+
+    let loaderCalls = 0;
+    const prepared = prepareApprovedBasicCountryImport(
+      REPO_ROOT,
+      "indonesia",
+      (repoRoot, countryDirectory) => {
+        loaderCalls += 1;
+        expect(repoRoot).toBe(REPO_ROOT);
+        expect(countryDirectory).toBe("indonesia");
+        return publication;
+      },
+    );
+
+    expect(loaderCalls).toBe(1);
+    expect(prepared).toMatchObject({
+      countryDirectory: "indonesia",
+      countryCode: "ID",
+      canonical: publication.data.canonical,
+    });
+    expect(prepared.plan.operations).toHaveLength(12);
+  });
+
+  test("brands only deeply frozen values prepared from the approved loader", () => {
+    const prepared = prepareApprovedBasicCountryImport(REPO_ROOT, "indonesia");
+    const structuralClone = JSON.parse(JSON.stringify(prepared)) as unknown;
+
+    expect(isRecursivelyFrozen(prepared)).toBe(true);
+    expect(isPreparedApprovedBasicCountryImportFromLoader(prepared)).toBe(true);
+    expect(isPreparedApprovedBasicCountryImportFromLoader(structuralClone)).toBe(
+      false,
+    );
+    expect(isPreparedApprovedBasicCountryImportFromLoader({
+      countryDirectory: "indonesia",
+      countryCode: "ID",
+      canonical: prepared.canonical,
+      plan: prepared.plan,
+    })).toBe(false);
+  });
+
   test.each([
     ["brazil", "BR"],
     ["indonesia", "ID"],
@@ -97,3 +147,10 @@ describe("approved Basic country publication import", () => {
     ).toThrow("Approved Basic publication validation failed: PUBLICATION_READ_FAILED");
   });
 });
+
+function isRecursivelyFrozen(value: unknown): boolean {
+  if (typeof value !== "object" || value === null) {
+    return true;
+  }
+  return Object.isFrozen(value) && Object.values(value).every(isRecursivelyFrozen);
+}
