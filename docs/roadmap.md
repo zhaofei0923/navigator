@@ -58,8 +58,8 @@ graph LR
 | 里程碑 | 当前状态 | 下一步 | 进入下一阶段的必要条件 |
 |--------|----------|--------|------------------------|
 | M0 六国 BASIC | **已完成** | 保持六国 canonical publication 与批准回执不可变 | ID、VN、SA、AE、BR、ZA 均恰好为 BASIC，且无 AI eligibility |
-| M1 生产平台底座 | **现在启动** | 依次实施 PLATFORM-DB-1、PLATFORM-API-1、PLATFORM-OPS-1 | 六国幂等导入；数据库/API 返回与 canonical JSON 等价；具备健康检查、可观测性和容量基线 |
-| M2 ID STANDARD 试点 | **已批准启动，与 M1 并行** | 创建并执行 `DATA-STANDARD-ID`，先做来源登记与 draft 候选 | ID 的 policy、risk、opportunities 达到可展示状态并通过 STANDARD 机器判定；来源、事实和发布分别审核；不自动启用 AI |
+| M1 生产平台底座 | **进行中：PLATFORM-DB-1 已完成，PLATFORM-API-1 未完成** | 等待 Gate 0 对精确 NestJS 依赖集合的人工批准；批准后完成 PLATFORM-API-1 任务 3–6，再启动 PLATFORM-OPS-1 | 六国幂等导入；数据库/API 返回与 canonical JSON 等价；具备健康检查、可观测性和容量基线 |
+| M2 ID STANDARD 试点 | **与 M1 并行进行中：安全合成 fixture 切片已完成** | 在独立人工关口下再推进真实来源登记、事实与双语文本候选；STANDARD 发布另行批准，当前 ID 仍为真实 BASIC | ID 的 policy、risk、opportunities 达到可展示状态并通过 STANDARD 机器判定；来源、事实和发布分别审核；不自动启用 AI |
 | M3 Admin 与权限基础 | **M1 后启动** | P5-1、P5-2 与 P4-1、P4-3 按独立任务实施 | 审核发布闭环、服务端鉴权、留资加密均通过测试 |
 | M4 AI 受控 Beta | **骨架可在 M1 后开发，生产启用待门槛** | P3-1、P3-2；之后单独执行 AI Beta 启用卡 | 试点已达 STANDARD；ai-advisor 至少 20 个合格片段、覆盖至少 3 个来源模块；Prompt 与检索默认值人工确认 |
 | M5 会员与报告受控 Beta | **M3 后开发** | P4-2、P5-4 与真实受控资源试用 | 至少一个真实受控资源；服务端权限矩阵通过；权益与计费边界人工确认 |
@@ -258,6 +258,7 @@ graph LR
 - 目标：只对已发布 BASIC 的 `ID` 补齐 policy、risk、opportunities 等 Standard 必需数据；与 M1 并行，不得夹带平台代码或其他国家数据。
 - 验收：新增内容均为双语、可追溯且元字段完整，经独立审核发布；国家通过 STANDARD 机器判定；数据导入、Web/API、覆盖边界与回归测试通过；不得仅因达到 STANDARD 就自动生成 KnowledgeChunk 或开启 AI。
 - 人工确认：试点国家和候选建设启动已由项目所有者批准。来源、事实、双语文本、STANDARD 发布、`aiUsable`、真实 ID KnowledgeChunk 创建与可检索资格、COMPLETE 升级均须分别人工批准。
+- 2026-07-18 进度：严格合成数据的 fixture、parser、覆盖判定与 AI 负向边界切片已完成，仅证明实现路径可安全测试；它没有引入任何真实 ID 来源、事实或双语业务文本，也没有授权或产生 STANDARD 发布、`aiUsable = true`、真实 KnowledgeChunk、AI 可检索资格或 COMPLETE。ID 的真实 canonical publication 仍恰好为 BASIC。
 
 #### `DATA-COMPLETE-<ISO2>` 单国 Complete 闭环试点 ⚠️
 - 目标：仅在同一国家的 STANDARD 试点验收后，以新任务补齐固定十模块，验证项目、伙伴、中资企业、策略、AI 和报告闭环。
@@ -299,16 +300,19 @@ graph LR
 - 目标：在现有统一数据模型内，将六国 approved BASIC canonical 数据接入 PostgreSQL/Prisma 生产读取链路，建立可重复执行的导入与回滚边界；canonical 文件仍是本阶段不可变的审计输入。
 - 验收：六国可幂等导入且重复执行不产生重复记录；数据库读取结果与 canonical JSON 在国家、覆盖、模块状态、元字段和双语字段上等价；单国失败不留下半成品；无审计包或 staging 数据进入业务表。
 - 人工确认：否（仅复用已批准 schema；任何模型变更、破坏性迁移或生产数据库操作须另行 ⚠️）。
+- 2026-07-18 进度：本卡已完成；M1 因后续 API 与 OPS 尚未完成而继续保持进行中。
 
 #### PLATFORM-API-1 NestJS 国家只读 API
 - 目标：按现有 api-contract 建立 NestJS /api/v1 服务边界，将国家列表、详情和模块 GET 接口从文件读取迁移到数据库读取；Next.js 只保留展示和 BFF 职责。
 - 验收：现有六国 API contract、中英文降级、BUILDING 占位和错误语义不变；契约测试对比迁移前后响应；服务端输入校验和 Prisma 参数化查询通过安全测试；可通过开关回退到已验证读取路径。
 - 人工确认：否（NestJS 已是固定技术栈；若需新增依赖、改变接口契约或模型，须单独 ⚠️）。
+- 2026-07-18 进度：无新增依赖的任务 1–2 已完成，本卡仍未完成。下一步必须先取得 Gate 0 对 `@nestjs/common@11.1.28`、`@nestjs/core@11.1.28`、`@nestjs/platform-express@11.1.28`、`reflect-metadata@0.2.2`、`rxjs@7.8.2` 与开发依赖 `@nestjs/testing@11.1.28` 的精确人工批准；批准前不得安装依赖或执行任务 3–6。
 
 #### PLATFORM-OPS-1 并发与运行治理基线
 - 目标：在数据库/API 链路上建立连接池、缓存边界、健康检查、结构化日志、指标、追踪和可重复负载测试；容量规划以峰值 RPS、读写比例、缓存命中率和 AI 请求占比为输入，不只按日访问量估算。
 - 验收：为日请求量 10 万、100 万、1000 万三档记录假设、峰值模型、p95/p99、错误率、数据库连接与资源水位；验证缓存失效和降级路径；产出单实例容量基线及横向扩容触发阈值，且不在测试中调用真实 AI 或外部来源。
 - 人工确认：否（只建立基线；Redis、队列、APM 等新依赖以及生产部署须单独 ⚠️）。
+- 2026-07-18 进度：尚未启动；严格等待 PLATFORM-API-1 任务 3–6 完成后再实施，继续保持 DB → API → OPS 串行顺序。
 
 ### P3 — AI 顾问 ⚠️
 

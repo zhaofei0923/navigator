@@ -56,6 +56,10 @@ MVP 到商业化初期的当前建设目标是经人工批准的国家先完成 
 - 该决定只批准试点选择与候选建设启动，不自动启用 AI，也不改变权限、计费或数据模型。来源、事实、双语文本、STANDARD 发布、`aiUsable`、真实 ID KnowledgeChunk 创建与可检索资格、COMPLETE 升级均须分别人工批准。
 - 详细依赖和任务切片以 [六国 BASIC 后里程碑设计](./superpowers/specs/2026-07-18-six-basic-platform-milestone-design.md) 与 [roadmap.md](./roadmap.md) 为准。
 
+2026-07-18 执行进度：M1 正在按 DB → API → OPS 严格串行推进。`PLATFORM-DB-1` 已完成；`PLATFORM-API-1` 仅完成无新增依赖的任务 1–2，仍须等待 Gate 0 对精确 NestJS 依赖集合的人工批准后才能执行任务 3–6；`PLATFORM-OPS-1` 必须继续等待 API 完成，因此 API 与 M1 均未完成。
+
+与 M1 并行的 `DATA-STANDARD-ID` 已完成严格合成 fixture、parser、覆盖判定与 AI 负向边界切片。该切片不含真实 ID 来源、事实或双语业务文本，不构成 STANDARD 发布，也不授权 `aiUsable = true`、真实 KnowledgeChunk、AI 可检索资格或 COMPLETE；ID 的真实 canonical publication 仍恰好为 BASIC。上述真实数据与发布动作仍须逐项通过人工关口。
+
 ### SA r1 audit history and r2 Basic publication record
 
 - `DATA-BASIC-SA-COLLECT` 的 `SA` / `saudi-arabia` / `data-basic-sa-20260717-r1` 保持 immutable history：其四个 artifact hash 仍为 `source-register.json` `fcc3de285225f2e26a04f82b72e53caf69df605971fd2eb10b0eacbe2e884711`、`extracted-facts.json` `7a423661d5b7bd2d43c7f81b39131eeea47fb82cf62624343d976128eb4d36d1`、`market-overview.draft.json` `567821ee55b5fd04cf4db198ee8a25629ec459a8f4542ae57185d478b800c92a`、`review-report.json` `a375cc5b759f3e1b619a3c1826adb0eaad48c5779a44a816a387fd021e301ee9`。r1 遗漏了官方对约 `92.5 GW` 与约 `340,430 GWh` 的限定词，故在批准前已 superseded；它是不可变审计历史，永不得批准或发布，且不得作为任何批准决定或发布任务的输入。
@@ -183,7 +187,7 @@ MVP 到商业化初期的当前建设目标是经人工批准的国家先完成 
 4. 经人工审核完成 `draft -> pending -> published`；Basic 发布记录保持 `aiUsable = false`。
 5. 运行覆盖等级判定与数据质量检查，确认国家为 Basic。
 6. 通过代表性 Web 占位与基础画像验收后对外展示。
-7. 六国 BASIC 基线完成后启动 PLATFORM-DB-1 → PLATFORM-API-1 → PLATFORM-OPS-1；这条平台链路不等待 Complete。
+7. 六国 BASIC 基线完成后按 PLATFORM-DB-1 → PLATFORM-API-1 → PLATFORM-OPS-1 严格串行；当前 DB 已完成，API 任务 1–2 已完成但仍等待 Gate 0 精确依赖批准，OPS 不得提前启动；这条平台链路不等待 Complete。
 8. 已选定 `ID` 作为首个深覆盖试点，以独立 `DATA-STANDARD-ID` 任务与平台链路并行推进；来源、事实和发布分别审核，达到 Standard 不自动启用 AI。
 9. 平台与试点数据分别达到门槛后，AI 和会员/报告各以受控 Beta 任务启用，并分别经过 AI、权限和计费人工关口。
 10. 只有 Standard 试点与相关 Beta 验收后，才另行批准 `DATA-COMPLETE-<ISO2>`；完成一个闭环试点后再逐国拆卡复制。
