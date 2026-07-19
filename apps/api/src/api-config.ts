@@ -5,6 +5,9 @@ export type ApiConfig =
       readonly port: number;
       readonly countryReadSource: "database";
       readonly databaseUrl: string;
+      readonly databasePoolMax: number;
+      readonly databasePoolTimeoutSeconds: number;
+      readonly databaseConnectTimeoutSeconds: number;
     }
   | {
       readonly port: number;
@@ -25,8 +28,39 @@ export function validateApiEnv(environment: ApiEnvironment): ApiConfig {
       "DATABASE_URL",
       invalidVariables,
     );
+    const databasePoolMax = parseBoundedInteger(
+      environment.DATABASE_POOL_MAX,
+      10,
+      1,
+      50,
+      "DATABASE_POOL_MAX",
+      invalidVariables,
+    );
+    const databasePoolTimeoutSeconds = parseBoundedInteger(
+      environment.DATABASE_POOL_TIMEOUT_SECONDS,
+      5,
+      1,
+      30,
+      "DATABASE_POOL_TIMEOUT_SECONDS",
+      invalidVariables,
+    );
+    const databaseConnectTimeoutSeconds = parseBoundedInteger(
+      environment.DATABASE_CONNECT_TIMEOUT_SECONDS,
+      5,
+      1,
+      30,
+      "DATABASE_CONNECT_TIMEOUT_SECONDS",
+      invalidVariables,
+    );
     throwIfInvalid(invalidVariables);
-    return { port, countryReadSource: source, databaseUrl };
+    return Object.freeze({
+      port,
+      countryReadSource: source,
+      databaseUrl,
+      databasePoolMax,
+      databasePoolTimeoutSeconds,
+      databaseConnectTimeoutSeconds,
+    });
   }
 
   if (source === "canonical") {
@@ -35,7 +69,11 @@ export function validateApiEnv(environment: ApiEnvironment): ApiConfig {
       invalidVariables,
     );
     throwIfInvalid(invalidVariables);
-    return { port, countryReadSource: source, canonicalRepositoryRoot };
+    return Object.freeze({
+      port,
+      countryReadSource: source,
+      canonicalRepositoryRoot,
+    });
   }
 
   throwIfInvalid(invalidVariables);
@@ -70,6 +108,26 @@ function requiredValue(
     return "";
   }
   return value;
+}
+
+function parseBoundedInteger(
+  value: string | undefined,
+  defaultValue: number,
+  minimum: number,
+  maximum: number,
+  variableName: string,
+  invalidVariables: string[],
+): number {
+  if (value === undefined) return defaultValue;
+  const parsed = Number(value);
+  if (
+    !Number.isSafeInteger(parsed) ||
+    parsed < minimum ||
+    parsed > maximum
+  ) {
+    invalidVariables.push(variableName);
+  }
+  return parsed;
 }
 
 function parseCanonicalRepositoryRoot(

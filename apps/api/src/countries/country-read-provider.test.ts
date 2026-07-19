@@ -31,6 +31,8 @@ const REPOSITORY_ROOT = resolve(
 );
 const DATABASE_URL =
   "postgresql://navigator:unit-only@127.0.0.1:5432/navigator";
+const MANAGED_DATABASE_URL =
+  `${DATABASE_URL}?connection_limit=10&pool_timeout=5&connect_timeout=5&application_name=navigator-api`;
 const EXPECTED_CONTENT_TYPE = "application/json; charset=utf-8";
 const EXPECTED_COUNTRY_CODES = ["ID", "VN", "SA", "AE", "BR", "ZA"];
 const INTERNAL_ERROR_BODY = {
@@ -63,6 +65,9 @@ describe.sequential("country read production provider acceptance", () => {
         port: 3100,
         countryReadSource: "database",
         databaseUrl: DATABASE_URL,
+        databasePoolMax: 10,
+        databasePoolTimeoutSeconds: 5,
+        databaseConnectTimeoutSeconds: 5,
       },
       factories,
     );
@@ -70,7 +75,7 @@ describe.sequential("country read production provider acceptance", () => {
     try {
       expect(factories.createPrismaCountryReadRuntime).toHaveBeenCalledTimes(1);
       expect(factories.createPrismaCountryReadRuntime).toHaveBeenCalledWith({
-        databaseUrl: DATABASE_URL,
+        databaseUrl: MANAGED_DATABASE_URL,
       });
       expect(
         factories.createApprovedPublicationCountryReadRuntime,
@@ -173,6 +178,9 @@ describe.sequential("country read production provider acceptance", () => {
         port: 3100,
         countryReadSource: "database",
         databaseUrl: DATABASE_URL,
+        databasePoolMax: 10,
+        databasePoolTimeoutSeconds: 5,
+        databaseConnectTimeoutSeconds: 5,
       },
       factories,
     );

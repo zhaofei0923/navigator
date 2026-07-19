@@ -41,6 +41,9 @@
 | 变量 | 必需 | 说明 |
 |------|------|------|
 | `DATABASE_URL` | ✓ | Prisma 连接串（含账号密码，**服务端专用**） |
+| `DATABASE_POOL_MAX` | — | API 单实例 Prisma 连接池上限，默认 `10`，范围 `1..50` |
+| `DATABASE_POOL_TIMEOUT_SECONDS` | — | API 等待连接池连接的超时秒数，默认 `5`，范围 `1..30`；禁止 `0`（无界等待） |
+| `DATABASE_CONNECT_TIMEOUT_SECONDS` | — | API 建立 PostgreSQL 连接的超时秒数，默认 `5`，范围 `1..30` |
 | `SHADOW_DATABASE_URL` | — | Prisma 迁移影子库（本地/CI） |
 | `PGVECTOR_DIMENSION` | ✓ | 向量维度，须与 embedding 模型一致（见 [ai-advisor.md](./ai-advisor.md)） |
 
@@ -52,7 +55,9 @@
 | `CANONICAL_REPOSITORY_ROOT` | 仅 `canonical` | 已规范化的绝对仓库根路径；`database` source 会忽略该变量 |
 | `API_INTERNAL_BASE_URL` | Web ✓ | Next BFF 到 Nest 的服务端专用基址；本地模板为 `http://127.0.0.1:3100/api/v1` |
 
-`database` source 仅要求 `DATABASE_URL`；`canonical` source 不要求 `DATABASE_URL`。API 的 scoped parser 只读取 `API_PORT`、`COUNTRY_READ_SOURCE`、`CANONICAL_REPOSITORY_ROOT` 与 `DATABASE_URL`，不会读取 Web BFF、认证、AI 或留资变量。M1 固定监听 `127.0.0.1`，外部流量必须先进入同机 TLS reverse proxy 或 Next BFF。
+`database` source 仅要求 `DATABASE_URL`，并读取三个可选的连接池/连接超时配置；`canonical` source 不读取或要求任何 `DATABASE_*` 变量。API 的 scoped parser 只读取 `API_PORT`、`COUNTRY_READ_SOURCE`、`CANONICAL_REPOSITORY_ROOT`、`DATABASE_URL`、`DATABASE_POOL_MAX`、`DATABASE_POOL_TIMEOUT_SECONDS` 与 `DATABASE_CONNECT_TIMEOUT_SECONDS`，不会读取 Web BFF、认证、AI 或留资变量。M1 固定监听 `127.0.0.1`，外部流量必须先进入同机 TLS reverse proxy 或 Next BFF。
+
+API 在创建唯一 Prisma runtime 前生成受管连接 URL：增加 `connection_limit`、`pool_timeout`、`connect_timeout` 与固定的 `application_name=navigator-api`。原始 `DATABASE_URL` 不修改且不得写入日志；若原 URL 已含任一受管参数（即使值相同）则启动失败，错误只报告参数名。以 PostgreSQL `max_connections=100`、预留 20 条运维连接、每个 API 副本默认池上限 10 计算，API 副本硬上限为 8，部署配置不得超过该上限。
 
 Web 的 scoped parser 只读取 `NODE_ENV` 与 `API_INTERNAL_BASE_URL`，不会要求数据库、认证、留资或 AI 变量。内部基址只允许 `http` / `https`，不得携带 credentials、query 或 hash；生产环境的明文 `http` 仅允许字面 IP loopback `127.0.0.1` / `::1`，其他主机必须使用 `https`。该变量无公开前缀，只允许在 Node 服务端 instrumentation、BFF 与 SSR server code 中读取，禁止进入客户端 bundle。
 

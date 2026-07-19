@@ -5,6 +5,7 @@ import type { CountryReadRuntime } from "@navigator/db/country-read-runtime";
 import type { CountryReadRepository } from "@navigator/shared-types/country-runtime";
 
 import { AppModule } from "../app.module.js";
+import { validateApiEnv } from "../api-config.js";
 import {
   COUNTRY_READ_REPOSITORY,
   COUNTRY_READ_RUNTIME_FACTORIES,
@@ -25,11 +26,18 @@ describe("CountryReadRuntimeProvider", () => {
         port: 3100,
         countryReadSource: "database",
         databaseUrl: "postgresql://navigator:secret@127.0.0.1:5432/navigator",
+        databasePoolMax: 10,
+        databasePoolTimeoutSeconds: 5,
+        databaseConnectTimeoutSeconds: 5,
       },
       factories,
     );
 
     expect(factories.createPrismaCountryReadRuntime).toHaveBeenCalledTimes(1);
+    expect(factories.createPrismaCountryReadRuntime).toHaveBeenCalledWith({
+      databaseUrl:
+        "postgresql://navigator:secret@127.0.0.1:5432/navigator?connection_limit=10&pool_timeout=5&connect_timeout=5&application_name=navigator-api",
+    });
     expect(factories.createApprovedPublicationCountryReadRuntime).not.toHaveBeenCalled();
     expect(provider.repository).toBe(runtime.repository);
 
@@ -95,6 +103,9 @@ describe("CountryReadRuntimeProvider", () => {
           port: 3100,
           countryReadSource: "database",
           databaseUrl,
+          databasePoolMax: 10,
+          databasePoolTimeoutSeconds: 5,
+          databaseConnectTimeoutSeconds: 5,
         }),
       ],
     })
@@ -112,11 +123,62 @@ describe("CountryReadRuntimeProvider", () => {
       expect(first).toBe(runtime.repository);
       expect(factories.createPrismaCountryReadRuntime).toHaveBeenCalledTimes(1);
       expect(factories.createPrismaCountryReadRuntime).toHaveBeenCalledWith({
-        databaseUrl,
+        databaseUrl: `${databaseUrl}?connection_limit=10&pool_timeout=5&connect_timeout=5&application_name=navigator-api`,
       });
       expect(factories.createApprovedPublicationCountryReadRuntime).not.toHaveBeenCalled();
     } finally {
       await module.close();
+    }
+  });
+
+  test("validates raw env before building one managed URL without logging secrets", async () => {
+    const databaseUrl =
+      "postgresql://navigator:never-log@127.0.0.1:5432/navigator?schema=public";
+    const environment = Object.freeze({
+      API_PORT: "3100",
+      DATABASE_URL: databaseUrl,
+      DATABASE_POOL_MAX: "12",
+      DATABASE_POOL_TIMEOUT_SECONDS: "6",
+      DATABASE_CONNECT_TIMEOUT_SECONDS: "7",
+    });
+    const originalEnvironment = { ...environment };
+    const runtime = createRuntime();
+    const factories: CountryReadRuntimeFactories = {
+      createPrismaCountryReadRuntime: vi.fn(() => runtime),
+      createApprovedPublicationCountryReadRuntime: vi.fn(() => createRuntime()),
+    };
+    const consoleSpies = [
+      vi.spyOn(console, "log").mockImplementation(() => undefined),
+      vi.spyOn(console, "info").mockImplementation(() => undefined),
+      vi.spyOn(console, "warn").mockImplementation(() => undefined),
+      vi.spyOn(console, "error").mockImplementation(() => undefined),
+    ];
+    const stdoutSpy = vi
+      .spyOn(process.stdout, "write")
+      .mockImplementation(() => true);
+    const stderrSpy = vi
+      .spyOn(process.stderr, "write")
+      .mockImplementation(() => true);
+
+    try {
+      const config = validateApiEnv(environment);
+      const provider = new CountryReadRuntimeProvider(config, factories);
+
+      expect(provider.repository).toBe(runtime.repository);
+      expect(factories.createPrismaCountryReadRuntime).toHaveBeenCalledOnce();
+      expect(factories.createPrismaCountryReadRuntime).toHaveBeenCalledWith({
+        databaseUrl:
+          "postgresql://navigator:never-log@127.0.0.1:5432/navigator?schema=public&connection_limit=12&pool_timeout=6&connect_timeout=7&application_name=navigator-api",
+      });
+      expect(environment).toEqual(originalEnvironment);
+      expect(environment.DATABASE_URL).toBe(databaseUrl);
+      for (const spy of [...consoleSpies, stdoutSpy, stderrSpy]) {
+        expect(spy).not.toHaveBeenCalled();
+      }
+    } finally {
+      for (const spy of [...consoleSpies, stdoutSpy, stderrSpy]) {
+        spy.mockRestore();
+      }
     }
   });
 });

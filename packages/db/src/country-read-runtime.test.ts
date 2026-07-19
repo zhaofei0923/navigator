@@ -3,6 +3,8 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
+  readFileSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -84,6 +86,22 @@ afterEach(() => {
 });
 
 describe("CountryReadRuntime factories", () => {
+  test("keeps PrismaClient construction inside the DB runtime factory", () => {
+    const sourceFiles = [
+      ...listProductionTypeScriptFiles(join(REPOSITORY_ROOT, "apps", "api", "src")),
+      ...listProductionTypeScriptFiles(
+        join(REPOSITORY_ROOT, "packages", "db", "src", "read"),
+      ),
+    ];
+    const constructorOwners = sourceFiles
+      .filter((filePath) => /\bnew\s+PrismaClient\s*\(/u.test(readFileSync(filePath, "utf8")))
+      .map((filePath) => filePath.slice(REPOSITORY_ROOT.length + 1));
+
+    expect(constructorOwners).toEqual([
+      "packages/db/src/read/country-read-runtime.ts",
+    ]);
+  });
+
   test("Prisma runtime owns one client, passes finite ping bounds and closes once", async () => {
     const runtime: CountryReadRuntime = createPrismaCountryReadRuntime({
       databaseUrl: "postgresql://navigator:private@example.test/navigator",
@@ -309,6 +327,17 @@ function installDistOnlyPackage(
   mkdirSync(destination, { recursive: true });
   cpSync(join(source, "package.json"), join(destination, "package.json"));
   cpSync(join(source, "dist"), join(destination, "dist"), { recursive: true });
+}
+
+function listProductionTypeScriptFiles(directory: string): string[] {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const entryPath = join(directory, entry.name);
+    if (entry.isDirectory()) return listProductionTypeScriptFiles(entryPath);
+    if (!entry.isFile() || !entry.name.endsWith(".ts") || entry.name.endsWith(".test.ts")) {
+      return [];
+    }
+    return [entryPath];
+  });
 }
 
 function createRepositoryFixture(): string {

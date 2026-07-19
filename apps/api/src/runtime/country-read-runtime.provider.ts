@@ -7,6 +7,7 @@ import {
 import type { CountryReadRepository } from "@navigator/shared-types/country-runtime";
 
 import type { ApiConfig } from "../api-config.js";
+import { buildDatabaseRuntimeConfig } from "../database/database-config.js";
 
 export const API_CONFIG = Symbol("API_CONFIG");
 export const COUNTRY_READ_RUNTIME_FACTORIES = Symbol("COUNTRY_READ_RUNTIME_FACTORIES");
@@ -53,8 +54,14 @@ function createRuntime(
   factories: CountryReadRuntimeFactories,
 ): CountryReadRuntime {
   if (config.countryReadSource === "database") {
-    return factories.createPrismaCountryReadRuntime({
+    const runtimeConfig = buildDatabaseRuntimeConfig({
       databaseUrl: config.databaseUrl,
+      poolMax: config.databasePoolMax,
+      poolTimeoutSeconds: config.databasePoolTimeoutSeconds,
+      connectTimeoutSeconds: config.databaseConnectTimeoutSeconds,
+    });
+    return factories.createPrismaCountryReadRuntime({
+      databaseUrl: runtimeConfig.databaseUrl,
     });
   }
   if (config.countryReadSource === "canonical") {
