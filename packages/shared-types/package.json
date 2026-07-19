@@ -14,9 +14,17 @@
       "development": "./src/country-runtime.ts",
       "default": "./dist/country-runtime.js"
     },
-    "./coverage": "./src/coverage.ts",
+    "./coverage": {
+      "types": "./src/coverage.ts",
+      "development": "./src/coverage.ts",
+      "default": "./dist/coverage.js"
+    },
     "./i18n": "./src/i18n.ts",
-    "./schema": "./src/schema.ts"
+    "./schema": {
+      "types": "./src/schema.ts",
+      "development": "./src/schema.ts",
+      "default": "./dist/schema.js"
+    }
   },
   "scripts": {
     "build": "tsc --project tsconfig.build.json",

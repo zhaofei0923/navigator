@@ -1,5 +1,6 @@
 import {
   cpSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   rmSync,
@@ -205,26 +206,57 @@ describe("CountryReadRuntime factories", () => {
     await expect(runtime.repository.list()).resolves.toHaveLength(6);
   });
 
-  test("plain Node resolves compiled runtime subpaths from a non-repository package", () => {
+  test("plain Node loads the canonical runtime from dist-only packages without source stripping", () => {
     execFileSync(
       "corepack",
       ["pnpm", "--filter", "@navigator/db", "build"],
       { cwd: REPOSITORY_ROOT, stdio: "pipe" },
     );
+    for (const artifact of [
+      "country-runtime.js",
+      "country-runtime.d.ts",
+      "coverage.js",
+      "coverage.d.ts",
+      "schema.js",
+      "schema.d.ts",
+    ]) {
+      expect(existsSync(join(
+        REPOSITORY_ROOT,
+        "packages",
+        "shared-types",
+        "dist",
+        artifact,
+      ))).toBe(true);
+    }
     const packageRoot = makeTemporaryDirectory("navigator-runtime-package-");
     const navigatorModules = join(packageRoot, "node_modules", "@navigator");
     mkdirSync(navigatorModules, { recursive: true });
     writeFileSync(join(packageRoot, "package.json"), '{"type":"module"}\n');
+    installDistOnlyPackage("db", join(navigatorModules, "db"));
+    installDistOnlyPackage("shared-types", join(navigatorModules, "shared-types"));
+
+    const prismaModules = join(packageRoot, "node_modules", "@prisma");
+    mkdirSync(prismaModules, { recursive: true });
     symlinkSync(
-      join(REPOSITORY_ROOT, "packages", "db"),
-      join(navigatorModules, "db"),
+      join(
+        REPOSITORY_ROOT,
+        "packages",
+        "db",
+        "node_modules",
+        "@prisma",
+        "client",
+      ),
+      join(prismaModules, "client"),
       "dir",
     );
-    symlinkSync(
-      join(REPOSITORY_ROOT, "packages", "shared-types"),
-      join(navigatorModules, "shared-types"),
-      "dir",
-    );
+
+    expect(existsSync(join(navigatorModules, "db", "src"))).toBe(false);
+    expect(existsSync(join(navigatorModules, "shared-types", "src"))).toBe(false);
+
+    const canonicalRoot = join(packageRoot, "canonical-repository");
+    cpSync(join(REPOSITORY_ROOT, "data"), join(canonicalRoot, "data"), {
+      recursive: true,
+    });
     const foreignCwd = join(packageRoot, "foreign-cwd");
     mkdirSync(foreignCwd);
 
@@ -234,9 +266,8 @@ describe("CountryReadRuntime factories", () => {
       const { createApprovedPublicationCountryReadRuntime } =
         await import("@navigator/db/country-read-runtime");
       const runtime = createApprovedPublicationCountryReadRuntime({
-        repositoryRoot: ${JSON.stringify(REPOSITORY_ROOT)},
+        repositoryRoot: ${JSON.stringify(canonicalRoot)},
       });
-      process.chdir(${JSON.stringify(foreignCwd)});
       const countries = await runtime.repository.list();
       await runtime.ping({ maxWaitMs: 1, timeoutMs: 1 });
       await runtime.close();
@@ -249,8 +280,12 @@ describe("CountryReadRuntime factories", () => {
     const result = JSON.parse(
       execFileSync(
         process.execPath,
-        ["--input-type=module", "--eval", script],
-        { cwd: packageRoot, encoding: "utf8" },
+        ["--no-strip-types", "--input-type=module", "--eval", script],
+        {
+          cwd: foreignCwd,
+          encoding: "utf8",
+          env: { ...process.env, NODE_OPTIONS: "" },
+        },
       ),
     ) as {
       readonly codes: readonly string[];
@@ -265,6 +300,16 @@ describe("CountryReadRuntime factories", () => {
     expect(result.sharedResolved).not.toMatch(/\.ts$/u);
   }, 30_000);
 });
+
+function installDistOnlyPackage(
+  packageName: "db" | "shared-types",
+  destination: string,
+): void {
+  const source = join(REPOSITORY_ROOT, "packages", packageName);
+  mkdirSync(destination, { recursive: true });
+  cpSync(join(source, "package.json"), join(destination, "package.json"));
+  cpSync(join(source, "dist"), join(destination, "dist"), { recursive: true });
+}
 
 function createRepositoryFixture(): string {
   const fixtureRoot = makeTemporaryDirectory("navigator-country-root-");
