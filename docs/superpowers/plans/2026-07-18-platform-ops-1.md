@@ -517,11 +517,23 @@ pnpm --filter @navigator/api load:readonly \
 
 ```bash
 kill -TERM "$navigator_ops_collector_pid"
-wait "$navigator_ops_collector_pid"
+if wait "$navigator_ops_collector_pid"; then
+  navigator_ops_collector_status=0
+else
+  navigator_ops_collector_status=$?
+fi
+if [ "$navigator_ops_collector_status" -ne 0 ] && \
+   [ "$navigator_ops_collector_status" -ne 143 ]; then exit 1; fi
 navigator_ops_collector_pid=""
 
 kill -TERM "$navigator_ops_api_pid"
-wait "$navigator_ops_api_pid"
+if wait "$navigator_ops_api_pid"; then
+  navigator_ops_api_status=0
+else
+  navigator_ops_api_status=$?
+fi
+if [ "$navigator_ops_api_status" -ne 0 ] && \
+   [ "$navigator_ops_api_status" -ne 143 ]; then exit 1; fi
 navigator_ops_api_pid=""
 
 docker stop navigator-platform-ops-1-postgres >/dev/null
