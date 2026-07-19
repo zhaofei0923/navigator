@@ -7,6 +7,10 @@ const PLATFORM_MILESTONE_DESIGN =
 const PLATFORM_API_PLAN =
   "docs/superpowers/plans/2026-07-18-platform-api-1.md";
 
+const M1_IMPLEMENTATION_SHA =
+  "015010c29a5a0deb39ef32cbe4e1a9fe8fd07840";
+const M1_IMPLEMENTATION_CI_RUN = "29693475214";
+
 const SIX_BASIC_ACTIVE_RUNS = [
   "data-basic-id-20260711-r2",
   "data-basic-vn-20260715-r3",
@@ -88,7 +92,7 @@ const ACTIVE_MILESTONE_SECTIONS = [
       start: "### P4 — 权限 / 会员 / 留资",
       end: "### P5 — Admin 后台",
     },
-    m1PendingPattern: /M1 生产平台底座[\s\S]{0,100}收尾验证中/,
+    m1CompletePattern: /M1 生产平台底座[\s\S]{0,100}\*\*已完成\*\*/,
   },
   {
     documentPath: "docs/country-rollout.md",
@@ -101,8 +105,7 @@ const ACTIVE_MILESTONE_SECTIONS = [
       end: "### SA r1 audit history",
     },
     p4Boundary: { start: "## 4. 建设流程", end: "\n---\n" },
-    m1PendingPattern:
-      /M1 正在[\s\S]{0,180}(?:仍保持|保持)[“\"]进行中[”\"]/,
+    m1CompletePattern: /M1 已完成全量验证、独立审查/,
   },
   {
     documentPath: PLATFORM_MILESTONE_DESIGN,
@@ -115,7 +118,7 @@ const ACTIVE_MILESTONE_SECTIONS = [
       start: "## 4. 任务切片",
       end: "## 5. 明确不授权的事项",
     },
-    m1PendingPattern: /M1 生产平台底座 \| 收尾验证中/,
+    m1CompletePattern: /M1 生产平台底座 \| 已完成/,
   },
 ] as const;
 
@@ -184,7 +187,7 @@ describe("Platform milestone documentation policy", () => {
     }
   });
 
-  it("keeps M1 pending full acceptance and P4-1 behind its human gate", () => {
+  it("records completed M1 acceptance and keeps P4-1 behind its human gate", () => {
     for (const milestoneDocument of ACTIVE_MILESTONE_SECTIONS) {
       const { documentPath } = milestoneDocument;
       const m1Policy = readBoundedSection(
@@ -196,8 +199,8 @@ describe("Platform milestone documentation policy", () => {
         milestoneDocument.p4Boundary,
       );
 
-      expect(m1Policy, `${documentPath}: M1 is not complete`).toMatch(
-        milestoneDocument.m1PendingPattern,
+      expect(m1Policy, `${documentPath}: M1 is complete`).toMatch(
+        milestoneDocument.m1CompletePattern,
       );
       expect(m1Policy, `${documentPath}: full verification gate`).toMatch(
         /全量验证/,
@@ -208,8 +211,14 @@ describe("Platform milestone documentation policy", () => {
       expect(m1Policy, `${documentPath}: merged-main CI gate`).toMatch(
         /(?:merged-main[\s\S]{0,80}CI|CI-SHA 对齐)/,
       );
-      expect(m1Policy, `${documentPath}: premature M1 completion`).not.toMatch(
-        /\|\s*M1 生产平台底座\s*\|\s*(?:\*\*)?已完成(?:\*\*)?\s*\||M1 (?:已|已经)完成[；。]/,
+      expect(m1Policy, `${documentPath}: implementation SHA`).toContain(
+        M1_IMPLEMENTATION_SHA,
+      );
+      expect(m1Policy, `${documentPath}: implementation CI run`).toContain(
+        M1_IMPLEMENTATION_CI_RUN,
+      );
+      expect(m1Policy, `${documentPath}: stale pending state`).not.toMatch(
+        /收尾验证中|仍保持[“\"]进行中[”\"]|M1 正在(?:进行|等待)/,
       );
       expect(p4Policy, `${documentPath}: P4-1 human gate`).toMatch(
         /P4-1[\s\S]{0,100}(?:仍须人工关口|仍须人工批准|须另行人工批准|另行取得人工批准)/,
@@ -220,7 +229,21 @@ describe("Platform milestone documentation policy", () => {
     }
   });
 
-  it("keeps the actual P3, P4, and P5 task sections behind full M1 acceptance", () => {
+  it("records the P2.5 task sequence as completed", () => {
+    const platformFoundation = readBoundedSection("docs/roadmap.md", {
+      start: "### P2.5 — 生产平台底座",
+      end: "### P3 — AI 顾问",
+    });
+
+    expect(platformFoundation).toMatch(
+      /P2\.5 已按 DB → API → OPS 严格串行完成/,
+    );
+    expect(platformFoundation).not.toMatch(
+      /P2\.5 现在启动|以下三张卡严格串行交付/,
+    );
+  });
+
+  it("releases the actual P3, P4, and P5 task sections after full M1 acceptance", () => {
     for (const boundary of [
       { start: "### P3 — AI 顾问", end: "### P4 — 权限 / 会员 / 留资" },
       { start: "### P4 — 权限 / 会员 / 留资", end: "### P5 — Admin 后台" },
@@ -228,9 +251,13 @@ describe("Platform milestone documentation policy", () => {
     ] as const) {
       const policy = readBoundedSection("docs/roadmap.md", boundary);
 
-      expect(policy, boundary.start).toMatch(/M1 全量验收/);
-      expect(policy, boundary.start).toMatch(/merged-main CI-SHA 对齐/);
+      expect(policy, boundary.start).toMatch(
+        /M1 全量验收及 merged-main CI-SHA 对齐已完成/,
+      );
       expect(policy, boundary.start).not.toMatch(/P2\.5 核心完成后/);
+      expect(policy, boundary.start).not.toMatch(
+        /仅(?:可|在)[^\n]{0,80}M1[^\n]{0,80}(?:后|通过后)/,
+      );
     }
 
     const p4Policy = readBoundedSection("docs/roadmap.md", {
@@ -239,6 +266,54 @@ describe("Platform milestone documentation policy", () => {
     });
     expect(p4Policy).toMatch(
       /P4-1[\s\S]{0,120}(?:权限逻辑)?另行取得人工批准后实施/,
+    );
+  });
+
+  it("keeps production AI and membership behind their remaining gates", () => {
+    const roadmap = readRootFile("docs/roadmap.md");
+    const m4Line = roadmap
+      .split("\n")
+      .find((line) => line.startsWith("| M4 AI 受控 Beta |"));
+    const m5Line = roadmap
+      .split("\n")
+      .find((line) => line.startsWith("| M5 会员与报告受控 Beta |"));
+
+    expect(m4Line).toBeDefined();
+    expect(m4Line).toContain("生产 Beta 仍封锁");
+    for (const requirement of [
+      "ID 已独立发布为 STANDARD",
+      "KnowledgeChunk",
+      "正式 Prompt",
+      "检索默认值",
+      "`aiUsable`",
+      "人工批准",
+    ]) {
+      expect(m4Line).toContain(requirement);
+    }
+
+    expect(m5Line).toBeDefined();
+    for (const requirement of [
+      "至少一个真实受控资源",
+      "服务端权限矩阵",
+      "权益与计费边界人工确认",
+    ]) {
+      expect(m5Line).toContain(requirement);
+    }
+
+    const p3Policy = readBoundedSection("docs/roadmap.md", {
+      start: "### P3 — AI 顾问",
+      end: "### P4 — 权限 / 会员 / 留资",
+    });
+    expect(p3Policy).toMatch(
+      /P3-3 AI 受控 Beta 启用 ⚠️[\s\S]{0,1200}人工确认：是（生产 AI、正式 Prompt 和检索默认值均属人工关口）/,
+    );
+
+    const p4Policy = readBoundedSection("docs/roadmap.md", {
+      start: "### P4 — 权限 / 会员 / 留资",
+      end: "### P5 — Admin 后台",
+    });
+    expect(p4Policy).toMatch(
+      /P4-4 会员与报告受控 Beta ⚠️[\s\S]{0,1200}人工确认：是（真实权益、会员等级、价格和计费边界须在启动前批准）/,
     );
   });
 

@@ -43,18 +43,18 @@ Web 占位和跨国复制能力。
 | 里程碑 | 状态 | 核心交付 | 完成闸门 |
 |--------|------|----------|----------|
 | M0 六国 BASIC | 已完成 | 六国 canonical publication、批准回执、Web/API Basic 展示 | 六国均恰好为 BASIC，无深层模块与 AI eligibility |
-| M1 生产平台底座 | 收尾验证中 | PostgreSQL/Prisma 生产导入与读取、NestJS /api/v1、连接治理、缓存/健康检查/可观测性、容量基线及故障演练均已完成 | 全量验证、独立审查、merged-main 推送与 CI-SHA 对齐全部通过后方可标记完成 |
+| M1 生产平台底座 | 已完成 | PostgreSQL/Prisma 生产导入与读取、NestJS /api/v1、连接治理、缓存/健康检查/可观测性、容量基线及故障演练均已完成 | 全量验证与独立审查通过；实施提交 `015010c29a5a0deb39ef32cbe4e1a9fe8fd07840` 已推送到 `main`，merged-main CI [run 29693475214](https://github.com/zhaofei0923/navigator/actions/runs/29693475214) 为 `success`，CI-SHA 对齐 |
 | M2 ID STANDARD 试点 | 设计与首批来源目录已批准；与 M1 并行，仅授权 draft candidate | 按已批准目录生成 ID policy、risk、opportunities 的双语、可追溯不可变候选 | 当前只验收 `reviewStatus = draft`、`aiUsable = false` 的候选；事实、双语文本和发布分别批准并通过 STANDARD 机器判定后，M2 才可完成 |
-| M3 运营与权限基础 | M1 完整验收后启动 | Admin 核心编辑/审核、JWT 与服务端守卫、留资加密 | P4-1 权限逻辑另行人工批准；draft 到 pending 到 published 闭环；未授权访问失败；敏感信息不回显 |
-| M4 AI 受控 Beta | 骨架可在 M1 后开发 | RAG 离线管道、问答接口、限流、失效同步 | 试点为 STANDARD；ai-advisor 至少 20 个可用片段且覆盖至少 3 个来源模块；正式 Prompt 和检索默认值经人工确认 |
+| M3 运营与权限基础 | 可按独立任务启动；P4-1 仍待人工批准 | Admin 核心编辑/审核、JWT 与服务端守卫、留资加密 | P4-1 权限逻辑另行人工批准；draft 到 pending 到 published 闭环；未授权访问失败；敏感信息不回显 |
+| M4 AI 受控 Beta | fixture 骨架可按独立任务启动；生产 Beta 仍封锁 | RAG 离线管道、问答接口、限流、失效同步 | 试点为 STANDARD；ai-advisor 至少 20 个可用片段且覆盖至少 3 个来源模块；正式 Prompt 和检索默认值经人工确认 |
 | M5 会员与报告受控 Beta | M3 后开发 | 报告下载、访问等级、短时效绑定用户链接、真实用户试用 | 至少一个真实受控资源；服务端权限矩阵通过；权益和计费边界经人工确认 |
 | M6 试点 COMPLETE 与复制 | 后续 | 试点十模块完整闭环，并验证向其他 BASIC 国家复制 | 试点经独立任务达到 COMPLETE；AI/会员 Beta 验收通过；再逐国、逐任务批准复制 |
 
 执行依赖为：
 
-- M0 完成后，M1 已按 DB → API → OPS 顺序实施，当前处于收尾验证。
+- M0 完成后，M1 已按 DB → API → OPS 顺序实施并完成全量验证、独立审查、merged-main 推送与 CI-SHA 对齐；实施提交为 `015010c29a5a0deb39ef32cbe4e1a9fe8fd07840`，成功 CI run 为 `29693475214`。
 - 项目所有者已批准 ID 试点设计与首批来源目录，M2 与 M1 并行，但仅可生成 draft candidate。
-- M3 与 M4 fixture 骨架均依赖 M1 的全量验证、独立审查、merged-main 推送和 CI-SHA 对齐全部通过。
+- M3 与 M4 fixture 骨架的 M1 前置现已满足，可分别按独立任务启动；各自剩余人工关口不因 M1 完成而自动放行。
 - M4 生产 Beta 还依赖 M2 经独立批准发布的真实 STANDARD 数据，以及 KnowledgeChunk 数量/模块覆盖、正式 Prompt、检索默认值和 `aiUsable` 等全部 AI 人工关口。
 - M5 依赖 M3 和至少一个真实受控资源。
 - M6 依赖试点 STANDARD、AI/会员相关 Beta 验收及新的 COMPLETE 人工批准。
@@ -66,9 +66,9 @@ Web 占位和跨国复制能力。
 - PLATFORM-OPS-1：只完成连接池、缓存边界、健康检查、可观测性和负载基线。
 - `DATA-STANDARD-ID`：只建设已选定的 ID STANDARD 试点；来源登记、事实候选、
   人工审核和原子发布保持分阶段闸门，不夹带平台代码。
-- P5-1 / P5-2：M1 完整验收后完成 Admin 数据管理与审核，不等待 AI 或会员业务全部完成。
-- P3-1 / P3-2：M1 完整验收后实现严格边界内的 AI 管道和接口骨架；生产启用由 M4 闸门决定。
-- P4-1：权限逻辑须另行人工批准后实施；P4-3 可在 M1 完整验收后按独立任务实施。报告权益和付费 Beta 由 M5 闸门决定。
+- P5-1 / P5-2：M1 已完整验收，可按独立任务完成 Admin 数据管理与审核，不等待 AI 或会员业务全部完成。
+- P3-1 / P3-2：M1 已完整验收，可按独立任务实现严格边界内的 AI 管道和接口骨架；生产启用由 M4 闸门决定。
+- P4-1：权限逻辑须另行人工批准后实施；P4-3 的 M1 前置已满足，可按独立任务实施。报告权益和付费 Beta 由 M5 闸门决定。
 - `DATA-COMPLETE-<ISO2>`：仅在试点 STANDARD 验收后另行批准和实施。
 
 每个切片仍遵守“一张任务卡 = 一件事 = 独立 review / 测试 / 回滚”。

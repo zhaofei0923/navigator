@@ -51,12 +51,12 @@ MVP 到商业化初期的当前建设目标是经人工批准的国家先完成 
 
 这六个 canonical publication、批准回执和十模块占位共同构成 M0 完成证据。它们已经验证统一模型和跨国复制能力，因此：
 
-- 生产 PostgreSQL/Prisma 读取链路、NestJS API 与运行治理可在六国 BASIC 后启动；Admin 核心、鉴权与留资基础须在 M1 验收完成后按独立任务启动；以上均不等待 COMPLETE。
+- 生产 PostgreSQL/Prisma 读取链路、NestJS API 与运行治理已在六国 BASIC 后完成；M1 已验收，Admin 核心与留资基础现可按独立任务启动，P4-1 鉴权/权限逻辑仍须另行人工批准；以上均不等待 COMPLETE。
 - 项目所有者已选择 `ID` 作为首个 Standard 试点，并批准试点设计与首批来源目录，仅授权与 M1 并行生成 draft candidate。
 - 首批来源目录身份和采集范围已获批，但这不等于其中任何提取事实、双语文本或编辑结论获批。候选必须保持 `reviewStatus = draft`、`aiUsable = false`；不得进入 `pending` 或 `published`，不得修改真实 canonical、写入生产数据库、创建 KnowledgeChunk 或进入 AI 检索。
 - 详细依赖和任务切片以 [六国 BASIC 后里程碑设计](./superpowers/specs/2026-07-18-six-basic-platform-milestone-design.md) 与 [roadmap.md](./roadmap.md) 为准。
 
-2026-07-19 执行进度：`PLATFORM-DB-1`、`PLATFORM-API-1`、`PLATFORM-OPS-1` 均已完成；Gate 0 精确依赖已获批准。M1 正在进行全量验证、独立审查、合并 `main`、推送及 CI-SHA 对齐，在这些验收完成前仍保持“进行中”。
+2026-07-19 执行进度：`PLATFORM-DB-1`、`PLATFORM-API-1`、`PLATFORM-OPS-1` 均已完成；Gate 0 精确依赖已获批准。M1 已完成全量验证、独立审查、合并 `main`、推送与 CI-SHA 对齐：实施提交 `015010c29a5a0deb39ef32cbe4e1a9fe8fd07840` 已进入 `main`，merged-main CI [run 29693475214](https://github.com/zhaofei0923/navigator/actions/runs/29693475214) 为 `success`，本地、`origin/main`、远端与 CI head SHA 一致。
 
 与 M1 并行的 `DATA-STANDARD-ID` 已完成安全合成 fixture 切片；试点设计和首批来源目录现已获批，下一步仅可生成不可变 draft candidate，当前 M2 不得标记完成。任何候选事实与双语文本仍是未批准草稿，不构成 STANDARD 发布，也不授权 canonical/生产数据库写入、任何 `aiUsable` 变更、真实 KnowledgeChunk、AI 检索资格或 COMPLETE。ID 的真实 canonical publication 仍恰好为 BASIC。
 
@@ -187,9 +187,9 @@ MVP 到商业化初期的当前建设目标是经人工批准的国家先完成 
 4. 经人工审核完成 `draft -> pending -> published`；Basic 发布记录保持 `aiUsable = false`。
 5. 运行覆盖等级判定与数据质量检查，确认国家为 Basic。
 6. 通过代表性 Web 占位与基础画像验收后对外展示。
-7. `PLATFORM-DB-1`、`PLATFORM-API-1`、`PLATFORM-OPS-1` 已完成；M1 须在全量验证、独立审查、merged-main 推送与 CI-SHA 对齐后才算完成。
+7. `PLATFORM-DB-1`、`PLATFORM-API-1`、`PLATFORM-OPS-1` 已完成；M1 的全量验证、独立审查、merged-main 推送与 CI-SHA 对齐已经通过。
 8. ID STANDARD 试点设计与首批来源目录已批准，仅可生成 draft candidate；目录批准不等于事实、双语文本、发布或 AI 资格批准。
-9. M1 完成后可按独立任务启动 M3，其中 P4-1 权限逻辑仍须人工批准；同时可启动 M4 的 P3-1/P3-2 fixture 骨架。M4 生产 Beta 仍须等待 ID 独立发布为 STANDARD、合格 KnowledgeChunk 数量与模块覆盖门槛、正式 Prompt/检索参数及 `aiUsable` 人工批准。
+9. M1 已完成，可按独立任务启动 M3，其中 P4-1 权限逻辑仍须人工批准；同时可启动 M4 的 P3-1/P3-2 fixture 骨架。M4 生产 Beta 仍须等待 ID 独立发布为 STANDARD、合格 KnowledgeChunk 数量与模块覆盖门槛、正式 Prompt/检索参数及 `aiUsable` 人工批准。
 10. 只有 Standard 试点与相关 Beta 验收后，才另行批准 `DATA-COMPLETE-<ISO2>`；完成一个闭环试点后再逐国拆卡复制。
 
 ---
