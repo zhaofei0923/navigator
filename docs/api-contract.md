@@ -82,6 +82,13 @@
 - 这两个路由只存在于上述根路径；`/api/v1/health/live` 与 `/api/v1/health/ready` 均返回 404。
 - metrics 使用独立 loopback 端口，不属于业务 API。
 
+### 0.8 请求关联与安全日志
+
+- 所有 HTTP 响应（包括健康检查、校验错误、未知路由与内部错误）都携带 `x-request-id` 与 W3C `traceparent`。
+- 受信 loopback gateway / BFF 的 `x-request-id` 仅在它是单一的 16..64 位 `[A-Za-z0-9_-]` 字符串时原样保留，否则服务端生成新 UUID；不得 trim 或回显多值、空白、Unicode、`.`、CR/LF 等非法输入。gateway 必须丢弃外部终端提供的同名 header，再由 gateway 或 loopback API 生成不含业务标识、联系信息或凭证的不透明 token；API 不对外网直连。
+- M1 只接收严格的 W3C v00 `traceparent`：合法输入保留 trace id 与 flags，并由服务端生成新的非零 span id；非法、多值、全零或非小写输入会被完整替换。响应固定使用 `00-{traceId}-{newSpanId}-{flags}`。
+- 每个请求只输出一行结构化 JSON 日志。除上述受信 correlation token 外，不记录任意请求头；路由仅记录固定模板或 `UNMATCHED`，不得记录原始 path/query、国家码、IP、联系信息、连接串或异常 message/stack。readiness 的正常 503 不归类为内部异常；响应完成前连接关闭固定记录为 `http_request_aborted` / 499，不得误记为成功 200。
+
 ---
 
 ## 1. 国家列表与筛选

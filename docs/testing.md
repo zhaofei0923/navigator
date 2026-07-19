@@ -231,6 +231,12 @@ factory 或静默回退；应用关闭仍须保持 runtime 只关闭一次。该
 PostgreSQL；Prisma adapter 由 DB 集成测试负责，migration/import → database API → Web → browser 由
 §6.3 的平台 E2E 负责。
 
+### 6.5 请求关联与日志边界验收
+
+`request-context.test.ts` 验证严格 W3C v00、request-id 边界、非零随机标识、await/timer 上下文保持、并发隔离与请求外清理；`json-logger.test.ts` 验证单次 newline-delimited JSON write、字段白名单、固定错误分类与 sink 失败隔离；`observability.interceptor.test.ts` 验证 middleware 与 interceptor 共用同一请求状态、模板路由、缓存状态、500 脱敏及 `finish`/`close` 只记一次。
+
+`main.test.ts` 必须穿过真实 loopback Nest HTTP，证明已匹配健康路由和未知 404 均携带安全 `x-request-id` / `traceparent` 且各自产生一行日志，并证明 Nest 依赖初始化失败只 reject、不会在固定 bootstrap JSON 事件前直接终止进程。未知 path/query、国家/模块参数、任意非 correlation header、连接串、SQL、联系信息和异常文本不得进入日志；全局 middleware 覆盖 interceptor 无法进入的未知路由。提前 `close` 且 `writableFinished=false` 必须固定记录 499 aborted，异步 sink rejection 必须被隔离。
+
 ---
 
 ## 7. 一致性检查清单

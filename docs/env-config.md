@@ -59,7 +59,7 @@
 | `HEALTH_READY_TIMEOUT_MS` | — | `GET /health/ready` 检查 selected runtime 的超时毫秒数，默认 `1000`，范围 `100..5000` |
 | `API_INTERNAL_BASE_URL` | Web ✓ | Next BFF 到 Nest 的服务端专用基址；本地模板为 `http://127.0.0.1:3100/api/v1` |
 
-`database` source 仅要求 `DATABASE_URL`，并读取三个可选的连接池/连接超时配置；`canonical` source 不读取或要求任何 `DATABASE_*` 变量。两个 source 都读取 `READ_CACHE_TTL_SECONDS`、`READ_CACHE_STALE_IF_ERROR_SECONDS`、`READ_CACHE_MAX_ENTRIES` 与 `HEALTH_READY_TIMEOUT_MS`。API 的 scoped parser 除这四项外，只读取 `API_PORT`、`COUNTRY_READ_SOURCE`、`CANONICAL_REPOSITORY_ROOT`、`DATABASE_URL`、`DATABASE_POOL_MAX`、`DATABASE_POOL_TIMEOUT_SECONDS` 与 `DATABASE_CONNECT_TIMEOUT_SECONDS`，不会读取 Web BFF、认证、AI 或留资变量。M1 固定监听 `127.0.0.1`，外部流量必须先进入同机 TLS reverse proxy 或 Next BFF。
+`database` source 仅要求 `DATABASE_URL`，并读取三个可选的连接池/连接超时配置；`canonical` source 不读取或要求任何 `DATABASE_*` 变量。两个 source 都读取 `READ_CACHE_TTL_SECONDS`、`READ_CACHE_STALE_IF_ERROR_SECONDS`、`READ_CACHE_MAX_ENTRIES` 与 `HEALTH_READY_TIMEOUT_MS`。API 的 scoped parser 除这四项外，只读取 `API_PORT`、`COUNTRY_READ_SOURCE`、`CANONICAL_REPOSITORY_ROOT`、`DATABASE_URL`、`DATABASE_POOL_MAX`、`DATABASE_POOL_TIMEOUT_SECONDS` 与 `DATABASE_CONNECT_TIMEOUT_SECONDS`，不会读取 Web BFF、认证、AI 或留资变量。M1 固定监听 `127.0.0.1`，外部流量必须先进入同机 TLS reverse proxy 或 Next BFF。该受信 gateway/BFF 必须删除终端客户端传入的 `x-request-id`，再由 gateway 或 loopback API 生成符合契约且不编码 PII、凭证或业务标识的不透明关联 token；将终端 header 原样透传不属于受支持部署。
 
 API 在创建唯一 Prisma runtime 前生成受管连接 URL：增加 `connection_limit`、`pool_timeout`、`connect_timeout` 与固定的 `application_name=navigator-api`。原始 `DATABASE_URL` 不修改且不得写入日志；若原 URL 已含任一受管参数（即使值相同）则启动失败，错误只报告参数名。以 PostgreSQL `max_connections=100`、预留 20 条运维连接、每个 API 副本默认池上限 10 计算，API 副本硬上限为 8，部署配置不得超过该上限。
 

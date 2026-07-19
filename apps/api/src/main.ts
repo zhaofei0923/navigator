@@ -1,17 +1,26 @@
 import "reflect-metadata";
 
-import { RequestMethod, type INestApplication } from "@nestjs/common";
+import {
+  RequestMethod,
+  type INestApplication,
+  type NestInterceptor,
+} from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { fileURLToPath } from "node:url";
 
 import { AppModule } from "./app.module.js";
 import { type ApiEnvironment, validateApiEnv } from "./api-config.js";
+import { JsonLogger } from "./ops/json-logger.js";
+import { ObservabilityInterceptor } from "./ops/observability.interceptor.js";
 
 export async function bootstrap(
   environment: ApiEnvironment = process.env,
 ): Promise<INestApplication> {
   const config = validateApiEnv(environment);
-  const app = await NestFactory.create(AppModule.register(config), { logger: false });
+  const app = await NestFactory.create(AppModule.register(config), {
+    abortOnError: false,
+    logger: false,
+  });
 
   configureApplication(app);
   await app.listen(config.port, "127.0.0.1");
@@ -21,12 +30,15 @@ export async function bootstrap(
 export function configureApplication(
   app: ApiApplicationConfigurationTarget,
 ): void {
+  const observability = new ObservabilityInterceptor();
   app.setGlobalPrefix("api/v1", {
     exclude: [
       { path: "health/live", method: RequestMethod.GET },
       { path: "health/ready", method: RequestMethod.GET },
     ],
   });
+  app.use(observability.middleware);
+  app.useGlobalInterceptors(observability);
   app.enableShutdownHooks(["SIGTERM", "SIGINT"]);
 }
 
@@ -35,11 +47,13 @@ export interface ApiApplicationConfigurationTarget {
     exclude: { path: string; method: RequestMethod }[];
   }): unknown;
   enableShutdownHooks(signals: string[]): unknown;
+  use(middleware: unknown): unknown;
+  useGlobalInterceptors(...interceptors: NestInterceptor[]): unknown;
 }
 
 if (isEntrypoint()) {
-  void bootstrap().catch((error: unknown) => {
-    console.error(error instanceof Error ? error.message : "API_BOOTSTRAP_FAILED");
+  void bootstrap().catch(() => {
+    new JsonLogger().logBootstrapFailure();
     process.exitCode = 1;
   });
 }

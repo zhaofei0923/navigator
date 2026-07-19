@@ -44,12 +44,12 @@ describe("proxyCountryApi", () => {
       expect(Object.fromEntries(headers.entries())).toEqual({
         "accept-language": "en-US,en;q=0.9",
         traceparent: "00-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbb-01",
-        "x-request-id": "request_1234567890",
       });
       expect(headers.has("authorization")).toBe(false);
       expect(headers.has("cookie")).toBe(false);
       expect(headers.has("host")).toBe(false);
       expect(headers.has("x-forwarded-for")).toBe(false);
+      expect(headers.has("x-request-id")).toBe(false);
 
       return new Response(JSON.stringify({ data: { code: "ID" }, success: true }), {
         status: 206,
@@ -70,7 +70,7 @@ describe("proxyCountryApi", () => {
         host: "attacker.test",
         traceparent: "00-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbb-01",
         "x-forwarded-for": "203.0.113.10",
-        "x-request-id": "request_1234567890",
+        "x-request-id": "postgresql_secret",
       },
     });
 

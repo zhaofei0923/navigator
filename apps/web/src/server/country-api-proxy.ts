@@ -106,7 +106,6 @@ function forwardedRequestHeaders(source: Headers): Headers {
   const headers = new Headers();
   copyHeader(source, headers, "accept-language");
   copyHeader(source, headers, "traceparent");
-  copyHeader(source, headers, "x-request-id");
   return headers;
 }
 
