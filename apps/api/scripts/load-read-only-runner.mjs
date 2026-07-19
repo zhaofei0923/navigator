@@ -1,7 +1,7 @@
 import { performance } from "node:perf_hooks";
 
 import {
-  assertEnvironment, assertLoopbackBaseUrl, assertLoopbackMetricsUrl, assertMetricCapacity,
+  assertLoopbackBaseUrl, assertLoopbackMetricsUrl, assertMetricCapacity, assertRuntimeEnvironment,
   assertRequestMatrix, assertRuntimeScenario, assertScenarioName, assertSha256, buildRequestMatrix,
 } from "./load-read-only-contract.mjs";
 import { fetchMetrics, performRead } from "./load-read-only-http.mjs";
@@ -13,7 +13,7 @@ export async function runLoadScenario(options) {
   const scenario = assertRuntimeScenario(options.scenario);
   const scenarioName = assertScenarioName(options.scenarioName);
   const scenarioFileSha256 = assertSha256(options.scenarioFileSha256);
-  const environment = assertEnvironment(options.environment, scenarioFileSha256);
+  const environment = assertRuntimeEnvironment(options.environment, scenarioFileSha256);
   const fetchImpl = options.fetch ?? globalThis.fetch;
   if (typeof fetchImpl !== "function") throw new Error("LOAD_FETCH_UNAVAILABLE");
   const clock = assertClock(options.clock ?? createMonotonicClock());

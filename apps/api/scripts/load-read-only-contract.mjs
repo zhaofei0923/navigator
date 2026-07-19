@@ -24,6 +24,9 @@ const ENVIRONMENT_KEYS = Object.freeze([
   "configuration", "cpu", "gitSha", "imageDigest", "imageId", "memory",
   "scenarioFileSha256", "schemaVersion", "versions",
 ]);
+const RUNTIME_ENVIRONMENT_KEYS = Object.freeze([
+  "cpu", "gitSha", "imageDigest", "memory", "scenarioFileSha256", "schemaVersion", "versions",
+]);
 const FIXED_CONFIGURATION = Object.freeze({
   aiShare: 0,
   apiPort: 3100,
@@ -168,13 +171,26 @@ export function assertRequestMatrix(value) {
 
 export function assertEnvironment(value, expectedScenarioSha) {
   if (!isRecord(value) || !sameKeys(value, Object.fromEntries(ENVIRONMENT_KEYS.map((key) => [key, true]))) ||
-      !/^[0-9a-f]{40}$/.test(value.gitSha ?? "") || !/^sha256:[0-9a-f]{64}$/.test(value.imageDigest ?? "") ||
-      !/^sha256:[0-9a-f]{64}$/.test(value.imageId ?? "") || value.schemaVersion !== 1 ||
-      value.scenarioFileSha256 !== expectedScenarioSha || !isRecord(value.versions) ||
-      !sameKeys(value.versions, { node: true, postgres: true, prisma: true }) ||
+      !/^sha256:[0-9a-f]{64}$/.test(value.imageId ?? "") || !isRecord(value.versions) ||
       !isRecord(value.cpu) || !sameKeys(value.cpu, { capacityCores: true, source: true }) ||
       !isRecord(value.memory) || !sameKeys(value.memory, { limitBytes: true, source: true }) ||
       !matchesFixedConfiguration(value.configuration)) {
+    throw new Error("LOAD_ENVIRONMENT_INVALID");
+  }
+  return assertRuntimeEnvironment({
+    cpu: value.cpu, gitSha: value.gitSha, imageDigest: value.imageDigest, memory: value.memory,
+    scenarioFileSha256: value.scenarioFileSha256, schemaVersion: value.schemaVersion, versions: value.versions,
+  }, expectedScenarioSha);
+}
+
+export function assertRuntimeEnvironment(value, expectedScenarioSha) {
+  if (!isRecord(value) ||
+      !sameKeys(value, Object.fromEntries(RUNTIME_ENVIRONMENT_KEYS.map((key) => [key, true]))) ||
+      !/^[0-9a-f]{40}$/.test(value.gitSha ?? "") || !/^sha256:[0-9a-f]{64}$/.test(value.imageDigest ?? "") ||
+      value.schemaVersion !== 1 || value.scenarioFileSha256 !== expectedScenarioSha || !isRecord(value.versions) ||
+      !sameKeys(value.versions, { node: true, postgres: true, prisma: true }) ||
+      !isRecord(value.cpu) || !sameKeys(value.cpu, { capacityCores: true, source: true }) ||
+      !isRecord(value.memory) || !sameKeys(value.memory, { limitBytes: true, source: true })) {
     throw new Error("LOAD_ENVIRONMENT_INVALID");
   }
   for (const version of Object.values(value.versions)) {
@@ -184,7 +200,8 @@ export function assertEnvironment(value, expectedScenarioSha) {
       !safeSource(value.cpu.source) || !safeSource(value.memory.source)) throw new Error("LOAD_ENVIRONMENT_INVALID");
   return Object.freeze({
     cpu: Object.freeze({ ...value.cpu }), gitSha: value.gitSha, imageDigest: value.imageDigest,
-    memory: Object.freeze({ ...value.memory }), versions: Object.freeze({ ...value.versions }),
+    memory: Object.freeze({ ...value.memory }), scenarioFileSha256: value.scenarioFileSha256,
+    schemaVersion: value.schemaVersion, versions: Object.freeze({ ...value.versions }),
   });
 }
 

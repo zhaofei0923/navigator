@@ -42,6 +42,8 @@ describe("load runner CLI boundary", () => {
       const valid = benchmarkEnvironment();
       for (const invalid of [
         { ...valid, databaseUrl: "postgresql://secret" },
+        { ...valid, configuration: { ...valid.configuration, databasePoolMax: 11 } },
+        { ...valid, imageId: "sha256:invalid" },
         { ...valid, versions: { node: "v24", prisma: "6.19.3" } },
         { ...valid, cpu: { ...valid.cpu, source: "cgroup\nsecret" } },
       ]) {
@@ -72,6 +74,11 @@ describe("load runner CLI boundary", () => {
     const projected = await readEnvironmentArtifact(fixture.outputPath, raw.scenarioFileSha256);
     assert.equal(projected.gitSha, "d".repeat(40));
     assert.equal(projected.imageDigest, imageDigest);
+    assert.equal(projected.scenarioFileSha256, raw.scenarioFileSha256);
+    assert.equal(projected.schemaVersion, 1);
+    assert.deepEqual(Object.keys(projected).sort(), [
+      "cpu", "gitSha", "imageDigest", "memory", "scenarioFileSha256", "schemaVersion", "versions",
+    ]);
     assert.equal(projected.configuration, undefined);
     assert.equal(projected.imageId, undefined);
   });

@@ -3,9 +3,51 @@ import { readFile } from "node:fs/promises";
 import { performance } from "node:perf_hooks";
 import { describe, test } from "node:test";
 
+import { assertEnvironment } from "./load-read-only-contract.mjs";
 import { createMonotonicClock, runLoadScenario } from "./load-read-only-runner.mjs";
 
 describe("fixed-window read-only load runner", () => {
+  test("accepts the validated environment projection used by the CLI boundary", async () => {
+    const clock = createVirtualClock();
+    const environment = assertEnvironment(benchmarkEnvironment(), "a".repeat(64));
+    const execution = runLoadScenario(baseOptions({
+      clock,
+      environment,
+      fetch: async (url) => String(url).endsWith("/metrics")
+        ? metricsResponse(clock.now() / 1_000)
+        : new Response("{}", { headers: { "x-navigator-cache": "hit" }, status: 200 }),
+    }));
+
+    const result = await clock.run(execution);
+
+    assert.equal(result.count, 1);
+    assert.equal(result.gitSha, "b".repeat(40));
+  });
+
+  test("rejects malformed runtime projections before any network request", async () => {
+    const valid = assertEnvironment(benchmarkEnvironment(), "a".repeat(64));
+    const { versions: _versions, ...withoutVersions } = valid;
+    const invalid = [
+      { ...valid, scenarioFileSha256: "b".repeat(64) },
+      { ...valid, configuration: fixedConfiguration() },
+      { ...valid, imageId: `sha256:${"d".repeat(64)}` },
+      withoutVersions,
+      { ...valid, cpu: { ...valid.cpu, source: "unsafe\nsource" } },
+    ];
+    let fetchCalls = 0;
+
+    for (const environment of invalid) {
+      await assert.rejects(runLoadScenario(baseOptions({
+        environment,
+        fetch: async () => {
+          fetchCalls += 1;
+          throw new Error("UNEXPECTED_FETCH");
+        },
+      })), { message: "LOAD_ENVIRONMENT_INVALID" });
+    }
+    assert.equal(fetchCalls, 0);
+  });
+
   test("keeps request dispatch and one-hertz API metrics sampling independent", async () => {
     const clock = createVirtualClock();
     const calls = [];
@@ -166,7 +208,7 @@ async function captureTimeoutNegativeWarnings(operation) {
 function baseOptions(overrides = {}) {
   return {
     baseUrl: "http://127.0.0.1:3100",
-    environment: benchmarkEnvironment(),
+    environment: assertEnvironment(benchmarkEnvironment(), "a".repeat(64)),
     metricsUrl: "http://127.0.0.1:9464/metrics",
     scenario: { targetRps: 1, maxConcurrency: 1, warmupSeconds: 0, measurementSeconds: 1 },
     scenarioFileSha256: "a".repeat(64),
