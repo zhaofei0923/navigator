@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { createServer } from "node:net";
-import { dirname, resolve } from "node:path";
+import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, test, vi } from "vitest";
@@ -18,6 +18,19 @@ afterEach(async () => {
 });
 
 describe("bootstrap", () => {
+  test("recognizes both absolute and cwd-relative production entrypoints", () => {
+    const isEntrypoint = Reflect.get(main, "isEntrypoint") as
+      | ((entrypoint?: string) => boolean)
+      | undefined;
+    const mainPath = fileURLToPath(new URL("./main.ts", import.meta.url));
+
+    expect(isEntrypoint).toBeTypeOf("function");
+    expect(isEntrypoint?.(mainPath)).toBe(true);
+    expect(isEntrypoint?.(relative(process.cwd(), mainPath))).toBe(true);
+    expect(isEntrypoint?.("apps/api/dist/not-main.js")).toBe(false);
+    expect(isEntrypoint?.(undefined)).toBe(false);
+  });
+
   test("listens only on the loopback address", async () => {
     const metricsPort = await availablePort();
     const app = await main.bootstrap({

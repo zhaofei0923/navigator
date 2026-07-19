@@ -6,6 +6,7 @@ import {
   type NestInterceptor,
 } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
+import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { AppModule } from "./app.module.js";
@@ -83,7 +84,9 @@ if (isEntrypoint()) {
   });
 }
 
-function isEntrypoint(): boolean {
-  const entrypoint = process.argv[1];
-  return entrypoint !== undefined && fileURLToPath(import.meta.url) === entrypoint;
+export function isEntrypoint(entrypoint = process.argv[1]): boolean {
+  return (
+    entrypoint !== undefined &&
+    fileURLToPath(import.meta.url) === resolve(entrypoint)
+  );
 }
