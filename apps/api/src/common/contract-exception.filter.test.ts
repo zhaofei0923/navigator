@@ -91,4 +91,25 @@ describe("ContractExceptionFilter", () => {
       /SELECT|postgresql|password|db\.internal|\/home\/|staging/,
     );
   });
+
+  test("maps an unknown router path to a fixed 404 without reflecting the path", async () => {
+    const secretPath =
+      "/api/v1/health/live/postgresql%3A%2F%2Fuser%3Apassword%40db.internal";
+    const response = await fetch(`${baseUrl}${secretPath}`);
+    const body: unknown = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get("content-type")).toMatch(/^application\/json\b/i);
+    expect(body).toEqual({
+      error: {
+        code: "NOT_FOUND",
+        details: null,
+        message: "Resource not found",
+      },
+      success: false,
+    });
+    expect(JSON.stringify(body)).not.toMatch(
+      /health|postgresql|password|db\.internal|Cannot GET/i,
+    );
+  });
 });

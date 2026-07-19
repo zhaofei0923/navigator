@@ -10,7 +10,7 @@
 
 ### 0.1 基础
 - 协议：HTTPS，`Content-Type: application/json`。
-- 版本前缀：所有接口以 `/api/v1` 开头。
+- 版本前缀：所有业务接口以 `/api/v1` 开头；仅 `GET /health/live` 与 `GET /health/ready` 是编排器根路径例外。
 - 后端：NestJS（除非任务卡指定 FastAPI）。
 - 所有外部输入（query / body / 上传 / AI 提问）**必须服务端校验**，防注入（AGENTS.md 第 10 节）。数据库访问统一走 Prisma 参数化查询。
 
@@ -73,6 +73,14 @@
 - STANDARD 候选管道中新接收的 `policy`、`risk`、`opportunities` 记录使用 [data-schema.md §3.2](./data-schema.md) 定义的不透明、不可变 UUID v4 `id`。
 - API 必须原样返回并在记录修订后保留该 `id`；不得根据标题、顺序、内容哈希、来源 URL、国家或模块重新生成。
 - 本约定沿用现有响应字段与数据库字符串主键，不新增响应字段，也不要求数据库迁移。
+
+### 0.7 编排器健康检查
+
+- `GET /health/live` 返回 HTTP 200 与裸 JSON `{"status":"ok"}`，不得访问数据库。
+- `GET /health/ready` 仅在当前选定的 country read runtime 探测成功时返回 HTTP 200 与裸 JSON `{"status":"ready"}`；探测超时或失败返回 HTTP 503 与裸 JSON `{"status":"not_ready"}`，不得包含底层错误。
+- 两个响应都必须设置 `Cache-Control: no-store`，readiness 必须绕过业务 response cache，任何 stale 业务数据都不得伪装服务已就绪。
+- 这两个路由只存在于上述根路径；`/api/v1/health/live` 与 `/api/v1/health/ready` 均返回 404。
+- metrics 使用独立 loopback 端口，不属于业务 API。
 
 ---
 
@@ -223,7 +231,7 @@
 
 ## 8. 一致性检查清单
 
-- [ ] 所有接口路由以 `/api/v1` 开头
+- [ ] 所有业务接口路由以 `/api/v1` 开头，只有 §0.7 的两个健康检查使用根路径
 - [ ] 出参数据结构与 [data-schema.md](./data-schema.md) 一致，无特例字段
 - [ ] STANDARD 政策/风险/机会记录原样保留稳定 UUID v4 `id`
 - [ ] `BUILDING` 模块返回 200 + 占位，不返回错误

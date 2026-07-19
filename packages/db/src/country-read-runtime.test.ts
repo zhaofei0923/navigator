@@ -21,9 +21,50 @@ const prismaState = vi.hoisted(() => ({
   constructorError: null as Error | null,
   disconnectError: null as Error | null,
   disconnectCalls: 0,
+  queryError: null as Error | null,
+  queryPending: false,
+  queryCalls: [] as {
+    readonly cooked: readonly string[];
+    readonly raw: readonly string[];
+    readonly values: readonly unknown[];
+  }[],
+  transactionInFlight: 0,
+  transactionMaxInFlight: 0,
   transactionError: null as Error | null,
   transactionCalls: [] as unknown[],
+  transactionKeys: [] as string[][],
 }));
+
+const approvedRepositoryState = vi.hoisted(() => ({
+  listCalls: 0,
+}));
+
+vi.mock(
+  "./read/approved-publication-country-read-repository.js",
+  async (importOriginal) => {
+    const actual = await importOriginal<
+      typeof import("./read/approved-publication-country-read-repository.js")
+    >();
+    return {
+      ...actual,
+      createApprovedPublicationCountryReadRepository(
+        options: Parameters<
+          typeof actual.createApprovedPublicationCountryReadRepository
+        >[0],
+      ) {
+        const repository =
+          actual.createApprovedPublicationCountryReadRepository(options);
+        return Object.freeze({
+          findByCode: (code: string) => repository.findByCode(code),
+          async list() {
+            approvedRepositoryState.listCalls += 1;
+            return repository.list();
+          },
+        });
+      },
+    };
+  },
+);
 
 vi.mock("@prisma/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@prisma/client")>();
@@ -43,17 +84,55 @@ vi.mock("@prisma/client", async (importOriginal) => {
 
       async $transaction<T>(
         callback: (transaction: {
-          readonly country: {
-            count(): Promise<number>;
-            findMany(): Promise<readonly unknown[]>;
-            findUnique(): Promise<null>;
-          };
+          readonly $queryRaw: <T>(
+            strings: TemplateStringsArray,
+            ...values: readonly unknown[]
+          ) => Promise<T>;
         }) => Promise<T>,
-        options: unknown,
+        options: { readonly maxWait: number; readonly timeout: number },
       ): Promise<T> {
         prismaState.transactionCalls.push(options);
-        if (prismaState.transactionError !== null) throw prismaState.transactionError;
-        return callback({ country: this.country });
+        prismaState.transactionInFlight += 1;
+        prismaState.transactionMaxInFlight = Math.max(
+          prismaState.transactionMaxInFlight,
+          prismaState.transactionInFlight,
+        );
+        try {
+          if (prismaState.transactionError !== null) {
+            throw prismaState.transactionError;
+          }
+          let rejectPendingQuery: ((reason: unknown) => void) | undefined;
+          const transaction = Object.freeze({
+            $queryRaw: async <Result>(
+              strings: TemplateStringsArray,
+              ...values: readonly unknown[]
+            ): Promise<Result> => {
+              prismaState.queryCalls.push({
+                cooked: [...strings],
+                raw: [...strings.raw],
+                values,
+              });
+              if (prismaState.queryPending) {
+                await new Promise<never>((_resolve, reject) => {
+                  rejectPendingQuery = reject;
+                });
+              }
+              if (prismaState.queryError !== null) throw prismaState.queryError;
+              return [{ result: 1 }] as unknown as Result;
+            },
+          });
+          prismaState.transactionKeys.push(Object.keys(transaction));
+          const transactionTimeout = setTimeout(() => {
+            rejectPendingQuery?.(new Error("MOCK_TRANSACTION_TIMEOUT"));
+          }, options.timeout);
+          try {
+            return await callback(transaction);
+          } finally {
+            clearTimeout(transactionTimeout);
+          }
+        } finally {
+          prismaState.transactionInFlight -= 1;
+        }
       }
 
       async $disconnect(): Promise<void> {
@@ -80,12 +159,20 @@ const REPOSITORY_ROOT = resolve(
 const temporaryDirectories: string[] = [];
 
 afterEach(() => {
+  approvedRepositoryState.listCalls = 0;
   prismaState.constructOptions.length = 0;
   prismaState.constructorError = null;
   prismaState.disconnectError = null;
   prismaState.disconnectCalls = 0;
+  prismaState.queryError = null;
+  prismaState.queryPending = false;
+  prismaState.queryCalls.length = 0;
+  prismaState.transactionInFlight = 0;
+  prismaState.transactionMaxInFlight = 0;
   prismaState.transactionError = null;
   prismaState.transactionCalls.length = 0;
+  prismaState.transactionKeys.length = 0;
+  vi.useRealTimers();
   while (temporaryDirectories.length > 0) {
     const directory = temporaryDirectories.pop();
     if (directory !== undefined) rmSync(directory, { recursive: true, force: true });
@@ -139,7 +226,52 @@ describe("CountryReadRuntime factories", () => {
 
     expect(prismaState.constructOptions).toHaveLength(1);
     expect(prismaState.transactionCalls).toEqual([{ maxWait: 250, timeout: 750 }]);
+    expect(prismaState.queryCalls).toEqual([
+      { cooked: ["SELECT 1"], raw: ["SELECT 1"], values: [] },
+    ]);
+    expect(prismaState.transactionKeys).toEqual([["$queryRaw"]]);
     expect(prismaState.disconnectCalls).toBe(1);
+  });
+
+  test("uses a static tagged query and releases each timed-out transaction", async () => {
+    vi.useFakeTimers();
+    const runtime = createPrismaCountryReadRuntime({
+      databaseUrl: "postgresql://navigator:secret@example.test/navigator",
+    });
+    prismaState.queryPending = true;
+
+    try {
+      for (let attempt = 1; attempt <= 2; attempt += 1) {
+        const pendingPing = runtime.ping({ maxWaitMs: 125, timeoutMs: 125 });
+        const rejectedPing = expect(pendingPing).rejects.toThrow(
+          "COUNTRY_READ_PING_FAILED",
+        );
+
+        expect(prismaState.queryCalls).toHaveLength(attempt);
+        expect(prismaState.transactionInFlight).toBe(1);
+        await vi.advanceTimersByTimeAsync(124);
+        expect(prismaState.transactionInFlight).toBe(1);
+        await vi.advanceTimersByTimeAsync(1);
+        await rejectedPing;
+        expect(prismaState.transactionInFlight).toBe(0);
+      }
+
+      expect(prismaState.transactionMaxInFlight).toBe(1);
+      expect(prismaState.transactionCalls).toEqual([
+        { maxWait: 125, timeout: 125 },
+        { maxWait: 125, timeout: 125 },
+      ]);
+      expect(prismaState.transactionKeys).toEqual([
+        ["$queryRaw"],
+        ["$queryRaw"],
+      ]);
+      expect(prismaState.queryCalls).toEqual([
+        { cooked: ["SELECT 1"], raw: ["SELECT 1"], values: [] },
+        { cooked: ["SELECT 1"], raw: ["SELECT 1"], values: [] },
+      ]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   test.each([
@@ -230,6 +362,39 @@ describe("CountryReadRuntime factories", () => {
       process.chdir(originalCwd);
     }
   }, 30_000);
+
+  test("canonical readiness is an O(1) check of startup-validated state", async () => {
+    const fixtureRoot = createRepositoryFixture();
+    const runtime = createApprovedPublicationCountryReadRuntime({
+      repositoryRoot: fixtureRoot,
+    });
+    rmSync(fixtureRoot, { recursive: true, force: true });
+
+    await expect(
+      runtime.ping({ maxWaitMs: 100, timeoutMs: 100 }),
+    ).resolves.toBeUndefined();
+    await expect(
+      runtime.ping({ maxWaitMs: 100, timeoutMs: 100 }),
+    ).resolves.toBeUndefined();
+    expect(approvedRepositoryState.listCalls).toBe(0);
+
+    await expect(runtime.repository.list()).resolves.not.toHaveLength(0);
+    expect(approvedRepositoryState.listCalls).toBe(1);
+  }, 30_000);
+
+  test("rejects a damaged canonical snapshot before a runtime can start", () => {
+    const fixtureRoot = createRepositoryFixture();
+    writeFileSync(
+      join(fixtureRoot, "data", "indonesia", "country.json"),
+      "{}\n",
+    );
+
+    expect(() =>
+      createApprovedPublicationCountryReadRuntime({
+        repositoryRoot: fixtureRoot,
+      }),
+    ).toThrow("APPROVED_PUBLICATION_RUNTIME_INVALID");
+  });
 
   test("canonical runtime requires an injected absolute root but normalizes it", async () => {
     expect(() => createApprovedPublicationCountryReadRuntime({

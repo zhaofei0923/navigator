@@ -24,6 +24,15 @@ const INTERNAL_ERROR_BODY = {
   success: false,
 } as const;
 
+const RESOURCE_NOT_FOUND_BODY = {
+  error: {
+    code: "NOT_FOUND",
+    details: null,
+    message: "Resource not found",
+  },
+  success: false,
+} as const;
+
 const VALIDATION_MESSAGES = new Set([
   "Invalid countries query",
   "Invalid country detail query",
@@ -66,8 +75,11 @@ function safeContractException(
   if (status === HttpStatus.BAD_REQUEST && isValidationErrorBody(body)) {
     return { body, status };
   }
-  if (status === HttpStatus.NOT_FOUND && isCountryNotFoundBody(body)) {
-    return { body, status };
+  if (status === HttpStatus.NOT_FOUND) {
+    return {
+      body: isCountryNotFoundBody(body) ? body : RESOURCE_NOT_FOUND_BODY,
+      status,
+    };
   }
   if (status === HttpStatus.INTERNAL_SERVER_ERROR && isInternalErrorBody(body)) {
     return { body, status };

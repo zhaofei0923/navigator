@@ -7,6 +7,7 @@ export type ApiConfig =
       readonly readCacheTtlSeconds: number;
       readonly readCacheStaleIfErrorSeconds: number;
       readonly readCacheMaxEntries: number;
+      readonly healthReadyTimeoutMs: number;
       readonly databaseUrl: string;
       readonly databasePoolMax: number;
       readonly databasePoolTimeoutSeconds: number;
@@ -18,6 +19,7 @@ export type ApiConfig =
       readonly readCacheTtlSeconds: number;
       readonly readCacheStaleIfErrorSeconds: number;
       readonly readCacheMaxEntries: number;
+      readonly healthReadyTimeoutMs: number;
       readonly canonicalRepositoryRoot: string;
     };
 
@@ -49,6 +51,14 @@ export function validateApiEnv(environment: ApiEnvironment): ApiConfig {
     10,
     10_000,
     "READ_CACHE_MAX_ENTRIES",
+    invalidVariables,
+  );
+  const healthReadyTimeoutMs = parseBoundedInteger(
+    environment.HEALTH_READY_TIMEOUT_MS,
+    1000,
+    100,
+    5000,
+    "HEALTH_READY_TIMEOUT_MS",
     invalidVariables,
   );
 
@@ -89,6 +99,7 @@ export function validateApiEnv(environment: ApiEnvironment): ApiConfig {
       readCacheTtlSeconds,
       readCacheStaleIfErrorSeconds,
       readCacheMaxEntries,
+      healthReadyTimeoutMs,
       databaseUrl,
       databasePoolMax,
       databasePoolTimeoutSeconds,
@@ -108,6 +119,7 @@ export function validateApiEnv(environment: ApiEnvironment): ApiConfig {
       readCacheTtlSeconds,
       readCacheStaleIfErrorSeconds,
       readCacheMaxEntries,
+      healthReadyTimeoutMs,
       canonicalRepositoryRoot,
     });
   }

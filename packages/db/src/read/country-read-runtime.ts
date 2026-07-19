@@ -54,7 +54,7 @@ export function createPrismaCountryReadRuntime(options: {
       try {
         await client.$transaction(
           async (transaction) => {
-            await transaction.country.count({ where: {} });
+            await transaction.$queryRaw`SELECT 1`;
           },
           {
             maxWait: pingOptions.maxWaitMs,
@@ -90,15 +90,6 @@ export function createApprovedPublicationCountryReadRuntime(options: {
     repository,
     async ping(pingOptions: CountryReadPingOptions): Promise<void> {
       assertPingOptions(pingOptions);
-      const snapshots = await repository.list();
-      if (
-        snapshots.length === 0 ||
-        !isRecursivelyFrozen(snapshots) ||
-        new Set(snapshots.map((snapshot) => snapshot.country.code)).size !==
-          snapshots.length
-      ) {
-        throw new Error("APPROVED_PUBLICATION_RUNTIME_INVALID");
-      }
     },
     close(): Promise<void> {
       return closeResult;
@@ -118,16 +109,6 @@ function assertPingOptions(options: {
   ) {
     throw new Error("COUNTRY_READ_PING_OPTIONS_INVALID");
   }
-}
-
-function isRecursivelyFrozen(
-  value: unknown,
-  seen = new WeakSet<object>(),
-): boolean {
-  if (typeof value !== "object" || value === null || seen.has(value)) return true;
-  if (!Object.isFrozen(value)) return false;
-  seen.add(value);
-  return Object.values(value).every((child) => isRecursivelyFrozen(child, seen));
 }
 
 function runtimeError(code: string): Error {

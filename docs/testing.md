@@ -211,10 +211,12 @@ BASIC 导入、API/Web production build、database source API、Web 与 Playwrig
 pgvector digest 的 `--rm` 容器；finally 只按本次 `docker run` 返回的 container ID 停止它。
 
 启动器在任何 migration/import/build 前证明 `127.0.0.1:3100` 与 `127.0.0.1:3000` 空闲。
-API readiness 只轮询已有的 `GET /api/v1/countries?locale=en`，要求 HTTP 200、JSON 且六国
-envelope 合法；API 就绪后才启动 Web，再轮询 `/en`。3xx、非法响应、API/Web 子进程提前退出或
-owned resource cleanup 失败都会使命令失败。流程不执行 reset、drop、truncate，也不依赖尚未交付的
-OPS health route。
+API readiness 只轮询根路径 `GET /health/ready`。只有 HTTP 200、JSON content type 与精确
+`{"status":"ready"}` 同时满足时才启动 Web；精确的 HTTP 503 `{"status":"not_ready"}` 可在固定
+次数内重试，其他状态、非 JSON 或畸形 body 均 fail closed。客户端单次探针 watchdog 为 3 秒，长于
+服务端默认最多 1 秒连接池等待加 1 秒事务执行上限。API 就绪后再轮询 Web `/en`，六国数据库/API/Web 结果继续由完整
+Playwright 链验证。3xx、非法响应、API/Web 子进程提前退出或 owned resource cleanup 失败都会使
+命令失败。流程不执行 reset、drop 或 truncate。
 
 ### 6.4 国家只读双 provider 验收
 

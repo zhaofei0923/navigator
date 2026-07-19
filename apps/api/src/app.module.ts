@@ -5,6 +5,8 @@ import type { CountryReadRepository } from "@navigator/shared-types/country-runt
 import type { ApiConfig } from "./api-config.js";
 import { ContractExceptionFilter } from "./common/contract-exception.filter.js";
 import { CountriesModule } from "./countries/countries.module.js";
+import { HealthController } from "./ops/health.controller.js";
+import { HealthService } from "./ops/health.service.js";
 import {
   API_CONFIG,
   COUNTRY_READ_REPOSITORY,
@@ -20,6 +22,7 @@ export class AppModule {
     return {
       module: AppModule,
       imports: [CountriesModule],
+      controllers: [HealthController],
       providers: [
         { provide: API_CONFIG, useValue: config },
         {
@@ -34,6 +37,7 @@ export class AppModule {
             runtimeProvider: CountryReadRuntimeProvider,
           ): CountryReadRepository => runtimeProvider.repository,
         },
+        HealthService,
         { provide: APP_FILTER, useClass: ContractExceptionFilter },
       ],
       exports: [API_CONFIG, COUNTRY_READ_REPOSITORY],

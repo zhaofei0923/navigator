@@ -41,6 +41,10 @@ export class CountryReadRuntimeProvider implements OnApplicationShutdown {
     return this.runtime.repository;
   }
 
+  ping(options: Parameters<CountryReadRuntime["ping"]>[0]): Promise<void> {
+    return this.runtime.ping(options);
+  }
+
   onApplicationShutdown(_signal?: string): Promise<void> {
     if (this.closePromise === undefined) {
       this.closePromise = Promise.resolve().then(() => this.runtime.close());

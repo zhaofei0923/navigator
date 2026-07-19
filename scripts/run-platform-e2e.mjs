@@ -14,7 +14,7 @@ const PGVECTOR_IMAGE =
   "pgvector/pgvector:pg17@sha256:d2ef61f42ef767baa5a1475393303cc235bcd92febd9d7014eddb48b41f3bad0";
 const COMMAND_OUTPUT_LIMIT = 2 * 1024 * 1024;
 const DEFAULT_READINESS_ATTEMPTS = 240;
-const DEFAULT_READINESS_REQUEST_TIMEOUT_MS = 1_000;
+export const PLATFORM_E2E_DEFAULT_READINESS_REQUEST_TIMEOUT_MS = 3_000;
 const DEFAULT_TERMINATE_GRACE_MS = 10_000;
 const DEFAULT_KILL_GRACE_MS = 5_000;
 const DEFAULT_GROUP_POLL_INTERVAL_MS = 50;
@@ -24,37 +24,6 @@ const MAX_TIMER_DELAY_MS = 2_147_483_647;
 const READINESS_DELAY_MS = 250;
 const INTERRUPT_EXIT_CODES = Object.freeze({ SIGINT: 130, SIGTERM: 143 });
 const INTERRUPT_SIGNALS = Object.freeze(Object.keys(INTERRUPT_EXIT_CODES));
-const EXPECTED_COUNTRY_CODES = new Set(["ID", "VN", "SA", "AE", "BR", "ZA"]);
-const COUNTRY_MODULE_KEYS = new Set([
-  "market-overview",
-  "policy",
-  "risk",
-  "opportunities",
-  "projects",
-  "partners",
-  "chinese-companies",
-  "entry-strategy",
-  "ai-advisor",
-  "reports",
-]);
-const COVERAGE_LEVELS = new Set(["BASIC", "STANDARD", "COMPLETE"]);
-const MODULE_COVERAGE_STATUSES = new Set(["BUILDING", "PARTIAL", "COMPLETE"]);
-const SIGNAL_LEVELS = new Set(["HIGH", "MEDIUM", "LOW", "DATA_BUILDING"]);
-const RECOMMENDED_PRIORITIES = new Set([
-  "PRIORITY",
-  "WATCH",
-  "EXPLORE",
-  "DATA_BUILDING",
-]);
-const COUNTRY_REGIONS = new Set([
-  "southeast-asia",
-  "south-asia",
-  "middle-east",
-  "africa",
-  "latin-america",
-  "europe",
-  "central-asia",
-]);
 
 export async function runPlatformE2E({
   containerCreateTimeoutMs = DEFAULT_CONTAINER_CREATE_TIMEOUT_MS,
@@ -63,7 +32,7 @@ export async function runPlatformE2E({
   environment = process.env,
   interruptSignal,
   readinessAttempts = DEFAULT_READINESS_ATTEMPTS,
-  readinessRequestTimeoutMs = DEFAULT_READINESS_REQUEST_TIMEOUT_MS,
+  readinessRequestTimeoutMs = PLATFORM_E2E_DEFAULT_READINESS_REQUEST_TIMEOUT_MS,
 } = {}) {
   throwIfInterrupted(interruptSignal);
   const externalDatabaseUrl = environment.DATABASE_URL;
@@ -145,7 +114,7 @@ export async function runPlatformE2E({
         NODE_ENV: "production",
       },
     );
-    await waitForCountries(
+    await waitForApiReady(
       dependencies,
       apiServer,
       readinessAttempts,
@@ -586,7 +555,7 @@ function startServer(dependencies, label, command, args, environment) {
   return server;
 }
 
-async function waitForCountries(
+async function waitForApiReady(
   dependencies,
   server,
   attempts,
@@ -595,32 +564,48 @@ async function waitForCountries(
 ) {
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     await assertServerRunning(server);
-    let body;
+    let state;
     try {
-      body = await runReadinessOperation(
+      state = await runReadinessOperation(
         server,
         requestTimeoutMs,
         async (signal) => {
           const response = await dependencies.fetch(
-            `http://127.0.0.1:${API_PORT}/api/v1/countries?locale=en`,
+            `http://127.0.0.1:${API_PORT}/health/ready`,
             { redirect: "manual", signal },
           );
           if (signal.aborted) {
             cancelBody(response.body);
             throw new Error("PLATFORM_E2E_READINESS_REQUEST_TIMEOUT");
           }
-          if (
-            response.status !== 200 ||
-            !isJsonContentType(response.headers.get("content-type"))
-          ) {
+          if (response.status !== 200 && response.status !== 503) {
             cancelBody(response.body);
-            throw new Error("PLATFORM_E2E_COUNTRIES_READINESS_INVALID");
+            throw new Error("PLATFORM_E2E_API_READINESS_INVALID");
           }
+          if (!isJsonContentType(response.headers.get("content-type"))) {
+            cancelBody(response.body);
+            throw new Error("PLATFORM_E2E_API_READINESS_INVALID");
+          }
+          let body;
           try {
-            return await response.json();
+            body = await response.json();
           } catch {
-            throw new Error("PLATFORM_E2E_COUNTRIES_READINESS_INVALID");
+            cancelBody(response.body);
+            throw new Error("PLATFORM_E2E_API_READINESS_INVALID");
           }
+          if (signal.aborted) {
+            throw new Error("PLATFORM_E2E_READINESS_REQUEST_TIMEOUT");
+          }
+          if (response.status === 200 && isExactReadinessBody(body, "ready")) {
+            return "ready";
+          }
+          if (
+            response.status === 503 &&
+            isExactReadinessBody(body, "not_ready")
+          ) {
+            return "not_ready";
+          }
+          throw new Error("PLATFORM_E2E_API_READINESS_INVALID");
         },
         interruptSignal,
       );
@@ -631,12 +616,12 @@ async function waitForCountries(
       }
       if (
         error instanceof Error &&
-        error.message === "PLATFORM_E2E_COUNTRIES_READINESS_INVALID"
+        error.message === "PLATFORM_E2E_API_READINESS_INVALID"
       ) {
         throw error;
       }
       if (attempt + 1 === attempts) {
-        throw new Error("PLATFORM_E2E_COUNTRIES_READINESS_TIMEOUT");
+        throw new Error("PLATFORM_E2E_API_READINESS_TIMEOUT");
       }
       await delayWhileRunning(
         dependencies,
@@ -646,10 +631,18 @@ async function waitForCountries(
       );
       continue;
     }
-    if (!isSixCountryEnvelope(body)) {
-      throw new Error("PLATFORM_E2E_COUNTRIES_READINESS_INVALID");
+    if (state === "ready") {
+      return;
     }
-    return;
+    if (attempt + 1 === attempts) {
+      throw new Error("PLATFORM_E2E_API_READINESS_TIMEOUT");
+    }
+    await delayWhileRunning(
+      dependencies,
+      server,
+      READINESS_DELAY_MS,
+      interruptSignal,
+    );
   }
 }
 
@@ -1011,86 +1004,12 @@ function isJsonContentType(value) {
     (mediaType?.startsWith("application/") === true && mediaType.endsWith("+json"));
 }
 
-function isSixCountryEnvelope(value) {
-  if (!isRecord(value)) return false;
-  if (
-    value.success !== true ||
-    !Array.isArray(value.data) ||
-    value.data.length !== EXPECTED_COUNTRY_CODES.size ||
-    !isCountriesMeta(value.meta)
-  ) {
-    return false;
-  }
-  const codes = value.data.map((country) =>
-    isRecord(country) ? country.code : undefined
-  );
-  return new Set(codes).size === EXPECTED_COUNTRY_CODES.size &&
-    codes.every((code) => EXPECTED_COUNTRY_CODES.has(code)) &&
-    value.data.every(isLocalizedCountryCard);
-}
-
-function isCountriesMeta(value) {
-  return isRecord(value) &&
-    value.locale === "en" &&
-    value.page === 1 &&
-    value.pageSize === 20 &&
-    value.textMode === "localized" &&
-    value.total === EXPECTED_COUNTRY_CODES.size;
-}
-
-function isLocalizedCountryCard(value) {
-  return isRecord(value) &&
-    typeof value.code === "string" &&
-    typeof value.name === "string" &&
-    COUNTRY_REGIONS.has(value.region) &&
-    typeof value.flagEmoji === "string" &&
-    typeof value.summary === "string" &&
-    COVERAGE_LEVELS.has(value.coverageLevel) &&
-    typeof value.updatedAt === "string" &&
-    isStringArray(value._i18nFallback) &&
-    isCompleteModuleCoverage(value.moduleCoverage) &&
-    isLocalizedCountrySignals(value.signals);
-}
-
-function isCompleteModuleCoverage(value) {
-  if (!Array.isArray(value) || value.length !== COUNTRY_MODULE_KEYS.size) {
-    return false;
-  }
-  const moduleKeys = value.map((item) =>
-    isRecord(item) ? item.moduleKey : undefined
-  );
-  return new Set(moduleKeys).size === COUNTRY_MODULE_KEYS.size &&
-    moduleKeys.every((moduleKey) => COUNTRY_MODULE_KEYS.has(moduleKey)) &&
-    value.every((item) =>
-      isRecord(item) &&
-      COUNTRY_MODULE_KEYS.has(item.moduleKey) &&
-      MODULE_COVERAGE_STATUSES.has(item.status) &&
-      Number.isInteger(item.dataCount) &&
-      item.dataCount >= 0 &&
-      typeof item.updatedAt === "string"
-    );
-}
-
-function isLocalizedCountrySignals(value) {
-  return isRecord(value) &&
-    SIGNAL_LEVELS.has(value.opportunityLevel) &&
-    SIGNAL_LEVELS.has(value.policyFriendliness) &&
-    (value.recommendedEntryMode === null ||
-      typeof value.recommendedEntryMode === "string") &&
-    RECOMMENDED_PRIORITIES.has(value.recommendedPriority) &&
-    SIGNAL_LEVELS.has(value.riskLevel) &&
-    Number.isInteger(value.sourceCount) &&
-    value.sourceCount >= 0 &&
-    isStringArray(value.sources) &&
-    typeof value.updatedAt === "string";
-}
-
-function isStringArray(value) {
-  return Array.isArray(value) && value.every((item) => typeof item === "string");
-}
-
-function isRecord(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
+function isExactReadinessBody(value, expectedStatus) {
+  return value !== null &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    Object.keys(value).length === 1 &&
+    value.status === expectedStatus;
 }
 
 function cancelBody(body) {

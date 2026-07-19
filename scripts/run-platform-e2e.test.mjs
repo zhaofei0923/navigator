@@ -12,19 +12,6 @@ import * as orchestrator from "./run-platform-e2e.mjs";
 const { runPlatformE2E } = orchestrator;
 const SAFE_DATABASE_URL =
   "postgresql://navigator_test:navigator_test_only@127.0.0.1:5432/navigator_platform_db_1_test";
-const COUNTRY_CODES = ["ID", "VN", "SA", "AE", "BR", "ZA"];
-const MODULE_KEYS = [
-  "market-overview",
-  "policy",
-  "risk",
-  "opportunities",
-  "projects",
-  "partners",
-  "chinese-companies",
-  "entry-strategy",
-  "ai-advisor",
-  "reports",
-];
 
 test("rejects an unsafe external DATABASE_URL before any side effect", async () => {
   const fake = createFakeDependencies();
@@ -63,7 +50,7 @@ test("rejects a normalized-but-not-literal expanded IPv6 DATABASE_URL before sid
 test("accepts only the two literal loopback authority forms", async () => {
   for (const host of ["127.0.0.1", "[::1]"]) {
     const fake = createFakeDependencies({
-      fetchResponses: [countriesReadyResponse(), webReadyResponse()],
+      fetchResponses: [healthReadyResponse(), webReadyResponse()],
     });
 
     await runPlatformE2E({
@@ -77,6 +64,35 @@ test("accepts only the two literal loopback authority forms", async () => {
 
     assert.deepEqual(fake.startedServerLabels, ["api", "web"]);
   }
+});
+
+test("probes the root readiness endpoint before starting Web and never probes countries", async () => {
+  const fake = createFakeDependencies({
+    fetchResponses: [healthReadyResponse(), webReadyResponse()],
+  });
+
+  await runPlatformE2E({
+    dependencies: fake.dependencies,
+    environment: { DATABASE_URL: SAFE_DATABASE_URL },
+    readinessAttempts: 1,
+  });
+
+  const fetchUrls = fake.events
+    .filter(({ kind }) => kind === "fetch")
+    .map(({ url }) => url);
+  assert.deepEqual(fetchUrls, [
+    "http://127.0.0.1:3100/health/ready",
+    "http://127.0.0.1:3000/en",
+  ]);
+  assert.equal(fetchUrls.some((url) => url.includes("/api/v1/countries")), false);
+  assert.deepEqual(fake.startedServerLabels, ["api", "web"]);
+});
+
+test("exports a client watchdog longer than both default runtime bounds", () => {
+  assert.equal(
+    orchestrator.PLATFORM_E2E_DEFAULT_READINESS_REQUEST_TIMEOUT_MS,
+    3_000,
+  );
 });
 
 test("refuses an existing fixed-name container without creating or stopping it", async () => {
@@ -110,16 +126,82 @@ test("refuses occupied API or Web ports before spawning commands", async () => {
   }
 });
 
-test("does not start Web when the countries probe is non-200 or non-JSON", async () => {
-  const badResponses = [
-    new Response(JSON.stringify({ data: [], success: true }), {
-      headers: { "content-type": "application/json" },
-      status: 503,
+test("retries a valid 503 not-ready response and starts Web only after exact readiness", async () => {
+  const fake = createFakeDependencies({
+    fetchResponses: [
+      healthNotReadyResponse(),
+      healthReadyResponse(),
+      webReadyResponse(),
+    ],
+  });
+
+  await runPlatformE2E({
+    dependencies: fake.dependencies,
+    environment: { DATABASE_URL: SAFE_DATABASE_URL },
+    readinessAttempts: 2,
+  });
+
+  const fetchUrls = fake.events
+    .filter(({ kind }) => kind === "fetch")
+    .map(({ url }) => url);
+  const finalHealthFetchIndex = fake.events.findLastIndex(
+    ({ kind, url }) => kind === "fetch" && url.endsWith("/health/ready"),
+  );
+  const webSpawnIndex = fake.events.findIndex(
+    ({ kind, options }) => kind === "spawn" && options.label === "web",
+  );
+  assert.deepEqual(fetchUrls, [
+    "http://127.0.0.1:3100/health/ready",
+    "http://127.0.0.1:3100/health/ready",
+    "http://127.0.0.1:3000/en",
+  ]);
+  assert.equal(webSpawnIndex > finalHealthFetchIndex, true);
+  assert.deepEqual(fake.startedServerLabels, ["api", "web"]);
+});
+
+test("does not start Web when readiness remains 503 through the final attempt", async () => {
+  const fake = createFakeDependencies({
+    fetchResponses: [healthNotReadyResponse(), healthNotReadyResponse()],
+  });
+
+  await assert.rejects(
+    runPlatformE2E({
+      dependencies: fake.dependencies,
+      environment: { DATABASE_URL: SAFE_DATABASE_URL },
+      readinessAttempts: 2,
     }),
-    new Response("not-json", {
+    { message: "PLATFORM_E2E_API_READINESS_TIMEOUT" },
+  );
+
+  const fetchUrls = fake.events
+    .filter(({ kind }) => kind === "fetch")
+    .map(({ url }) => url);
+  assert.deepEqual(fetchUrls, [
+    "http://127.0.0.1:3100/health/ready",
+    "http://127.0.0.1:3100/health/ready",
+  ]);
+  assert.equal(fake.startedServerLabels.includes("web"), false);
+  assert.deepEqual(fake.killedProcessLabels, ["api"]);
+});
+
+test("rejects readiness responses unless status, content type, and body shape are exact", async () => {
+  const badResponses = [
+    new Response(JSON.stringify({ status: "ready" }), {
+      headers: { "content-type": "application/json" },
+      status: 201,
+    }),
+    new Response(JSON.stringify({ status: "ready" }), {
       headers: { "content-type": "text/plain" },
       status: 200,
     }),
+    new Response("not-json", {
+      headers: { "content-type": "application/json" },
+      status: 200,
+    }),
+    jsonResponse(null),
+    jsonResponse([]),
+    jsonResponse({ status: "ok" }),
+    jsonResponse({ extra: true, status: "ready" }),
   ];
 
   for (const response of badResponses) {
@@ -131,35 +213,30 @@ test("does not start Web when the countries probe is non-200 or non-JSON", async
         environment: { DATABASE_URL: SAFE_DATABASE_URL },
         readinessAttempts: 1,
       }),
-      { message: "PLATFORM_E2E_COUNTRIES_READINESS_INVALID" },
+      { message: "PLATFORM_E2E_API_READINESS_INVALID" },
     );
 
+    const fetchUrls = fake.events
+      .filter(({ kind }) => kind === "fetch")
+      .map(({ url }) => url);
+    assert.deepEqual(fetchUrls, ["http://127.0.0.1:3100/health/ready"]);
     assert.equal(fake.startedServerLabels.includes("web"), false);
     assert.deepEqual(fake.killedProcessLabels, ["api"]);
   }
 });
 
-test("requires the exact unique six-country set and complete localized card envelope", async () => {
-  const missingSummary = countriesReadyBody();
-  delete missingSummary.data[0].summary;
-  const missingPagination = countriesReadyBody();
-  delete missingPagination.meta.pageSize;
-  const invalidRegion = countriesReadyBody();
-  for (const country of invalidRegion.data) {
-    country.region = "not-a-shared-region";
-  }
-  const badBodies = [
-    countriesReadyBody({ codes: ["ID", "VN", "SA", "AE", "BR", "XX"] }),
-    countriesReadyBody({ codes: ["ID", "VN", "SA", "AE", "BR", "BR"] }),
-    missingSummary,
-    missingPagination,
-    invalidRegion,
+test("rejects readiness bodies paired with the wrong status or extra fields", async () => {
+  const invalidPairings = [
+    ["503 ready", jsonResponse({ status: "ready" }, 503)],
+    [
+      "503 not-ready with an extra field",
+      jsonResponse({ extra: true, status: "not_ready" }, 503),
+    ],
+    ["200 not-ready", jsonResponse({ status: "not_ready" })],
   ];
 
-  for (const body of badBodies) {
-    const fake = createFakeDependencies({
-      fetchResponses: [jsonResponse(body)],
-    });
+  for (const [label, response] of invalidPairings) {
+    const fake = createFakeDependencies({ fetchResponses: [response] });
 
     await assert.rejects(
       runPlatformE2E({
@@ -167,11 +244,12 @@ test("requires the exact unique six-country set and complete localized card enve
         environment: { DATABASE_URL: SAFE_DATABASE_URL },
         readinessAttempts: 1,
       }),
-      { message: "PLATFORM_E2E_COUNTRIES_READINESS_INVALID" },
+      { message: "PLATFORM_E2E_API_READINESS_INVALID" },
+      label,
     );
 
-    assert.equal(fake.startedServerLabels.includes("web"), false);
-    assert.deepEqual(fake.killedProcessLabels, ["api"]);
+    assert.equal(fake.startedServerLabels.includes("web"), false, label);
+    assert.deepEqual(fake.killedProcessLabels, ["api"], label);
   }
 });
 
@@ -188,9 +266,16 @@ test("bounds a pending API readiness fetch, retries, and cleans the owned API", 
       }),
       500,
     ),
-    { message: "PLATFORM_E2E_COUNTRIES_READINESS_TIMEOUT" },
+    { message: "PLATFORM_E2E_API_READINESS_TIMEOUT" },
   );
 
+  const fetchUrls = fake.events
+    .filter(({ kind }) => kind === "fetch")
+    .map(({ url }) => url);
+  assert.deepEqual(fetchUrls, [
+    "http://127.0.0.1:3100/health/ready",
+    "http://127.0.0.1:3100/health/ready",
+  ]);
   assert.equal(fake.startedServerLabels.includes("web"), false);
   assert.deepEqual(fake.killedProcessLabels, ["api"]);
   assert.equal(fake.fetchSignals.length, 2);
@@ -199,7 +284,7 @@ test("bounds a pending API readiness fetch, retries, and cleans the owned API", 
 
 test("bounds a pending Web readiness fetch and cleans both owned servers", async () => {
   const fake = createFakeDependencies({
-    fetchResponses: [countriesReadyResponse()],
+    fetchResponses: [healthReadyResponse()],
     pendingFetch: "web",
   });
 
@@ -224,7 +309,7 @@ test("fails when either managed server exits before readiness", async () => {
   for (const label of ["api", "web"]) {
     const fake = createFakeDependencies({
       earlyExitServer: label,
-      fetchResponses: label === "web" ? [countriesReadyResponse()] : [],
+      fetchResponses: label === "web" ? [healthReadyResponse()] : [],
     });
 
     await assert.rejects(
@@ -245,7 +330,7 @@ test("fails when either managed server exits before readiness", async () => {
 test("kills Playwright when a managed server exits during its run", async () => {
   for (const label of ["api", "web"]) {
     const fake = createFakeDependencies({
-      fetchResponses: [countriesReadyResponse(), webReadyResponse()],
+      fetchResponses: [healthReadyResponse(), webReadyResponse()],
       serverExitDuringPlaywright: label,
     });
 
@@ -264,7 +349,7 @@ test("kills Playwright when a managed server exits during its run", async () => 
 
 test("cleans up only owned process groups and the exact created container id", async () => {
   const fake = createFakeDependencies({
-    fetchResponses: [countriesReadyResponse(), webReadyResponse()],
+    fetchResponses: [healthReadyResponse(), webReadyResponse()],
   });
 
   await runPlatformE2E({
@@ -297,7 +382,7 @@ test("entrypoint interruption waits for one ordered cleanup and restores signal 
   controller.stderr = { write: (value) => stderr.push(String(value)) };
   controller.exitCode = undefined;
   const fake = createFakeDependencies({
-    fetchResponses: [countriesReadyResponse(), webReadyResponse()],
+    fetchResponses: [healthReadyResponse(), webReadyResponse()],
     onSpawn: ({ options }) => {
       if (options.label !== "playwright") return;
       queueMicrotask(() => {
@@ -368,7 +453,7 @@ test("entrypoint interruption terminates an active owned command before containe
 
 test("sweeps each detached command group after its leader completes", async () => {
   const fake = createFakeDependencies({
-    fetchResponses: [countriesReadyResponse(), webReadyResponse()],
+    fetchResponses: [healthReadyResponse(), webReadyResponse()],
   });
 
   await runPlatformE2E({
@@ -416,7 +501,7 @@ test("eliminates a detached command descendant after its leader completes", {
     "});",
   ].join("\n");
   const fake = createFakeDependencies({
-    fetchResponses: [countriesReadyResponse(), webReadyResponse()],
+    fetchResponses: [healthReadyResponse(), webReadyResponse()],
   });
   const fakeSpawn = fake.dependencies.spawn;
   let commandGroupId;
@@ -504,7 +589,7 @@ test("entrypoint preserves the first signal during API or Web readiness", async 
     controller.stderr = { write: (value) => stderr.push(String(value)) };
     controller.exitCode = undefined;
     const fake = createFakeDependencies({
-      fetchResponses: target === "web" ? [countriesReadyResponse()] : [],
+      fetchResponses: target === "web" ? [healthReadyResponse()] : [],
       onFetch: (url) => {
         if (url.includes(`:${target === "api" ? 3100 : 3000}/`)) {
           queueMicrotask(() => controller.emit("SIGINT"));
@@ -760,7 +845,7 @@ test("bounds a pending Docker stop with an independent cleanup watchdog", async 
     controller.exitCode = undefined;
     const fake = createFakeDependencies({
       completionRemainsPendingAfterKill: ["container-stop"],
-      fetchResponses: [countriesReadyResponse(), webReadyResponse()],
+      fetchResponses: [healthReadyResponse(), webReadyResponse()],
       onSpawn: ({ options }) => {
         if (options.label !== "playwright") return;
         queueMicrotask(() => {
@@ -1192,52 +1277,18 @@ function createFakeDependencies(options = {}) {
   };
 }
 
-function countriesReadyResponse(options) {
-  return jsonResponse(countriesReadyBody(options));
+function healthReadyResponse() {
+  return jsonResponse({ status: "ready" });
 }
 
-function countriesReadyBody({ codes = COUNTRY_CODES } = {}) {
-  return {
-    data: codes.map(countryCard),
-    meta: { locale: "en", page: 1, pageSize: 20, textMode: "localized", total: 6 },
-    success: true,
-  };
+function healthNotReadyResponse() {
+  return jsonResponse({ status: "not_ready" }, 503);
 }
 
-function countryCard(code) {
-  const updatedAt = "2026-07-18T00:00:00.000Z";
-  return {
-    code,
-    coverageLevel: "BASIC",
-    flagEmoji: "🌐",
-    moduleCoverage: MODULE_KEYS.map((moduleKey) => ({
-      dataCount: moduleKey === "market-overview" ? 1 : 0,
-      moduleKey,
-      status: moduleKey === "market-overview" ? "COMPLETE" : "BUILDING",
-      updatedAt,
-    })),
-    name: `Country ${code}`,
-    region: "southeast-asia",
-    signals: {
-      opportunityLevel: "DATA_BUILDING",
-      policyFriendliness: "DATA_BUILDING",
-      recommendedEntryMode: null,
-      recommendedPriority: "DATA_BUILDING",
-      riskLevel: "DATA_BUILDING",
-      sourceCount: 0,
-      sources: [],
-      updatedAt,
-    },
-    summary: `Summary ${code}`,
-    updatedAt,
-    _i18nFallback: [],
-  };
-}
-
-function jsonResponse(body) {
+function jsonResponse(body, status = 200) {
   return new Response(JSON.stringify(body), {
-    headers: { "content-type": "application/json" },
-    status: 200,
+    headers: { "content-type": "application/json; charset=utf-8" },
+    status,
   });
 }
 

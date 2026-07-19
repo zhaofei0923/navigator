@@ -28,6 +28,7 @@ describe("CountryReadRuntimeProvider", () => {
         readCacheTtlSeconds: 60,
         readCacheStaleIfErrorSeconds: 300,
         readCacheMaxEntries: 1000,
+        healthReadyTimeoutMs: 1000,
         databaseUrl: "postgresql://navigator:secret@127.0.0.1:5432/navigator",
         databasePoolMax: 10,
         databasePoolTimeoutSeconds: 5,
@@ -66,6 +67,7 @@ describe("CountryReadRuntimeProvider", () => {
         readCacheTtlSeconds: 60,
         readCacheStaleIfErrorSeconds: 300,
         readCacheMaxEntries: 1000,
+        healthReadyTimeoutMs: 1000,
         canonicalRepositoryRoot: "/srv/navigator",
       },
       factories,
@@ -111,6 +113,7 @@ describe("CountryReadRuntimeProvider", () => {
           readCacheTtlSeconds: 60,
           readCacheStaleIfErrorSeconds: 300,
           readCacheMaxEntries: 1000,
+          healthReadyTimeoutMs: 1000,
           databaseUrl,
           databasePoolMax: 10,
           databasePoolTimeoutSeconds: 5,
@@ -189,6 +192,46 @@ describe("CountryReadRuntimeProvider", () => {
         spy.mockRestore();
       }
     }
+  });
+
+  test("forwards health ping bounds to the selected singleton runtime", async () => {
+    const runtime = createRuntime();
+    const factories: CountryReadRuntimeFactories = {
+      createPrismaCountryReadRuntime: vi.fn(() => runtime),
+      createApprovedPublicationCountryReadRuntime: vi.fn(() => createRuntime()),
+    };
+    const provider = new CountryReadRuntimeProvider(
+      {
+        port: 3100,
+        countryReadSource: "database",
+        readCacheTtlSeconds: 60,
+        readCacheStaleIfErrorSeconds: 300,
+        readCacheMaxEntries: 1000,
+        healthReadyTimeoutMs: 1375,
+        databaseUrl: "postgresql://navigator:secret@127.0.0.1:5432/navigator",
+        databasePoolMax: 10,
+        databasePoolTimeoutSeconds: 5,
+        databaseConnectTimeoutSeconds: 5,
+      },
+      factories,
+    );
+
+    await Promise.all([
+      provider.ping({ maxWaitMs: 1375, timeoutMs: 1375 }),
+      provider.ping({ maxWaitMs: 1375, timeoutMs: 1375 }),
+    ]);
+
+    expect(runtime.ping).toHaveBeenCalledTimes(2);
+    expect(runtime.ping).toHaveBeenNthCalledWith(1, {
+      maxWaitMs: 1375,
+      timeoutMs: 1375,
+    });
+    expect(runtime.ping).toHaveBeenNthCalledWith(2, {
+      maxWaitMs: 1375,
+      timeoutMs: 1375,
+    });
+    expect(factories.createPrismaCountryReadRuntime).toHaveBeenCalledOnce();
+    expect(factories.createApprovedPublicationCountryReadRuntime).not.toHaveBeenCalled();
   });
 });
 

@@ -91,4 +91,5 @@ jobs:
       - name: Full-stack E2E
         env:
           DATABASE_URL: postgresql://navigator_test:navigator_test_only@127.0.0.1:5432/navigator_platform_db_1_test
+          HEALTH_READY_TIMEOUT_MS: "1000"
         run: pnpm test:e2e

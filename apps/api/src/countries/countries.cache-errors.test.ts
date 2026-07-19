@@ -205,6 +205,7 @@ async function startApp(
         readCacheMaxEntries: 10,
         readCacheStaleIfErrorSeconds: 300,
         readCacheTtlSeconds: 1,
+        healthReadyTimeoutMs: 1000,
         canonicalRepositoryRoot: REPOSITORY_ROOT,
       }),
     ],

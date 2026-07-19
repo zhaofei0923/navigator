@@ -57,4 +57,32 @@ describe("P0-4 CI gates", () => {
       "node --test scripts/run-platform-e2e.test.mjs && vitest run tests && turbo run test",
     );
   });
+
+  it("keeps root health probes documented and the full-stack CI chain health-gated", () => {
+    const apiContract = readRootFile("docs/api-contract.md");
+    const environmentExample = readRootFile(".env.example");
+    const environmentContract = readRootFile("docs/env-config.md");
+    const testingContract = readRootFile("docs/testing.md");
+    const workflow = readRootFile(".github/workflows/ci.yml");
+
+    expect(apiContract).toContain(
+      "所有业务接口以 `/api/v1` 开头；仅 `GET /health/live` 与 `GET /health/ready` 是编排器根路径例外。",
+    );
+    expect(apiContract).toContain(
+      "metrics 使用独立 loopback 端口，不属于业务 API。",
+    );
+    expect(testingContract).toContain(
+      "API readiness 只轮询根路径 `GET /health/ready`",
+    );
+    expect(testingContract).not.toContain(
+      "API readiness 只轮询已有的 `GET /api/v1/countries?locale=en`",
+    );
+    expect(environmentExample.match(/^HEALTH_READY_TIMEOUT_MS=1000$/gmu)).toHaveLength(1);
+    expect(environmentContract).toContain(
+      "`HEALTH_READY_TIMEOUT_MS` | — | `GET /health/ready` 检查 selected runtime 的超时毫秒数，默认 `1000`，范围 `100..5000`",
+    );
+    expect(workflow).toMatch(
+      /- name: Full-stack E2E[\s\S]*?HEALTH_READY_TIMEOUT_MS: "1000"[\s\S]*?run: pnpm test:e2e/u,
+    );
+  });
 });

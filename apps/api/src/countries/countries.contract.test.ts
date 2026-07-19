@@ -50,6 +50,7 @@ beforeAll(async () => {
         readCacheTtlSeconds: 60,
         readCacheStaleIfErrorSeconds: 300,
         readCacheMaxEntries: 1000,
+        healthReadyTimeoutMs: 1000,
         canonicalRepositoryRoot: repositoryRoot,
       }),
     ],

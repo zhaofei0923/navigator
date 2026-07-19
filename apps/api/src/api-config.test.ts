@@ -16,6 +16,7 @@ describe("validateApiEnv", () => {
       readCacheTtlSeconds: 60,
       readCacheStaleIfErrorSeconds: 300,
       readCacheMaxEntries: 1000,
+      healthReadyTimeoutMs: 1000,
       databaseUrl: "postgresql://navigator:secret@127.0.0.1:5432/navigator",
       databasePoolMax: 10,
       databasePoolTimeoutSeconds: 5,
@@ -42,6 +43,7 @@ describe("validateApiEnv", () => {
       readCacheTtlSeconds: 60,
       readCacheStaleIfErrorSeconds: 300,
       readCacheMaxEntries: 1000,
+      healthReadyTimeoutMs: 1000,
       databaseUrl,
       databasePoolMax: 50,
       databasePoolTimeoutSeconds: 30,
@@ -84,6 +86,34 @@ describe("validateApiEnv", () => {
   });
 
   test.each([
+    ["database", "100", 100],
+    ["database", "5000", 5000],
+    ["canonical", "100", 100],
+    ["canonical", "5000", 5000],
+  ] as const)(
+    "parses inclusive health timeout %s source boundary %s",
+    (source, value, expected) => {
+      const common = {
+        API_PORT: "3100",
+        COUNTRY_READ_SOURCE: source,
+        HEALTH_READY_TIMEOUT_MS: value,
+      };
+      const environment = source === "canonical"
+        ? { ...common, CANONICAL_REPOSITORY_ROOT: "/srv/navigator" }
+        : {
+            ...common,
+            DATABASE_URL:
+              "postgresql://navigator:secret@127.0.0.1:5432/navigator",
+          };
+
+      const config = validateApiEnv(environment);
+
+      expect(config).toMatchObject({ healthReadyTimeoutMs: expected });
+      expect(Object.isFrozen(config)).toBe(true);
+    },
+  );
+
+  test.each([
     ["READ_CACHE_TTL_SECONDS", "0"],
     ["READ_CACHE_TTL_SECONDS", "301"],
     ["READ_CACHE_TTL_SECONDS", "1.5"],
@@ -105,6 +135,13 @@ describe("validateApiEnv", () => {
     ["READ_CACHE_MAX_ENTRIES", "Infinity"],
     ["READ_CACHE_MAX_ENTRIES", ""],
     ["READ_CACHE_MAX_ENTRIES", "   "],
+    ["HEALTH_READY_TIMEOUT_MS", "99"],
+    ["HEALTH_READY_TIMEOUT_MS", "5001"],
+    ["HEALTH_READY_TIMEOUT_MS", "100.5"],
+    ["HEALTH_READY_TIMEOUT_MS", "NaN"],
+    ["HEALTH_READY_TIMEOUT_MS", "Infinity"],
+    ["HEALTH_READY_TIMEOUT_MS", ""],
+    ["HEALTH_READY_TIMEOUT_MS", "   "],
   ])("rejects invalid %s by name without echoing its value", (name, value) => {
     const error = captureError(() =>
       validateApiEnv({
@@ -160,6 +197,7 @@ describe("validateApiEnv", () => {
       readCacheTtlSeconds: 60,
       readCacheStaleIfErrorSeconds: 300,
       readCacheMaxEntries: 1000,
+      healthReadyTimeoutMs: 1000,
       canonicalRepositoryRoot: "/srv/navigator",
     });
     expect(Object.isFrozen(config)).toBe(true);
@@ -191,6 +229,7 @@ describe("validateApiEnv", () => {
       readCacheTtlSeconds: 60,
       readCacheStaleIfErrorSeconds: 300,
       readCacheMaxEntries: 1000,
+      healthReadyTimeoutMs: 1000,
       canonicalRepositoryRoot: "/srv/navigator",
     });
   });
@@ -203,12 +242,14 @@ describe("validateApiEnv", () => {
       READ_CACHE_TTL_SECONDS: "300",
       READ_CACHE_STALE_IF_ERROR_SECONDS: "0",
       READ_CACHE_MAX_ENTRIES: "10000",
+      HEALTH_READY_TIMEOUT_MS: "4321",
     });
 
     expect(config).toMatchObject({
       readCacheTtlSeconds: 300,
       readCacheStaleIfErrorSeconds: 0,
       readCacheMaxEntries: 10000,
+      healthReadyTimeoutMs: 4321,
     });
     expect(Object.isFrozen(config)).toBe(true);
   });
@@ -272,6 +313,7 @@ describe("validateApiEnv", () => {
               "READ_CACHE_TTL_SECONDS",
               "READ_CACHE_STALE_IF_ERROR_SECONDS",
               "READ_CACHE_MAX_ENTRIES",
+              "HEALTH_READY_TIMEOUT_MS",
               "CANONICAL_REPOSITORY_ROOT",
             ].includes(property)
           ) {
