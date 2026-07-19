@@ -12,12 +12,39 @@ const PGVECTOR_IMAGE =
   "pgvector/pgvector:pg17@sha256:d2ef61f42ef767baa5a1475393303cc235bcd92febd9d7014eddb48b41f3bad0";
 const COMMAND_OUTPUT_LIMIT = 2 * 1024 * 1024;
 const DEFAULT_READINESS_ATTEMPTS = 240;
+const DEFAULT_READINESS_REQUEST_TIMEOUT_MS = 1_000;
+const DEFAULT_TERMINATE_GRACE_MS = 10_000;
+const DEFAULT_KILL_GRACE_MS = 5_000;
+const DEFAULT_GROUP_POLL_INTERVAL_MS = 50;
 const READINESS_DELAY_MS = 250;
+const EXPECTED_COUNTRY_CODES = new Set(["ID", "VN", "SA", "AE", "BR", "ZA"]);
+const COUNTRY_MODULE_KEYS = new Set([
+  "market-overview",
+  "policy",
+  "risk",
+  "opportunities",
+  "projects",
+  "partners",
+  "chinese-companies",
+  "entry-strategy",
+  "ai-advisor",
+  "reports",
+]);
+const COVERAGE_LEVELS = new Set(["BASIC", "STANDARD", "COMPLETE"]);
+const MODULE_COVERAGE_STATUSES = new Set(["BUILDING", "PARTIAL", "COMPLETE"]);
+const SIGNAL_LEVELS = new Set(["HIGH", "MEDIUM", "LOW", "DATA_BUILDING"]);
+const RECOMMENDED_PRIORITIES = new Set([
+  "PRIORITY",
+  "WATCH",
+  "EXPLORE",
+  "DATA_BUILDING",
+]);
 
 export async function runPlatformE2E({
   dependencies = createProductionDependencies(),
   environment = process.env,
   readinessAttempts = DEFAULT_READINESS_ATTEMPTS,
+  readinessRequestTimeoutMs = DEFAULT_READINESS_REQUEST_TIMEOUT_MS,
 } = {}) {
   const externalDatabaseUrl = environment.DATABASE_URL;
   if (externalDatabaseUrl !== undefined) {
@@ -25,6 +52,12 @@ export async function runPlatformE2E({
   }
   if (!Number.isInteger(readinessAttempts) || readinessAttempts < 1) {
     throw new Error("PLATFORM_E2E_READINESS_ATTEMPTS_INVALID");
+  }
+  if (
+    !Number.isInteger(readinessRequestTimeoutMs) ||
+    readinessRequestTimeoutMs < 1
+  ) {
+    throw new Error("PLATFORM_E2E_READINESS_REQUEST_TIMEOUT_INVALID");
   }
 
   await requireFreePort(dependencies, API_PORT);
@@ -60,7 +93,12 @@ export async function runPlatformE2E({
         NODE_ENV: "production",
       },
     );
-    await waitForCountries(dependencies, apiServer, readinessAttempts);
+    await waitForCountries(
+      dependencies,
+      apiServer,
+      readinessAttempts,
+      readinessRequestTimeoutMs,
+    );
 
     webServer = startServer(
       dependencies,
@@ -81,7 +119,12 @@ export async function runPlatformE2E({
         NODE_ENV: "production",
       },
     );
-    await waitForWeb(dependencies, webServer, readinessAttempts);
+    await waitForWeb(
+      dependencies,
+      webServer,
+      readinessAttempts,
+      readinessRequestTimeoutMs,
+    );
 
     await runPlaywright(dependencies, baseEnvironment, apiServer, webServer);
   } catch (error) {
@@ -131,9 +174,12 @@ function requireSafeDatabaseUrl(value) {
       ? -1
       : value.indexOf("/", schemeDelimiter + 3);
     const rawPath = rawPathStart === -1 ? "" : value.slice(rawPathStart);
+    const rawAuthority = rawPathStart === -1
+      ? ""
+      : value.slice(schemeDelimiter + 3, rawPathStart);
     if (
       parsed.protocol !== "postgresql:" ||
-      (parsed.hostname !== "127.0.0.1" && parsed.hostname !== "[::1]") ||
+      !hasLiteralLoopbackHost(rawAuthority) ||
       rawPath !== `/${E2E_DATABASE_NAME}` ||
       parsed.search !== "" ||
       parsed.hash !== ""
@@ -144,6 +190,23 @@ function requireSafeDatabaseUrl(value) {
   } catch {
     throw new Error("PLATFORM_E2E_DATABASE_URL_REJECTED");
   }
+}
+
+function hasLiteralLoopbackHost(rawAuthority) {
+  const hostAndPort = rawAuthority.slice(rawAuthority.lastIndexOf("@") + 1);
+  if (hostAndPort.startsWith("[")) {
+    const closingBracket = hostAndPort.indexOf("]");
+    if (closingBracket === -1) return false;
+    const rawHost = hostAndPort.slice(0, closingBracket + 1);
+    const rawPort = hostAndPort.slice(closingBracket + 1);
+    return rawHost === "[::1]" && (rawPort === "" || /^:\d+$/u.test(rawPort));
+  }
+  const separator = hostAndPort.lastIndexOf(":");
+  const rawHost = separator === -1
+    ? hostAndPort
+    : hostAndPort.slice(0, separator);
+  const rawPort = separator === -1 ? "" : hostAndPort.slice(separator);
+  return rawHost === "127.0.0.1" && (rawPort === "" || /^:\d+$/u.test(rawPort));
 }
 
 async function requireFreePort(dependencies, port) {
@@ -339,20 +402,50 @@ function startServer(dependencies, label, command, args, environment) {
   return server;
 }
 
-async function waitForCountries(dependencies, server, attempts) {
+async function waitForCountries(
+  dependencies,
+  server,
+  attempts,
+  requestTimeoutMs,
+) {
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     await assertServerRunning(server);
-    let response;
+    let body;
     try {
-      response = await raceServerExit(
+      body = await runReadinessOperation(
         server,
-        dependencies.fetch(
-          `http://127.0.0.1:${API_PORT}/api/v1/countries?locale=en`,
-          { redirect: "manual" },
-        ),
+        requestTimeoutMs,
+        async (signal) => {
+          const response = await dependencies.fetch(
+            `http://127.0.0.1:${API_PORT}/api/v1/countries?locale=en`,
+            { redirect: "manual", signal },
+          );
+          if (signal.aborted) {
+            cancelBody(response.body);
+            throw new Error("PLATFORM_E2E_READINESS_REQUEST_TIMEOUT");
+          }
+          if (
+            response.status !== 200 ||
+            !isJsonContentType(response.headers.get("content-type"))
+          ) {
+            cancelBody(response.body);
+            throw new Error("PLATFORM_E2E_COUNTRIES_READINESS_INVALID");
+          }
+          try {
+            return await response.json();
+          } catch {
+            throw new Error("PLATFORM_E2E_COUNTRIES_READINESS_INVALID");
+          }
+        },
       );
     } catch (error) {
       if (error instanceof Error && error.message.startsWith("PLATFORM_E2E_CHILD_EXITED:")) {
+        throw error;
+      }
+      if (
+        error instanceof Error &&
+        error.message === "PLATFORM_E2E_COUNTRIES_READINESS_INVALID"
+      ) {
         throw error;
       }
       if (attempt + 1 === attempts) {
@@ -361,19 +454,6 @@ async function waitForCountries(dependencies, server, attempts) {
       await delayWhileRunning(dependencies, server, READINESS_DELAY_MS);
       continue;
     }
-    if (
-      response.status !== 200 ||
-      !isJsonContentType(response.headers.get("content-type"))
-    ) {
-      cancelBody(response.body);
-      throw new Error("PLATFORM_E2E_COUNTRIES_READINESS_INVALID");
-    }
-    let body;
-    try {
-      body = await response.json();
-    } catch {
-      throw new Error("PLATFORM_E2E_COUNTRIES_READINESS_INVALID");
-    }
     if (!isSixCountryEnvelope(body)) {
       throw new Error("PLATFORM_E2E_COUNTRIES_READINESS_INVALID");
     }
@@ -381,19 +461,35 @@ async function waitForCountries(dependencies, server, attempts) {
   }
 }
 
-async function waitForWeb(dependencies, server, attempts) {
+async function waitForWeb(dependencies, server, attempts, requestTimeoutMs) {
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     await assertServerRunning(server);
-    let response;
     try {
-      response = await raceServerExit(
+      await runReadinessOperation(
         server,
-        dependencies.fetch(`http://127.0.0.1:${WEB_PORT}/en`, {
-          redirect: "manual",
-        }),
+        requestTimeoutMs,
+        async (signal) => {
+          const response = await dependencies.fetch(
+            `http://127.0.0.1:${WEB_PORT}/en`,
+            { redirect: "manual", signal },
+          );
+          cancelBody(response.body);
+          if (signal.aborted) {
+            throw new Error("PLATFORM_E2E_READINESS_REQUEST_TIMEOUT");
+          }
+          if (response.status !== 200) {
+            throw new Error("PLATFORM_E2E_WEB_READINESS_INVALID");
+          }
+        },
       );
     } catch (error) {
       if (error instanceof Error && error.message.startsWith("PLATFORM_E2E_CHILD_EXITED:")) {
+        throw error;
+      }
+      if (
+        error instanceof Error &&
+        error.message === "PLATFORM_E2E_WEB_READINESS_INVALID"
+      ) {
         throw error;
       }
       if (attempt + 1 === attempts) {
@@ -402,11 +498,30 @@ async function waitForWeb(dependencies, server, attempts) {
       await delayWhileRunning(dependencies, server, READINESS_DELAY_MS);
       continue;
     }
-    cancelBody(response.body);
-    if (response.status !== 200) {
-      throw new Error("PLATFORM_E2E_WEB_READINESS_INVALID");
-    }
     return;
+  }
+}
+
+async function runReadinessOperation(
+  server,
+  timeoutMs,
+  operation,
+) {
+  const controller = new AbortController();
+  let timeout;
+  const timedOut = new Promise((_, rejectTimeout) => {
+    timeout = setTimeout(() => {
+      controller.abort();
+      rejectTimeout(new Error("PLATFORM_E2E_READINESS_REQUEST_TIMEOUT"));
+    }, timeoutMs);
+    timeout.unref?.();
+  });
+  try {
+    const probe = Promise.resolve().then(() => operation(controller.signal));
+    return await raceServerExit(server, Promise.race([probe, timedOut]));
+  } finally {
+    clearTimeout(timeout);
+    controller.abort();
   }
 }
 
@@ -418,7 +533,7 @@ async function runPlaywright(dependencies, environment, apiServer, webServer) {
     ["exec", "playwright", "test"],
     {
       environment: { ...environment, E2E_SERVERS_MANAGED: "1" },
-      kind: "command",
+      kind: "process-group",
       label: "playwright",
     },
   );
@@ -428,13 +543,24 @@ async function runPlaywright(dependencies, environment, apiServer, webServer) {
     webServer.spawned.completion.then(() => ({ kind: "server", server: webServer })),
   ]);
   if (outcome.kind === "server") {
+    await cleanOwnedProcess(playwright, "playwright");
     throw new Error(`PLATFORM_E2E_CHILD_EXITED:${outcome.server.label}`);
   }
+  await cleanOwnedProcess(playwright, "playwright");
   if (outcome.result.code !== 0) {
     throw new Error("PLATFORM_E2E_PLAYWRIGHT_FAILED");
   }
   await assertServerRunning(apiServer);
   await assertServerRunning(webServer);
+}
+
+async function cleanOwnedProcess(spawned, label) {
+  try {
+    await spawned.killGroup();
+    await spawned.completion;
+  } catch {
+    throw new Error(`PLATFORM_E2E_CLEANUP_FAILED:${label}`);
+  }
 }
 
 async function raceServerExit(server, operation) {
@@ -510,15 +636,85 @@ function isJsonContentType(value) {
 }
 
 function isSixCountryEnvelope(value) {
-  return value !== null &&
-    typeof value === "object" &&
-    value.success === true &&
-    Array.isArray(value.data) &&
-    value.data.length === 6 &&
-    value.meta !== null &&
-    typeof value.meta === "object" &&
-    value.meta.locale === "en" &&
-    value.meta.total === 6;
+  if (!isRecord(value)) return false;
+  if (
+    value.success !== true ||
+    !Array.isArray(value.data) ||
+    value.data.length !== EXPECTED_COUNTRY_CODES.size ||
+    !isCountriesMeta(value.meta)
+  ) {
+    return false;
+  }
+  const codes = value.data.map((country) =>
+    isRecord(country) ? country.code : undefined
+  );
+  return new Set(codes).size === EXPECTED_COUNTRY_CODES.size &&
+    codes.every((code) => EXPECTED_COUNTRY_CODES.has(code)) &&
+    value.data.every(isLocalizedCountryCard);
+}
+
+function isCountriesMeta(value) {
+  return isRecord(value) &&
+    value.locale === "en" &&
+    value.page === 1 &&
+    value.pageSize === 20 &&
+    value.textMode === "localized" &&
+    value.total === EXPECTED_COUNTRY_CODES.size;
+}
+
+function isLocalizedCountryCard(value) {
+  return isRecord(value) &&
+    typeof value.code === "string" &&
+    typeof value.name === "string" &&
+    typeof value.region === "string" &&
+    typeof value.flagEmoji === "string" &&
+    typeof value.summary === "string" &&
+    COVERAGE_LEVELS.has(value.coverageLevel) &&
+    typeof value.updatedAt === "string" &&
+    isStringArray(value._i18nFallback) &&
+    isCompleteModuleCoverage(value.moduleCoverage) &&
+    isLocalizedCountrySignals(value.signals);
+}
+
+function isCompleteModuleCoverage(value) {
+  if (!Array.isArray(value) || value.length !== COUNTRY_MODULE_KEYS.size) {
+    return false;
+  }
+  const moduleKeys = value.map((item) =>
+    isRecord(item) ? item.moduleKey : undefined
+  );
+  return new Set(moduleKeys).size === COUNTRY_MODULE_KEYS.size &&
+    moduleKeys.every((moduleKey) => COUNTRY_MODULE_KEYS.has(moduleKey)) &&
+    value.every((item) =>
+      isRecord(item) &&
+      COUNTRY_MODULE_KEYS.has(item.moduleKey) &&
+      MODULE_COVERAGE_STATUSES.has(item.status) &&
+      Number.isInteger(item.dataCount) &&
+      item.dataCount >= 0 &&
+      typeof item.updatedAt === "string"
+    );
+}
+
+function isLocalizedCountrySignals(value) {
+  return isRecord(value) &&
+    SIGNAL_LEVELS.has(value.opportunityLevel) &&
+    SIGNAL_LEVELS.has(value.policyFriendliness) &&
+    (value.recommendedEntryMode === null ||
+      typeof value.recommendedEntryMode === "string") &&
+    RECOMMENDED_PRIORITIES.has(value.recommendedPriority) &&
+    SIGNAL_LEVELS.has(value.riskLevel) &&
+    Number.isInteger(value.sourceCount) &&
+    value.sourceCount >= 0 &&
+    isStringArray(value.sources) &&
+    typeof value.updatedAt === "string";
+}
+
+function isStringArray(value) {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function isRecord(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 function cancelBody(body) {
@@ -556,15 +752,16 @@ function createProductionDependencies() {
   };
 }
 
-function spawnProcess(command, args, options) {
+export function spawnProcess(command, args, options) {
+  const ownsProcessGroup =
+    options.kind === "server" || options.kind === "process-group";
   const child = spawnChildProcess(command, args, {
     cwd: resolve(import.meta.dirname, ".."),
-    detached: options.kind === "server",
+    detached: ownsProcessGroup,
     env: options.environment,
     stdio: ["ignore", "pipe", "pipe"],
   });
   let stdout = "";
-  let settled = false;
   child.stdout?.on("data", (chunk) => {
     process.stdout.write(chunk);
     if (stdout.length < COMMAND_OUTPUT_LIMIT) {
@@ -577,45 +774,100 @@ function spawnProcess(command, args, options) {
   const completion = new Promise((resolveCompletion, rejectCompletion) => {
     child.once("error", rejectCompletion);
     child.once("close", (code, signal) => {
-      settled = true;
       resolveCompletion({ code, signal, stdout });
     });
   });
+  const groupId = ownsProcessGroup ? child.pid : undefined;
+  let termination;
 
   return {
     completion,
-    killGroup: async () => {
-      if (settled) return;
-      if (child.pid === undefined) {
-        throw new Error("PLATFORM_E2E_PROCESS_PID_MISSING");
-      }
-      signalProcessGroup(child.pid, "SIGTERM");
-      const graceful = await Promise.race([
-        completion.then(() => true),
-        new Promise((resolveTimeout) => setTimeout(() => resolveTimeout(false), 10_000)),
-      ]);
-      if (!graceful) {
-        signalProcessGroup(child.pid, "SIGKILL");
-        const killed = await Promise.race([
-          completion.then(() => true),
-          new Promise((resolveTimeout) => setTimeout(() => resolveTimeout(false), 5_000)),
-        ]);
-        if (!killed) {
-          throw new Error("PLATFORM_E2E_PROCESS_GROUP_STUCK");
-        }
-      }
+    killGroup: () => {
+      termination ??= terminateOwnedProcessGroup(groupId, {
+        groupPollIntervalMs: options.groupPollIntervalMs,
+        killGraceMs: options.killGraceMs,
+        terminateGraceMs: options.terminateGraceMs,
+      });
+      return termination;
     },
     pid: child.pid,
   };
 }
 
-function signalProcessGroup(pid, signal) {
+async function terminateOwnedProcessGroup(groupId, options) {
+  if (groupId === undefined) {
+    throw new Error("PLATFORM_E2E_PROCESS_PID_MISSING");
+  }
+  const terminateGraceMs = processGroupTiming(
+    options.terminateGraceMs,
+    DEFAULT_TERMINATE_GRACE_MS,
+  );
+  const killGraceMs = processGroupTiming(
+    options.killGraceMs,
+    DEFAULT_KILL_GRACE_MS,
+  );
+  const pollIntervalMs = processGroupTiming(
+    options.groupPollIntervalMs,
+    DEFAULT_GROUP_POLL_INTERVAL_MS,
+  );
+
+  if (!processGroupExists(groupId)) return;
+  if (!signalProcessGroup(groupId, "SIGTERM")) return;
+  if (
+    await waitForProcessGroupExit(groupId, terminateGraceMs, pollIntervalMs)
+  ) {
+    return;
+  }
+  if (!signalProcessGroup(groupId, "SIGKILL")) return;
+  if (await waitForProcessGroupExit(groupId, killGraceMs, pollIntervalMs)) {
+    return;
+  }
+  throw new Error("PLATFORM_E2E_PROCESS_GROUP_STUCK");
+}
+
+function processGroupTiming(value, fallback) {
+  if (value === undefined) return fallback;
+  if (!Number.isInteger(value) || value < 1) {
+    throw new Error("PLATFORM_E2E_PROCESS_GROUP_TIMING_INVALID");
+  }
+  return value;
+}
+
+async function waitForProcessGroupExit(groupId, timeoutMs, pollIntervalMs) {
+  const deadline = Date.now() + timeoutMs;
+  while (processGroupExists(groupId)) {
+    const remainingMs = deadline - Date.now();
+    if (remainingMs <= 0) return false;
+    await cleanupDelay(Math.min(pollIntervalMs, remainingMs));
+  }
+  return true;
+}
+
+function cleanupDelay(milliseconds) {
+  return new Promise((resolveDelay) => {
+    // The referenced poll keeps cleanup alive after a detached leader has exited.
+    setTimeout(resolveDelay, milliseconds);
+  });
+}
+
+function processGroupExists(groupId) {
   try {
-    process.kill(-pid, signal);
+    process.kill(-groupId, 0);
+    return true;
   } catch (error) {
-    if (error?.code !== "ESRCH") {
-      throw error;
-    }
+    if (error?.code === "ESRCH") return false;
+    if (error?.code === "EPERM") return true;
+    throw error;
+  }
+}
+
+function signalProcessGroup(groupId, signal) {
+  try {
+    process.kill(-groupId, signal);
+    return true;
+  } catch (error) {
+    if (error?.code === "ESRCH") return false;
+    throw error;
   }
 }
 
