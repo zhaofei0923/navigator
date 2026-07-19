@@ -216,6 +216,19 @@ envelope 合法；API 就绪后才启动 Web，再轮询 `/en`。3xx、非法响
 owned resource cleanup 失败都会使命令失败。流程不执行 reset、drop、truncate，也不依赖尚未交付的
 OPS health route。
 
+### 6.4 国家只读双 provider 验收
+
+国家只读 API 的 provider 验收必须穿过生产 `AppModule.register()` 组合，只允许在单元测试中注入
+runtime factory，不得覆盖 repository token。默认 `database` source 只能构造一次 Prisma runtime；
+`canonical` 只能显式选择，并且只使用启动配置中已规范化的绝对 repository root。canonical 验收需从
+非仓库 cwd 启动，证明其不依赖进程当前目录。
+
+两个 source 都必须通过同一套完整六国 HTTP golden，精确匹配 status、content-type 与解析后的 JSON。
+数据库 repository 抛错时必须返回固定、脱敏的 `500 INTERNAL_ERROR`，不得在请求期间调用 canonical
+factory 或静默回退；应用关闭仍须保持 runtime 只关闭一次。该单元验收使用注入的 runtime，不连接真实
+PostgreSQL；Prisma adapter 由 DB 集成测试负责，migration/import → database API → Web → browser 由
+§6.3 的平台 E2E 负责。
+
 ---
 
 ## 7. 一致性检查清单
