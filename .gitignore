@@ -6,6 +6,7 @@ node_modules/
 # Testing
 coverage/
 .nyc_output/
+/artifacts/platform-ops/
 
 # Build outputs
 dist/

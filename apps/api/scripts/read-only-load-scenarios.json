@@ -1,0 +1,20 @@
+{
+  "100k": {
+    "targetRps": 6,
+    "maxConcurrency": 16,
+    "warmupSeconds": 120,
+    "measurementSeconds": 600
+  },
+  "1m": {
+    "targetRps": 56,
+    "maxConcurrency": 128,
+    "warmupSeconds": 120,
+    "measurementSeconds": 600
+  },
+  "10m": {
+    "targetRps": 556,
+    "maxConcurrency": 1024,
+    "warmupSeconds": 120,
+    "measurementSeconds": 600
+  }
+}

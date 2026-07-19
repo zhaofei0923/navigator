@@ -7,6 +7,7 @@
     "prebuild": "pnpm --filter @navigator/shared-types build && pnpm --filter @navigator/db build",
     "build": "tsc --project tsconfig.build.json",
     "lint": "tsc --project tsconfig.json --noEmit --pretty false",
+    "load:readonly": "node scripts/load-read-only.mjs",
     "typecheck": "tsc --project tsconfig.json --noEmit --pretty false",
     "test": "vitest run",
     "start": "node dist/main.js",
