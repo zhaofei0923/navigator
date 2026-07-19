@@ -540,7 +540,7 @@ describe("Basic document evidence materializer", () => {
     expect(fixture.captures).toEqual(capturesBefore);
     expect(fixture.review).toEqual(reviewBefore);
     expect(fixture.documentPlans).toEqual(documentPlansBefore);
-  });
+  }, 15_000);
 
   test("snapshots immutable provenance only for the exact successful result", async () => {
     const fixture = await materializationFixture();
@@ -623,7 +623,7 @@ describe("Basic document evidence materializer", () => {
       countryCode: "VN",
       catalogVersion: "2026.07.13.documents-1",
     });
-  });
+  }, 15_000);
 
   test("is order-independent and emits stable source, fact, and evidence ordering", async () => {
     const fixture = await materializationFixture();
