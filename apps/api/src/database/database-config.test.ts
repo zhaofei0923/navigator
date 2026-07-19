@@ -42,6 +42,79 @@ describe("buildDatabaseRuntimeConfig", () => {
     ]);
   });
 
+  test.each(["postgresql", "postgres"] as const)(
+    "preserves the supported %s scheme while adding the same managed parameters",
+    (scheme) => {
+      const result = buildDatabaseRuntimeConfig({
+        databaseUrl:
+          `${scheme}://navigator:private@db.internal:5432/navigator?schema=tenant`,
+        poolMax: 10,
+        poolTimeoutSeconds: 5,
+        connectTimeoutSeconds: 5,
+      });
+      const managedUrl = new URL(result.databaseUrl);
+
+      expect(managedUrl.protocol).toBe(`${scheme}:`);
+      expect(managedUrl.searchParams.get("schema")).toBe("tenant");
+      expect(managedUrl.searchParams.get("connection_limit")).toBe("10");
+      expect(managedUrl.searchParams.get("pool_timeout")).toBe("5");
+      expect(managedUrl.searchParams.get("connect_timeout")).toBe("5");
+      expect(managedUrl.searchParams.get("application_name")).toBe(
+        "navigator-api",
+      );
+    },
+  );
+
+  test.each([
+    ["leading space", ` ${RAW_DATABASE_URL}`],
+    ["trailing space", `${RAW_DATABASE_URL} `],
+    [
+      "username TAB",
+      "postgresql://navi\tgator:private@db.internal/navigator",
+    ],
+    [
+      "host LF",
+      "postgresql://navigator:private@db.in\nternal/navigator",
+    ],
+    [
+      "path CR",
+      "postgresql://navigator:private@db.internal/navi\rgator",
+    ],
+  ])("rejects raw URL whitespace in %s before parsing", (_label, databaseUrl) => {
+    expectDatabaseUrlError(databaseUrl);
+  });
+
+  test.each(
+    [...Array.from({ length: 33 }, (_, codePoint) => codePoint), 127].map(
+      (codePoint) => [
+        codePoint.toString(16).toUpperCase().padStart(4, "0"),
+        codePoint,
+      ] as const,
+    ),
+  )(
+    "rejects raw URL control code point U+%s before parsing",
+    (_label, codePoint) => {
+      const character = String.fromCodePoint(codePoint);
+      expectDatabaseUrlError(
+        `postgresql://navigator:private@db.internal/navigator?marker=left${character}right`,
+      );
+    },
+  );
+
+  test("allows percent-encoded whitespace and control octets", () => {
+    const result = buildDatabaseRuntimeConfig({
+      databaseUrl:
+        "postgresql://navigator:private@db.internal/navigator?marker=%20%09%0A%0D%00%7F",
+      poolMax: 10,
+      poolTimeoutSeconds: 5,
+      connectTimeoutSeconds: 5,
+    });
+
+    expect(new URL(result.databaseUrl).searchParams.get("marker")).toBe(
+      " \t\n\r\0\u007f",
+    );
+  });
+
   test.each([
     [1, 1, 1],
     [50, 30, 30],
@@ -95,7 +168,6 @@ describe("buildDatabaseRuntimeConfig", () => {
 
   test.each([
     "mysql://navigator:private@db.internal/navigator",
-    "postgres://navigator:private@db.internal/navigator",
     "postgresql://:private@db.internal/navigator",
     "postgresql://navigator@db.internal/navigator",
     "postgresql:///navigator",
@@ -167,4 +239,19 @@ function captureError(operation: () => unknown): Error {
     if (error instanceof Error) return error;
   }
   throw new Error("Expected operation to throw Error");
+}
+
+function expectDatabaseUrlError(databaseUrl: string): void {
+  const error = captureError(() =>
+    buildDatabaseRuntimeConfig({
+      databaseUrl,
+      poolMax: 10,
+      poolTimeoutSeconds: 5,
+      connectTimeoutSeconds: 5,
+    }),
+  );
+
+  expect(error.message).toBe("DATABASE_URL");
+  expect(error.message).not.toContain(databaseUrl);
+  expect("cause" in error).toBe(false);
 }

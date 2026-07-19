@@ -55,6 +55,10 @@ export function buildDatabaseRuntimeConfig(
 }
 
 function parseDatabaseUrl(value: string): URL {
+  if (/[\u0000-\u0020\u007f]/u.test(value)) {
+    throw new Error("DATABASE_URL");
+  }
+
   let databaseUrl: URL;
   try {
     databaseUrl = new URL(value);
@@ -63,8 +67,11 @@ function parseDatabaseUrl(value: string): URL {
   }
 
   const hasSingleDatabasePath = /^\/[^/]+$/.test(databaseUrl.pathname);
+  const hasSupportedProtocol =
+    databaseUrl.protocol === "postgresql:" ||
+    databaseUrl.protocol === "postgres:";
   if (
-    databaseUrl.protocol !== "postgresql:" ||
+    !hasSupportedProtocol ||
     databaseUrl.username === "" ||
     databaseUrl.password === "" ||
     databaseUrl.hostname === "" ||
