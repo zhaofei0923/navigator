@@ -25,44 +25,51 @@ const prismaState = vi.hoisted(() => ({
   transactionCalls: [] as unknown[],
 }));
 
-vi.mock("@prisma/client", () => ({
-  PrismaClient: class MockPrismaClient {
-    readonly country = {
-      count: async (): Promise<number> => 6,
-      findMany: async (): Promise<readonly unknown[]> => [],
-      findUnique: async (): Promise<null> => null,
-    };
+vi.mock("@prisma/client", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@prisma/client")>();
+  return {
+    ...actual,
+    PrismaClient: class MockPrismaClient {
+      readonly country = {
+        count: async (): Promise<number> => 6,
+        findMany: async (): Promise<readonly unknown[]> => [],
+        findUnique: async (): Promise<null> => null,
+      };
 
-    constructor(options: unknown) {
-      prismaState.constructOptions.push(options);
-      if (prismaState.constructorError !== null) throw prismaState.constructorError;
-    }
+      constructor(options: unknown) {
+        prismaState.constructOptions.push(options);
+        if (prismaState.constructorError !== null) throw prismaState.constructorError;
+      }
 
-    async $transaction<T>(
-      callback: (transaction: {
-        readonly country: {
-          count(): Promise<number>;
-          findMany(): Promise<readonly unknown[]>;
-          findUnique(): Promise<null>;
-        };
-      }) => Promise<T>,
-      options: unknown,
-    ): Promise<T> {
-      prismaState.transactionCalls.push(options);
-      if (prismaState.transactionError !== null) throw prismaState.transactionError;
-      return callback({ country: this.country });
-    }
+      async $transaction<T>(
+        callback: (transaction: {
+          readonly country: {
+            count(): Promise<number>;
+            findMany(): Promise<readonly unknown[]>;
+            findUnique(): Promise<null>;
+          };
+        }) => Promise<T>,
+        options: unknown,
+      ): Promise<T> {
+        prismaState.transactionCalls.push(options);
+        if (prismaState.transactionError !== null) throw prismaState.transactionError;
+        return callback({ country: this.country });
+      }
 
-    async $disconnect(): Promise<void> {
-      prismaState.disconnectCalls += 1;
-      if (prismaState.disconnectError !== null) throw prismaState.disconnectError;
-    }
-  },
-}));
+      async $disconnect(): Promise<void> {
+        prismaState.disconnectCalls += 1;
+        if (prismaState.disconnectError !== null) throw prismaState.disconnectError;
+      }
+    },
+  };
+});
 
 import {
+  CountryNotFoundError,
   createApprovedPublicationCountryReadRuntime,
   createPrismaCountryReadRuntime,
+  DatabaseUnavailableError,
+  DataIntegrityError,
   type CountryReadRuntime,
 } from "./read/country-read-runtime.js";
 
@@ -86,6 +93,23 @@ afterEach(() => {
 });
 
 describe("CountryReadRuntime factories", () => {
+  test.each([
+    [DatabaseUnavailableError, "DatabaseUnavailableError", "DATABASE_UNAVAILABLE"],
+    [DataIntegrityError, "DataIntegrityError", "DATA_INTEGRITY_ERROR"],
+    [CountryNotFoundError, "CountryNotFoundError", "COUNTRY_NOT_FOUND"],
+  ] as const)(
+    "exports fixed public %s without a cause or caller-controlled payload",
+    (ErrorConstructor, name, message) => {
+      const error = new ErrorConstructor();
+
+      expect(error.name).toBe(name);
+      expect(error.message).toBe(message);
+      expect(Object.keys(error)).toEqual(["name"]);
+      expect("cause" in error).toBe(false);
+      expect(Object.values(error).some((value) => value instanceof Error)).toBe(false);
+    },
+  );
+
   test("keeps PrismaClient construction inside the DB runtime factory", () => {
     const sourceFiles = [
       ...listProductionTypeScriptFiles(join(REPOSITORY_ROOT, "apps", "api", "src")),
@@ -281,7 +305,12 @@ describe("CountryReadRuntime factories", () => {
     const script = `
       const dbResolved = import.meta.resolve("@navigator/db/country-read-runtime");
       const sharedResolved = import.meta.resolve("@navigator/shared-types/country-runtime");
-      const { createApprovedPublicationCountryReadRuntime } =
+      const {
+        CountryNotFoundError,
+        createApprovedPublicationCountryReadRuntime,
+        DatabaseUnavailableError,
+        DataIntegrityError,
+      } =
         await import("@navigator/db/country-read-runtime");
       const runtime = createApprovedPublicationCountryReadRuntime({
         repositoryRoot: ${JSON.stringify(canonicalRoot)},
@@ -293,6 +322,16 @@ describe("CountryReadRuntime factories", () => {
         codes: countries.map((snapshot) => snapshot.country.code),
         dbResolved,
         sharedResolved,
+        publicErrors: [
+          new DatabaseUnavailableError(),
+          new DataIntegrityError(),
+          new CountryNotFoundError(),
+        ].map((error) => ({
+          name: error.name,
+          message: error.message,
+          ownKeys: Object.keys(error),
+          hasCause: "cause" in error,
+        })),
       }));
     `;
     const result = JSON.parse(
@@ -309,9 +348,35 @@ describe("CountryReadRuntime factories", () => {
       readonly codes: readonly string[];
       readonly dbResolved: string;
       readonly sharedResolved: string;
+      readonly publicErrors: readonly {
+        readonly name: string;
+        readonly message: string;
+        readonly ownKeys: readonly string[];
+        readonly hasCause: boolean;
+      }[];
     };
 
     expect(result.codes).toEqual(["ID", "VN", "SA", "AE", "BR", "ZA"]);
+    expect(result.publicErrors).toEqual([
+      {
+        name: "DatabaseUnavailableError",
+        message: "DATABASE_UNAVAILABLE",
+        ownKeys: ["name"],
+        hasCause: false,
+      },
+      {
+        name: "DataIntegrityError",
+        message: "DATA_INTEGRITY_ERROR",
+        ownKeys: ["name"],
+        hasCause: false,
+      },
+      {
+        name: "CountryNotFoundError",
+        message: "COUNTRY_NOT_FOUND",
+        ownKeys: ["name"],
+        hasCause: false,
+      },
+    ]);
     expect(result.dbResolved).toMatch(/\/dist\/read\/country-read-runtime\.js$/u);
     expect(result.sharedResolved).toMatch(/\/dist\/country-runtime\.js$/u);
     expect(result.dbResolved).not.toMatch(/\.ts$/u);

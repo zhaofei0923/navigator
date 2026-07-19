@@ -1,4 +1,4 @@
-import type { Prisma, PrismaClient } from "@prisma/client";
+import { Prisma, type PrismaClient } from "@prisma/client";
 import {
   RISK_CATEGORIES,
   sortCountrySnapshots,
@@ -12,10 +12,21 @@ import {
   LOCALIZED_TEXT_KEYS,
   hasExactOwnKeys,
 } from "../seed/basic-country-validation-utils.js";
+import {
+  DatabaseUnavailableError,
+  DataIntegrityError,
+} from "./country-read-errors.js";
 import { normalizeCountryReadSnapshot } from "./country-read-normalization.js";
 
-const COUNTRY_READ_INVALID_DATA = "COUNTRY_READ_INVALID_DATA" as const;
 const COUNTRY_READ_QUERY_FAILED = "COUNTRY_READ_QUERY_FAILED" as const;
+const TRANSIENT_PRISMA_ERROR_CODES: ReadonlySet<string> = new Set([
+  "P1001",
+  "P1002",
+  "P1008",
+  "P1017",
+  "P2024",
+  "P2037",
+]);
 
 const MODULE_KEYS = [
   "market-overview",
@@ -278,16 +289,15 @@ export interface PrismaCountryReadClient {
 }
 
 export type PrismaCountryReadRepositoryErrorCode =
-  | typeof COUNTRY_READ_INVALID_DATA
-  | typeof COUNTRY_READ_QUERY_FAILED;
+  typeof COUNTRY_READ_QUERY_FAILED;
 
 export class PrismaCountryReadRepositoryError extends Error {
   readonly code: PrismaCountryReadRepositoryErrorCode;
 
-  constructor(code: PrismaCountryReadRepositoryErrorCode) {
-    super(code);
+  constructor() {
+    super(COUNTRY_READ_QUERY_FAILED);
     this.name = "PrismaCountryReadRepositoryError";
-    this.code = code;
+    this.code = COUNTRY_READ_QUERY_FAILED;
   }
 }
 
@@ -750,14 +760,27 @@ function requireHttpUrl(value: unknown): string {
   return raw;
 }
 
-function invalidData(cause?: unknown): PrismaCountryReadRepositoryError {
+function invalidData(cause?: unknown): DataIntegrityError {
   void cause;
-  return new PrismaCountryReadRepositoryError(COUNTRY_READ_INVALID_DATA);
+  return new DataIntegrityError();
 }
 
-function queryFailed(cause: unknown): PrismaCountryReadRepositoryError {
-  void cause;
-  return new PrismaCountryReadRepositoryError(COUNTRY_READ_QUERY_FAILED);
+function queryFailed(
+  cause: unknown,
+): DatabaseUnavailableError | PrismaCountryReadRepositoryError {
+  if (isTransientPrismaError(cause)) return new DatabaseUnavailableError();
+  return new PrismaCountryReadRepositoryError();
+}
+
+function isTransientPrismaError(error: unknown): boolean {
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    return TRANSIENT_PRISMA_ERROR_CODES.has(error.code);
+  }
+  if (error instanceof Prisma.PrismaClientInitializationError) {
+    return error.errorCode !== undefined &&
+      TRANSIENT_PRISMA_ERROR_CODES.has(error.errorCode);
+  }
+  return false;
 }
 
 function deepFreeze<T>(value: T, seen = new WeakSet<object>()): T {

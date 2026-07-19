@@ -25,6 +25,9 @@ describe("CountryReadRuntimeProvider", () => {
       {
         port: 3100,
         countryReadSource: "database",
+        readCacheTtlSeconds: 60,
+        readCacheStaleIfErrorSeconds: 300,
+        readCacheMaxEntries: 1000,
         databaseUrl: "postgresql://navigator:secret@127.0.0.1:5432/navigator",
         databasePoolMax: 10,
         databasePoolTimeoutSeconds: 5,
@@ -60,6 +63,9 @@ describe("CountryReadRuntimeProvider", () => {
       {
         port: 3100,
         countryReadSource: "canonical",
+        readCacheTtlSeconds: 60,
+        readCacheStaleIfErrorSeconds: 300,
+        readCacheMaxEntries: 1000,
         canonicalRepositoryRoot: "/srv/navigator",
       },
       factories,
@@ -102,6 +108,9 @@ describe("CountryReadRuntimeProvider", () => {
         AppModule.register({
           port: 3100,
           countryReadSource: "database",
+          readCacheTtlSeconds: 60,
+          readCacheStaleIfErrorSeconds: 300,
+          readCacheMaxEntries: 1000,
           databaseUrl,
           databasePoolMax: 10,
           databasePoolTimeoutSeconds: 5,

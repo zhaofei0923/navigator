@@ -2,6 +2,11 @@ import { PrismaClient } from "@prisma/client";
 import type { CountryReadRepository } from "@navigator/shared-types/country-runtime";
 
 import { createApprovedPublicationCountryReadRepository } from "./approved-publication-country-read-repository.js";
+export {
+  CountryNotFoundError,
+  DatabaseUnavailableError,
+  DataIntegrityError,
+} from "./country-read-errors.js";
 import {
   createPrismaCountryReadRepository,
 } from "./prisma-country-read-repository.js";

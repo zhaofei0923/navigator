@@ -4,6 +4,9 @@ export type ApiConfig =
   | {
       readonly port: number;
       readonly countryReadSource: "database";
+      readonly readCacheTtlSeconds: number;
+      readonly readCacheStaleIfErrorSeconds: number;
+      readonly readCacheMaxEntries: number;
       readonly databaseUrl: string;
       readonly databasePoolMax: number;
       readonly databasePoolTimeoutSeconds: number;
@@ -12,6 +15,9 @@ export type ApiConfig =
   | {
       readonly port: number;
       readonly countryReadSource: "canonical";
+      readonly readCacheTtlSeconds: number;
+      readonly readCacheStaleIfErrorSeconds: number;
+      readonly readCacheMaxEntries: number;
       readonly canonicalRepositoryRoot: string;
     };
 
@@ -21,6 +27,30 @@ export function validateApiEnv(environment: ApiEnvironment): ApiConfig {
   const invalidVariables: string[] = [];
   const port = parsePort(environment.API_PORT, invalidVariables);
   const source = parseSource(environment.COUNTRY_READ_SOURCE, invalidVariables);
+  const readCacheTtlSeconds = parseBoundedInteger(
+    environment.READ_CACHE_TTL_SECONDS,
+    60,
+    1,
+    300,
+    "READ_CACHE_TTL_SECONDS",
+    invalidVariables,
+  );
+  const readCacheStaleIfErrorSeconds = parseBoundedInteger(
+    environment.READ_CACHE_STALE_IF_ERROR_SECONDS,
+    300,
+    0,
+    600,
+    "READ_CACHE_STALE_IF_ERROR_SECONDS",
+    invalidVariables,
+  );
+  const readCacheMaxEntries = parseBoundedInteger(
+    environment.READ_CACHE_MAX_ENTRIES,
+    1000,
+    10,
+    10_000,
+    "READ_CACHE_MAX_ENTRIES",
+    invalidVariables,
+  );
 
   if (source === "database") {
     const databaseUrl = requiredValue(
@@ -56,6 +86,9 @@ export function validateApiEnv(environment: ApiEnvironment): ApiConfig {
     return Object.freeze({
       port,
       countryReadSource: source,
+      readCacheTtlSeconds,
+      readCacheStaleIfErrorSeconds,
+      readCacheMaxEntries,
       databaseUrl,
       databasePoolMax,
       databasePoolTimeoutSeconds,
@@ -72,6 +105,9 @@ export function validateApiEnv(environment: ApiEnvironment): ApiConfig {
     return Object.freeze({
       port,
       countryReadSource: source,
+      readCacheTtlSeconds,
+      readCacheStaleIfErrorSeconds,
+      readCacheMaxEntries,
       canonicalRepositoryRoot,
     });
   }
@@ -119,6 +155,10 @@ function parseBoundedInteger(
   invalidVariables: string[],
 ): number {
   if (value === undefined) return defaultValue;
+  if (value.trim() === "") {
+    invalidVariables.push(variableName);
+    return Number.NaN;
+  }
   const parsed = Number(value);
   if (
     !Number.isSafeInteger(parsed) ||

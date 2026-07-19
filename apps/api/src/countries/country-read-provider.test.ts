@@ -64,6 +64,9 @@ describe.sequential("country read production provider acceptance", () => {
       {
         port: 3100,
         countryReadSource: "database",
+        readCacheTtlSeconds: 60,
+        readCacheStaleIfErrorSeconds: 300,
+        readCacheMaxEntries: 1000,
         databaseUrl: DATABASE_URL,
         databasePoolMax: 10,
         databasePoolTimeoutSeconds: 5,
@@ -111,6 +114,9 @@ describe.sequential("country read production provider acceptance", () => {
         {
           port: 3100,
           countryReadSource: "canonical",
+          readCacheTtlSeconds: 60,
+          readCacheStaleIfErrorSeconds: 300,
+          readCacheMaxEntries: 1000,
           canonicalRepositoryRoot: REPOSITORY_ROOT,
         },
         factories,
@@ -177,6 +183,9 @@ describe.sequential("country read production provider acceptance", () => {
       {
         port: 3100,
         countryReadSource: "database",
+        readCacheTtlSeconds: 60,
+        readCacheStaleIfErrorSeconds: 300,
+        readCacheMaxEntries: 1000,
         databaseUrl: DATABASE_URL,
         databasePoolMax: 10,
         databasePoolTimeoutSeconds: 5,

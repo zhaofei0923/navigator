@@ -2,14 +2,39 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import type { PrismaClient } from "@prisma/client";
+import { Prisma, type PrismaClient } from "@prisma/client";
 import { MODULE_KEYS } from "@navigator/shared-types/schema";
 import { describe, expect, test } from "vitest";
 
 import {
   createPrismaCountryReadRepository,
+  PrismaCountryReadRepositoryError,
   type PrismaCountryReadClient,
 } from "./read/prisma-country-read-repository.js";
+import {
+  DatabaseUnavailableError,
+  DataIntegrityError,
+} from "./read/country-read-runtime.js";
+
+const PRISMA_CLIENT_VERSION = "6.19.3";
+const PRIVATE_FAILURE =
+  "postgresql://navigator:secret@example.test/private/path SELECT confidential";
+const TRANSIENT_PRISMA_CODES = [
+  "P1001",
+  "P1002",
+  "P1008",
+  "P1017",
+  "P2024",
+  "P2037",
+] as const;
+const NON_TRANSIENT_PRISMA_CODES = [
+  "P1000",
+  "P1003",
+  "P1010",
+  "P2021",
+  "P2022",
+  "P9999",
+] as const;
 
 const PUBLIC_WHERE = {
   reviewStatus: "published",
@@ -145,7 +170,7 @@ function validRow(): Record<string, unknown> {
 class RecordingClient implements PrismaCountryReadClient {
   readonly calls: Array<{ method: string; args: unknown }> = [];
   row: Record<string, unknown> | null = validRow();
-  queryError: Error | null = null;
+  queryError: unknown = null;
 
   readonly country = {
     findMany: async (args: unknown): Promise<readonly unknown[]> => {
@@ -290,7 +315,7 @@ describe("Prisma CountryReadRepository boundary", () => {
     client.row = row;
     const repository = createPrismaCountryReadRepository(client);
 
-    await expect(repository.list()).rejects.toThrow("COUNTRY_READ_INVALID_DATA");
+    await expect(repository.list()).rejects.toThrow("DATA_INTEGRITY_ERROR");
   });
 
   test.each([
@@ -311,7 +336,7 @@ describe("Prisma CountryReadRepository boundary", () => {
       createPrismaCountryReadRepository(client).list(),
     );
 
-    expectStableRedactedError(error, "COUNTRY_READ_INVALID_DATA");
+    expectStableRedactedError(error, "DATA_INTEGRITY_ERROR");
   });
 
   test("rejects an accessor-backed risk category without invoking its getter", async () => {
@@ -332,18 +357,108 @@ describe("Prisma CountryReadRepository boundary", () => {
       createPrismaCountryReadRepository(client).list(),
     );
 
-    expectStableRedactedError(error, "COUNTRY_READ_INVALID_DATA");
+    expectStableRedactedError(error, "DATA_INTEGRITY_ERROR");
     expect(getterCalls).toBe(0);
   });
 
-  test("redacts database failures", async () => {
+  test.each(TRANSIENT_PRISMA_CODES)(
+    "classifies real Prisma known request error %s as transient database unavailability",
+    async (code) => {
+      const client = new RecordingClient();
+      client.queryError = knownRequestError(code);
+
+      const error = await captureError(
+        createPrismaCountryReadRepository(client).list(),
+      );
+
+      expectFixedPublicError(
+        error,
+        DatabaseUnavailableError,
+        "DatabaseUnavailableError",
+        "DATABASE_UNAVAILABLE",
+      );
+    },
+  );
+
+  test.each(TRANSIENT_PRISMA_CODES)(
+    "classifies real Prisma initialization error %s as transient database unavailability",
+    async (code) => {
+      const client = new RecordingClient();
+      client.queryError = initializationError(code);
+
+      const error = await captureError(
+        createPrismaCountryReadRepository(client).findByCode("ID"),
+      );
+
+      expectFixedPublicError(
+        error,
+        DatabaseUnavailableError,
+        "DatabaseUnavailableError",
+        "DATABASE_UNAVAILABLE",
+      );
+    },
+  );
+
+  test.each(NON_TRANSIENT_PRISMA_CODES)(
+    "keeps real Prisma known request error %s non-transient",
+    async (code) => {
+      const client = new RecordingClient();
+      client.queryError = knownRequestError(code);
+
+      const error = await captureError(
+        createPrismaCountryReadRepository(client).list(),
+      );
+
+      expectFixedNonTransientQueryError(error);
+    },
+  );
+
+  test.each(NON_TRANSIENT_PRISMA_CODES)(
+    "keeps real Prisma initialization error %s non-transient",
+    async (code) => {
+      const client = new RecordingClient();
+      client.queryError = initializationError(code);
+
+      const error = await captureError(
+        createPrismaCountryReadRepository(client).findByCode("ID"),
+      );
+
+      expectFixedNonTransientQueryError(error);
+    },
+  );
+
+  test.each([
+    ["validation", () => new Prisma.PrismaClientValidationError(
+      PRIVATE_FAILURE,
+      { clientVersion: PRISMA_CLIENT_VERSION },
+    )],
+    ["unknown request", () => new Prisma.PrismaClientUnknownRequestError(
+      PRIVATE_FAILURE,
+      { clientVersion: PRISMA_CLIENT_VERSION },
+    )],
+    ["Rust panic", () => new Prisma.PrismaClientRustPanicError(
+      PRIVATE_FAILURE,
+      PRISMA_CLIENT_VERSION,
+    )],
+    ["plain", () => new Error(PRIVATE_FAILURE)],
+    ["forged Error name/code", () => Object.assign(new Error(PRIVATE_FAILURE), {
+      name: "PrismaClientKnownRequestError",
+      code: "P1001",
+    })],
+    ["forged object name/code", () => ({
+      name: "PrismaClientKnownRequestError",
+      code: "P1001",
+      message: PRIVATE_FAILURE,
+    })],
+  ] as const)("keeps %s failures non-transient", async (_label, createError) => {
     const client = new RecordingClient();
-    client.queryError = new Error("postgresql://user:secret@example.test/private");
+    client.queryError = createError();
 
-    const rejection = createPrismaCountryReadRepository(client).list();
+    const error = await captureError(
+      createPrismaCountryReadRepository(client).list(),
+    );
 
-    await expect(rejection).rejects.toThrow("COUNTRY_READ_QUERY_FAILED");
-    await expect(rejection).rejects.not.toThrow("secret");
+    expectFixedNonTransientQueryError(error);
   });
 
   test("does not retain query or validation errors in cause or enumerable properties", async () => {
@@ -363,7 +478,12 @@ describe("Prisma CountryReadRepository boundary", () => {
     const validationError = await captureError(
       createPrismaCountryReadRepository(validationClient).list(),
     );
-    expectStableRedactedError(validationError, "COUNTRY_READ_INVALID_DATA");
+    expectFixedPublicError(
+      validationError,
+      DataIntegrityError,
+      "DataIntegrityError",
+      "DATA_INTEGRITY_ERROR",
+    );
   });
 
   test("binds query shapes to generated Prisma 6 types without runtime double assertions", () => {
@@ -392,7 +512,7 @@ describe("Prisma CountryReadRepository boundary", () => {
       client.row = row;
 
       await expect(createPrismaCountryReadRepository(client).list()).rejects.toThrow(
-        "COUNTRY_READ_INVALID_DATA",
+        "DATA_INTEGRITY_ERROR",
       );
     },
   );
@@ -433,7 +553,7 @@ describe("Prisma CountryReadRepository boundary", () => {
     client.row = row;
 
     await expect(createPrismaCountryReadRepository(client).list()).rejects.toThrow(
-      "COUNTRY_READ_INVALID_DATA",
+      "DATA_INTEGRITY_ERROR",
     );
   });
 
@@ -546,4 +666,49 @@ function expectStableRedactedError(error: Error, code: string): void {
   expect("cause" in error).toBe(false);
   expect(JSON.stringify(error)).not.toMatch(/secret|private\/path/u);
   expect(Object.values(error).some((value) => value instanceof Error)).toBe(false);
+}
+
+function knownRequestError(
+  code: string,
+): InstanceType<typeof Prisma.PrismaClientKnownRequestError> {
+  return new Prisma.PrismaClientKnownRequestError(PRIVATE_FAILURE, {
+    code,
+    clientVersion: PRISMA_CLIENT_VERSION,
+    meta: { databaseUrl: PRIVATE_FAILURE, sql: "SELECT confidential" },
+  });
+}
+
+function initializationError(
+  code: string,
+): InstanceType<typeof Prisma.PrismaClientInitializationError> {
+  return new Prisma.PrismaClientInitializationError(
+    PRIVATE_FAILURE,
+    PRISMA_CLIENT_VERSION,
+    code,
+  );
+}
+
+function expectFixedPublicError<T extends Error>(
+  error: Error,
+  ErrorConstructor: new () => T,
+  name: string,
+  message: string,
+): void {
+  expect(error).toBeInstanceOf(ErrorConstructor);
+  expect(error.name).toBe(name);
+  expect(error.message).toBe(message);
+  expect(Object.keys(error)).toEqual(["name"]);
+  expect("cause" in error).toBe(false);
+  expect(JSON.stringify(error)).not.toMatch(/secret|confidential|private\/path/u);
+  expect(error.stack).not.toMatch(/secret|confidential|private\/path/u);
+}
+
+function expectFixedNonTransientQueryError(error: Error): void {
+  expect(error).toBeInstanceOf(PrismaCountryReadRepositoryError);
+  expect(error.name).toBe("PrismaCountryReadRepositoryError");
+  expect(error.message).toBe("COUNTRY_READ_QUERY_FAILED");
+  expect(error).toHaveProperty("code", "COUNTRY_READ_QUERY_FAILED");
+  expect("cause" in error).toBe(false);
+  expect(JSON.stringify(error)).not.toMatch(/secret|confidential|private\/path/u);
+  expect(error.stack).not.toMatch(/secret|confidential|private\/path/u);
 }

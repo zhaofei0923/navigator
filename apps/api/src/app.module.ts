@@ -36,7 +36,7 @@ export class AppModule {
         },
         { provide: APP_FILTER, useClass: ContractExceptionFilter },
       ],
-      exports: [COUNTRY_READ_REPOSITORY],
+      exports: [API_CONFIG, COUNTRY_READ_REPOSITORY],
     };
   }
 }

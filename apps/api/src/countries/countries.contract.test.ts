@@ -14,6 +14,10 @@ import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
 
 import { AppModule } from "../app.module.js";
 import { configureApplication } from "../main.js";
+import {
+  READONLY_RESPONSE_CACHE,
+  type ReadonlyResponseCache,
+} from "../ops/readonly-response-cache.js";
 import { COUNTRY_READ_REPOSITORY } from "../runtime/country-read-runtime.provider.js";
 
 const repositoryRoot = resolve(
@@ -35,6 +39,7 @@ const forbiddenResponseFragments = [
 
 let app: INestApplication;
 let baseUrl: string;
+let responseCache: ReadonlyResponseCache;
 
 beforeAll(async () => {
   const module = await Test.createTestingModule({
@@ -42,6 +47,9 @@ beforeAll(async () => {
       AppModule.register({
         port: 3100,
         countryReadSource: "canonical",
+        readCacheTtlSeconds: 60,
+        readCacheStaleIfErrorSeconds: 300,
+        readCacheMaxEntries: 1000,
         canonicalRepositoryRoot: repositoryRoot,
       }),
     ],
@@ -58,6 +66,7 @@ beforeAll(async () => {
     throw new Error("TEST_HTTP_ADDRESS_UNAVAILABLE");
   }
   baseUrl = `http://127.0.0.1:${address.port}`;
+  responseCache = app.get(READONLY_RESPONSE_CACHE);
 });
 
 afterAll(async () => {
@@ -119,6 +128,7 @@ describe("Nest country read HTTP contract", () => {
   );
 
   test("maps repository failures to a fixed, non-leaking 500 envelope", async () => {
+    responseCache.clear();
     vi.mocked(repository.list).mockRejectedValueOnce(
       new Error(
         "SELECT secret FROM country at postgresql://user:password@db.internal:5432/navigator /home/kevin/navigator/data/staging embeddingEn fileUrl",

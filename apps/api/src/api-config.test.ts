@@ -13,6 +13,9 @@ describe("validateApiEnv", () => {
     ).toEqual({
       port: 3100,
       countryReadSource: "database",
+      readCacheTtlSeconds: 60,
+      readCacheStaleIfErrorSeconds: 300,
+      readCacheMaxEntries: 1000,
       databaseUrl: "postgresql://navigator:secret@127.0.0.1:5432/navigator",
       databasePoolMax: 10,
       databasePoolTimeoutSeconds: 5,
@@ -36,6 +39,9 @@ describe("validateApiEnv", () => {
     expect(config).toEqual({
       port: 3100,
       countryReadSource: "database",
+      readCacheTtlSeconds: 60,
+      readCacheStaleIfErrorSeconds: 300,
+      readCacheMaxEntries: 1000,
       databaseUrl,
       databasePoolMax: 50,
       databasePoolTimeoutSeconds: 30,
@@ -43,6 +49,76 @@ describe("validateApiEnv", () => {
     });
     expect(environment.DATABASE_URL).toBe(databaseUrl);
     expect(Object.isFrozen(config)).toBe(true);
+  });
+
+  test("parses inclusive read cache boundaries for database source", () => {
+    expect(
+      validateApiEnv({
+        API_PORT: "3100",
+        DATABASE_URL:
+          "postgresql://navigator:secret@127.0.0.1:5432/navigator",
+        READ_CACHE_TTL_SECONDS: "1",
+        READ_CACHE_STALE_IF_ERROR_SECONDS: "0",
+        READ_CACHE_MAX_ENTRIES: "10",
+      }),
+    ).toMatchObject({
+      readCacheTtlSeconds: 1,
+      readCacheStaleIfErrorSeconds: 0,
+      readCacheMaxEntries: 10,
+    });
+
+    expect(
+      validateApiEnv({
+        API_PORT: "3100",
+        DATABASE_URL:
+          "postgresql://navigator:secret@127.0.0.1:5432/navigator",
+        READ_CACHE_TTL_SECONDS: "300",
+        READ_CACHE_STALE_IF_ERROR_SECONDS: "600",
+        READ_CACHE_MAX_ENTRIES: "10000",
+      }),
+    ).toMatchObject({
+      readCacheTtlSeconds: 300,
+      readCacheStaleIfErrorSeconds: 600,
+      readCacheMaxEntries: 10000,
+    });
+  });
+
+  test.each([
+    ["READ_CACHE_TTL_SECONDS", "0"],
+    ["READ_CACHE_TTL_SECONDS", "301"],
+    ["READ_CACHE_TTL_SECONDS", "1.5"],
+    ["READ_CACHE_TTL_SECONDS", "NaN"],
+    ["READ_CACHE_TTL_SECONDS", "Infinity"],
+    ["READ_CACHE_TTL_SECONDS", ""],
+    ["READ_CACHE_TTL_SECONDS", "   "],
+    ["READ_CACHE_STALE_IF_ERROR_SECONDS", "-1"],
+    ["READ_CACHE_STALE_IF_ERROR_SECONDS", "601"],
+    ["READ_CACHE_STALE_IF_ERROR_SECONDS", "0.5"],
+    ["READ_CACHE_STALE_IF_ERROR_SECONDS", "NaN"],
+    ["READ_CACHE_STALE_IF_ERROR_SECONDS", "Infinity"],
+    ["READ_CACHE_STALE_IF_ERROR_SECONDS", ""],
+    ["READ_CACHE_STALE_IF_ERROR_SECONDS", "   "],
+    ["READ_CACHE_MAX_ENTRIES", "9"],
+    ["READ_CACHE_MAX_ENTRIES", "10001"],
+    ["READ_CACHE_MAX_ENTRIES", "10.5"],
+    ["READ_CACHE_MAX_ENTRIES", "NaN"],
+    ["READ_CACHE_MAX_ENTRIES", "Infinity"],
+    ["READ_CACHE_MAX_ENTRIES", ""],
+    ["READ_CACHE_MAX_ENTRIES", "   "],
+  ])("rejects invalid %s by name without echoing its value", (name, value) => {
+    const error = captureError(() =>
+      validateApiEnv({
+        API_PORT: "3100",
+        DATABASE_URL:
+          "postgresql://navigator:secret@127.0.0.1:5432/navigator",
+        [name]: value,
+      }),
+    );
+
+    expect(error.message).toBe(name);
+    if (value.trim() !== "") expect(error.message).not.toContain(value);
+    expect(error.message).not.toContain("secret");
+    expect("cause" in error).toBe(false);
   });
 
   test.each([
@@ -81,6 +157,9 @@ describe("validateApiEnv", () => {
     expect(config).toEqual({
       port: 3100,
       countryReadSource: "canonical",
+      readCacheTtlSeconds: 60,
+      readCacheStaleIfErrorSeconds: 300,
+      readCacheMaxEntries: 1000,
       canonicalRepositoryRoot: "/srv/navigator",
     });
     expect(Object.isFrozen(config)).toBe(true);
@@ -109,8 +188,29 @@ describe("validateApiEnv", () => {
     expect(validateApiEnv(environment)).toEqual({
       port: 3100,
       countryReadSource: "canonical",
+      readCacheTtlSeconds: 60,
+      readCacheStaleIfErrorSeconds: 300,
+      readCacheMaxEntries: 1000,
       canonicalRepositoryRoot: "/srv/navigator",
     });
+  });
+
+  test("reads read cache overrides for canonical source", () => {
+    const config = validateApiEnv({
+      API_PORT: "3100",
+      COUNTRY_READ_SOURCE: "canonical",
+      CANONICAL_REPOSITORY_ROOT: "/srv/navigator",
+      READ_CACHE_TTL_SECONDS: "300",
+      READ_CACHE_STALE_IF_ERROR_SECONDS: "0",
+      READ_CACHE_MAX_ENTRIES: "10000",
+    });
+
+    expect(config).toMatchObject({
+      readCacheTtlSeconds: 300,
+      readCacheStaleIfErrorSeconds: 0,
+      readCacheMaxEntries: 10000,
+    });
+    expect(Object.isFrozen(config)).toBe(true);
   });
 
   test("reports invalid variable names without echoing values", () => {
@@ -169,6 +269,9 @@ describe("validateApiEnv", () => {
               "DATABASE_POOL_MAX",
               "DATABASE_POOL_TIMEOUT_SECONDS",
               "DATABASE_CONNECT_TIMEOUT_SECONDS",
+              "READ_CACHE_TTL_SECONDS",
+              "READ_CACHE_STALE_IF_ERROR_SECONDS",
+              "READ_CACHE_MAX_ENTRIES",
               "CANONICAL_REPOSITORY_ROOT",
             ].includes(property)
           ) {
