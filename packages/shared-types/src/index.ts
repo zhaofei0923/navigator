@@ -9,8 +9,10 @@ export {
   PROJECT_STATUSES,
   REGIONS,
   REVIEW_STATUSES,
+  RISK_CATEGORIES,
   RISK_LEVELS,
   TECH_TAGS,
+  isRiskCategory,
   type AccessLevel,
   type CoverageLevel,
   type Credibility,
@@ -22,6 +24,7 @@ export {
   type ProjectStatus,
   type Region,
   type ReviewStatus,
+  type RiskCategory,
   type RiskLevel,
   type TechTag,
 } from "./schema.js";

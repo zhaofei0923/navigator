@@ -68,6 +68,12 @@
 | `techTags` | string[] | — | 技术标签过滤（见 data-schema §7.2） |
 | `region` | string | — | 地区过滤（见 data-schema §7.3） |
 
+### 0.6 STANDARD 记录身份
+
+- STANDARD 候选管道中新接收的 `policy`、`risk`、`opportunities` 记录使用 [data-schema.md §3.2](./data-schema.md) 定义的不透明、不可变 UUID v4 `id`。
+- API 必须原样返回并在记录修订后保留该 `id`；不得根据标题、顺序、内容哈希、来源 URL、国家或模块重新生成。
+- 本约定沿用现有响应字段与数据库字符串主键，不新增响应字段，也不要求数据库迁移。
+
 ---
 
 ## 1. 国家列表与筛选
@@ -107,6 +113,7 @@
 - 模块 `status = BUILDING` 时，返回 `{ status: "BUILDING", items: [] }`，**HTTP 200**（前端渲染占位，不视为错误）。
 - 列表型模块返回分页 `items`；对象型模块（`market-overview` / `entry-strategy`）返回单对象 `item`。
 - 仅返回 `reviewStatus = published` 且 `credibility != UNVERIFIED` 的数据（除非 admin 端带权限，见 §7）。
+- `risk` 项的 `category` 只能使用 [data-schema.md §7.5](./data-schema.md) 的固定机器值；展示标签由客户端 i18n 提供。
 
 **返回示例（列表型，localized 模式）**：
 ```json
@@ -117,7 +124,7 @@
     "status": "PARTIAL",
     "items": [
       {
-        "id": "pol_001",
+        "id": "550e8400-e29b-41d4-a716-446655440000",
         "title": "可再生能源上网电价政策",
         "summary": "...",
         "policyType": "incentive",
@@ -218,6 +225,7 @@
 
 - [ ] 所有接口路由以 `/api/v1` 开头
 - [ ] 出参数据结构与 [data-schema.md](./data-schema.md) 一致，无特例字段
+- [ ] STANDARD 政策/风险/机会记录原样保留稳定 UUID v4 `id`
 - [ ] `BUILDING` 模块返回 200 + 占位，不返回错误
 - [ ] 展示文本按 `textMode` 处理，降级字段记入 `_i18nFallback`
 - [ ] AI 接口强制 §5 的检索过滤、回答语言、来源/更新时间/风险提示

@@ -121,6 +121,15 @@
       "emptyTitle": "暂无已发布数据",
       "emptyDescription": "该模块已启用，但当前视图暂无可展示的已发布记录。",
       "fallbackNotice": "{count} 个字段未翻译",
+      "riskCategory": {
+        "political": "政治",
+        "economic": "经济",
+        "legal": "法律",
+        "exchange-rate": "汇率",
+        "operational": "运营",
+        "social": "社会",
+        "environmental": "环境"
+      },
       "source": {
         "internalSample": "内部样板数据",
         "publishedKnowledge": "已发布模块知识",
