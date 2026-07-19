@@ -313,7 +313,9 @@ async function createOwnedDatabase(
 
   await requireFreePort(dependencies, E2E_DATABASE_PORT, interruptSignal);
   throwIfInterrupted(interruptSignal);
-  const created = await requireCommand(
+  let containerId;
+  let containerIdInvalid = false;
+  await requireCommand(
     dependencies,
     "container-create",
     "docker",
@@ -334,13 +336,22 @@ async function createOwnedDatabase(
       PGVECTOR_IMAGE,
     ],
     environment,
+    undefined,
+    (result) => {
+      if (result.code !== 0) return;
+      const returnedContainerId = result.stdout.trim();
+      if (!/^[A-Za-z0-9_-]+$/u.test(returnedContainerId)) {
+        containerIdInvalid = true;
+        return;
+      }
+      containerId = returnedContainerId;
+      recordOwnedContainer(returnedContainerId);
+    },
   );
   // Docker ownership starts only after its exact returned ID is captured.
-  const containerId = created.stdout.trim();
-  if (!/^[A-Za-z0-9_-]+$/u.test(containerId)) {
+  if (containerIdInvalid || containerId === undefined) {
     throw new Error("PLATFORM_E2E_CONTAINER_ID_INVALID");
   }
-  recordOwnedContainer(containerId);
 
   let ready = false;
   for (let attempt = 0; attempt < 30; attempt += 1) {
@@ -743,6 +754,7 @@ async function requireCommand(
   args,
   environment,
   interruptSignal,
+  onCompletion,
 ) {
   const result = await runCommandResult(
     dependencies,
@@ -751,6 +763,7 @@ async function requireCommand(
     args,
     environment,
     interruptSignal,
+    onCompletion,
   );
   if (result.code !== 0) {
     throw new Error(`PLATFORM_E2E_COMMAND_FAILED:${label}`);
@@ -765,6 +778,7 @@ async function runCommandResult(
   args,
   environment,
   interruptSignal,
+  onCompletion,
 ) {
   let spawned;
   try {
@@ -774,14 +788,24 @@ async function runCommandResult(
       kind: "command",
       label,
     });
-    return await waitForOwnedProcess(spawned, label, interruptSignal);
+    return await waitForOwnedProcess(
+      spawned,
+      label,
+      interruptSignal,
+      onCompletion,
+    );
   } catch (error) {
     if (isInterruptionError(error) || isCleanupError(error)) throw error;
     throw new Error(`PLATFORM_E2E_COMMAND_FAILED:${label}`);
   }
 }
 
-async function waitForOwnedProcess(spawned, label, interruptSignal) {
+async function waitForOwnedProcess(
+  spawned,
+  label,
+  interruptSignal,
+  onCompletion,
+) {
   let failure;
   let failed = false;
   let result;
@@ -790,6 +814,14 @@ async function waitForOwnedProcess(spawned, label, interruptSignal) {
   } catch (error) {
     failed = true;
     failure = error;
+  }
+  if (!failed) {
+    try {
+      onCompletion?.(result);
+    } catch (error) {
+      failed = true;
+      failure = error;
+    }
   }
   await cleanOwnedProcess(spawned, label);
   throwIfInterrupted(interruptSignal);

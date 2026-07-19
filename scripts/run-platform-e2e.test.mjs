@@ -564,6 +564,24 @@ test("signal during Docker creation waits to record and stop only the returned c
   assert.deepEqual(stops.map(({ args }) => args), [["stop", "owned-container-id"]]);
 });
 
+test("records and stops the returned container before reporting create-group cleanup failure", async () => {
+  const fake = createFakeDependencies({
+    failedCleanupLabels: ["container-create"],
+  });
+
+  await assert.rejects(
+    runPlatformE2E({
+      dependencies: fake.dependencies,
+      environment: {},
+      readinessAttempts: 1,
+    }),
+    { message: "PLATFORM_E2E_CLEANUP_FAILED:container-create" },
+  );
+
+  const stops = fake.spawnEvents.filter(({ args }) => args[0] === "stop");
+  assert.deepEqual(stops.map(({ args }) => args), [["stop", "owned-container-id"]]);
+});
+
 test("entrypoint interruption cancels the pre-acquisition Docker port probe", async () => {
   const controller = new EventEmitter();
   controller.stderr = { write: () => undefined };
