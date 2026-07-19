@@ -63,6 +63,7 @@ describe.sequential("country read production provider acceptance", () => {
     const harness = await startProviderApp(
       {
         port: 3100,
+        metricsPort: 9464,
         countryReadSource: "database",
         readCacheTtlSeconds: 60,
         readCacheStaleIfErrorSeconds: 300,
@@ -114,6 +115,7 @@ describe.sequential("country read production provider acceptance", () => {
       harness = await startProviderApp(
         {
           port: 3100,
+          metricsPort: 9464,
           countryReadSource: "canonical",
           readCacheTtlSeconds: 60,
           readCacheStaleIfErrorSeconds: 300,
@@ -149,6 +151,7 @@ describe.sequential("country read production provider acceptance", () => {
     const factories = createFactories();
     const invalidConfig = {
       port: 3100,
+      metricsPort: 9464,
       countryReadSource: rejectedSource,
     } as unknown as ApiConfig;
 
@@ -184,6 +187,7 @@ describe.sequential("country read production provider acceptance", () => {
     const harness = await startProviderApp(
       {
         port: 3100,
+        metricsPort: 9464,
         countryReadSource: "database",
         readCacheTtlSeconds: 60,
         readCacheStaleIfErrorSeconds: 300,

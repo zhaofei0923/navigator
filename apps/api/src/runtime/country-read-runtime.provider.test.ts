@@ -24,6 +24,7 @@ describe("CountryReadRuntimeProvider", () => {
     const provider = new CountryReadRuntimeProvider(
       {
         port: 3100,
+        metricsPort: 9464,
         countryReadSource: "database",
         readCacheTtlSeconds: 60,
         readCacheStaleIfErrorSeconds: 300,
@@ -63,6 +64,7 @@ describe("CountryReadRuntimeProvider", () => {
     new CountryReadRuntimeProvider(
       {
         port: 3100,
+        metricsPort: 9464,
         countryReadSource: "canonical",
         readCacheTtlSeconds: 60,
         readCacheStaleIfErrorSeconds: 300,
@@ -89,6 +91,7 @@ describe("CountryReadRuntimeProvider", () => {
       new CountryReadRuntimeProvider(
         {
           port: 3100,
+          metricsPort: 9464,
           countryReadSource: "invalid",
         } as never,
         factories,
@@ -109,6 +112,7 @@ describe("CountryReadRuntimeProvider", () => {
       imports: [
         AppModule.register({
           port: 3100,
+          metricsPort: 9464,
           countryReadSource: "database",
           readCacheTtlSeconds: 60,
           readCacheStaleIfErrorSeconds: 300,
@@ -203,6 +207,7 @@ describe("CountryReadRuntimeProvider", () => {
     const provider = new CountryReadRuntimeProvider(
       {
         port: 3100,
+        metricsPort: 9464,
         countryReadSource: "database",
         readCacheTtlSeconds: 60,
         readCacheStaleIfErrorSeconds: 300,

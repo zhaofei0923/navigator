@@ -14,6 +14,7 @@ import {
   type TextMode,
 } from "@navigator/shared-types/country-runtime";
 
+import type { ApiConfig } from "../api-config.js";
 import {
   buildCountryDetailCacheKey,
   buildCountryListCacheKey,
@@ -21,10 +22,16 @@ import {
   type CountryModuleKey,
 } from "../ops/cache-key.js";
 import {
+  METRICS_REGISTRY,
+  type DbMetricOperation,
+  type MetricsRecorder,
+} from "../ops/metrics-registry.js";
+import {
   READONLY_RESPONSE_CACHE,
   type CachedRead,
   type ReadonlyResponseCache,
 } from "../ops/readonly-response-cache.js";
+import { API_CONFIG } from "../runtime/country-read-runtime.provider.js";
 import {
   COUNTRY_READ_PROVIDER,
   type CountryReadProvider,
@@ -37,6 +44,10 @@ export class CountriesService {
     private readonly repository: CountryReadProvider,
     @Inject(READONLY_RESPONSE_CACHE)
     private readonly cache: ReadonlyResponseCache,
+    @Inject(API_CONFIG)
+    private readonly config: ApiConfig,
+    @Inject(METRICS_REGISTRY)
+    private readonly metrics: MetricsRecorder,
   ) {}
 
   async list(
@@ -47,7 +58,7 @@ export class CountriesService {
       buildCountryListCacheKey(filters, textMode),
       async () => cacheableSuccess(
         formatCountriesResponse(
-          await this.repository.list(),
+          await this.readDatabase("country_list", () => this.repository.list()),
           filters,
           textMode,
         ),
@@ -64,7 +75,9 @@ export class CountriesService {
     const cached = await this.cache.getOrLoad(
       buildCountryDetailCacheKey(code, filters, textMode),
       async () => {
-        const snapshot = await this.repository.findByCode(code);
+        const snapshot = await this.readDatabase("country_detail", () =>
+          this.repository.findByCode(code),
+        );
         if (snapshot === null) throw new CountryNotFoundError();
         const response = formatCountryDetailResponse(
           snapshot,
@@ -87,7 +100,9 @@ export class CountriesService {
     const cached = await this.cache.getOrLoad(
       buildCountryModuleCacheKey(code, moduleKey, filters, textMode),
       async () => {
-        const snapshot = await this.repository.findByCode(code);
+        const snapshot = await this.readDatabase("country_module", () =>
+          this.repository.findByCode(code),
+        );
         if (snapshot === null) throw new CountryNotFoundError();
         const response = formatCountryModuleResponse(
           snapshot,
@@ -100,6 +115,14 @@ export class CountriesService {
       },
     );
     return typedCachedRead<CountryModuleResponse>(cached);
+  }
+
+  private readDatabase<T>(
+    operation: DbMetricOperation,
+    work: () => Promise<T>,
+  ): Promise<T> {
+    if (this.config.countryReadSource === "canonical") return work();
+    return this.metrics.observeDbOperation(operation, work);
   }
 }
 

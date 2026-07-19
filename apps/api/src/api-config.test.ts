@@ -3,6 +3,58 @@ import { describe, expect, test } from "vitest";
 import { validateApiEnv } from "./api-config.js";
 
 describe("validateApiEnv", () => {
+  test.each(["database", "canonical"] as const)(
+    "uses the fixed metrics port default for %s source",
+    (source) => {
+      const environment =
+        source === "canonical"
+          ? {
+              API_PORT: "3100",
+              COUNTRY_READ_SOURCE: source,
+              CANONICAL_REPOSITORY_ROOT: "/srv/navigator",
+            }
+          : {
+              API_PORT: "3100",
+              COUNTRY_READ_SOURCE: source,
+              DATABASE_URL:
+                "postgresql://navigator:secret@127.0.0.1:5432/navigator",
+            };
+
+      expect(validateApiEnv(environment)).toMatchObject({ metricsPort: 9464 });
+    },
+  );
+
+  test.each([
+    ["1024", 1024],
+    ["65535", 65535],
+  ] as const)("accepts inclusive METRICS_PORT boundary %s", (value, expected) => {
+    expect(
+      validateApiEnv({
+        API_PORT: "3100",
+        METRICS_PORT: value,
+        DATABASE_URL:
+          "postgresql://navigator:secret@127.0.0.1:5432/navigator",
+      }),
+    ).toMatchObject({ metricsPort: expected });
+  });
+
+  test.each(["1023", "65536", "1.5", "NaN", "Infinity", "", "   "])(
+    "rejects invalid METRICS_PORT %p by variable name",
+    (value) => {
+      const error = captureError(() =>
+        validateApiEnv({
+          API_PORT: "3100",
+          METRICS_PORT: value,
+          DATABASE_URL:
+            "postgresql://navigator:secret@127.0.0.1:5432/navigator",
+        }),
+      );
+
+      expect(error.message).toBe("METRICS_PORT");
+      if (value.trim() !== "") expect(error.message).not.toContain(value);
+    },
+  );
+
   test("uses the database runtime by default and ignores a canonical root", () => {
     expect(
       validateApiEnv({
@@ -12,6 +64,7 @@ describe("validateApiEnv", () => {
       }),
     ).toEqual({
       port: 3100,
+      metricsPort: 9464,
       countryReadSource: "database",
       readCacheTtlSeconds: 60,
       readCacheStaleIfErrorSeconds: 300,
@@ -39,6 +92,7 @@ describe("validateApiEnv", () => {
 
     expect(config).toEqual({
       port: 3100,
+      metricsPort: 9464,
       countryReadSource: "database",
       readCacheTtlSeconds: 60,
       readCacheStaleIfErrorSeconds: 300,
@@ -193,6 +247,7 @@ describe("validateApiEnv", () => {
 
     expect(config).toEqual({
       port: 3100,
+      metricsPort: 9464,
       countryReadSource: "canonical",
       readCacheTtlSeconds: 60,
       readCacheStaleIfErrorSeconds: 300,
@@ -225,6 +280,7 @@ describe("validateApiEnv", () => {
 
     expect(validateApiEnv(environment)).toEqual({
       port: 3100,
+      metricsPort: 9464,
       countryReadSource: "canonical",
       readCacheTtlSeconds: 60,
       readCacheStaleIfErrorSeconds: 300,
@@ -305,6 +361,7 @@ describe("validateApiEnv", () => {
             typeof property === "string" &&
             ![
               "API_PORT",
+              "METRICS_PORT",
               "COUNTRY_READ_SOURCE",
               "DATABASE_URL",
               "DATABASE_POOL_MAX",

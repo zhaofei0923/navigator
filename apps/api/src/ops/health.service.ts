@@ -5,6 +5,10 @@ import {
   API_CONFIG,
   CountryReadRuntimeProvider,
 } from "../runtime/country-read-runtime.provider.js";
+import {
+  METRICS_REGISTRY,
+  type MetricsRecorder,
+} from "./metrics-registry.js";
 
 @Injectable()
 export class HealthService {
@@ -12,14 +16,22 @@ export class HealthService {
     @Inject(API_CONFIG) private readonly config: ApiConfig,
     @Inject(CountryReadRuntimeProvider)
     private readonly runtime: CountryReadRuntimeProvider,
+    @Inject(METRICS_REGISTRY)
+    private readonly metrics: MetricsRecorder,
   ) {}
 
   async isReady(): Promise<boolean> {
     try {
-      await this.runtime.ping({
-        maxWaitMs: this.config.healthReadyTimeoutMs,
-        timeoutMs: this.config.healthReadyTimeoutMs,
-      });
+      const ping = () =>
+        this.runtime.ping({
+          maxWaitMs: this.config.healthReadyTimeoutMs,
+          timeoutMs: this.config.healthReadyTimeoutMs,
+        });
+      if (this.config.countryReadSource === "database") {
+        await this.metrics.observeDbOperation("readiness_ping", ping);
+      } else {
+        await ping();
+      }
       return true;
     } catch {
       return false;

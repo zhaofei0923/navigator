@@ -174,6 +174,7 @@ function createConfig(
 ): ApiConfig {
   const common = {
     port: 3100,
+    metricsPort: 9464,
     readCacheTtlSeconds: 60,
     readCacheStaleIfErrorSeconds: 300,
     readCacheMaxEntries: 1000,

@@ -7,11 +7,15 @@ import {
   CountryReadRuntimeProvider,
 } from "../runtime/country-read-runtime.provider.js";
 import { HealthService } from "./health.service.js";
+import {
+  METRICS_REGISTRY,
+  type MetricsRecorder,
+} from "./metrics-registry.js";
 
 describe("HealthService", () => {
   test("checks the selected runtime with the exact configured finite bounds", async () => {
     const ping = vi.fn(async () => undefined);
-    const { module, service } = await createService(ping, 1375);
+    const { module, operations, service } = await createService(ping, 1375);
 
     try {
       await expect(service.isReady()).resolves.toBe(true);
@@ -25,6 +29,7 @@ describe("HealthService", () => {
         maxWaitMs: 1375,
         timeoutMs: 1375,
       });
+      expect(operations).toEqual(["readiness_ping", "readiness_ping"]);
     } finally {
       await module.close();
     }
@@ -99,6 +104,23 @@ describe("HealthService", () => {
       await module.close();
     }
   });
+
+  test("does not report a canonical readiness probe as a database operation", async () => {
+    const ping = vi.fn(async () => undefined);
+    const { module, operations, service } = await createService(
+      ping,
+      1000,
+      "canonical",
+    );
+
+    try {
+      await expect(service.isReady()).resolves.toBe(true);
+      expect(ping).toHaveBeenCalledOnce();
+      expect(operations).toEqual([]);
+    } finally {
+      await module.close();
+    }
+  });
 });
 
 async function createService(
@@ -107,25 +129,51 @@ async function createService(
     readonly timeoutMs: number;
   }) => Promise<void>,
   healthReadyTimeoutMs: number,
-): Promise<{ module: TestingModule; service: HealthService }> {
-  const config: ApiConfig = {
+  source: "database" | "canonical" = "database",
+): Promise<{
+  module: TestingModule;
+  operations: string[];
+  service: HealthService;
+}> {
+  const common = {
     port: 3100,
-    countryReadSource: "database",
+    metricsPort: 9464,
     readCacheTtlSeconds: 60,
     readCacheStaleIfErrorSeconds: 300,
     readCacheMaxEntries: 1000,
     healthReadyTimeoutMs,
-    databaseUrl: "postgresql://navigator:secret@127.0.0.1:5432/navigator",
-    databasePoolMax: 10,
-    databasePoolTimeoutSeconds: 5,
-    databaseConnectTimeoutSeconds: 5,
+  };
+  const config: ApiConfig = source === "canonical"
+    ? {
+        ...common,
+        countryReadSource: "canonical",
+        canonicalRepositoryRoot: "/srv/navigator",
+      }
+    : {
+        ...common,
+        countryReadSource: "database",
+        databaseUrl:
+          "postgresql://navigator:secret@127.0.0.1:5432/navigator",
+        databasePoolMax: 10,
+        databasePoolTimeoutSeconds: 5,
+        databaseConnectTimeoutSeconds: 5,
+      };
+  const operations: string[] = [];
+  const metrics: MetricsRecorder = {
+    recordCacheRequest: () => undefined,
+    recordHttpRequest: () => undefined,
+    async observeDbOperation(operation, work) {
+      operations.push(operation);
+      return work();
+    },
   };
   const module = await Test.createTestingModule({
     providers: [
       HealthService,
       { provide: API_CONFIG, useValue: config },
       { provide: CountryReadRuntimeProvider, useValue: { ping } },
+      { provide: METRICS_REGISTRY, useValue: metrics },
     ],
   }).compile();
-  return { module, service: module.get(HealthService) };
+  return { module, operations, service: module.get(HealthService) };
 }

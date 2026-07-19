@@ -7,6 +7,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import { RequestMethod, type INestApplication } from "@nestjs/common";
 
 import * as main from "./main.js";
+import { MetricsRegistry } from "./ops/metrics-registry.js";
 import { ObservabilityInterceptor } from "./ops/observability.interceptor.js";
 
 const applications: INestApplication[] = [];
@@ -18,14 +19,21 @@ afterEach(async () => {
 
 describe("bootstrap", () => {
   test("listens only on the loopback address", async () => {
+    const metricsPort = await availablePort();
     const app = await main.bootstrap({
       API_PORT: String(await availablePort()),
+      METRICS_PORT: String(metricsPort),
       COUNTRY_READ_SOURCE: "canonical",
       CANONICAL_REPOSITORY_ROOT: repositoryRoot,
     });
     applications.push(app);
 
     expect(app.getHttpServer().address()).toMatchObject({ address: "127.0.0.1" });
+    const metrics = await fetch(`http://127.0.0.1:${metricsPort}/metrics`);
+    expect(metrics.status).toBe(200);
+    await expect(metrics.text()).resolves.toContain(
+      "navigator_process_cpu_capacity_cores",
+    );
   });
 
   test("rejects dependency initialization failures without process teardown", async () => {
@@ -37,10 +45,12 @@ describe("bootstrap", () => {
     const abort = vi.spyOn(process, "abort").mockImplementation(() => {
       throw new Error("UNEXPECTED_PROCESS_ABORT");
     });
+    const closeMetrics = vi.spyOn(MetricsRegistry.prototype, "close");
     try {
       await expect(
         main.bootstrap({
           API_PORT: String(await availablePort()),
+          METRICS_PORT: String(await availablePort()),
           COUNTRY_READ_SOURCE: "canonical",
           CANONICAL_REPOSITORY_ROOT: resolve(
             repositoryRoot,
@@ -50,9 +60,40 @@ describe("bootstrap", () => {
       ).rejects.toThrow();
       expect(exit).not.toHaveBeenCalled();
       expect(abort).not.toHaveBeenCalled();
+      expect(closeMetrics).toHaveBeenCalledOnce();
     } finally {
       exit.mockRestore();
       abort.mockRestore();
+      closeMetrics.mockRestore();
+    }
+  });
+
+  test("closes the API listener when the metrics listener cannot bind", async () => {
+    const apiPort = await availablePort();
+    const metricsPort = await availablePort();
+    const occupied = createServer();
+    await new Promise<void>((resolve, reject) => {
+      occupied.once("error", reject);
+      occupied.listen(metricsPort, "127.0.0.1", resolve);
+    });
+
+    try {
+      await expect(
+        main.bootstrap({
+          API_PORT: String(apiPort),
+          METRICS_PORT: String(metricsPort),
+          COUNTRY_READ_SOURCE: "canonical",
+          CANONICAL_REPOSITORY_ROOT: repositoryRoot,
+        }),
+      ).rejects.toMatchObject({ code: "EADDRINUSE" });
+      await expect(fetch(`http://127.0.0.1:${apiPort}/health/live`)).rejects.toThrow();
+      expect(occupied.listening).toBe(true);
+    } finally {
+      await new Promise<void>((resolve, reject) => {
+        occupied.close((error) =>
+          error === undefined ? resolve() : reject(error),
+        );
+      });
     }
   });
 
@@ -65,8 +106,10 @@ describe("bootstrap", () => {
       }) as typeof process.stdout.write,
     );
     try {
+      const metricsPort = await availablePort();
       const app = await main.bootstrap({
         API_PORT: String(await availablePort()),
+        METRICS_PORT: String(metricsPort),
         COUNTRY_READ_SOURCE: "canonical",
         CANONICAL_REPOSITORY_ROOT: repositoryRoot,
       });
@@ -126,6 +169,29 @@ describe("bootstrap", () => {
       expect(JSON.stringify(records)).not.toMatch(
         /postgresql|secret|person@|example\.com|health\/live\/postgresql/i,
       );
+      const firstCountries = await fetch(`${origin}/api/v1/countries?locale=en`);
+      const secondCountries = await fetch(`${origin}/api/v1/countries?locale=en`);
+      expect(firstCountries.headers.get("x-navigator-cache")).toBe("miss");
+      expect(secondCountries.headers.get("x-navigator-cache")).toBe("hit");
+      await firstCountries.text();
+      await secondCountries.text();
+      const metrics = await fetch(`http://127.0.0.1:${metricsPort}/metrics`);
+      const exposition = await metrics.text();
+      expect(exposition).toContain(
+        'navigator_http_requests_total{method="GET",route="/health/live",status="200"} 1',
+      );
+      expect(exposition).toContain(
+        'navigator_http_requests_total{method="GET",route="UNMATCHED",status="404"} 1',
+      );
+      expect(exposition).toContain(
+        'navigator_cache_requests_total{route="/api/v1/countries",state="miss"} 1',
+      );
+      expect(exposition).toContain(
+        'navigator_cache_requests_total{route="/api/v1/countries",state="hit"} 1',
+      );
+      expect(exposition).toContain(
+        'navigator_db_operation_duration_seconds_count{operation="country_list"} 0',
+      );
     } finally {
       stdout.mockRestore();
     }
@@ -137,6 +203,7 @@ describe("bootstrap", () => {
     expect(source).toContain('app.listen(config.port, "127.0.0.1")');
     expect(source).not.toMatch(/app\.listen\(config\.port\s*\)/);
     expect(source).not.toContain('app.listen(config.port, "0.0.0.0")');
+    expect(source).toContain("metricsServer.listen()");
   });
 
   test("configures the exact API prefix exclusions and shutdown signals", () => {

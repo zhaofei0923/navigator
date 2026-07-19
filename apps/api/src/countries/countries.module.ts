@@ -6,6 +6,10 @@ import {
   READONLY_RESPONSE_CACHE,
   type ReadonlyResponseCache,
 } from "../ops/readonly-response-cache.js";
+import {
+  METRICS_REGISTRY,
+  type MetricsRecorder,
+} from "../ops/metrics-registry.js";
 import { API_CONFIG } from "../runtime/country-read-runtime.provider.js";
 
 import { CountriesController } from "./countries.controller.js";
@@ -16,10 +20,14 @@ import { CountriesService } from "./countries.service.js";
   providers: [
     {
       provide: READONLY_RESPONSE_CACHE,
-      inject: [API_CONFIG],
-      useFactory: (config: ApiConfig): ReadonlyResponseCache =>
+      inject: [API_CONFIG, METRICS_REGISTRY],
+      useFactory: (
+        config: ApiConfig,
+        metrics: MetricsRecorder,
+      ): ReadonlyResponseCache =>
         createReadonlyResponseCache({
           maxEntries: config.readCacheMaxEntries,
+          metrics,
           staleIfErrorSeconds: config.readCacheStaleIfErrorSeconds,
           ttlSeconds: config.readCacheTtlSeconds,
         }),

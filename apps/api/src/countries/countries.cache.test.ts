@@ -161,6 +161,7 @@ async function startApp(
     imports: [
       AppModule.register({
         port: 3100,
+        metricsPort: 9464,
         countryReadSource: "canonical",
         readCacheMaxEntries: 10,
         readCacheStaleIfErrorSeconds: 300,

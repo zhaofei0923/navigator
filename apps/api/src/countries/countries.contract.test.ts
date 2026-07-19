@@ -46,6 +46,7 @@ beforeAll(async () => {
     imports: [
       AppModule.register({
         port: 3100,
+        metricsPort: 9464,
         countryReadSource: "canonical",
         readCacheTtlSeconds: 60,
         readCacheStaleIfErrorSeconds: 300,

@@ -14,6 +14,10 @@ import {
   JsonLogger,
   type InternalErrorClassification,
 } from "./json-logger.js";
+import type {
+  HttpMetricErrorCode,
+  MetricsRecorder,
+} from "./metrics-registry.js";
 import {
   createRequestContext,
   runWithRequestContext,
@@ -54,17 +58,20 @@ interface ObservableHttpResponse {
 export interface ObservabilityInterceptorOptions {
   readonly entropy?: RequestContextEntropy | undefined;
   readonly logger?: JsonLogger | undefined;
+  readonly metrics?: MetricsRecorder | undefined;
   readonly monotonicNow?: (() => number) | undefined;
 }
 
 export class ObservabilityInterceptor implements NestInterceptor {
   private readonly entropy: RequestContextEntropy | undefined;
   private readonly logger: JsonLogger;
+  private readonly metrics: MetricsRecorder | undefined;
   private readonly monotonicNow: () => number;
 
   constructor(options: ObservabilityInterceptorOptions = {}) {
     this.entropy = options.entropy;
     this.logger = options.logger ?? new JsonLogger();
+    this.metrics = options.metrics;
     this.monotonicNow = options.monotonicNow ?? performance.now.bind(performance);
   }
 
@@ -105,15 +112,27 @@ export class ObservabilityInterceptor implements NestInterceptor {
         !aborted && status === 500
           ? observation.internalError ?? "unexpected"
           : false;
+      const durationMs = Math.max(
+        0,
+        this.readMonotonicClock() - startedAt,
+      );
+      const method = normalizeMethod(request.method);
+      this.recordHttpMetric({
+        durationMs,
+        errorCode: errorCodeForStatus(status),
+        method,
+        route: observation.route,
+        status,
+      });
       runWithRequestContext(context, () => {
         this.logger.logRequest({
           aborted,
           cacheState: normalizeCacheState(
             response.getHeader("x-navigator-cache"),
           ),
-          durationMs: Math.max(0, this.readMonotonicClock() - startedAt),
+          durationMs,
           internalError,
-          method: normalizeMethod(request.method),
+          method,
           requestId: context.requestId,
           route: observation.route,
           spanId: context.spanId,
@@ -168,6 +187,40 @@ export class ObservabilityInterceptor implements NestInterceptor {
     const value = this.monotonicNow();
     return Number.isFinite(value) ? value : 0;
   }
+
+  private recordHttpMetric(metric: {
+    readonly durationMs: number;
+    readonly errorCode: HttpMetricErrorCode | undefined;
+    readonly method: HttpMethod;
+    readonly route: HttpRoute;
+    readonly status: number;
+  }): void {
+    if (this.metrics === undefined) return;
+    try {
+      const common = {
+        durationSeconds: metric.durationMs / 1_000,
+        method: metric.method,
+        route: metric.route,
+        status: metric.status,
+      } as const;
+      this.metrics.recordHttpRequest(
+        metric.errorCode === undefined
+          ? common
+          : { ...common, errorCode: metric.errorCode },
+      );
+    } catch {
+      // Observability must never change the request outcome.
+    }
+  }
+}
+
+function errorCodeForStatus(
+  status: number,
+): HttpMetricErrorCode | undefined {
+  if (status === 400) return "VALIDATION_ERROR";
+  if (status === 404) return "NOT_FOUND";
+  if (status === 500) return "INTERNAL_ERROR";
+  return undefined;
 }
 
 function classifyInternalError(error: unknown): InternalErrorClassification {

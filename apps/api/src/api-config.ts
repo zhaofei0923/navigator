@@ -1,33 +1,42 @@
 import { isAbsolute, normalize } from "node:path";
 
-export type ApiConfig =
-  | {
-      readonly port: number;
+interface ApiConfigCommon {
+  readonly port: number;
+  readonly metricsPort: number;
+  readonly readCacheTtlSeconds: number;
+  readonly readCacheStaleIfErrorSeconds: number;
+  readonly readCacheMaxEntries: number;
+  readonly healthReadyTimeoutMs: number;
+}
+
+export type ApiConfig = ApiConfigCommon &
+  (
+    | {
       readonly countryReadSource: "database";
-      readonly readCacheTtlSeconds: number;
-      readonly readCacheStaleIfErrorSeconds: number;
-      readonly readCacheMaxEntries: number;
-      readonly healthReadyTimeoutMs: number;
       readonly databaseUrl: string;
       readonly databasePoolMax: number;
       readonly databasePoolTimeoutSeconds: number;
       readonly databaseConnectTimeoutSeconds: number;
     }
-  | {
-      readonly port: number;
+    | {
       readonly countryReadSource: "canonical";
-      readonly readCacheTtlSeconds: number;
-      readonly readCacheStaleIfErrorSeconds: number;
-      readonly readCacheMaxEntries: number;
-      readonly healthReadyTimeoutMs: number;
       readonly canonicalRepositoryRoot: string;
-    };
+    }
+  );
 
 export type ApiEnvironment = Readonly<Record<string, string | undefined>>;
 
 export function validateApiEnv(environment: ApiEnvironment): ApiConfig {
   const invalidVariables: string[] = [];
   const port = parsePort(environment.API_PORT, invalidVariables);
+  const metricsPort = parseBoundedInteger(
+    environment.METRICS_PORT,
+    9464,
+    1024,
+    65535,
+    "METRICS_PORT",
+    invalidVariables,
+  );
   const source = parseSource(environment.COUNTRY_READ_SOURCE, invalidVariables);
   const readCacheTtlSeconds = parseBoundedInteger(
     environment.READ_CACHE_TTL_SECONDS,
@@ -95,6 +104,7 @@ export function validateApiEnv(environment: ApiEnvironment): ApiConfig {
     throwIfInvalid(invalidVariables);
     return Object.freeze({
       port,
+      metricsPort,
       countryReadSource: source,
       readCacheTtlSeconds,
       readCacheStaleIfErrorSeconds,
@@ -115,6 +125,7 @@ export function validateApiEnv(environment: ApiEnvironment): ApiConfig {
     throwIfInvalid(invalidVariables);
     return Object.freeze({
       port,
+      metricsPort,
       countryReadSource: source,
       readCacheTtlSeconds,
       readCacheStaleIfErrorSeconds,

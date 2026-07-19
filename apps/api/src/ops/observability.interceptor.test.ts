@@ -13,10 +13,11 @@ import {
   DataIntegrityError,
 } from "@navigator/db/country-read-runtime";
 import { defer, lastValueFrom, of, throwError } from "rxjs";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import { ContractExceptionFilter } from "../common/contract-exception.filter.js";
 import { JsonLogger } from "./json-logger.js";
+import type { MetricsRecorder } from "./metrics-registry.js";
 import { ObservabilityInterceptor } from "./observability.interceptor.js";
 import {
   getRequestContext,
@@ -39,6 +40,7 @@ const entropy: RequestContextEntropy = {
 describe("observability middleware and interceptor", () => {
   test("sets safe trace headers before work and emits exactly one template-only log", async () => {
     const lines: string[] = [];
+    const metrics = metricsRecorder();
     const response = new FakeResponse();
     const request = requestFixture({
       headers: {
@@ -52,7 +54,7 @@ describe("observability middleware and interceptor", () => {
       route: { path: "/api/v1/countries/:code" },
       url: "/api/v1/countries/ID?email=person@example.com",
     });
-    const observability = createObservability(lines, [100, 112.25]);
+    const observability = createObservability(lines, [100, 112.25], metrics);
     let contextDuringWork: ReturnType<typeof getRequestContext>;
 
     await runThroughMiddleware(observability, request, response, async () => {
@@ -104,6 +106,12 @@ describe("observability middleware and interceptor", () => {
     expect(lines[0]).not.toMatch(
       /\/ID|email|person@|private|authorization|cookie|user-agent|Bearer/i,
     );
+    expect(metrics.recordHttpRequest).toHaveBeenCalledExactlyOnceWith({
+      durationSeconds: 0.01225,
+      method: "GET",
+      route: "/api/v1/countries/:code",
+      status: 200,
+    });
   });
 
   test.each([
@@ -115,6 +123,7 @@ describe("observability middleware and interceptor", () => {
     "classifies a 500 without serializing the exception: %s",
     async (failure, expectedEvent) => {
       const lines: string[] = [];
+      const metrics = metricsRecorder();
       const response = new FakeResponse();
       const request = requestFixture({
         headers: {},
@@ -122,7 +131,7 @@ describe("observability middleware and interceptor", () => {
         route: { path: "/countries/:code/modules/:moduleKey" },
         url: "/api/v1/countries/VN/modules/policy?token=private",
       });
-      const observability = createObservability(lines, [10, 18]);
+      const observability = createObservability(lines, [10, 18], metrics);
 
       await runThroughMiddleware(observability, request, response, async () => {
         await expect(
@@ -158,11 +167,19 @@ describe("observability middleware and interceptor", () => {
       expect(lines[0]).not.toMatch(
         /postgresql|secret|db\.internal|SELECT|\/home\/|token|private|policy|VN/i,
       );
+      expect(metrics.recordHttpRequest).toHaveBeenCalledExactlyOnceWith({
+        durationSeconds: 0.008,
+        errorCode: "INTERNAL_ERROR",
+        method: "GET",
+        route: "/api/v1/countries/:code/modules/:moduleKey",
+        status: 500,
+      });
     },
   );
 
   test("logs unmatched requests from middleware without reflecting path, query, or invalid headers", async () => {
     const lines: string[] = [];
+    const metrics = metricsRecorder();
     const response = new FakeResponse();
     const request = requestFixture({
       headers: {
@@ -172,7 +189,7 @@ describe("observability middleware and interceptor", () => {
       method: "BREW",
       url: "/api/v1/health/live/postgresql:user:secret?phone=13800138000",
     });
-    const observability = createObservability(lines, [40, 43]);
+    const observability = createObservability(lines, [40, 43], metrics);
 
     await runThroughMiddleware(observability, request, response, async () => {
       expect(response.getHeader("x-request-id")).toBe(GENERATED_REQUEST_ID);
@@ -197,10 +214,18 @@ describe("observability middleware and interceptor", () => {
     expect(lines[0]).not.toMatch(
       /health|postgresql|secret|phone|13800138000|attacker|example\.com|BREW/i,
     );
+    expect(metrics.recordHttpRequest).toHaveBeenCalledExactlyOnceWith({
+      durationSeconds: 0.003,
+      errorCode: "NOT_FOUND",
+      method: "OTHER",
+      route: "UNMATCHED",
+      status: 404,
+    });
   });
 
   test("records an early close as one fixed aborted outcome instead of a success", async () => {
     const lines: string[] = [];
+    const metrics = metricsRecorder();
     const response = new FakeResponse();
     const request = requestFixture({
       headers: {},
@@ -208,7 +233,7 @@ describe("observability middleware and interceptor", () => {
       route: { path: "/countries" },
       url: "/api/v1/countries?country=ID",
     });
-    const observability = createObservability(lines, [20, 24]);
+    const observability = createObservability(lines, [20, 24], metrics);
 
     await runThroughMiddleware(observability, request, response, async () => {
       await lastValueFrom(
@@ -232,10 +257,50 @@ describe("observability middleware and interceptor", () => {
       status: 499,
     });
     expect(lines[0]).not.toContain("INTERNAL_ERROR");
+    expect(metrics.recordHttpRequest).toHaveBeenCalledExactlyOnceWith({
+      durationSeconds: 0.004,
+      method: "GET",
+      route: "/api/v1/countries",
+      status: 499,
+    });
+  });
+
+  test("isolates a metrics recorder failure from request completion and logging", async () => {
+    const lines: string[] = [];
+    const metrics = metricsRecorder();
+    metrics.recordHttpRequest.mockImplementation(() => {
+      throw new Error("private-metrics-failure");
+    });
+    const response = new FakeResponse();
+    const request = requestFixture({
+      headers: {},
+      method: "GET",
+      route: { path: "/health/live" },
+      url: "/health/live",
+    });
+    const observability = createObservability(lines, [1, 2], metrics);
+
+    await runThroughMiddleware(observability, request, response, async () => {
+      await lastValueFrom(
+        observability.intercept(executionContext(request, response), {
+          handle: () => of({ status: "ok" }),
+        }),
+      );
+      response.statusCode = 200;
+      expect(() => response.emit("finish")).not.toThrow();
+    });
+
+    expect(lines).toHaveLength(1);
+    expect(JSON.parse(lines[0] ?? "null")).toMatchObject({
+      event: "http_request_completed",
+      route: "/health/live",
+      status: 200,
+    });
   });
 
   test("does not classify an ordinary readiness 503 as an internal exception", async () => {
     const lines: string[] = [];
+    const metrics = metricsRecorder();
     const response = new FakeResponse();
     const request = requestFixture({
       headers: {},
@@ -243,7 +308,7 @@ describe("observability middleware and interceptor", () => {
       route: { path: "/health/ready" },
       url: "/health/ready",
     });
-    const observability = createObservability(lines, [0, 1]);
+    const observability = createObservability(lines, [0, 1], metrics);
 
     await runThroughMiddleware(observability, request, response, async () => {
       await lastValueFrom(
@@ -265,6 +330,12 @@ describe("observability middleware and interceptor", () => {
     });
     expect(record).not.toHaveProperty("cacheState");
     expect(record).not.toHaveProperty("errorCode");
+    expect(metrics.recordHttpRequest).toHaveBeenCalledExactlyOnceWith({
+      durationSeconds: 0.001,
+      method: "GET",
+      route: "/health/ready",
+      status: 503,
+    });
   });
 
   test("keeps the fixed 500 contract and classification through the real Nest lifecycle", async () => {
@@ -326,12 +397,25 @@ class FailingCountriesController {
   }
 }
 
-function createObservability(lines: string[], times: number[]) {
+function createObservability(
+  lines: string[],
+  times: number[],
+  metrics?: MetricsRecorder,
+) {
   return new ObservabilityInterceptor({
     entropy,
     logger: new JsonLogger({ now: () => NOW, write: (line) => lines.push(line) }),
+    metrics,
     monotonicNow: () => times.shift() ?? 0,
   });
+}
+
+function metricsRecorder() {
+  return {
+    recordCacheRequest: vi.fn(),
+    recordHttpRequest: vi.fn(),
+    observeDbOperation: <T>(_operation: never, work: () => Promise<T>) => work(),
+  } satisfies MetricsRecorder;
 }
 
 async function runThroughMiddleware(

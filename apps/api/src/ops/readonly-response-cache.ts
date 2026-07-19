@@ -5,6 +5,7 @@ import {
   getCountryCacheKeyOwnership,
   type CountryCacheKeyOwnership,
 } from "./cache-key.js";
+import type { MetricsRecorder } from "./metrics-registry.js";
 import {
   isOwnedByListOrCountry,
   isReadonlyCacheEntryFresh,
@@ -14,6 +15,10 @@ import {
   cloneReadonlyCacheValue,
   serializeReadonlyCacheSuccess,
 } from "./readonly-response-cache-json.js";
+import {
+  recordCacheRequest,
+  resolveCacheOutcome,
+} from "./readonly-response-cache-metrics.js";
 
 const MIB = 1024 * 1024;
 const MAX_ITEM_BYTES = MIB;
@@ -44,6 +49,7 @@ export interface ReadonlyResponseCacheOptions {
   readonly ttlSeconds: number;
   readonly staleIfErrorSeconds: number;
   readonly maxEntries: number;
+  readonly metrics?: MetricsRecorder | undefined;
   readonly now?: (() => number) | undefined;
 }
 
@@ -75,6 +81,7 @@ class InMemoryReadonlyResponseCache implements ReadonlyResponseCache {
   private readonly flights = new Map<string, Flight>();
   private readonly countryGenerations = new Map<string, number>();
   private readonly maxEntries: number;
+  private readonly metrics: MetricsRecorder | undefined;
   private readonly now: () => number;
   private readonly staleIfErrorMilliseconds: number;
   private readonly ttlMilliseconds: number;
@@ -85,6 +92,7 @@ class InMemoryReadonlyResponseCache implements ReadonlyResponseCache {
   constructor(options: ReadonlyResponseCacheOptions) {
     const validated = validateReadonlyCacheOptions(options);
     this.maxEntries = validated.maxEntries;
+    this.metrics = options.metrics;
     this.now = validated.now;
     this.staleIfErrorMilliseconds = validated.staleIfErrorSeconds * 1_000;
     this.ttlMilliseconds = validated.ttlSeconds * 1_000;
@@ -101,6 +109,7 @@ class InMemoryReadonlyResponseCache implements ReadonlyResponseCache {
       isReadonlyCacheEntryFresh(entry.cachedAt, currentTime, this.ttlMilliseconds)
     ) {
       this.touch(key, entry);
+      recordCacheRequest(this.metrics, key, "hit");
       return {
         state: "hit",
         value: cloneReadonlyCacheValue<T>(entry.serialized),
@@ -109,7 +118,7 @@ class InMemoryReadonlyResponseCache implements ReadonlyResponseCache {
 
     const existingFlight = this.flights.get(key);
     if (existingFlight !== undefined) {
-      return cloneOutcome<T>(await existingFlight.promise);
+      return resolveCacheOutcome<T>(key, existingFlight.promise, this.metrics);
     }
 
     const generation = this.captureGeneration(key);
@@ -121,7 +130,7 @@ class InMemoryReadonlyResponseCache implements ReadonlyResponseCache {
     });
     flight = { generation, promise };
     this.flights.set(key, flight);
-    return cloneOutcome<T>(await promise);
+    return resolveCacheOutcome<T>(key, promise, this.metrics);
   }
 
   invalidateCountry(countryCode: string): void {
@@ -288,11 +297,4 @@ export function createReadonlyResponseCache(
   options: ReadonlyResponseCacheOptions,
 ): ReadonlyResponseCache {
   return new InMemoryReadonlyResponseCache(options);
-}
-
-function cloneOutcome<T extends JsonValue>(outcome: LoadOutcome): CachedRead<T> {
-  return {
-    state: outcome.state,
-    value: cloneReadonlyCacheValue<T>(outcome.serialized),
-  };
 }
