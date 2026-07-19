@@ -142,11 +142,16 @@ test("requires the exact unique six-country set and complete localized card enve
   delete missingSummary.data[0].summary;
   const missingPagination = countriesReadyBody();
   delete missingPagination.meta.pageSize;
+  const invalidRegion = countriesReadyBody();
+  for (const country of invalidRegion.data) {
+    country.region = "not-a-shared-region";
+  }
   const badBodies = [
     countriesReadyBody({ codes: ["ID", "VN", "SA", "AE", "BR", "XX"] }),
     countriesReadyBody({ codes: ["ID", "VN", "SA", "AE", "BR", "BR"] }),
     missingSummary,
     missingPagination,
+    invalidRegion,
   ];
 
   for (const body of badBodies) {
@@ -343,7 +348,10 @@ test("does not retain a completed process-group cleanup watchdog timer", {
   skip: process.platform === "win32",
 }, async () => {
   const moduleUrl = new URL("./run-platform-e2e.mjs", import.meta.url).href;
+  const fixtureDirectory = await mkdtemp(join(tmpdir(), "navigator-watchdog-"));
+  const innerGroupMarkerPath = join(fixtureDirectory, "inner-group-id");
   const harnessScript = [
+    "import { writeFileSync } from 'node:fs';",
     `import { spawnProcess } from ${JSON.stringify(moduleUrl)};`,
     "const child = spawnProcess(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], {",
     "  environment: process.env,",
@@ -353,6 +361,7 @@ test("does not retain a completed process-group cleanup watchdog timer", {
     "  killGraceMs: 200,",
     "  groupPollIntervalMs: 5,",
     "});",
+    `writeFileSync(${JSON.stringify(innerGroupMarkerPath)}, String(child.pid));`,
     "await new Promise((resolve) => setTimeout(resolve, 100));",
     "await child.killGroup();",
     "await child.completion;",
@@ -363,8 +372,20 @@ test("does not retain a completed process-group cleanup watchdog timer", {
     { detached: true, stdio: ["ignore", "pipe", "pipe"] },
   );
 
-  const result = await collectChildResult(harness, 1_000);
-  assert.equal(result.code, 0, result.stderr);
+  let innerGroupId;
+  try {
+    const result = await collectChildResult(harness, 1_000);
+    assert.equal(result.code, 0, result.stderr);
+  } finally {
+    try {
+      innerGroupId = Number(await readFile(innerGroupMarkerPath, "utf8"));
+    } catch (error) {
+      if (error?.code !== "ENOENT") throw error;
+    }
+    await terminateTestProcessGroup(innerGroupId);
+    await terminateTestProcessGroup(harness.pid);
+    await rm(fixtureDirectory, { force: true, recursive: true });
+  }
 });
 
 function createFakeDependencies(options = {}) {
@@ -586,9 +607,10 @@ function collectChildResult(child, timeoutMs) {
     stderr += String(chunk);
   });
   return new Promise((resolve, reject) => {
+    let timedOut = false;
     const timeout = setTimeout(() => {
+      timedOut = true;
       forceSignalGroup(child.pid, "SIGKILL");
-      reject(new Error("TEST_CHILD_EXIT_TIMEOUT"));
     }, timeoutMs);
     child.once("error", (error) => {
       clearTimeout(timeout);
@@ -596,7 +618,27 @@ function collectChildResult(child, timeoutMs) {
     });
     child.once("close", (code, signal) => {
       clearTimeout(timeout);
-      resolve({ code, signal, stderr });
+      if (timedOut) reject(new Error("TEST_CHILD_EXIT_TIMEOUT"));
+      else resolve({ code, signal, stderr });
     });
   });
+}
+
+async function terminateTestProcessGroup(groupId) {
+  if (!Number.isInteger(groupId) || !processGroupExists(groupId)) return;
+  forceSignalGroup(groupId, "SIGTERM");
+  if (await waitForTestProcessGroupExit(groupId, 100)) return;
+  forceSignalGroup(groupId, "SIGKILL");
+  if (!(await waitForTestProcessGroupExit(groupId, 1_000))) {
+    throw new Error("TEST_PROCESS_GROUP_CLEANUP_TIMEOUT");
+  }
+}
+
+async function waitForTestProcessGroupExit(groupId, timeoutMs) {
+  const deadline = Date.now() + timeoutMs;
+  while (processGroupExists(groupId)) {
+    if (Date.now() >= deadline) return false;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  return true;
 }

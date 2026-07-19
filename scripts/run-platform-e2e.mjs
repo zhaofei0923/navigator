@@ -39,6 +39,15 @@ const RECOMMENDED_PRIORITIES = new Set([
   "EXPLORE",
   "DATA_BUILDING",
 ]);
+const COUNTRY_REGIONS = new Set([
+  "southeast-asia",
+  "south-asia",
+  "middle-east",
+  "africa",
+  "latin-america",
+  "europe",
+  "central-asia",
+]);
 
 export async function runPlatformE2E({
   dependencies = createProductionDependencies(),
@@ -666,7 +675,7 @@ function isLocalizedCountryCard(value) {
   return isRecord(value) &&
     typeof value.code === "string" &&
     typeof value.name === "string" &&
-    typeof value.region === "string" &&
+    COUNTRY_REGIONS.has(value.region) &&
     typeof value.flagEmoji === "string" &&
     typeof value.summary === "string" &&
     COVERAGE_LEVELS.has(value.coverageLevel) &&
