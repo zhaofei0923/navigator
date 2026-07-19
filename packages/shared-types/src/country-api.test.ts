@@ -60,6 +60,7 @@ describe("country API storage contract", () => {
   test("keeps the dedicated server runtime export intentionally narrow", () => {
     expect(Object.keys(countryRuntime).sort()).toEqual(
       expect.arrayContaining([
+        "RISK_CATEGORIES",
         "formatCountriesResponse",
         "formatCountryDetailResponse",
         "formatCountryModuleResponse",
@@ -67,6 +68,15 @@ describe("country API storage contract", () => {
         "parseCountryCodeParam",
       ]),
     );
+    expect(countryRuntime).toHaveProperty("RISK_CATEGORIES", [
+      "political",
+      "economic",
+      "legal",
+      "exchange-rate",
+      "operational",
+      "social",
+      "environmental",
+    ]);
     expect(countryRuntime).not.toHaveProperty("validateEnv");
     expect(countryRuntime).not.toHaveProperty("getCountryCoverageLevel");
   });

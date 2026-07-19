@@ -293,6 +293,49 @@ describe("Prisma CountryReadRepository boundary", () => {
     await expect(repository.list()).rejects.toThrow("COUNTRY_READ_INVALID_DATA");
   });
 
+  test.each([
+    ["unregistered value", "other"],
+    ["case variant", "LEGAL"],
+    ["blank value", "   "],
+    ["non-string value", 1],
+  ] as const)("fails closed with a stable redacted error for risk category %s", async (
+    _label,
+    category,
+  ) => {
+    const client = new RecordingClient();
+    const row = structuredClone(validRow());
+    firstRelation(row, "risks").category = category;
+    client.row = row;
+
+    const error = await captureError(
+      createPrismaCountryReadRepository(client).list(),
+    );
+
+    expectStableRedactedError(error, "COUNTRY_READ_INVALID_DATA");
+  });
+
+  test("rejects an accessor-backed risk category without invoking its getter", async () => {
+    const client = new RecordingClient();
+    const row = structuredClone(validRow());
+    let getterCalls = 0;
+    Object.defineProperty(firstRelation(row, "risks"), "category", {
+      configurable: true,
+      enumerable: true,
+      get() {
+        getterCalls += 1;
+        return "legal";
+      },
+    });
+    client.row = row;
+
+    const error = await captureError(
+      createPrismaCountryReadRepository(client).list(),
+    );
+
+    expectStableRedactedError(error, "COUNTRY_READ_INVALID_DATA");
+    expect(getterCalls).toBe(0);
+  });
+
   test("redacts database failures", async () => {
     const client = new RecordingClient();
     client.queryError = new Error("postgresql://user:secret@example.test/private");

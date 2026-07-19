@@ -1,5 +1,6 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
 import {
+  RISK_CATEGORIES,
   sortCountrySnapshots,
   type CountryDataSnapshot,
   type CountryReadRepository,
@@ -445,7 +446,7 @@ function parseRisk(row: Readonly<Record<string, unknown>>, code: string): JsonOb
   return {
     id: requireNonBlankString(row.id),
     title: parseLocalizedText(row.title),
-    category: requireNonBlankString(row.category),
+    category: requireEnum(requireOwnDataValue(row, "category"), RISK_CATEGORIES),
     level: requireEnum(row.level, RISK_LEVELS),
     description: parseLocalizedText(row.description),
     mitigation: parseLocalizedText(row.mitigation),
@@ -650,6 +651,15 @@ function requireRecord(value: unknown): Readonly<Record<string, unknown>> {
     throw invalidData();
   }
   return value as Readonly<Record<string, unknown>>;
+}
+
+function requireOwnDataValue(
+  value: Readonly<Record<string, unknown>>,
+  key: string,
+): unknown {
+  const descriptor = Object.getOwnPropertyDescriptor(value, key);
+  if (descriptor === undefined || !("value" in descriptor)) throw invalidData();
+  return descriptor.value;
 }
 
 function requireCountryCode(value: unknown): string {
