@@ -499,15 +499,15 @@ DB integration test 自身负责“空库 → 六国导入两次 → 6/60/6/深�
 每档 warm-up 120 秒、measurement 600 秒：
 
 ```bash
-pnpm --filter @navigator/api load:readonly -- \
+pnpm --filter @navigator/api load:readonly \
   --base-url http://127.0.0.1:3100 \
   --metrics-url http://127.0.0.1:9464/metrics \
   --scenario 100k --output ../../artifacts/platform-ops/100k.json
-pnpm --filter @navigator/api load:readonly -- \
+pnpm --filter @navigator/api load:readonly \
   --base-url http://127.0.0.1:3100 \
   --metrics-url http://127.0.0.1:9464/metrics \
   --scenario 1m --output ../../artifacts/platform-ops/1m.json
-pnpm --filter @navigator/api load:readonly -- \
+pnpm --filter @navigator/api load:readonly \
   --base-url http://127.0.0.1:3100 \
   --metrics-url http://127.0.0.1:9464/metrics \
   --scenario 10m --output ../../artifacts/platform-ops/10m.json
