@@ -126,6 +126,9 @@ describe("approved Basic country publication import", () => {
     expect(packageJson.scripts["seed:approved-basic-country"]).toContain(
       "--experimental-transform-types",
     );
+    expect(packageJson.scripts["seed:approved-basic-country"]).toContain(
+      "--conditions=development",
+    );
   });
 
   test("accepts direct and pnpm-delimited country arguments", () => {

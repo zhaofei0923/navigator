@@ -171,7 +171,7 @@ describe("candidate:basic-country CLI", () => {
     )) as { scripts: Record<string, string> };
 
     expect(packageJson.scripts["candidate:basic-country"])
-      .toBe("node --import ../../scripts/node-ts-source-hook.mjs src/cli/candidate-basic-country.ts");
+      .toBe("node --conditions=development --import ../../scripts/node-ts-source-hook.mjs src/cli/candidate-basic-country.ts");
     expect(rootPackageJson.scripts["candidate:basic-country"])
       .toBe("pnpm --filter @navigator/db candidate:basic-country");
   });

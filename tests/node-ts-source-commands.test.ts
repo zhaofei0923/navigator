@@ -1,11 +1,19 @@
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+} from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, test } from "vitest";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const sharedTypesRoot = resolve(repositoryRoot, "packages/shared-types");
+const sharedTypesDist = resolve(sharedTypesRoot, "dist");
 
 describe("tracked TypeScript command hook", () => {
   test("wires DB source commands through the tracked node --import hook", () => {
@@ -17,23 +25,23 @@ describe("tracked TypeScript command hook", () => {
     ) as { readonly scripts?: Readonly<Record<string, string>> };
 
     expect(dbPackageJson.scripts?.["candidate:basic-country"]).toBe(
-      "node --import ../../scripts/node-ts-source-hook.mjs src/cli/candidate-basic-country.ts",
+      "node --conditions=development --import ../../scripts/node-ts-source-hook.mjs src/cli/candidate-basic-country.ts",
     );
     expect(dbPackageJson.scripts?.["preflight:basic-activation"]).toBe(
-      "node --import ../../scripts/node-ts-source-hook.mjs src/seed/basic-country-activation-preflight-cli.ts",
+      "node --conditions=development --import ../../scripts/node-ts-source-hook.mjs src/seed/basic-country-activation-preflight-cli.ts",
     );
     expect(dbPackageJson.scripts?.["seed:approved-basic-country"]).toBe(
-      "node --experimental-transform-types --import ../../scripts/node-ts-source-hook.mjs src/seed/approved-basic-country-import.ts",
+      "node --conditions=development --experimental-transform-types --import ../../scripts/node-ts-source-hook.mjs src/seed/approved-basic-country-import.ts",
     );
     expect(
       dbPackageJson.scripts?.["validate:approved-basic-publications"],
     ).toBe(
-      "node --experimental-transform-types --import ../../scripts/node-ts-source-hook.mjs src/seed/approved-basic-publications-validation.ts",
+      "node --conditions=development --experimental-transform-types --import ../../scripts/node-ts-source-hook.mjs src/seed/approved-basic-publications-validation.ts",
     );
     expect(
       dbPackageJson.scripts?.["import:approved-basic-publications"],
     ).toBe(
-      "node --experimental-transform-types --import ../../scripts/node-ts-source-hook.mjs src/seed/approved-basic-countries-prisma-import-cli.ts",
+      "node --conditions=development --experimental-transform-types --import ../../scripts/node-ts-source-hook.mjs src/seed/approved-basic-countries-prisma-import-cli.ts",
     );
     expect(webPackageJson.scripts?.prebuild).toBe(
       "pnpm --filter @navigator/db validate:approved-basic-publications",
@@ -104,6 +112,63 @@ describe("tracked TypeScript command hook", () => {
     );
   }, 30_000);
 
+  test("runs every DB source command without shared dist or global conditions", () => {
+    const commands = [
+      {
+        args: ["candidate:basic-country", "--", "--help"],
+        output: "Usage: pnpm candidate:basic-country",
+      },
+      {
+        args: [
+          "--filter",
+          "@navigator/db",
+          "run",
+          "preflight:basic-activation",
+          "--",
+          "--help",
+        ],
+        output: "Usage: pnpm --filter @navigator/db run preflight:basic-activation",
+      },
+      {
+        args: [
+          "--filter",
+          "@navigator/db",
+          "seed:approved-basic-country",
+          "--",
+          "indonesia",
+        ],
+        output: '"coverageLevel": "BASIC"',
+      },
+      {
+        args: [
+          "--filter",
+          "@navigator/db",
+          "import:approved-basic-publications",
+          "--",
+          "--help",
+        ],
+        output: "Usage: pnpm --filter @navigator/db import:approved-basic-publications",
+      },
+      {
+        args: [
+          "--filter",
+          "@navigator/db",
+          "validate:approved-basic-publications",
+        ],
+        output: '"countryCodes":["BR","ID","SA","ZA","AE","VN"]',
+      },
+    ] as const;
+
+    const results = withoutSharedTypesDist(() => commands.map(({ args }) => (
+      runPnpm(args)
+    )));
+
+    for (const [index, result] of results.entries()) {
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.stdout).toContain(commands[index]?.output);
+    }
+  }, 30_000);
+
   test("launches the TypeScript all-country import CLI with an injected fake client", () => {
     const cliModule = "./packages/db/src/seed/approved-basic-countries-prisma-import-cli.ts";
     const childSource = `
@@ -170,6 +235,7 @@ describe("tracked TypeScript command hook", () => {
       process.exitCode = status;
     `;
     const result = spawnSync("node", [
+      "--conditions=development",
       "--experimental-transform-types",
       "--import",
       resolve(repositoryRoot, "scripts/node-ts-source-hook.mjs"),
@@ -178,7 +244,7 @@ describe("tracked TypeScript command hook", () => {
       childSource,
     ], {
       cwd: repositoryRoot,
-      env: { ...process.env, NODE_NO_WARNINGS: "1" },
+      env: { ...process.env, NODE_NO_WARNINGS: "1", NODE_OPTIONS: "" },
       encoding: "utf8",
     });
 
@@ -196,7 +262,29 @@ function runPnpm(args: readonly string[]) {
     env: {
       ...process.env,
       DATABASE_URL: "postgresql://invalid:invalid@127.0.0.1:1/navigator",
+      NODE_OPTIONS: "",
     },
     encoding: "utf8",
   });
+}
+
+function withoutSharedTypesDist<T>(operation: () => T): T {
+  const backupRoot = mkdtempSync(resolve(
+    sharedTypesRoot,
+    ".dist-source-command-test-",
+  ));
+  const backupDist = resolve(backupRoot, "dist");
+  const hadDist = existsSync(sharedTypesDist);
+
+  if (hadDist) renameSync(sharedTypesDist, backupDist);
+  try {
+    expect(existsSync(sharedTypesDist)).toBe(false);
+    return operation();
+  } finally {
+    if (existsSync(sharedTypesDist)) {
+      rmSync(sharedTypesDist, { recursive: true, force: true });
+    }
+    if (hadDist) renameSync(backupDist, sharedTypesDist);
+    rmSync(backupRoot, { recursive: true, force: true });
+  }
 }

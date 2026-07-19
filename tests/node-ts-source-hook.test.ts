@@ -87,6 +87,7 @@ describe("repository TypeScript source hook", () => {
     const result = spawnSync(
       process.execPath,
       [
+        "--conditions=development",
         "--import",
         hookPath,
         "--input-type=module",
