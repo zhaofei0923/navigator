@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 
 const PORT = 31876;
 const COUNTRIES_REQUEST_TIMEOUT_MS = 1_000;
+const PORT_CONNECT_TIMEOUT_MS = 500;
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(scriptDirectory, "../../..");
 
@@ -191,17 +192,39 @@ function isChildRunning(childProcess) {
   return childProcess.exitCode === null && childProcess.signalCode === null;
 }
 
-function canConnect(port) {
+export function canConnect(
+  port,
+  {
+    cancelTimeout = clearTimeout,
+    createSocket = createConnection,
+    scheduleTimeout = setTimeout,
+    timeoutMilliseconds = PORT_CONNECT_TIMEOUT_MS,
+  } = {},
+) {
   return new Promise((resolveConnection) => {
-    const socket = createConnection({ host: "127.0.0.1", port });
-    socket.once("connect", () => {
+    const socket = createSocket({ host: "127.0.0.1", port });
+    let settled = false;
+    let timeout;
+    const settle = (canConnectToPort) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      cancelTimeout(timeout);
+      socket.removeListener("connect", onConnect);
+      socket.removeListener("error", onError);
       socket.destroy();
-      resolveConnection(true);
-    });
-    socket.once("error", () => {
-      socket.destroy();
-      resolveConnection(false);
-    });
+      resolveConnection(canConnectToPort);
+    };
+    const onConnect = () => settle(true);
+    const onError = () => settle(false);
+
+    socket.once("connect", onConnect);
+    socket.once("error", onError);
+    timeout = scheduleTimeout(
+      () => settle(false),
+      Math.max(1, timeoutMilliseconds),
+    );
   });
 }
 

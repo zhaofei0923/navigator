@@ -1,4 +1,5 @@
 import { createServer } from "node:http";
+import { EventEmitter } from "node:events";
 import { describe, expect, test } from "vitest";
 
 import { requestCountries } from "./runtime-smoke.mjs";
@@ -39,6 +40,39 @@ describe("runtime smoke HTTP request helper", () => {
       await close(server);
     }
   }, 2_000);
+
+  test("bounds a connect attempt that never settles and releases its resources", async () => {
+    const { canConnect } = await import("./runtime-smoke.mjs");
+    const socket = new EventEmitter();
+    let destroyed = false;
+    socket.destroy = () => {
+      destroyed = true;
+    };
+    const timerHandle = Symbol("connect-timeout");
+    let timeoutCallback;
+    let timeoutMilliseconds;
+    const canceledTimers = [];
+
+    const connection = canConnect(31876, {
+      cancelTimeout: (handle) => canceledTimers.push(handle),
+      createSocket: () => socket,
+      scheduleTimeout: (callback, milliseconds) => {
+        timeoutCallback = callback;
+        timeoutMilliseconds = milliseconds;
+        return timerHandle;
+      },
+    });
+
+    expect(timeoutMilliseconds).toBe(500);
+    expect(timeoutCallback).toBeTypeOf("function");
+    timeoutCallback();
+
+    await expect(connection).resolves.toBe(false);
+    expect(destroyed).toBe(true);
+    expect(canceledTimers).toEqual([timerHandle]);
+    expect(socket.listenerCount("connect")).toBe(0);
+    expect(socket.listenerCount("error")).toBe(0);
+  });
 });
 
 function listen(server) {
