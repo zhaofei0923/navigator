@@ -1,6 +1,8 @@
 import { spawn as spawnChildProcess } from "node:child_process";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { createServer } from "node:net";
-import { resolve } from "node:path";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const E2E_CONTAINER_NAME = "navigator-platform-e2e-postgres";
@@ -16,6 +18,9 @@ const DEFAULT_READINESS_REQUEST_TIMEOUT_MS = 1_000;
 const DEFAULT_TERMINATE_GRACE_MS = 10_000;
 const DEFAULT_KILL_GRACE_MS = 5_000;
 const DEFAULT_GROUP_POLL_INTERVAL_MS = 50;
+const DEFAULT_CONTAINER_CREATE_TIMEOUT_MS = 120_000;
+const DEFAULT_CONTAINER_STOP_TIMEOUT_MS = 30_000;
+const MAX_TIMER_DELAY_MS = 2_147_483_647;
 const READINESS_DELAY_MS = 250;
 const INTERRUPT_EXIT_CODES = Object.freeze({ SIGINT: 130, SIGTERM: 143 });
 const INTERRUPT_SIGNALS = Object.freeze(Object.keys(INTERRUPT_EXIT_CODES));
@@ -52,6 +57,8 @@ const COUNTRY_REGIONS = new Set([
 ]);
 
 export async function runPlatformE2E({
+  containerCreateTimeoutMs = DEFAULT_CONTAINER_CREATE_TIMEOUT_MS,
+  containerStopTimeoutMs = DEFAULT_CONTAINER_STOP_TIMEOUT_MS,
   dependencies = createProductionDependencies(),
   environment = process.env,
   interruptSignal,
@@ -72,6 +79,14 @@ export async function runPlatformE2E({
   ) {
     throw new Error("PLATFORM_E2E_READINESS_REQUEST_TIMEOUT_INVALID");
   }
+  requirePositiveInteger(
+    containerCreateTimeoutMs,
+    "PLATFORM_E2E_CONTAINER_CREATE_TIMEOUT_INVALID",
+  );
+  requirePositiveInteger(
+    containerStopTimeoutMs,
+    "PLATFORM_E2E_CONTAINER_STOP_TIMEOUT_INVALID",
+  );
 
   await requireFreePort(dependencies, API_PORT, interruptSignal);
   await requireFreePort(dependencies, WEB_PORT, interruptSignal);
@@ -88,6 +103,7 @@ export async function runPlatformE2E({
       dependencies,
       { apiServer, ownedContainerId, playwright, webServer },
       baseEnvironment,
+      containerStopTimeoutMs,
     );
     return cleanupPromise;
   };
@@ -100,6 +116,7 @@ export async function runPlatformE2E({
         ownedContainerId = containerId;
       },
       interruptSignal,
+      containerCreateTimeoutMs,
     );
     await prepareDatabase(
       dependencies,
@@ -194,6 +211,7 @@ async function cleanOwnedResources(
   dependencies,
   { apiServer, ownedContainerId, playwright, webServer },
   environment,
+  containerStopTimeoutMs,
 ) {
   const cleanupErrors = [];
   for (const [label, spawned] of [
@@ -210,12 +228,19 @@ async function cleanOwnedResources(
   }
   if (ownedContainerId !== undefined) {
     try {
-      const result = await runCommandResult(
+      const result = await withCommandWatchdog(
         dependencies,
-        "container-stop",
-        "docker",
-        ["stop", ownedContainerId],
-        environment,
+        containerStopTimeoutMs,
+        new Error("PLATFORM_E2E_CONTAINER_STOP_TIMEOUT"),
+        undefined,
+        (cleanupSignal) => runCommandResult(
+          dependencies,
+          "container-stop",
+          "docker",
+          ["stop", ownedContainerId],
+          environment,
+          cleanupSignal,
+        ),
       );
       if (result.code !== 0) {
         throw new Error("PLATFORM_E2E_CONTAINER_STOP_FAILED");
@@ -270,6 +295,12 @@ function hasLiteralLoopbackHost(rawAuthority) {
   return rawHost === "127.0.0.1" && (rawPort === "" || /^:\d+$/u.test(rawPort));
 }
 
+function requirePositiveInteger(value, errorMessage) {
+  if (!Number.isInteger(value) || value < 1 || value > MAX_TIMER_DELAY_MS) {
+    throw new Error(errorMessage);
+  }
+}
+
 async function requireFreePort(dependencies, port, interruptSignal) {
   let isFree = false;
   try {
@@ -291,6 +322,7 @@ async function createOwnedDatabase(
   environment,
   recordOwnedContainer,
   interruptSignal,
+  createTimeoutMs,
 ) {
   const existing = await requireCommand(
     dependencies,
@@ -313,45 +345,81 @@ async function createOwnedDatabase(
 
   await requireFreePort(dependencies, E2E_DATABASE_PORT, interruptSignal);
   throwIfInterrupted(interruptSignal);
-  let containerId;
-  let containerIdInvalid = false;
-  await requireCommand(
-    dependencies,
-    "container-create",
-    "docker",
-    [
-      "run",
-      "--detach",
-      "--rm",
-      "--name",
-      E2E_CONTAINER_NAME,
-      "--publish",
-      `127.0.0.1:${E2E_DATABASE_PORT}:5432`,
-      "--env",
-      "POSTGRES_USER=navigator_test",
-      "--env",
-      "POSTGRES_PASSWORD=navigator_test_only",
-      "--env",
-      `POSTGRES_DB=${E2E_DATABASE_NAME}`,
-      PGVECTOR_IMAGE,
-    ],
-    environment,
-    undefined,
-    (result) => {
-      if (result.code !== 0) return;
-      const returnedContainerId = result.stdout.trim();
-      if (!/^[A-Za-z0-9_-]+$/u.test(returnedContainerId)) {
-        containerIdInvalid = true;
-        return;
-      }
-      containerId = returnedContainerId;
-      recordOwnedContainer(returnedContainerId);
-    },
+  const receiptDirectory = await mkdtemp(
+    join(tmpdir(), "navigator-platform-e2e-container-"),
   );
-  // Docker ownership starts only after its exact returned ID is captured.
-  if (containerIdInvalid || containerId === undefined) {
-    throw new Error("PLATFORM_E2E_CONTAINER_ID_INVALID");
+  const receiptPath = join(receiptDirectory, "container.cid");
+  let containerId;
+  const recordReceipt = async (result) => {
+    const receiptId = await readOwnedContainerReceipt(receiptPath);
+    if (receiptId !== undefined && containerId === undefined) {
+      containerId = receiptId;
+      recordOwnedContainer(receiptId);
+    }
+    if (result === undefined || result.code !== 0) return;
+    const returnedContainerId = parseContainerId(result.stdout);
+    if (receiptId === undefined || returnedContainerId === undefined) {
+      throw new Error("PLATFORM_E2E_CONTAINER_ID_INVALID");
+    }
+    if (returnedContainerId !== receiptId) {
+      throw new Error("PLATFORM_E2E_CONTAINER_ID_MISMATCH");
+    }
+  };
+  let createError;
+  try {
+    try {
+      await withCommandWatchdog(
+        dependencies,
+        createTimeoutMs,
+        new Error("PLATFORM_E2E_CONTAINER_CREATE_TIMEOUT"),
+        interruptSignal,
+        (commandSignal) => requireCommand(
+          dependencies,
+          "container-create",
+          "docker",
+          [
+            "run",
+            "--cidfile",
+            receiptPath,
+            "--detach",
+            "--rm",
+            "--name",
+            E2E_CONTAINER_NAME,
+            "--publish",
+            `127.0.0.1:${E2E_DATABASE_PORT}:5432`,
+            "--env",
+            "POSTGRES_USER=navigator_test",
+            "--env",
+            "POSTGRES_PASSWORD=navigator_test_only",
+            "--env",
+            `POSTGRES_DB=${E2E_DATABASE_NAME}`,
+            PGVECTOR_IMAGE,
+          ],
+          environment,
+          commandSignal,
+          recordReceipt,
+        ),
+      );
+    } catch (error) {
+      await recordReceipt();
+      createError = normalizeError(error);
+    }
+    if (createError === undefined && containerId === undefined) {
+      createError = new Error("PLATFORM_E2E_CONTAINER_ID_INVALID");
+    }
+  } finally {
+    try {
+      const removeDirectory = dependencies.removeDirectory ?? rm;
+      await removeDirectory(receiptDirectory, { force: true, recursive: true });
+    } catch {
+      if (!isCleanupError(createError)) {
+        createError = new Error(
+          "PLATFORM_E2E_CLEANUP_FAILED:container-receipt",
+        );
+      }
+    }
   }
+  if (createError !== undefined) throw createError;
 
   let ready = false;
   for (let attempt = 0; attempt < 30; attempt += 1) {
@@ -385,6 +453,23 @@ async function createOwnedDatabase(
   }
 
   return `postgresql://navigator_test:navigator_test_only@127.0.0.1:${E2E_DATABASE_PORT}/${E2E_DATABASE_NAME}`;
+}
+
+async function readOwnedContainerReceipt(receiptPath) {
+  try {
+    return parseContainerId(await readFile(receiptPath, "utf8"));
+  } catch {
+    return undefined;
+  }
+}
+
+function parseContainerId(value) {
+  const body = value.endsWith("\r\n")
+    ? value.slice(0, -2)
+    : value.endsWith("\n")
+    ? value.slice(0, -1)
+    : value;
+  return /^[A-Za-z0-9_-]+$/u.test(body) ? body : undefined;
 }
 
 async function prepareDatabase(
@@ -702,7 +787,6 @@ async function runPlaywright(
 async function cleanOwnedProcess(spawned, label) {
   try {
     await spawned.killGroup();
-    await spawned.completion;
   } catch {
     throw new Error(`PLATFORM_E2E_CLEANUP_FAILED:${label}`);
   }
@@ -795,8 +879,44 @@ async function runCommandResult(
       onCompletion,
     );
   } catch (error) {
-    if (isInterruptionError(error) || isCleanupError(error)) throw error;
+    if (
+      isInterruptionError(error) ||
+      isCleanupError(error) ||
+      isContainerOwnershipError(error)
+    ) {
+      throw error;
+    }
     throw new Error(`PLATFORM_E2E_COMMAND_FAILED:${label}`);
+  }
+}
+
+async function withCommandWatchdog(
+  dependencies,
+  timeoutMs,
+  timeoutError,
+  interruptSignal,
+  operation,
+) {
+  const controller = new AbortController();
+  const abortForInterruption = () => {
+    controller.abort(getInterruptionError(interruptSignal));
+  };
+  if (interruptSignal?.aborted) {
+    abortForInterruption();
+  } else {
+    interruptSignal?.addEventListener("abort", abortForInterruption, {
+      once: true,
+    });
+  }
+  const scheduleTimeout = dependencies.setTimeout ?? setTimeout;
+  const cancelTimeout = dependencies.clearTimeout ?? clearTimeout;
+  const timeout = scheduleTimeout(() => controller.abort(timeoutError), timeoutMs);
+  timeout.unref?.();
+  try {
+    return await operation(controller.signal);
+  } finally {
+    cancelTimeout(timeout);
+    interruptSignal?.removeEventListener("abort", abortForInterruption);
   }
 }
 
@@ -817,7 +937,7 @@ async function waitForOwnedProcess(
   }
   if (!failed) {
     try {
-      onCompletion?.(result);
+      await onCompletion?.(result);
     } catch (error) {
       failed = true;
       failure = error;
@@ -866,7 +986,7 @@ function throwIfInterrupted(interruptSignal) {
 
 function getInterruptionError(interruptSignal) {
   const reason = interruptSignal?.reason;
-  if (isInterruptionError(reason)) return reason;
+  if (reason instanceof Error) return reason;
   return new Error("PLATFORM_E2E_INTERRUPTED");
 }
 
@@ -878,6 +998,11 @@ function isInterruptionError(error) {
 function isCleanupError(error) {
   return error instanceof Error &&
     error.message.startsWith("PLATFORM_E2E_CLEANUP_FAILED:");
+}
+
+function isContainerOwnershipError(error) {
+  return error instanceof Error &&
+    error.message.startsWith("PLATFORM_E2E_CONTAINER_ID_");
 }
 
 function isJsonContentType(value) {
@@ -998,6 +1123,7 @@ function createProductionDependencies() {
     delay: abortableDelay,
     fetch: globalThis.fetch,
     probePort: probePortFree,
+    removeDirectory: rm,
     spawn: spawnProcess,
   };
 }

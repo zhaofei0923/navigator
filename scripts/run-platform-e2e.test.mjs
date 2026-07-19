@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { spawn as spawnChildProcess } from "node:child_process";
 import { EventEmitter } from "node:events";
+import { existsSync, writeFileSync } from "node:fs";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -564,6 +565,54 @@ test("signal during Docker creation waits to record and stop only the returned c
   assert.deepEqual(stops.map(({ args }) => args), [["stop", "owned-container-id"]]);
 });
 
+test("interrupts a pending Docker creation and stops only its task-owned receipt id", async () => {
+  const controller = new EventEmitter();
+  const stderr = [];
+  const existingSigtermListener = () => undefined;
+  controller.on("SIGTERM", existingSigtermListener);
+  controller.stderr = { write: (value) => stderr.push(String(value)) };
+  controller.exitCode = undefined;
+  const fake = createFakeDependencies({
+    completionRemainsPendingAfterKill: ["container-create"],
+    onSpawn: ({ options }) => {
+      if (options.label !== "container-create") return;
+      queueMicrotask(() => {
+        controller.emit("SIGINT");
+        controller.emit("SIGTERM");
+        controller.emit("SIGINT");
+      });
+    },
+    pendingCommand: "container-create",
+  });
+
+  await withTestDeadline(
+    orchestrator.runPlatformE2EEntrypoint({
+      controller,
+      runOptions: {
+        dependencies: fake.dependencies,
+        environment: {},
+        readinessAttempts: 1,
+      },
+    }),
+    200,
+  );
+
+  assert.equal(controller.exitCode, 130);
+  assert.deepEqual(stderr, ["PLATFORM_E2E_INTERRUPTED:SIGINT\n"]);
+  assert.equal(
+    fake.cleanedProcessLabels.filter((label) => label === "container-create").length,
+    1,
+  );
+  assert.deepEqual(fake.killedProcessLabels, ["container-create"]);
+  const stops = fake.spawnEvents.filter(({ args }) => args[0] === "stop");
+  assert.deepEqual(stops.map(({ args }) => args), [["stop", "owned-container-id"]]);
+  assert.equal(stops.some(({ args }) => args.includes("navigator-platform-e2e-postgres")), false);
+  assert.equal(fake.containerReceiptPaths.length, 1);
+  assert.equal(existsSync(fake.containerReceiptPaths[0]), false);
+  assert.deepEqual(controller.listeners("SIGTERM"), [existingSigtermListener]);
+  assert.equal(controller.listenerCount("SIGINT"), 0);
+});
+
 test("records and stops the returned container before reporting create-group cleanup failure", async () => {
   const fake = createFakeDependencies({
     failedCleanupLabels: ["container-create"],
@@ -580,6 +629,210 @@ test("records and stops the returned container before reporting create-group cle
 
   const stops = fake.spawnEvents.filter(({ args }) => args[0] === "stop");
   assert.deepEqual(stops.map(({ args }) => args), [["stop", "owned-container-id"]]);
+});
+
+test("fails closed when Docker stdout disagrees with its task-owned receipt", async () => {
+  const fake = createFakeDependencies({
+    containerReceiptId: "receipt-container-id",
+    containerStdoutId: "different-container-id",
+  });
+
+  await assert.rejects(
+    runPlatformE2E({
+      dependencies: fake.dependencies,
+      environment: {},
+      readinessAttempts: 1,
+    }),
+    { message: "PLATFORM_E2E_CONTAINER_ID_MISMATCH" },
+  );
+
+  const stops = fake.spawnEvents.filter(({ args }) => args[0] === "stop");
+  assert.deepEqual(stops.map(({ args }) => args), [["stop", "receipt-container-id"]]);
+  assert.equal(stops.some(({ args }) => args.includes("navigator-platform-e2e-postgres")), false);
+  assert.equal(fake.containerReceiptPaths.length, 1);
+  assert.equal(existsSync(fake.containerReceiptPaths[0]), false);
+});
+
+test("fails closed on missing or malformed task-owned container receipts", async () => {
+  for (const receiptOptions of [
+    { containerReceiptId: null },
+    { containerReceiptId: " owned-container-id" },
+    { containerReceiptId: "owned-container-id\nother-container-id" },
+    { containerReceiptContents: "owned-container-id\n\n" },
+    { containerReceiptContents: "owned-container-id\r\n\r\n" },
+  ]) {
+    const fake = createFakeDependencies(receiptOptions);
+
+    await assert.rejects(
+      runPlatformE2E({
+        dependencies: fake.dependencies,
+        environment: {},
+        readinessAttempts: 1,
+      }),
+      { message: "PLATFORM_E2E_CONTAINER_ID_INVALID" },
+    );
+
+    const stops = fake.spawnEvents.filter(({ args }) => args[0] === "stop");
+    assert.deepEqual(stops, []);
+    assert.equal(fake.containerReceiptPaths.length, 1);
+    assert.equal(existsSync(fake.containerReceiptPaths[0]), false);
+  }
+});
+
+test("bounds a pending Docker creation without an external signal", async () => {
+  const fake = createFakeDependencies({ pendingCommand: "container-create" });
+
+  await assert.rejects(
+    withTestDeadline(
+      runPlatformE2E({
+        containerCreateTimeoutMs: 20,
+        dependencies: fake.dependencies,
+        environment: {},
+        readinessAttempts: 1,
+      }),
+      200,
+    ),
+    { message: "PLATFORM_E2E_COMMAND_FAILED:container-create" },
+  );
+
+  assert.equal(
+    fake.cleanedProcessLabels.filter((label) => label === "container-create").length,
+    1,
+  );
+  assert.deepEqual(fake.killedProcessLabels, ["container-create"]);
+  const stops = fake.spawnEvents.filter(({ args }) => args[0] === "stop");
+  assert.deepEqual(stops.map(({ args }) => args), [["stop", "owned-container-id"]]);
+  assert.equal(fake.containerReceiptPaths.length, 1);
+  assert.equal(existsSync(fake.containerReceiptPaths[0]), false);
+});
+
+test("maps receipt-directory removal failures and still stops the exact owned id", async () => {
+  const fake = createFakeDependencies({
+    commandExitCodes: { "container-stop": 1 },
+    failedReceiptCleanup: true,
+  });
+
+  await assert.rejects(
+    runPlatformE2E({
+      dependencies: fake.dependencies,
+      environment: {},
+      readinessAttempts: 1,
+    }),
+    { message: "PLATFORM_E2E_CLEANUP_FAILED:container-receipt" },
+  );
+
+  const stops = fake.spawnEvents.filter(({ args }) => args[0] === "stop");
+  assert.deepEqual(stops.map(({ args }) => args), [["stop", "owned-container-id"]]);
+  assert.equal(fake.containerReceiptPaths.length, 1);
+  assert.equal(existsSync(fake.containerReceiptPaths[0]), false);
+});
+
+test("preserves earlier create cleanup failure over receipt and stop failures", async () => {
+  const fake = createFakeDependencies({
+    commandExitCodes: { "container-stop": 1 },
+    failedCleanupLabels: ["container-create"],
+    failedReceiptCleanup: true,
+  });
+
+  await assert.rejects(
+    runPlatformE2E({
+      dependencies: fake.dependencies,
+      environment: {},
+      readinessAttempts: 1,
+    }),
+    { message: "PLATFORM_E2E_CLEANUP_FAILED:container-create" },
+  );
+
+  const stops = fake.spawnEvents.filter(({ args }) => args[0] === "stop");
+  assert.deepEqual(stops.map(({ args }) => args), [["stop", "owned-container-id"]]);
+});
+
+test("bounds a pending Docker stop with an independent cleanup watchdog", async () => {
+  for (const [firstSignal, repeatedSignal, expectedExitCode] of [
+    ["SIGINT", "SIGTERM", 130],
+    ["SIGTERM", "SIGINT", 143],
+  ]) {
+    const controller = new EventEmitter();
+    const stderr = [];
+    const existingListener = () => undefined;
+    controller.on(firstSignal, existingListener);
+    controller.stderr = { write: (value) => stderr.push(String(value)) };
+    controller.exitCode = undefined;
+    const fake = createFakeDependencies({
+      completionRemainsPendingAfterKill: ["container-stop"],
+      fetchResponses: [countriesReadyResponse(), webReadyResponse()],
+      onSpawn: ({ options }) => {
+        if (options.label !== "playwright") return;
+        queueMicrotask(() => {
+          controller.emit(firstSignal);
+          controller.emit(repeatedSignal);
+          controller.emit(firstSignal);
+        });
+      },
+      pendingCommand: "container-stop",
+      pendingPlaywright: true,
+    });
+
+    await withTestDeadline(
+      orchestrator.runPlatformE2EEntrypoint({
+        controller,
+        runOptions: {
+          containerStopTimeoutMs: 20,
+          dependencies: fake.dependencies,
+          environment: {},
+          readinessAttempts: 1,
+        },
+      }),
+      300,
+    );
+
+    assert.equal(controller.exitCode, expectedExitCode);
+    assert.deepEqual(stderr, ["PLATFORM_E2E_CLEANUP_FAILED:container\n"]);
+    assert.equal(
+      fake.cleanedProcessLabels.filter((label) => label === "container-stop").length,
+      1,
+    );
+    assert.equal(
+      fake.killedProcessLabels.filter((label) => label === "container-stop").length,
+      1,
+    );
+    const stops = fake.spawnEvents.filter(({ args }) => args[0] === "stop");
+    assert.deepEqual(stops.map(({ args }) => args), [["stop", "owned-container-id"]]);
+    assert.equal(fake.activeWatchdogTimers.size, 0);
+    assert.deepEqual(controller.listeners(firstSignal), [existingListener]);
+    assert.equal(controller.listenerCount(repeatedSignal), 0);
+  }
+});
+
+test("rejects invalid container watchdog timeouts before side effects", async () => {
+  for (const [optionName, expectedMessage] of [
+    ["containerCreateTimeoutMs", "PLATFORM_E2E_CONTAINER_CREATE_TIMEOUT_INVALID"],
+    ["containerStopTimeoutMs", "PLATFORM_E2E_CONTAINER_STOP_TIMEOUT_INVALID"],
+  ]) {
+    for (const invalidValue of [
+      0,
+      -1,
+      1.5,
+      "20",
+      Number.NaN,
+      Number.POSITIVE_INFINITY,
+      2_147_483_648,
+      Number.MAX_SAFE_INTEGER,
+    ]) {
+      const fake = createFakeDependencies();
+
+      await assert.rejects(
+        runPlatformE2E({
+          dependencies: fake.dependencies,
+          environment: { DATABASE_URL: SAFE_DATABASE_URL },
+          [optionName]: invalidValue,
+        }),
+        { message: expectedMessage },
+      );
+
+      assert.deepEqual(fake.events, []);
+    }
+  }
 });
 
 test("entrypoint interruption cancels the pre-acquisition Docker port probe", async () => {
@@ -776,12 +1029,18 @@ function createFakeDependencies(options = {}) {
   const startedServerLabels = [];
   const killedProcessLabels = [];
   const cleanedProcessLabels = [];
+  const containerReceiptPaths = [];
+  const activeWatchdogTimers = new Set();
   const fetchSignals = [];
   const fetchResponses = [...(options.fetchResponses ?? [])];
   const serverResolvers = new Map();
   let nextPid = 1000;
 
   const dependencies = {
+    clearTimeout: (timer) => {
+      clearTimeout(timer);
+      activeWatchdogTimers.delete(timer);
+    },
     delay: async () => undefined,
     fetch: async (url, init) => {
       const urlString = String(url);
@@ -808,6 +1067,18 @@ function createFakeDependencies(options = {}) {
       }
       return !(options.occupiedPorts ?? []).includes(port);
     },
+    removeDirectory: async (path, removeOptions) => {
+      await rm(path, removeOptions);
+      if (options.failedReceiptCleanup) {
+        throw new Error(`FAKE_RECEIPT_CLEANUP_FAILED:${path}`);
+      }
+    },
+    setTimeout: (callback, milliseconds) => {
+      let timer;
+      timer = setTimeout(callback, milliseconds);
+      activeWatchdogTimers.add(timer);
+      return timer;
+    },
     spawn: (command, args, spawnOptions) => {
       const event = { args: [...args], command, options: spawnOptions };
       events.push({ kind: "spawn", ...event });
@@ -824,7 +1095,19 @@ function createFakeDependencies(options = {}) {
       if (command === "docker" && args[0] === "ps") {
         stdout = options.existingContainerId ?? "";
       } else if (command === "docker" && args[0] === "run") {
-        stdout = "owned-container-id\n";
+        const cidfileIndex = args.indexOf("--cidfile");
+        if (cidfileIndex !== -1) {
+          const receiptPath = args[cidfileIndex + 1];
+          containerReceiptPaths.push(receiptPath);
+          if (options.containerReceiptId !== null) {
+            writeFileSync(
+              receiptPath,
+              options.containerReceiptContents ??
+                `${options.containerReceiptId ?? "owned-container-id"}\n`,
+            );
+          }
+        }
+        stdout = `${options.containerStdoutId ?? "owned-container-id"}\n`;
       } else if (
         command === "pnpm" &&
         args.includes("import:approved-basic-publications")
@@ -887,7 +1170,9 @@ function createFakeDependencies(options = {}) {
           if (options.failedCleanupLabels?.includes(label)) {
             throw new Error(`FAKE_CLEANUP_FAILED:${label}`);
           }
-          resolveCompletion({ code: null, signal: "SIGTERM", stdout: "" });
+          if (!options.completionRemainsPendingAfterKill?.includes(label)) {
+            resolveCompletion({ code: null, signal: "SIGTERM", stdout: "" });
+          }
         },
         pid,
       };
@@ -895,7 +1180,9 @@ function createFakeDependencies(options = {}) {
   };
 
   return {
+    activeWatchdogTimers,
     cleanedProcessLabels,
+    containerReceiptPaths,
     dependencies,
     events,
     fetchSignals,
