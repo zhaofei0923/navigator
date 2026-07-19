@@ -84,7 +84,7 @@
 | `pnpm lint` | 代码规范（含无硬编码文案检查，若配置） |
 | `pnpm typecheck` | TS strict 类型检查，禁止 `any` |
 | `pnpm test` | Vitest 单元/集成 |
-| `pnpm test:e2e` | Playwright E2E |
+| `pnpm test:e2e` | 受控启动 migration/import → Nest API → Next Web → Playwright |
 
 - 三项（lint / typecheck / test）**本地必须通过**方可提交；E2E 至少在 CI 关键流程通过。
 - 覆盖率不设唯一硬指标，但 §1–§4 列出的对象/流程**必须有对应用例**，缺失视为不达标。
@@ -195,6 +195,26 @@ trap - EXIT INT TERM
 ```
 
 验收证明 `0001_init` 已成功应用、真实事务故障全部回滚、六国串行导入两次仍为 Country=6 / ModuleCoverage=60 / MarketOverview=6、其余深层表/KnowledgeChunk/Lead=0，并逐国将数据库回读结果与 canonical publication 做深度相等比较。清理只能使用本流程保存的 container ID，禁止按名称停止容器；禁止连接生产库，禁止 `migrate reset`、`db push`、drop、truncate、`deleteMany` 或由测试执行任何破坏性清理。
+
+### 6.3 平台全链路 E2E
+
+`pnpm test:e2e` 是唯一受支持的浏览器测试入口。它通过
+`scripts/run-platform-e2e.mjs` 串行执行 Prisma generate、migration deploy、六国已批准
+BASIC 导入、API/Web production build、database source API、Web 与 Playwright。禁止直接执行
+`playwright test`；未设置内部标志 `E2E_SERVERS_MANAGED=1` 时 Playwright 配置会 fail fast 并提示
+使用根命令。
+
+外部 `DATABASE_URL` 只接受 `postgresql` 协议、字面量 `127.0.0.1` / `[::1]`，且原始路径必须
+精确为 `/navigator_platform_db_1_test`，不得带 query/hash。CI 显式传入 service 的 loopback URL，
+因此不会启动 Docker。未提供 URL 的本地运行只会在固定名
+`navigator-platform-e2e-postgres` 不存在且 `127.0.0.1:55433` 空闲时，创建 DB-1 同一 pinned
+pgvector digest 的 `--rm` 容器；finally 只按本次 `docker run` 返回的 container ID 停止它。
+
+启动器在任何 migration/import/build 前证明 `127.0.0.1:3100` 与 `127.0.0.1:3000` 空闲。
+API readiness 只轮询已有的 `GET /api/v1/countries?locale=en`，要求 HTTP 200、JSON 且六国
+envelope 合法；API 就绪后才启动 Web，再轮询 `/en`。3xx、非法响应、API/Web 子进程提前退出或
+owned resource cleanup 失败都会使命令失败。流程不执行 reset、drop、truncate，也不依赖尚未交付的
+OPS health route。
 
 ---
 

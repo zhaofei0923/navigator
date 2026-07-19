@@ -40,7 +40,7 @@ import {
   type CountryModuleDataSeed,
   type CountryModuleRecord,
   type CountrySeedBundle,
-} from "./country-seed-registry";
+} from "./country-seed-registry.test-fixture.js";
 
 export type {
   CountriesResponse,

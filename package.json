@@ -8,7 +8,7 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "vitest run tests && turbo run test",
-    "test:e2e": "playwright test"
+    "test:e2e": "node scripts/run-platform-e2e.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",

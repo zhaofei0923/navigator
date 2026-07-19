@@ -75,6 +75,11 @@ jobs:
       - name: Build API distribution
         run: pnpm --filter @navigator/api build
 
+      - name: Build Web without API access
+        env:
+          API_INTERNAL_BASE_URL: http://127.0.0.1:9/api/v1
+        run: pnpm --filter @navigator/web build
+
       - name: Smoke test API distribution
         env:
           CANONICAL_REPOSITORY_ROOT: ${{ github.workspace }}
@@ -83,5 +88,7 @@ jobs:
       - name: Unit tests
         run: pnpm test
 
-      - name: E2E placeholder
+      - name: Full-stack E2E
+        env:
+          DATABASE_URL: postgresql://navigator_test:navigator_test_only@127.0.0.1:5432/navigator_platform_db_1_test
         run: pnpm test:e2e

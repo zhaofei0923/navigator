@@ -1,7 +1,11 @@
 import type { Locale } from "@navigator/shared-types/schema";
+import { parseCountryFilters } from "@navigator/shared-types/country-query";
 import { setRequestLocale } from "next-intl/server";
 
 import { CountryExplorer } from "../../../features/countries/country-explorer";
+import { fetchCountries } from "../../../server/country-api-client";
+
+export const dynamic = "force-dynamic";
 
 interface CountriesPageProps {
   params: Promise<{ locale: Locale }>;
@@ -33,11 +37,18 @@ export default async function CountriesPage({
     searchParams,
   ]);
   setRequestLocale(locale);
+  const normalizedSearchParams = toUrlSearchParams(resolvedSearchParams);
+  const response = await fetchCountries(parseCountryFilters({
+    acceptLanguage: locale,
+    searchParams: normalizedSearchParams,
+  }));
 
   return (
     <CountryExplorer
+      countries={response.data}
       locale={locale}
-      searchParams={toUrlSearchParams(resolvedSearchParams)}
+      searchParams={normalizedSearchParams}
+      total={response.meta.total}
     />
   );
 }

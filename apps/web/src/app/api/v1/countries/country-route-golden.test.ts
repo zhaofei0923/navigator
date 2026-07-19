@@ -12,9 +12,10 @@ import type {
   CountryRouteGoldenFixture,
 } from "@navigator/shared-types/test-support/country-route-golden";
 import type { CountryCatalogItem } from "@navigator/shared-types/country-api";
-import { formatCountryModuleResponse } from "@navigator/shared-types/country-formatter";
-
-import { localizeCountryCard } from "../../../../features/countries/country-service.js";
+import {
+  formatCountryModuleResponse,
+  localizeCountryCard,
+} from "@navigator/shared-types/country-formatter";
 import { GET as getCountries } from "./route.js";
 import { GET as getCountryDetail } from "./[code]/route.js";
 import { GET as getCountryModule } from "./[code]/modules/[moduleKey]/route.js";

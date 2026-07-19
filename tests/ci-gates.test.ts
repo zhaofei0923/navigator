@@ -27,11 +27,24 @@ describe("P0-4 CI gates", () => {
     );
   });
 
-  it("runs the Playwright E2E gate after P2 adds browser flows", () => {
+  it("routes Playwright through the controlled full-stack orchestrator", () => {
     const packageJson = JSON.parse(readRootFile("package.json")) as {
       scripts?: Record<string, string>;
     };
+    const workflow = readRootFile(".github/workflows/ci.yml");
+    const playwrightConfig = readRootFile("playwright.config.ts");
 
-    expect(packageJson.scripts?.["test:e2e"]).toBe("playwright test");
+    expect(packageJson.scripts?.["test:e2e"]).toBe(
+      "node scripts/run-platform-e2e.mjs",
+    );
+    expect(playwrightConfig).not.toContain("webServer:");
+    expect(playwrightConfig).toContain("E2E_SERVERS_MANAGED");
+    expect(playwrightConfig).toContain("pnpm test:e2e");
+    expect(workflow).toContain(
+      "API_INTERNAL_BASE_URL: http://127.0.0.1:9/api/v1",
+    );
+    expect(workflow).toContain(
+      "DATABASE_URL: postgresql://navigator_test:navigator_test_only@127.0.0.1:5432/navigator_platform_db_1_test",
+    );
   });
 });

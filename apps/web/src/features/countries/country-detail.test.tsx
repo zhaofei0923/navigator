@@ -7,14 +7,25 @@ import enMessages from "../../../locales/en.json";
 import zhMessages from "../../../locales/zh-CN.json";
 
 import { CountryDetail } from "./country-detail.js";
-import { buildCountryDetailResponse } from "./country-service.js";
-import type { LocalizedCountryDetail } from "./country-service.js";
+import {
+  buildCountryDetailResponse,
+  buildCountryModuleResponse,
+} from "./country-service.test-fixture.js";
+import type { LocalizedCountryDetail } from "@navigator/shared-types/country-api";
 
 function renderCountryDetail(code: string, locale: "zh-CN" | "en") {
   const response = buildCountryDetailResponse(code, { locale });
 
   if (response === null || response.meta.textMode !== "localized") {
     throw new Error("Expected localized Indonesia detail response");
+  }
+  const marketOverview = buildCountryModuleResponse(
+    code,
+    "market-overview",
+    { locale },
+  );
+  if (marketOverview === null || marketOverview.meta.textMode !== "localized") {
+    throw new Error("Expected localized market overview response");
   }
 
   return renderToStaticMarkup(
@@ -23,12 +34,42 @@ function renderCountryDetail(code: string, locale: "zh-CN" | "en") {
       messages={locale === "zh-CN" ? zhMessages : enMessages}
       timeZone="Asia/Shanghai"
     >
-      <CountryDetail country={response.data} locale={locale} />
+      <CountryDetail
+        country={response.data}
+        locale={locale}
+        moduleResponses={{ "market-overview": marketOverview }}
+      />
     </NextIntlClientProvider>,
   );
 }
 
 describe("CountryDetail visible i18n", () => {
+  test("does not rebuild a missing module response from canonical data", () => {
+    const response = buildCountryDetailResponse("ID", { locale: "en" });
+    if (response === null || response.meta.textMode !== "localized") {
+      throw new Error("Expected localized Indonesia detail response");
+    }
+
+    const html = renderToStaticMarkup(
+      <NextIntlClientProvider
+        locale="en"
+        messages={enMessages}
+        timeZone="Asia/Shanghai"
+      >
+        <CountryDetail
+          country={response.data}
+          locale="en"
+          moduleResponses={{}}
+        />
+      </NextIntlClientProvider>,
+    );
+
+    expect(html).toContain(
+      "The module is active, but no published records are available for this view.",
+    );
+    expect(html).not.toContain("Installed renewable capacity reached 15,630 MW");
+  });
+
   test("renders the published Chinese market overview and nine placeholders", () => {
     const html = renderCountryDetail("ID", "zh-CN");
 

@@ -8,21 +8,19 @@ import {
   type ModuleKey,
   type TechTag,
 } from "@navigator/shared-types/schema";
+import type {
+  CountryModuleCoverageSummary,
+  LocalizedCountryDetail,
+  LocalizedCountryModuleResponse,
+  ModuleResponseRecord,
+} from "@navigator/shared-types/country-api";
 import { useTranslations } from "next-intl";
 import React from "react";
-
-import {
-  buildCountryModuleResponse,
-  type CountryModuleCoverageSummary,
-  type LocalizedCountryDetail,
-  type LocalizedCountryModuleResponse,
-  type ModuleResponseRecord,
-} from "./country-service";
 
 interface CountryDetailProps {
   country: LocalizedCountryDetail;
   locale: Locale;
-  moduleResponses?: Partial<Record<ModuleKey, LocalizedCountryModuleResponse>>;
+  moduleResponses: Partial<Record<ModuleKey, LocalizedCountryModuleResponse>>;
 }
 
 interface ModuleViewModel {
@@ -363,8 +361,7 @@ export function CountryDetail({
       response:
         coverage.status === "BUILDING"
           ? null
-          : (moduleResponses?.[moduleKey] ??
-            buildCountryModuleResponse(country.code, moduleKey, { locale })),
+          : (moduleResponses[moduleKey] ?? null),
     } satisfies ModuleViewModel;
   });
 

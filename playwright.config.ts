@@ -9,6 +9,12 @@ process.env.NO_PROXY = ["127.0.0.1", "localhost", process.env.NO_PROXY]
   .join(",");
 process.env.no_proxy = process.env.NO_PROXY;
 
+if (process.env.E2E_SERVERS_MANAGED !== "1") {
+  throw new Error(
+    "Playwright servers are not managed. Run pnpm test:e2e instead.",
+  );
+}
+
 export default defineConfig({
   testDir: "./tests/e2e",
   testMatch: "**/*.e2e.ts",
@@ -19,13 +25,6 @@ export default defineConfig({
       executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE,
     },
     trace: "retain-on-failure",
-  },
-  webServer: {
-    command:
-      "pnpm --filter @navigator/web dev --hostname 127.0.0.1 --port 3000",
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-    url: "http://127.0.0.1:3000/en",
   },
   projects: [
     {

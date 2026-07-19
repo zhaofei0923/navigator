@@ -13,14 +13,14 @@ import {
   filterCountryCatalog,
   getFilterOptions,
   localizeCountryCard,
-} from "./country-service.js";
-import type { CountrySignalsBase } from "./country-service.js";
+} from "./country-service.test-fixture.js";
+import type { CountrySignalsBase } from "./country-service.test-fixture.js";
 import type {
   CountryModuleDataRegistry,
   CountryModuleDataSeed,
   CountryModuleRecord,
   CountrySeedBundle,
-} from "./country-seed-registry.js";
+} from "./country-seed-registry.test-fixture.js";
 
 const P1_6D_ARTIFACT_FILE_NAMES = [
   "source-register.json",
@@ -197,7 +197,7 @@ describe("country explorer service", () => {
     };
 
     expect(compatible.sourceCount).toBe(0);
-    expect(readSource("./country-service.ts")).toMatch(
+    expect(readSource("./country-service.test-fixture.ts")).toMatch(
       /export type \{[\s\S]*\bCountrySignalsBase,/,
     );
   });
@@ -651,10 +651,10 @@ describe("country explorer service", () => {
     expectNoP1_6DFields(response);
   });
 
-  test("keeps the Web country boundary on the canonical seed and service", () => {
+  test("keeps the legacy formatter coverage isolated to test fixtures", () => {
     const sources = [
-      readSource("./country-service.ts"),
-      readSource("./country-seed-registry.ts"),
+      readSource("./country-service.test-fixture.ts"),
+      readSource("./country-seed-registry.test-fixture.ts"),
       readSource("../../app/api/v1/countries/[code]/route.ts"),
     ];
 

@@ -5,21 +5,23 @@ import type {
   Region,
   TechTag,
 } from "@navigator/shared-types/schema";
+import {
+  COVERAGE_LEVELS,
+  INDUSTRY_TAGS,
+  REGIONS,
+  TECH_TAGS,
+} from "@navigator/shared-types/schema";
+import type { LocalizedCountryCard } from "@navigator/shared-types/country-api";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import React from "react";
 
 import { Link } from "../../i18n/navigation";
-import {
-  buildCountriesResponse,
-  getFilterOptions,
-  type LocalizedCountryCard,
-} from "./country-service";
-import { parseCountryFilters } from "./filter-params";
-
 interface CountryExplorerProps {
+  countries: LocalizedCountryCard[];
   locale: Locale;
   searchParams: URLSearchParams;
+  total: number;
 }
 
 interface SelectOption<TValue extends string> {
@@ -255,30 +257,32 @@ function KeySignals({
   );
 }
 
-export function CountryExplorer({ locale, searchParams }: CountryExplorerProps) {
+export function CountryExplorer({
+  countries,
+  locale,
+  searchParams,
+  total,
+}: CountryExplorerProps) {
   const t = useTranslations("countries");
-  const filters = parseCountryFilters({ locale, searchParams });
-  const response = buildCountriesResponse(filters);
-  const options = getFilterOptions();
-  const selected = response.data[0];
+  const selected = countries[0];
   const regionLabels = useTranslations("countryMeta.region");
   const industryLabels = useTranslations("countryMeta.industry");
   const techLabels = useTranslations("countryMeta.tech");
   const coverageLabels = useTranslations("coverage.level");
 
-  const coverageOptions = options.coverageLevels.map((value) => ({
+  const coverageOptions = COVERAGE_LEVELS.map((value) => ({
     label: coverageLabels(value),
     value,
   }));
-  const regionOptions = options.regions.map((value: Region) => ({
+  const regionOptions = REGIONS.map((value: Region) => ({
     label: regionLabels(value),
     value,
   }));
-  const industryOptions = options.industryTags.map((value: IndustryTag) => ({
+  const industryOptions = INDUSTRY_TAGS.map((value: IndustryTag) => ({
     label: industryLabels(value),
     value,
   }));
-  const techOptions = options.techTags.map((value: TechTag) => ({
+  const techOptions = TECH_TAGS.map((value: TechTag) => ({
     label: techLabels(value),
     value,
   }));
@@ -330,14 +334,14 @@ export function CountryExplorer({ locale, searchParams }: CountryExplorerProps) 
           </form>
         </aside>
         <div className="explorer-main">
-          <ExplorerMap countries={response.data} />
+          <ExplorerMap countries={countries} />
           <section className="country-results" aria-label={t("results.label")}>
             <div className="results-heading">
               <h2>{t("results.title")}</h2>
-              <span>{t("results.count", { count: response.meta.total })}</span>
+              <span>{t("results.count", { count: total })}</span>
             </div>
             <div className="country-result-list">
-              {response.data.map((country) => (
+              {countries.map((country) => (
                 <CountryResultCard
                   country={country}
                   key={country.code}
