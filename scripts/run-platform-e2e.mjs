@@ -17,6 +17,8 @@ const DEFAULT_TERMINATE_GRACE_MS = 10_000;
 const DEFAULT_KILL_GRACE_MS = 5_000;
 const DEFAULT_GROUP_POLL_INTERVAL_MS = 50;
 const READINESS_DELAY_MS = 250;
+const INTERRUPT_EXIT_CODES = Object.freeze({ SIGINT: 130, SIGTERM: 143 });
+const INTERRUPT_SIGNALS = Object.freeze(Object.keys(INTERRUPT_EXIT_CODES));
 const EXPECTED_COUNTRY_CODES = new Set(["ID", "VN", "SA", "AE", "BR", "ZA"]);
 const COUNTRY_MODULE_KEYS = new Set([
   "market-overview",
@@ -52,9 +54,11 @@ const COUNTRY_REGIONS = new Set([
 export async function runPlatformE2E({
   dependencies = createProductionDependencies(),
   environment = process.env,
+  interruptSignal,
   readinessAttempts = DEFAULT_READINESS_ATTEMPTS,
   readinessRequestTimeoutMs = DEFAULT_READINESS_REQUEST_TIMEOUT_MS,
 } = {}) {
+  throwIfInterrupted(interruptSignal);
   const externalDatabaseUrl = environment.DATABASE_URL;
   if (externalDatabaseUrl !== undefined) {
     requireSafeDatabaseUrl(externalDatabaseUrl);
@@ -69,14 +73,24 @@ export async function runPlatformE2E({
     throw new Error("PLATFORM_E2E_READINESS_REQUEST_TIMEOUT_INVALID");
   }
 
-  await requireFreePort(dependencies, API_PORT);
-  await requireFreePort(dependencies, WEB_PORT);
+  await requireFreePort(dependencies, API_PORT, interruptSignal);
+  await requireFreePort(dependencies, WEB_PORT, interruptSignal);
 
   let ownedContainerId;
   let apiServer;
+  let playwright;
   let webServer;
   let primaryError;
+  let cleanupPromise;
   const baseEnvironment = loopbackEnvironment(environment);
+  const cleanupOwnedResourcesOnce = () => {
+    cleanupPromise ??= cleanOwnedResources(
+      dependencies,
+      { apiServer, ownedContainerId, playwright, webServer },
+      baseEnvironment,
+    );
+    return cleanupPromise;
+  };
 
   try {
     const databaseUrl = externalDatabaseUrl ?? await createOwnedDatabase(
@@ -85,10 +99,22 @@ export async function runPlatformE2E({
       (containerId) => {
         ownedContainerId = containerId;
       },
+      interruptSignal,
     );
-    await prepareDatabase(dependencies, baseEnvironment, databaseUrl);
-    await buildApplications(dependencies, baseEnvironment, databaseUrl);
+    await prepareDatabase(
+      dependencies,
+      baseEnvironment,
+      databaseUrl,
+      interruptSignal,
+    );
+    await buildApplications(
+      dependencies,
+      baseEnvironment,
+      databaseUrl,
+      interruptSignal,
+    );
 
+    throwIfInterrupted(interruptSignal);
     apiServer = startServer(
       dependencies,
       "api",
@@ -107,8 +133,10 @@ export async function runPlatformE2E({
       apiServer,
       readinessAttempts,
       readinessRequestTimeoutMs,
+      interruptSignal,
     );
 
+    throwIfInterrupted(interruptSignal);
     webServer = startServer(
       dependencies,
       "web",
@@ -133,21 +161,51 @@ export async function runPlatformE2E({
       webServer,
       readinessAttempts,
       readinessRequestTimeoutMs,
+      interruptSignal,
     );
 
-    await runPlaywright(dependencies, baseEnvironment, apiServer, webServer);
+    await runPlaywright(
+      dependencies,
+      baseEnvironment,
+      apiServer,
+      webServer,
+      (spawned) => {
+        playwright = spawned;
+      },
+      interruptSignal,
+    );
   } catch (error) {
     primaryError = normalizeError(error);
   }
 
+  const cleanupError = await cleanupOwnedResourcesOnce();
+  const firstCleanupError = isCleanupError(primaryError)
+    ? primaryError
+    : cleanupError;
+  if (firstCleanupError !== undefined) {
+    throw firstCleanupError;
+  }
+  if (primaryError !== undefined) {
+    throw primaryError;
+  }
+}
+
+async function cleanOwnedResources(
+  dependencies,
+  { apiServer, ownedContainerId, playwright, webServer },
+  environment,
+) {
   const cleanupErrors = [];
-  for (const server of [webServer, apiServer]) {
-    if (server === undefined) continue;
+  for (const [label, spawned] of [
+    ["playwright", playwright],
+    ["web", webServer?.spawned],
+    ["api", apiServer?.spawned],
+  ]) {
+    if (spawned === undefined) continue;
     try {
-      await server.spawned.killGroup();
-      await server.spawned.completion;
-    } catch {
-      cleanupErrors.push(new Error(`PLATFORM_E2E_CLEANUP_FAILED:${server.label}`));
+      await cleanOwnedProcess(spawned, label);
+    } catch (error) {
+      cleanupErrors.push(normalizeError(error));
     }
   }
   if (ownedContainerId !== undefined) {
@@ -157,7 +215,7 @@ export async function runPlatformE2E({
         "container-stop",
         "docker",
         ["stop", ownedContainerId],
-        baseEnvironment,
+        environment,
       );
       if (result.code !== 0) {
         throw new Error("PLATFORM_E2E_CONTAINER_STOP_FAILED");
@@ -166,13 +224,7 @@ export async function runPlatformE2E({
       cleanupErrors.push(new Error("PLATFORM_E2E_CLEANUP_FAILED:container"));
     }
   }
-
-  if (cleanupErrors[0] !== undefined) {
-    throw cleanupErrors[0];
-  }
-  if (primaryError !== undefined) {
-    throw primaryError;
-  }
+  return cleanupErrors[0];
 }
 
 function requireSafeDatabaseUrl(value) {
@@ -218,11 +270,15 @@ function hasLiteralLoopbackHost(rawAuthority) {
   return rawHost === "127.0.0.1" && (rawPort === "" || /^:\d+$/u.test(rawPort));
 }
 
-async function requireFreePort(dependencies, port) {
+async function requireFreePort(dependencies, port, interruptSignal) {
   let isFree = false;
   try {
-    isFree = await dependencies.probePort("127.0.0.1", port);
-  } catch {
+    isFree = await raceInterruption(
+      dependencies.probePort("127.0.0.1", port, interruptSignal),
+      interruptSignal,
+    );
+  } catch (error) {
+    if (isInterruptionError(error)) throw error;
     throw new Error(`PLATFORM_E2E_PORT_CHECK_FAILED:${port}`);
   }
   if (!isFree) {
@@ -234,6 +290,7 @@ async function createOwnedDatabase(
   dependencies,
   environment,
   recordOwnedContainer,
+  interruptSignal,
 ) {
   const existing = await requireCommand(
     dependencies,
@@ -248,12 +305,14 @@ async function createOwnedDatabase(
       "{{.ID}}",
     ],
     environment,
+    interruptSignal,
   );
   if (existing.stdout.trim() !== "") {
     throw new Error("PLATFORM_E2E_CONTAINER_ALREADY_EXISTS");
   }
 
-  await requireFreePort(dependencies, E2E_DATABASE_PORT);
+  await requireFreePort(dependencies, E2E_DATABASE_PORT, interruptSignal);
+  throwIfInterrupted(interruptSignal);
   const created = await requireCommand(
     dependencies,
     "container-create",
@@ -276,6 +335,7 @@ async function createOwnedDatabase(
     ],
     environment,
   );
+  // Docker ownership starts only after its exact returned ID is captured.
   const containerId = created.stdout.trim();
   if (!/^[A-Za-z0-9_-]+$/u.test(containerId)) {
     throw new Error("PLATFORM_E2E_CONTAINER_ID_INVALID");
@@ -298,12 +358,16 @@ async function createOwnedDatabase(
         E2E_DATABASE_NAME,
       ],
       environment,
+      interruptSignal,
     );
     if (result.code === 0) {
       ready = true;
       break;
     }
-    await dependencies.delay(1_000);
+    await raceInterruption(
+      dependencies.delay(1_000, interruptSignal),
+      interruptSignal,
+    );
   }
   if (!ready) {
     throw new Error("PLATFORM_E2E_DATABASE_NOT_READY");
@@ -312,7 +376,12 @@ async function createOwnedDatabase(
   return `postgresql://navigator_test:navigator_test_only@127.0.0.1:${E2E_DATABASE_PORT}/${E2E_DATABASE_NAME}`;
 }
 
-async function prepareDatabase(dependencies, environment, databaseUrl) {
+async function prepareDatabase(
+  dependencies,
+  environment,
+  databaseUrl,
+  interruptSignal,
+) {
   const databaseEnvironment = { ...environment, DATABASE_URL: databaseUrl };
   await requireCommand(
     dependencies,
@@ -328,6 +397,7 @@ async function prepareDatabase(dependencies, environment, databaseUrl) {
       "prisma/schema.prisma",
     ],
     databaseEnvironment,
+    interruptSignal,
   );
   await requireCommand(
     dependencies,
@@ -344,6 +414,7 @@ async function prepareDatabase(dependencies, environment, databaseUrl) {
       "prisma/schema.prisma",
     ],
     databaseEnvironment,
+    interruptSignal,
   );
   const imported = await requireCommand(
     dependencies,
@@ -351,6 +422,7 @@ async function prepareDatabase(dependencies, environment, databaseUrl) {
     "pnpm",
     ["--filter", "@navigator/db", "import:approved-basic-publications"],
     databaseEnvironment,
+    interruptSignal,
   );
   try {
     const summaryLine = imported.stdout
@@ -371,13 +443,19 @@ async function prepareDatabase(dependencies, environment, databaseUrl) {
   }
 }
 
-async function buildApplications(dependencies, environment, databaseUrl) {
+async function buildApplications(
+  dependencies,
+  environment,
+  databaseUrl,
+  interruptSignal,
+) {
   await requireCommand(
     dependencies,
     "api-build",
     "pnpm",
     ["--filter", "@navigator/api", "build"],
     { ...environment, DATABASE_URL: databaseUrl },
+    interruptSignal,
   );
   await requireCommand(
     dependencies,
@@ -390,6 +468,7 @@ async function buildApplications(dependencies, environment, databaseUrl) {
       DATABASE_URL: databaseUrl,
       NODE_ENV: "production",
     },
+    interruptSignal,
   );
 }
 
@@ -416,6 +495,7 @@ async function waitForCountries(
   server,
   attempts,
   requestTimeoutMs,
+  interruptSignal,
 ) {
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     await assertServerRunning(server);
@@ -446,8 +526,10 @@ async function waitForCountries(
             throw new Error("PLATFORM_E2E_COUNTRIES_READINESS_INVALID");
           }
         },
+        interruptSignal,
       );
     } catch (error) {
+      if (isInterruptionError(error)) throw error;
       if (error instanceof Error && error.message.startsWith("PLATFORM_E2E_CHILD_EXITED:")) {
         throw error;
       }
@@ -460,7 +542,12 @@ async function waitForCountries(
       if (attempt + 1 === attempts) {
         throw new Error("PLATFORM_E2E_COUNTRIES_READINESS_TIMEOUT");
       }
-      await delayWhileRunning(dependencies, server, READINESS_DELAY_MS);
+      await delayWhileRunning(
+        dependencies,
+        server,
+        READINESS_DELAY_MS,
+        interruptSignal,
+      );
       continue;
     }
     if (!isSixCountryEnvelope(body)) {
@@ -470,7 +557,13 @@ async function waitForCountries(
   }
 }
 
-async function waitForWeb(dependencies, server, attempts, requestTimeoutMs) {
+async function waitForWeb(
+  dependencies,
+  server,
+  attempts,
+  requestTimeoutMs,
+  interruptSignal,
+) {
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     await assertServerRunning(server);
     try {
@@ -490,8 +583,10 @@ async function waitForWeb(dependencies, server, attempts, requestTimeoutMs) {
             throw new Error("PLATFORM_E2E_WEB_READINESS_INVALID");
           }
         },
+        interruptSignal,
       );
     } catch (error) {
+      if (isInterruptionError(error)) throw error;
       if (error instanceof Error && error.message.startsWith("PLATFORM_E2E_CHILD_EXITED:")) {
         throw error;
       }
@@ -504,7 +599,12 @@ async function waitForWeb(dependencies, server, attempts, requestTimeoutMs) {
       if (attempt + 1 === attempts) {
         throw new Error("PLATFORM_E2E_WEB_READINESS_TIMEOUT");
       }
-      await delayWhileRunning(dependencies, server, READINESS_DELAY_MS);
+      await delayWhileRunning(
+        dependencies,
+        server,
+        READINESS_DELAY_MS,
+        interruptSignal,
+      );
       continue;
     }
     return;
@@ -515,9 +615,20 @@ async function runReadinessOperation(
   server,
   timeoutMs,
   operation,
+  interruptSignal,
 ) {
   const controller = new AbortController();
   let timeout;
+  const abortForInterruption = () => {
+    controller.abort(getInterruptionError(interruptSignal));
+  };
+  if (interruptSignal?.aborted) {
+    abortForInterruption();
+  } else {
+    interruptSignal?.addEventListener("abort", abortForInterruption, {
+      once: true,
+    });
+  }
   const timedOut = new Promise((_, rejectTimeout) => {
     timeout = setTimeout(() => {
       controller.abort();
@@ -527,14 +638,26 @@ async function runReadinessOperation(
   });
   try {
     const probe = Promise.resolve().then(() => operation(controller.signal));
-    return await raceServerExit(server, Promise.race([probe, timedOut]));
+    return await raceServerExit(
+      server,
+      raceInterruption(Promise.race([probe, timedOut]), interruptSignal),
+    );
   } finally {
     clearTimeout(timeout);
     controller.abort();
+    interruptSignal?.removeEventListener("abort", abortForInterruption);
   }
 }
 
-async function runPlaywright(dependencies, environment, apiServer, webServer) {
+async function runPlaywright(
+  dependencies,
+  environment,
+  apiServer,
+  webServer,
+  recordOwnedPlaywright,
+  interruptSignal,
+) {
+  throwIfInterrupted(interruptSignal);
   await assertServerRunning(apiServer);
   await assertServerRunning(webServer);
   const playwright = dependencies.spawn(
@@ -546,16 +669,18 @@ async function runPlaywright(dependencies, environment, apiServer, webServer) {
       label: "playwright",
     },
   );
-  const outcome = await Promise.race([
-    playwright.completion.then((result) => ({ kind: "playwright", result })),
-    apiServer.spawned.completion.then(() => ({ kind: "server", server: apiServer })),
-    webServer.spawned.completion.then(() => ({ kind: "server", server: webServer })),
-  ]);
+  recordOwnedPlaywright(playwright);
+  const outcome = await raceInterruption(
+    Promise.race([
+      playwright.completion.then((result) => ({ kind: "playwright", result })),
+      apiServer.spawned.completion.then(() => ({ kind: "server", server: apiServer })),
+      webServer.spawned.completion.then(() => ({ kind: "server", server: webServer })),
+    ]),
+    interruptSignal,
+  );
   if (outcome.kind === "server") {
-    await cleanOwnedProcess(playwright, "playwright");
     throw new Error(`PLATFORM_E2E_CHILD_EXITED:${outcome.server.label}`);
   }
-  await cleanOwnedProcess(playwright, "playwright");
   if (outcome.result.code !== 0) {
     throw new Error("PLATFORM_E2E_PLAYWRIGHT_FAILED");
   }
@@ -589,8 +714,19 @@ async function raceServerExit(server, operation) {
   return outcome.value;
 }
 
-async function delayWhileRunning(dependencies, server, milliseconds) {
-  await raceServerExit(server, dependencies.delay(milliseconds));
+async function delayWhileRunning(
+  dependencies,
+  server,
+  milliseconds,
+  interruptSignal,
+) {
+  await raceServerExit(
+    server,
+    raceInterruption(
+      dependencies.delay(milliseconds, interruptSignal),
+      interruptSignal,
+    ),
+  );
 }
 
 async function assertServerRunning(server) {
@@ -606,6 +742,7 @@ async function requireCommand(
   command,
   args,
   environment,
+  interruptSignal,
 ) {
   const result = await runCommandResult(
     dependencies,
@@ -613,6 +750,7 @@ async function requireCommand(
     command,
     args,
     environment,
+    interruptSignal,
   );
   if (result.code !== 0) {
     throw new Error(`PLATFORM_E2E_COMMAND_FAILED:${label}`);
@@ -626,16 +764,88 @@ async function runCommandResult(
   command,
   args,
   environment,
+  interruptSignal,
 ) {
+  let spawned;
   try {
-    return await dependencies.spawn(command, args, {
+    throwIfInterrupted(interruptSignal);
+    spawned = dependencies.spawn(command, args, {
       environment,
       kind: "command",
       label,
-    }).completion;
-  } catch {
+    });
+    return await waitForOwnedProcess(spawned, label, interruptSignal);
+  } catch (error) {
+    if (isInterruptionError(error) || isCleanupError(error)) throw error;
     throw new Error(`PLATFORM_E2E_COMMAND_FAILED:${label}`);
   }
+}
+
+async function waitForOwnedProcess(spawned, label, interruptSignal) {
+  let failure;
+  let failed = false;
+  let result;
+  try {
+    result = await raceInterruption(spawned.completion, interruptSignal);
+  } catch (error) {
+    failed = true;
+    failure = error;
+  }
+  await cleanOwnedProcess(spawned, label);
+  throwIfInterrupted(interruptSignal);
+  if (failed) throw failure;
+  return result;
+}
+
+async function raceInterruption(operation, interruptSignal) {
+  if (interruptSignal === undefined) return await operation;
+  throwIfInterrupted(interruptSignal);
+
+  let onAbort;
+  const interrupted = new Promise((resolveInterrupted) => {
+    onAbort = () => resolveInterrupted({
+      error: getInterruptionError(interruptSignal),
+      kind: "interrupted",
+    });
+    interruptSignal.addEventListener("abort", onAbort, { once: true });
+  });
+  try {
+    const outcome = await Promise.race([
+      Promise.resolve(operation).then(
+        (value) => ({ kind: "operation", value }),
+        (error) => ({ error, kind: "operation-error" }),
+      ),
+      interrupted,
+    ]);
+    if (outcome.kind === "interrupted" || outcome.kind === "operation-error") {
+      throw outcome.error;
+    }
+    return outcome.value;
+  } finally {
+    interruptSignal.removeEventListener("abort", onAbort);
+  }
+}
+
+function throwIfInterrupted(interruptSignal) {
+  if (interruptSignal?.aborted) {
+    throw getInterruptionError(interruptSignal);
+  }
+}
+
+function getInterruptionError(interruptSignal) {
+  const reason = interruptSignal?.reason;
+  if (isInterruptionError(reason)) return reason;
+  return new Error("PLATFORM_E2E_INTERRUPTED");
+}
+
+function isInterruptionError(error) {
+  return error instanceof Error &&
+    error.message.startsWith("PLATFORM_E2E_INTERRUPTED");
+}
+
+function isCleanupError(error) {
+  return error instanceof Error &&
+    error.message.startsWith("PLATFORM_E2E_CLEANUP_FAILED:");
 }
 
 function isJsonContentType(value) {
@@ -753,8 +963,7 @@ function normalizeError(error) {
 
 function createProductionDependencies() {
   return {
-    delay: (milliseconds) =>
-      new Promise((resolveDelay) => setTimeout(resolveDelay, milliseconds)),
+    delay: abortableDelay,
     fetch: globalThis.fetch,
     probePort: probePortFree,
     spawn: spawnProcess,
@@ -763,7 +972,9 @@ function createProductionDependencies() {
 
 export function spawnProcess(command, args, options) {
   const ownsProcessGroup =
-    options.kind === "server" || options.kind === "process-group";
+    options.kind === "command" ||
+    options.kind === "server" ||
+    options.kind === "process-group";
   const child = spawnChildProcess(command, args, {
     cwd: resolve(import.meta.dirname, ".."),
     detached: ownsProcessGroup,
@@ -801,6 +1012,25 @@ export function spawnProcess(command, args, options) {
     },
     pid: child.pid,
   };
+}
+
+function abortableDelay(milliseconds, interruptSignal) {
+  return new Promise((resolveDelay, rejectDelay) => {
+    let timeout;
+    const onAbort = () => {
+      clearTimeout(timeout);
+      rejectDelay(getInterruptionError(interruptSignal));
+    };
+    if (interruptSignal?.aborted) {
+      onAbort();
+      return;
+    }
+    timeout = setTimeout(() => {
+      interruptSignal?.removeEventListener("abort", onAbort);
+      resolveDelay();
+    }, milliseconds);
+    interruptSignal?.addEventListener("abort", onAbort, { once: true });
+  });
 }
 
 async function terminateOwnedProcessGroup(groupId, options) {
@@ -880,24 +1110,77 @@ function signalProcessGroup(groupId, signal) {
   }
 }
 
-function probePortFree(host, port) {
+function probePortFree(host, port, interruptSignal) {
   return new Promise((resolveProbe, rejectProbe) => {
     const server = createServer();
+    let settled = false;
+    const settle = (error, value) => {
+      if (settled) return;
+      settled = true;
+      interruptSignal?.removeEventListener("abort", onAbort);
+      if (error === undefined) resolveProbe(value);
+      else rejectProbe(error);
+    };
+    const onAbort = () => {
+      try {
+        server.close(() => settle(getInterruptionError(interruptSignal)));
+      } catch {
+        settle(getInterruptionError(interruptSignal));
+      }
+      settle(getInterruptionError(interruptSignal));
+    };
     server.unref();
     server.once("error", (error) => {
       if (error?.code === "EADDRINUSE" || error?.code === "EACCES") {
-        resolveProbe(false);
+        settle(undefined, false);
       } else {
-        rejectProbe(error);
+        settle(error);
       }
     });
     server.listen({ exclusive: true, host, port }, () => {
       server.close((error) => {
-        if (error === undefined) resolveProbe(true);
-        else rejectProbe(error);
+        if (error === undefined) settle(undefined, true);
+        else settle(error);
       });
     });
+    if (interruptSignal?.aborted) {
+      onAbort();
+    } else {
+      interruptSignal?.addEventListener("abort", onAbort, { once: true });
+    }
   });
+}
+
+export async function runPlatformE2EEntrypoint({
+  controller = process,
+  run = runPlatformE2E,
+  runOptions = {},
+} = {}) {
+  const interruption = new AbortController();
+  let receivedSignal;
+  const handlers = new Map(
+    INTERRUPT_SIGNALS.map((signal) => [signal, () => {
+      if (receivedSignal !== undefined) return;
+      receivedSignal = signal;
+      interruption.abort(new Error(`PLATFORM_E2E_INTERRUPTED:${signal}`));
+    }]),
+  );
+  for (const [signal, handler] of handlers) {
+    controller.on(signal, handler);
+  }
+  try {
+    await run({ ...runOptions, interruptSignal: interruption.signal });
+    throwIfInterrupted(interruption.signal);
+  } catch (error) {
+    controller.stderr.write(`${normalizeError(error).message}\n`);
+    controller.exitCode = receivedSignal === undefined
+      ? 1
+      : INTERRUPT_EXIT_CODES[receivedSignal];
+  } finally {
+    for (const [signal, handler] of handlers) {
+      controller.removeListener(signal, handler);
+    }
+  }
 }
 
 function isEntrypoint() {
@@ -906,8 +1189,5 @@ function isEntrypoint() {
 }
 
 if (isEntrypoint()) {
-  runPlatformE2E().catch((error) => {
-    process.stderr.write(`${normalizeError(error).message}\n`);
-    process.exitCode = 1;
-  });
+  void runPlatformE2EEntrypoint();
 }

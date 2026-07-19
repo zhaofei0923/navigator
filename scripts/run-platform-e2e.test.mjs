@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn as spawnChildProcess } from "node:child_process";
+import { EventEmitter } from "node:events";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -283,6 +284,369 @@ test("cleans up only owned process groups and the exact created container id", a
   );
 });
 
+test("entrypoint interruption waits for one ordered cleanup and restores signal handlers", async () => {
+  const runEntrypoint = orchestrator.runPlatformE2EEntrypoint;
+  assert.equal(typeof runEntrypoint, "function");
+  if (typeof runEntrypoint !== "function") return;
+
+  const controller = new EventEmitter();
+  const stderr = [];
+  const existingSigintListener = () => undefined;
+  controller.on("SIGINT", existingSigintListener);
+  controller.stderr = { write: (value) => stderr.push(String(value)) };
+  controller.exitCode = undefined;
+  const fake = createFakeDependencies({
+    fetchResponses: [countriesReadyResponse(), webReadyResponse()],
+    onSpawn: ({ options }) => {
+      if (options.label !== "playwright") return;
+      queueMicrotask(() => {
+        controller.emit("SIGTERM");
+        controller.emit("SIGINT");
+        controller.emit("SIGTERM");
+      });
+    },
+    pendingPlaywright: true,
+  });
+
+  await withTestDeadline(
+    runEntrypoint({
+      controller,
+      runOptions: {
+        dependencies: fake.dependencies,
+        environment: {},
+        readinessAttempts: 1,
+      },
+    }),
+    500,
+  );
+
+  assert.equal(controller.exitCode, 143);
+  assert.deepEqual(stderr, ["PLATFORM_E2E_INTERRUPTED:SIGTERM\n"]);
+  assert.deepEqual(fake.killedProcessLabels, ["playwright", "web", "api"]);
+  const stops = fake.spawnEvents.filter(({ args }) => args[0] === "stop");
+  assert.deepEqual(stops.map(({ args }) => args), [["stop", "owned-container-id"]]);
+  assert.deepEqual(controller.listeners("SIGINT"), [existingSigintListener]);
+  assert.equal(controller.listenerCount("SIGTERM"), 0);
+});
+
+test("entrypoint interruption terminates an active owned command before container cleanup", async () => {
+  const runEntrypoint = orchestrator.runPlatformE2EEntrypoint;
+  assert.equal(typeof runEntrypoint, "function");
+  if (typeof runEntrypoint !== "function") return;
+
+  const controller = new EventEmitter();
+  controller.stderr = { write: () => undefined };
+  controller.exitCode = undefined;
+  const fake = createFakeDependencies({
+    onSpawn: ({ options }) => {
+      if (options.label === "api-build") {
+        queueMicrotask(() => controller.emit("SIGINT"));
+      }
+    },
+    pendingCommand: "api-build",
+  });
+
+  await withTestDeadline(
+    runEntrypoint({
+      controller,
+      runOptions: {
+        dependencies: fake.dependencies,
+        environment: {},
+        readinessAttempts: 1,
+      },
+    }),
+    500,
+  );
+
+  assert.equal(controller.exitCode, 130);
+  assert.deepEqual(fake.killedProcessLabels, ["api-build"]);
+  const stops = fake.spawnEvents.filter(({ args }) => args[0] === "stop");
+  assert.deepEqual(stops.map(({ args }) => args), [["stop", "owned-container-id"]]);
+  assert.equal(fake.startedServerLabels.length, 0);
+});
+
+test("sweeps each detached command group after its leader completes", async () => {
+  const fake = createFakeDependencies({
+    fetchResponses: [countriesReadyResponse(), webReadyResponse()],
+  });
+
+  await runPlatformE2E({
+    dependencies: fake.dependencies,
+    environment: { DATABASE_URL: SAFE_DATABASE_URL },
+    readinessAttempts: 1,
+  });
+
+  const commandLabels = fake.spawnEvents
+    .filter(({ options }) => options.kind === "command")
+    .map(({ options }) => options.label);
+  assert.deepEqual(commandLabels, [
+    "prisma-generate",
+    "prisma-migrate-deploy",
+    "approved-basic-import",
+    "api-build",
+    "web-build",
+  ]);
+  assert.deepEqual(
+    fake.cleanedProcessLabels.filter((label) => commandLabels.includes(label)),
+    commandLabels,
+  );
+});
+
+test("eliminates a detached command descendant after its leader completes", {
+  skip: process.platform === "win32",
+}, async () => {
+  const fixtureDirectory = await mkdtemp(join(tmpdir(), "navigator-command-pgid-"));
+  const pidMarkerPath = join(fixtureDirectory, "descendant-pid");
+  const termMarkerPath = join(fixtureDirectory, "term-observed");
+  const descendantScript = [
+    "const { writeFileSync } = require('node:fs');",
+    `process.on('SIGTERM', () => writeFileSync(${JSON.stringify(termMarkerPath)}, 'observed'));`,
+    "process.stdout.write('ready\\n');",
+    "setInterval(() => {}, 1000);",
+  ].join("");
+  const leaderScript = [
+    "const { spawn } = require('node:child_process');",
+    "const { writeFileSync } = require('node:fs');",
+    `const child = spawn(process.execPath, ['-e', ${JSON.stringify(descendantScript)}], { stdio: ['ignore', 'pipe', 'ignore'] });`,
+    "child.stdout.once('data', () => {",
+    `  writeFileSync(${JSON.stringify(pidMarkerPath)}, String(child.pid));`,
+    "  child.stdout.destroy();",
+    "  child.unref();",
+    "});",
+  ].join("\n");
+  const fake = createFakeDependencies({
+    fetchResponses: [countriesReadyResponse(), webReadyResponse()],
+  });
+  const fakeSpawn = fake.dependencies.spawn;
+  let commandGroupId;
+  const dependencies = {
+    ...fake.dependencies,
+    spawn: (command, args, options) => {
+      if (options.label !== "api-build") return fakeSpawn(command, args, options);
+      const spawned = orchestrator.spawnProcess(
+        process.execPath,
+        ["-e", leaderScript],
+        {
+          ...options,
+          groupPollIntervalMs: 5,
+          killGraceMs: 1_000,
+          terminateGraceMs: 30,
+        },
+      );
+      commandGroupId = spawned.pid;
+      return spawned;
+    },
+  };
+  let descendantPid;
+
+  try {
+    await runPlatformE2E({
+      dependencies,
+      environment: { DATABASE_URL: SAFE_DATABASE_URL },
+      readinessAttempts: 1,
+    });
+    descendantPid = Number(await readFile(pidMarkerPath, "utf8"));
+    assert.equal(await readFile(termMarkerPath, "utf8"), "observed");
+    assert.equal(processExists(descendantPid), false);
+    assert.equal(processGroupExists(commandGroupId), false);
+  } finally {
+    await terminateTestProcessGroup(commandGroupId);
+    if (processExists(descendantPid)) {
+      try {
+        process.kill(descendantPid, "SIGKILL");
+      } catch (error) {
+        if (error?.code !== "ESRCH") throw error;
+      }
+    }
+    await rm(fixtureDirectory, { force: true, recursive: true });
+  }
+});
+
+test("reports the first active-command cleanup failure before later container cleanup failures", async () => {
+  const controller = new EventEmitter();
+  const stderr = [];
+  controller.stderr = { write: (value) => stderr.push(String(value)) };
+  controller.exitCode = undefined;
+  const fake = createFakeDependencies({
+    commandExitCodes: { "container-stop": 1 },
+    failedCleanupLabels: ["api-build"],
+    onSpawn: ({ options }) => {
+      if (options.label === "api-build") {
+        queueMicrotask(() => controller.emit("SIGINT"));
+      }
+    },
+    pendingCommand: "api-build",
+  });
+
+  await withTestDeadline(
+    orchestrator.runPlatformE2EEntrypoint({
+      controller,
+      runOptions: {
+        dependencies: fake.dependencies,
+        environment: {},
+        readinessAttempts: 1,
+      },
+    }),
+    500,
+  );
+
+  assert.equal(controller.exitCode, 130);
+  assert.deepEqual(stderr, ["PLATFORM_E2E_CLEANUP_FAILED:api-build\n"]);
+  const stops = fake.spawnEvents.filter(({ args }) => args[0] === "stop");
+  assert.deepEqual(stops.map(({ args }) => args), [["stop", "owned-container-id"]]);
+});
+
+test("entrypoint preserves the first signal during API or Web readiness", async () => {
+  for (const target of ["api", "web"]) {
+    const controller = new EventEmitter();
+    const stderr = [];
+    controller.stderr = { write: (value) => stderr.push(String(value)) };
+    controller.exitCode = undefined;
+    const fake = createFakeDependencies({
+      fetchResponses: target === "web" ? [countriesReadyResponse()] : [],
+      onFetch: (url) => {
+        if (url.includes(`:${target === "api" ? 3100 : 3000}/`)) {
+          queueMicrotask(() => controller.emit("SIGINT"));
+        }
+      },
+      pendingFetch: target,
+    });
+
+    await withTestDeadline(
+      orchestrator.runPlatformE2EEntrypoint({
+        controller,
+        runOptions: {
+          dependencies: fake.dependencies,
+          environment: { DATABASE_URL: SAFE_DATABASE_URL },
+          readinessAttempts: 1,
+          readinessRequestTimeoutMs: 100,
+        },
+      }),
+      500,
+    );
+
+    assert.equal(controller.exitCode, 130);
+    assert.deepEqual(stderr, ["PLATFORM_E2E_INTERRUPTED:SIGINT\n"]);
+    assert.deepEqual(
+      fake.killedProcessLabels,
+      target === "api" ? ["api"] : ["web", "api"],
+    );
+  }
+});
+
+test("signal during Docker creation waits to record and stop only the returned container id", async () => {
+  const controller = new EventEmitter();
+  controller.stderr = { write: () => undefined };
+  controller.exitCode = undefined;
+  const fake = createFakeDependencies({
+    onSpawn: ({ options }) => {
+      if (options.label === "container-create") {
+        queueMicrotask(() => controller.emit("SIGTERM"));
+      }
+    },
+  });
+
+  await withTestDeadline(
+    orchestrator.runPlatformE2EEntrypoint({
+      controller,
+      runOptions: {
+        dependencies: fake.dependencies,
+        environment: {},
+        readinessAttempts: 1,
+      },
+    }),
+    500,
+  );
+
+  assert.equal(controller.exitCode, 143);
+  assert.deepEqual(fake.killedProcessLabels, []);
+  const stops = fake.spawnEvents.filter(({ args }) => args[0] === "stop");
+  assert.deepEqual(stops.map(({ args }) => args), [["stop", "owned-container-id"]]);
+});
+
+test("entrypoint interruption cancels the pre-acquisition Docker port probe", async () => {
+  const controller = new EventEmitter();
+  controller.stderr = { write: () => undefined };
+  controller.exitCode = undefined;
+  const fake = createFakeDependencies({
+    onProbe: (port) => {
+      if (port === 55433) queueMicrotask(() => controller.emit("SIGINT"));
+    },
+    pendingProbePort: 55433,
+  });
+
+  await withTestDeadline(
+    orchestrator.runPlatformE2EEntrypoint({
+      controller,
+      runOptions: {
+        dependencies: fake.dependencies,
+        environment: {},
+        readinessAttempts: 1,
+      },
+    }),
+    100,
+  );
+
+  assert.equal(controller.exitCode, 130);
+  assert.equal(
+    fake.spawnEvents.some(({ options }) => options.label === "container-create"),
+    false,
+  );
+});
+
+test("real child entrypoint handles SIGTERM without retaining its handlers", {
+  skip: process.platform === "win32",
+}, async () => {
+  const runEntrypoint = orchestrator.runPlatformE2EEntrypoint;
+  assert.equal(typeof runEntrypoint, "function");
+  if (typeof runEntrypoint !== "function") return;
+
+  const moduleUrl = new URL("./run-platform-e2e.mjs", import.meta.url).href;
+  const harnessScript = [
+    `import { runPlatformE2EEntrypoint } from ${JSON.stringify(moduleUrl)};`,
+    "const before = new Map(['SIGINT', 'SIGTERM'].map((signal) => [signal, process.listenerCount(signal)]));",
+    "await runPlatformE2EEntrypoint({",
+    "  controller: process,",
+    "  run: ({ interruptSignal }) => new Promise((resolve, reject) => {",
+    "    let interrupted = false;",
+    "    const keepAlive = setInterval(() => undefined, 1_000);",
+    "    const onAbort = () => {",
+    "      if (interrupted) return;",
+    "      interrupted = true;",
+    "      clearInterval(keepAlive);",
+    "      process.stdout.write('interrupted\\n');",
+    "      queueMicrotask(() => reject(interruptSignal.reason));",
+    "    };",
+    "    interruptSignal.addEventListener('abort', onAbort, { once: true });",
+    "    process.stdout.write('ready\\n');",
+    "    if (interruptSignal.aborted) onAbort();",
+    "  }),",
+    "});",
+    "for (const [signal, count] of before) {",
+    "  if (process.listenerCount(signal) !== count) throw new Error(`HANDLER_LEAK:${signal}`);",
+    "}",
+    "process.stdout.write('cleaned\\n');",
+  ].join("\n");
+  const harness = spawnChildProcess(
+    process.execPath,
+    ["--input-type=module", "--eval", harnessScript],
+    { detached: true, stdio: ["ignore", "pipe", "pipe"] },
+  );
+
+  try {
+    await waitForChildOutput(harness, "ready\n", 1_000);
+    const resultPromise = collectChildResult(harness, 1_000);
+    assert.equal(harness.kill("SIGTERM"), true);
+    const result = await resultPromise;
+    assert.equal(result.code, 143, result.stderr);
+    assert.equal(result.signal, null);
+    assert.equal(result.stderr, "PLATFORM_E2E_INTERRUPTED:SIGTERM\n");
+    assert.match(result.stdout, /interrupted\ncleaned\n/u);
+  } finally {
+    await terminateTestProcessGroup(harness.pid);
+  }
+});
+
 test("eliminates a saved process group when its leader exits before a SIGTERM-ignoring descendant", {
   skip: process.platform === "win32",
 }, async () => {
@@ -393,6 +757,7 @@ function createFakeDependencies(options = {}) {
   const spawnEvents = [];
   const startedServerLabels = [];
   const killedProcessLabels = [];
+  const cleanedProcessLabels = [];
   const fetchSignals = [];
   const fetchResponses = [...(options.fetchResponses ?? [])];
   const serverResolvers = new Map();
@@ -404,6 +769,7 @@ function createFakeDependencies(options = {}) {
       const urlString = String(url);
       events.push({ kind: "fetch", url: urlString });
       fetchSignals.push(init?.signal);
+      options.onFetch?.(urlString, init);
       if (
         (options.pendingFetch === "api" && urlString.includes(":3100/")) ||
         (options.pendingFetch === "web" && urlString.includes(":3000/"))
@@ -418,6 +784,10 @@ function createFakeDependencies(options = {}) {
     },
     probePort: async (_host, port) => {
       events.push({ kind: "probePort", port });
+      options.onProbe?.(port);
+      if (options.pendingProbePort === port) {
+        return new Promise(() => undefined);
+      }
       return !(options.occupiedPorts ?? []).includes(port);
     },
     spawn: (command, args, spawnOptions) => {
@@ -465,14 +835,40 @@ function createFakeDependencies(options = {}) {
             stdout: "",
           });
         });
+      } else if (label === "playwright" && options.pendingPlaywright) {
+        completion = pendingCompletion;
+      } else if (
+        spawnOptions.kind === "command" &&
+        options.pendingCommand === label
+      ) {
+        completion = pendingCompletion;
+      } else if (options.commandExitCodes?.[label] !== undefined) {
+        completion = Promise.resolve({
+          code: options.commandExitCodes[label],
+          signal: null,
+          stdout,
+        });
       } else {
         completion = Promise.resolve({ code: 0, signal: null, stdout });
       }
 
+      let completed = false;
+      const trackedCompletion = completion.then((result) => {
+        completed = true;
+        return result;
+      });
+      options.onSpawn?.(event);
+
       return {
-        completion,
+        completion: trackedCompletion,
         killGroup: async () => {
-          killedProcessLabels.push(label);
+          cleanedProcessLabels.push(label);
+          if (spawnOptions.kind !== "command" || !completed) {
+            killedProcessLabels.push(label);
+          }
+          if (options.failedCleanupLabels?.includes(label)) {
+            throw new Error(`FAKE_CLEANUP_FAILED:${label}`);
+          }
           resolveCompletion({ code: null, signal: "SIGTERM", stdout: "" });
         },
         pid,
@@ -481,6 +877,7 @@ function createFakeDependencies(options = {}) {
   };
 
   return {
+    cleanedProcessLabels,
     dependencies,
     events,
     fetchSignals,
@@ -602,7 +999,11 @@ function forceSignalGroup(groupId, signal) {
 }
 
 function collectChildResult(child, timeoutMs) {
+  let stdout = "";
   let stderr = "";
+  child.stdout.on("data", (chunk) => {
+    stdout += String(chunk);
+  });
   child.stderr.on("data", (chunk) => {
     stderr += String(chunk);
   });
@@ -619,8 +1020,36 @@ function collectChildResult(child, timeoutMs) {
     child.once("close", (code, signal) => {
       clearTimeout(timeout);
       if (timedOut) reject(new Error("TEST_CHILD_EXIT_TIMEOUT"));
-      else resolve({ code, signal, stderr });
+      else resolve({ code, signal, stderr, stdout });
     });
+  });
+}
+
+function waitForChildOutput(child, expected, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    let stdout = "";
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error("TEST_CHILD_OUTPUT_TIMEOUT"));
+    }, timeoutMs);
+    const onData = (chunk) => {
+      stdout += String(chunk);
+      if (stdout.includes(expected)) {
+        cleanup();
+        resolve();
+      }
+    };
+    const onClose = () => {
+      cleanup();
+      reject(new Error("TEST_CHILD_CLOSED_BEFORE_OUTPUT"));
+    };
+    const cleanup = () => {
+      clearTimeout(timeout);
+      child.stdout.removeListener("data", onData);
+      child.removeListener("close", onClose);
+    };
+    child.stdout.on("data", onData);
+    child.once("close", onClose);
   });
 }
 

@@ -7,7 +7,7 @@
     "candidate:basic-country": "pnpm --filter @navigator/db candidate:basic-country",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
-    "test": "vitest run tests && turbo run test",
+    "test": "node --test scripts/run-platform-e2e.test.mjs && vitest run tests && turbo run test",
     "test:e2e": "node scripts/run-platform-e2e.mjs"
   },
   "devDependencies": {

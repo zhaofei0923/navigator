@@ -47,4 +47,14 @@ describe("P0-4 CI gates", () => {
       "DATABASE_URL: postgresql://navigator_test:navigator_test_only@127.0.0.1:5432/navigator_platform_db_1_test",
     );
   });
+
+  it("keeps the platform orchestrator safety suite in the mandatory root test gate", () => {
+    const packageJson = JSON.parse(readRootFile("package.json")) as {
+      scripts?: Record<string, string>;
+    };
+
+    expect(packageJson.scripts?.test).toBe(
+      "node --test scripts/run-platform-e2e.test.mjs && vitest run tests && turbo run test",
+    );
+  });
 });
