@@ -51,14 +51,14 @@ MVP 到商业化初期的当前建设目标是经人工批准的国家先完成 
 
 这六个 canonical publication、批准回执和十模块占位共同构成 M0 完成证据。它们已经验证统一模型和跨国复制能力，因此：
 
-- 生产 PostgreSQL/Prisma 读取链路、NestJS API、运行治理、Admin 核心、鉴权与留资基础可以启动，不等待任何国家达到 COMPLETE。
-- 项目所有者已选择 `ID` 作为首个 Standard 试点，并批准 `DATA-STANDARD-ID` 与 M1 并行启动。
-- 该决定只批准试点选择与候选建设启动，不自动启用 AI，也不改变权限、计费或数据模型。来源、事实、双语文本、STANDARD 发布、`aiUsable`、真实 ID KnowledgeChunk 创建与可检索资格、COMPLETE 升级均须分别人工批准。
+- 生产 PostgreSQL/Prisma 读取链路、NestJS API 与运行治理可在六国 BASIC 后启动；Admin 核心、鉴权与留资基础须在 M1 验收完成后按独立任务启动；以上均不等待 COMPLETE。
+- 项目所有者已选择 `ID` 作为首个 Standard 试点，并批准试点设计与首批来源目录，仅授权与 M1 并行生成 draft candidate。
+- 首批来源目录身份和采集范围已获批，但这不等于其中任何提取事实、双语文本或编辑结论获批。候选必须保持 `reviewStatus = draft`、`aiUsable = false`；不得进入 `pending` 或 `published`，不得修改真实 canonical、写入生产数据库、创建 KnowledgeChunk 或进入 AI 检索。
 - 详细依赖和任务切片以 [六国 BASIC 后里程碑设计](./superpowers/specs/2026-07-18-six-basic-platform-milestone-design.md) 与 [roadmap.md](./roadmap.md) 为准。
 
-2026-07-18 执行进度：M1 正在按 DB → API → OPS 严格串行推进。`PLATFORM-DB-1` 已完成；`PLATFORM-API-1` 仅完成无新增依赖的任务 1–2，仍须等待 Gate 0 对精确 NestJS 依赖集合的人工批准后才能执行任务 3–8；`PLATFORM-OPS-1` 必须继续等待 API 完成，因此 API 与 M1 均未完成。
+2026-07-19 执行进度：`PLATFORM-DB-1`、`PLATFORM-API-1`、`PLATFORM-OPS-1` 均已完成；Gate 0 精确依赖已获批准。M1 正在进行全量验证、独立审查、合并 `main`、推送及 CI-SHA 对齐，在这些验收完成前仍保持“进行中”。
 
-与 M1 并行的 `DATA-STANDARD-ID` 已完成严格合成 fixture、parser、覆盖判定与 AI 负向边界切片。该切片不含真实 ID 来源、事实或双语业务文本，不构成 STANDARD 发布，也不授权 `aiUsable = true`、真实 KnowledgeChunk、AI 可检索资格或 COMPLETE；ID 的真实 canonical publication 仍恰好为 BASIC。上述真实数据与发布动作仍须逐项通过人工关口。
+与 M1 并行的 `DATA-STANDARD-ID` 已完成安全合成 fixture 切片；试点设计和首批来源目录现已获批，下一步仅可生成不可变 draft candidate，当前 M2 不得标记完成。任何候选事实与双语文本仍是未批准草稿，不构成 STANDARD 发布，也不授权 canonical/生产数据库写入、任何 `aiUsable` 变更、真实 KnowledgeChunk、AI 检索资格或 COMPLETE。ID 的真实 canonical publication 仍恰好为 BASIC。
 
 ### SA r1 audit history and r2 Basic publication record
 
@@ -187,9 +187,9 @@ MVP 到商业化初期的当前建设目标是经人工批准的国家先完成 
 4. 经人工审核完成 `draft -> pending -> published`；Basic 发布记录保持 `aiUsable = false`。
 5. 运行覆盖等级判定与数据质量检查，确认国家为 Basic。
 6. 通过代表性 Web 占位与基础画像验收后对外展示。
-7. 六国 BASIC 基线完成后按 PLATFORM-DB-1 → PLATFORM-API-1 → PLATFORM-OPS-1 严格串行；当前 DB 已完成，API 任务 1–2 已完成但仍等待 Gate 0 精确依赖批准，OPS 不得提前启动；这条平台链路不等待 Complete。
-8. 已选定 `ID` 作为首个深覆盖试点，以独立 `DATA-STANDARD-ID` 任务与平台链路并行推进；来源、事实和发布分别审核，达到 Standard 不自动启用 AI。
-9. 平台与试点数据分别达到门槛后，AI 和会员/报告各以受控 Beta 任务启用，并分别经过 AI、权限和计费人工关口。
+7. `PLATFORM-DB-1`、`PLATFORM-API-1`、`PLATFORM-OPS-1` 已完成；M1 须在全量验证、独立审查、merged-main 推送与 CI-SHA 对齐后才算完成。
+8. ID STANDARD 试点设计与首批来源目录已批准，仅可生成 draft candidate；目录批准不等于事实、双语文本、发布或 AI 资格批准。
+9. M1 完成后可按独立任务启动 M3，其中 P4-1 权限逻辑仍须人工批准；同时可启动 M4 的 P3-1/P3-2 fixture 骨架。M4 生产 Beta 仍须等待 ID 独立发布为 STANDARD、合格 KnowledgeChunk 数量与模块覆盖门槛、正式 Prompt/检索参数及 `aiUsable` 人工批准。
 10. 只有 Standard 试点与相关 Beta 验收后，才另行批准 `DATA-COMPLETE-<ISO2>`；完成一个闭环试点后再逐国拆卡复制。
 
 ---
@@ -202,7 +202,7 @@ MVP 到商业化初期的当前建设目标是经人工批准的国家先完成 
 - 国家建设优先级。
 - 国家覆盖等级升级结论。
 - Basic 扩展顺序及每个国家的数据工作启动决定。
-- ID Standard 的来源、事实与发布决定，ID Complete 的启动和发布决定，以及未来其他深覆盖试点选择。
+- 除已批准的 ID STANDARD 首批来源目录身份与范围外，任何新增或替换来源；全部提取事实、双语文本、STANDARD 发布、canonical/生产数据库写入及 ID Complete 的启动与发布决定，以及未来其他深覆盖试点选择。
 - AI 正式 Prompt、检索默认值、aiUsable 决定与生产 Beta 启用。
 - 会员权益、价格、计费、真实受控资源与会员/报告 Beta 启用。
 - 是否新增国家计划字段到数据库。

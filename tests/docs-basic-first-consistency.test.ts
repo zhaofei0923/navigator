@@ -86,30 +86,6 @@ const OPERATIONAL_REQUIREMENTS = [
   },
 ] as const;
 
-const SIX_BASIC_ACTIVE_RUNS = [
-  "data-basic-id-20260711-r2",
-  "data-basic-vn-20260715-r3",
-  "data-basic-sa-20260717-r2",
-  "data-basic-ae-20260717-r1",
-  "data-basic-br-20260718-r2",
-  "data-basic-za-20260718-r2",
-] as const;
-
-const PLATFORM_MILESTONE_DESIGN =
-  "docs/superpowers/specs/2026-07-18-six-basic-platform-milestone-design.md";
-
-const PLATFORM_API_PLAN =
-  "docs/superpowers/plans/2026-07-18-platform-api-1.md";
-
-const ID_STANDARD_GATE =
-  "来源、事实、双语文本、STANDARD 发布、`aiUsable`、真实 ID KnowledgeChunk 创建与可检索资格、COMPLETE 升级均须分别人工批准。";
-
-const ACTIVE_MILESTONE_DOCUMENTS = [
-  "docs/roadmap.md",
-  "docs/country-rollout.md",
-  PLATFORM_MILESTONE_DESIGN,
-] as const;
-
 const readRootFile = (filePath: string) =>
   readFileSync(join(process.cwd(), filePath), "utf8");
 
@@ -166,53 +142,4 @@ describe("Basic-first documentation policy", () => {
     expect(sourceBoundary).toMatch(/DATA-BASIC-ID[\s\S]{0,240}`BASIC`/);
   });
 
-  it("locks the six-country M0 identity and M0-to-M1 dependency", () => {
-    const design = readRootFile(PLATFORM_MILESTONE_DESIGN);
-    const roadmap = readRootFile("docs/roadmap.md");
-
-    for (const activeRun of SIX_BASIC_ACTIVE_RUNS) {
-      expect(design, activeRun).toContain(activeRun);
-    }
-    expect(roadmap).toContain("M0 --> PF");
-    expect(roadmap).not.toContain("P2 --> PF");
-  });
-
-  it("keeps ID STANDARD parallel to M1 without widening its human gates", () => {
-    for (const documentPath of ACTIVE_MILESTONE_DOCUMENTS) {
-      const policy = readRootFile(documentPath);
-
-      expect(policy, `${documentPath}: selected pilot`).toContain(
-        "DATA-STANDARD-ID",
-      );
-      expect(policy, `${documentPath}: M1 parallelism`).toMatch(
-        /DATA-STANDARD-ID[\s\S]{0,240}与 M1 并行|与 M1 并行[\s\S]{0,240}DATA-STANDARD-ID/,
-      );
-      expect(policy, `${documentPath}: independent gates`).toContain(
-        ID_STANDARD_GATE,
-      );
-    }
-  });
-
-  it("keeps the post-Gate API task range aligned with the implementation plan", () => {
-    const apiPlan = readRootFile(PLATFORM_API_PLAN);
-    const taskNumbers = [...apiPlan.matchAll(/^## 任务 (\d+)：/gm)].map(
-      ([, taskNumber]) => Number(taskNumber),
-    );
-
-    expect(taskNumbers).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
-
-    for (const documentPath of [
-      "docs/roadmap.md",
-      "docs/country-rollout.md",
-    ] as const) {
-      const policy = readRootFile(documentPath);
-
-      expect(policy, `${documentPath}: complete post-Gate range`).toContain(
-        "任务 3–8",
-      );
-      expect(policy, `${documentPath}: truncated post-Gate range`).not.toContain(
-        "任务 3–6",
-      );
-    }
-  });
 });

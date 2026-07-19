@@ -53,21 +53,21 @@ graph LR
 | P5 Admin 后台 | 数据管理 + 审核发布 + AI/报告/线索运营 | api-contract、data-schema、data-governance | ⚠️ |
 | P6 小程序/H5 | 轻入口复用双语 | i18n | — |
 
-### 1.1 当前执行里程碑（2026-07-18）
+### 1.1 当前执行里程碑（2026-07-19）
 
 | 里程碑 | 当前状态 | 下一步 | 进入下一阶段的必要条件 |
 |--------|----------|--------|------------------------|
 | M0 六国 BASIC | **已完成** | 保持六国 canonical publication 与批准回执不可变 | ID、VN、SA、AE、BR、ZA 均恰好为 BASIC，且无 AI eligibility |
-| M1 生产平台底座 | **进行中：PLATFORM-DB-1 已完成，PLATFORM-API-1 未完成** | 等待 Gate 0 对精确 NestJS 依赖集合的人工批准；批准后完成 PLATFORM-API-1 任务 3–8，再启动 PLATFORM-OPS-1 | 六国幂等导入；数据库/API 返回与 canonical JSON 等价；具备健康检查、可观测性和容量基线 |
-| M2 ID STANDARD 试点 | **与 M1 并行进行中：安全合成 fixture 切片已完成** | 在独立人工关口下再推进真实来源登记、事实与双语文本候选；STANDARD 发布另行批准，当前 ID 仍为真实 BASIC | ID 的 policy、risk、opportunities 达到可展示状态并通过 STANDARD 机器判定；来源、事实和发布分别审核；不自动启用 AI |
-| M3 Admin 与权限基础 | **M1 后启动** | P5-1、P5-2 与 P4-1、P4-3 按独立任务实施 | 审核发布闭环、服务端鉴权、留资加密均通过测试 |
-| M4 AI 受控 Beta | **骨架可在 M1 后开发，生产启用待门槛** | P3-1、P3-2；之后单独执行 AI Beta 启用卡 | 试点已达 STANDARD；ai-advisor 至少 20 个合格片段、覆盖至少 3 个来源模块；Prompt 与检索默认值人工确认 |
+| M1 生产平台底座 | **收尾验证中：PLATFORM-DB-1、PLATFORM-API-1、PLATFORM-OPS-1 均已完成** | 完成 M1 全量验证、独立审查、合并 `main`、推送及 CI-SHA 对齐；全部通过后标记 M1 完成，并启动 M3 与 M4 骨架开发 | 六国幂等导入；数据库/API 返回与 canonical JSON 等价；健康检查、可观测性、容量基线及故障演练通过；merged-main CI 通过 |
+| M2 ID STANDARD 试点 | **设计与首批来源目录已获批；仅授权 draft candidate** | 按已批准设计和首批来源目录生成可追溯、不可变的 draft candidate，提交后续人工审核；不得进入 `pending`、`published`、canonical、生产数据库或 AI | 当前授权仅可验收 draft candidate，M2 不得标记完成；后续须经事实、双语文本与发布分别批准并通过 STANDARD 机器判定，且不自动启用 AI |
+| M3 Admin 与权限基础 | **等待 M1 验收完成** | M1 完成后按独立任务启动 P5-1、P5-2、P4-1、P4-3；P4-1 权限逻辑仍须人工关口 | 审核发布闭环、服务端鉴权、留资加密均通过测试 |
+| M4 AI 受控 Beta | **等待 M1；M1 后仅启动骨架开发** | M1 完成后可用严格 fixtures 开发 P3-1、P3-2；不得使用 ID draft candidate 作为可检索事实，P3-3 生产启用继续等待全部门槛 | ID 已独立发布为 STANDARD；至少 20 个合格 KnowledgeChunk、覆盖至少 3 个来源模块；正式 Prompt、检索默认值及 `aiUsable` 均获人工批准 |
 | M5 会员与报告受控 Beta | **M3 后开发** | P4-2、P5-4 与真实受控资源试用 | 至少一个真实受控资源；服务端权限矩阵通过；权益与计费边界人工确认 |
 | M6 单国 COMPLETE 与复制 | **后续独立批准** | 先执行 `DATA-COMPLETE-<ISO2>`，再按国家拆卡复制 | 试点经独立任务达到 COMPLETE，且 AI/会员相关 Beta 已验收 |
 
-本次里程碑更新已由项目所有者追加选择 ID 并批准 `DATA-STANDARD-ID` 启动；该批准不等于批准具体来源、事实、STANDARD 发布、`aiUsable` 或 COMPLETE 升级。本次仍不修改数据模型、AI Prompt/检索边界、会员权益或计费，也不授权新增依赖或生产部署。
+项目所有者已批准 Gate 0 的精确 NestJS 依赖集合，以及 ID STANDARD 试点设计与首批来源目录。Gate 0 批准仅覆盖已列明的精确依赖版本，不授权其他新增依赖或技术栈变更。
 
-来源、事实、双语文本、STANDARD 发布、`aiUsable`、真实 ID KnowledgeChunk 创建与可检索资格、COMPLETE 升级均须分别人工批准。
+ID STANDARD 的批准边界仅允许按已批准设计和首批来源目录生成并提交 `reviewStatus = draft`、`aiUsable = false` 的候选。首批来源目录身份与采集范围获批，不等于从中提取的事实、双语文本或编辑结论获批。除该首批目录外的新增或替换来源，以及全部事实、双语文本、STANDARD 发布、真实 canonical/生产数据库写入、`aiUsable`、KnowledgeChunk、AI 检索资格和 COMPLETE 升级，均须另行人工批准。
 
 ---
 
@@ -254,11 +254,12 @@ graph LR
 - 验收：一国一任务卡、一分支、一审核周期，且仅合并一次到 `main`；合并后的 `main` 验证通过后，仅推送一次到 `origin/main`。数据先为 `draft`，仅在人工审核后发布；首次真实交付恰好为 `BASIC`，`market-overview` 外九个模块均为 `BUILDING`；Basic 数据保持 `aiUsable = false` 且不产生知识片段；通过仓库校验和代表性 Web 检查，确认基础画像正常渲染、`BUILDING` 模块显示占位。
 - 人工确认：是（国家启动、发布、最终 30–50 国清单、国家顺序和覆盖升级均由人工决定）。
 
-#### `DATA-STANDARD-ID` Indonesia Standard 深覆盖试点 ⚠️（已批准启动）
+#### `DATA-STANDARD-ID` Indonesia Standard 深覆盖试点 ⚠️（设计与首批来源目录已批准；仅授权 draft candidate）
 - 目标：只对已发布 BASIC 的 `ID` 补齐 policy、risk、opportunities 等 Standard 必需数据；与 M1 并行，不得夹带平台代码或其他国家数据。
-- 验收：新增内容均为双语、可追溯且元字段完整，经独立审核发布；国家通过 STANDARD 机器判定；数据导入、Web/API、覆盖边界与回归测试通过；不得仅因达到 STANDARD 就自动生成 KnowledgeChunk 或开启 AI。
-- 人工确认：试点国家和候选建设启动已由项目所有者批准。来源、事实、双语文本、STANDARD 发布、`aiUsable`、真实 ID KnowledgeChunk 创建与可检索资格、COMPLETE 升级均须分别人工批准。
-- 2026-07-18 进度：严格合成数据的 fixture、parser、覆盖判定与 AI 负向边界切片已完成，仅证明实现路径可安全测试；它没有引入任何真实 ID 来源、事实或双语业务文本，也没有授权或产生 STANDARD 发布、`aiUsable = true`、真实 KnowledgeChunk、AI 可检索资格或 COMPLETE。ID 的真实 canonical publication 仍恰好为 BASIC。
+- 当前授权验收：生成双语、可追溯、元字段完整且 `reviewStatus = draft`、`aiUsable = false` 的不可变 candidate，通过候选结构、覆盖预判及负向 AI 边界测试；不得进入 `pending` 或 `published`，当前 M2 不得标记完成。
+- 后续 STANDARD 发布验收（尚未授权）：经事实、双语文本与发布分别人工批准后，国家通过 STANDARD 机器判定并完成数据导入、Web/API 与回归验证；不得仅因达到 STANDARD 就自动生成 KnowledgeChunk 或开启 AI。
+- 人工确认：试点设计及首批来源目录身份/范围已获批准，仅可据此生成不可变 draft candidate。该批准不等于批准提取事实、双语文本、STANDARD 发布、canonical/生产数据库写入、`aiUsable`、真实 KnowledgeChunk、AI 检索资格或 COMPLETE 升级；新增或替换来源也须另行批准。
+- 2026-07-19 进度：严格合成数据的 fixture、parser、覆盖判定与 AI 负向边界切片已完成；试点设计和首批来源目录现已获批。下一步可进行可追溯采集、事实候选提取和双语草拟，但所有业务结论只能存在于 `reviewStatus = draft`、`aiUsable = false` 的不可变候选中并提交人工审核。不得产生 STANDARD 发布、canonical/生产数据库写入、真实 KnowledgeChunk、AI 检索资格或 COMPLETE；ID 的真实 canonical publication 仍恰好为 BASIC。
 
 #### `DATA-COMPLETE-<ISO2>` 单国 Complete 闭环试点 ⚠️
 - 目标：仅在同一国家的 STANDARD 试点验收后，以新任务补齐固定十模块，验证项目、伙伴、中资企业、策略、AI 和报告闭环。
@@ -300,23 +301,23 @@ graph LR
 - 目标：在现有统一数据模型内，将六国 approved BASIC canonical 数据接入 PostgreSQL/Prisma 生产读取链路，建立可重复执行的导入与回滚边界；canonical 文件仍是本阶段不可变的审计输入。
 - 验收：六国可幂等导入且重复执行不产生重复记录；数据库读取结果与 canonical JSON 在国家、覆盖、模块状态、元字段和双语字段上等价；单国失败不留下半成品；无审计包或 staging 数据进入业务表。
 - 人工确认：否（仅复用已批准 schema；任何模型变更、破坏性迁移或生产数据库操作须另行 ⚠️）。
-- 2026-07-18 进度：本卡已完成；M1 因后续 API 与 OPS 尚未完成而继续保持进行中。
+- 2026-07-19 进度：本卡已完成；后续 API 与 OPS 也均已完成，M1 正在等待全量验证、独立审查和 merged-main CI 验收。
 
 #### PLATFORM-API-1 NestJS 国家只读 API
 - 目标：按现有 api-contract 建立 NestJS /api/v1 服务边界，将国家列表、详情和模块 GET 接口从文件读取迁移到数据库读取；Next.js 只保留展示和 BFF 职责。
 - 验收：现有六国 API contract、中英文降级、BUILDING 占位和错误语义不变；契约测试对比迁移前后响应；服务端输入校验和 Prisma 参数化查询通过安全测试；可通过开关回退到已验证读取路径。
 - 人工确认：否（NestJS 已是固定技术栈；若需新增依赖、改变接口契约或模型，须单独 ⚠️）。
-- 2026-07-18 进度：无新增依赖的任务 1–2 已完成，本卡仍未完成。下一步必须先取得 Gate 0 对 `@nestjs/common@11.1.28`、`@nestjs/core@11.1.28`、`@nestjs/platform-express@11.1.28`、`reflect-metadata@0.2.2`、`rxjs@7.8.2` 与开发依赖 `@nestjs/testing@11.1.28` 的精确人工批准；批准前不得安装依赖或执行任务 3–8。
+- 2026-07-19 进度：Gate 0 已精确批准 `@nestjs/common@11.1.28`、`@nestjs/core@11.1.28`、`@nestjs/platform-express@11.1.28`、`reflect-metadata@0.2.2`、`rxjs@7.8.2` 与开发依赖 `@nestjs/testing@11.1.28`；本卡任务已完成。该批准不覆盖其他新增依赖。
 
 #### PLATFORM-OPS-1 并发与运行治理基线
 - 目标：在数据库/API 链路上建立连接池、缓存边界、健康检查、结构化日志、指标、追踪和可重复负载测试；容量规划以峰值 RPS、读写比例、缓存命中率和 AI 请求占比为输入，不只按日访问量估算。
 - 验收：为日请求量 10 万、100 万、1000 万三档记录假设、峰值模型、p95/p99、错误率、数据库连接与资源水位；验证缓存失效和降级路径；产出单实例容量基线及横向扩容触发阈值，且不在测试中调用真实 AI 或外部来源。
 - 人工确认：否（只建立基线；Redis、队列、APM 等新依赖以及生产部署须单独 ⚠️）。
-- 2026-07-18 进度：尚未启动；严格等待 PLATFORM-API-1 任务 3–8 完成后再实施，继续保持 DB → API → OPS 串行顺序。
+- 2026-07-19 进度：本卡已完成连接池、缓存、健康检查、结构化日志、指标、追踪、容量基线、负载验证与故障演练；M1 正在进行全量验证、独立审查和 merged-main CI 验收，尚不得提前标记 M1 完成。容量结论见 [M1 容量基线与服务器要求](./platform-ops-baseline.md)，故障证据见 [M1 故障演练记录](./platform-ops-failure-drill.md)。
 
 ### P3 — AI 顾问 ⚠️
 
-> P3-1/P3-2 可在 P2.5 核心完成后用严格 fixtures 开发和验收，不等待 COMPLETE；这不等于生产启用。真实 AI Beta 必须另过 P3-3 闸门。
+> P3-1/P3-2 仅可在 M1 全量验收及 merged-main CI-SHA 对齐后，用严格 fixtures 开发和验收；不等待 COMPLETE，但这不等于生产启用。真实 AI Beta 必须另过 P3-3 闸门。
 
 #### P3-1 RAG 离线管道
 - 目标：按 [ai-advisor.md §2](./ai-advisor.md) 实现 published→过滤→分块→双语向量化→写 `KnowledgeChunk`；数据失效同步。
@@ -335,7 +336,7 @@ graph LR
 
 ### P4 — 权限 / 会员 / 留资 ⚠️
 
-> P4-1 与 P4-3 可在 P2.5 核心完成后按独立任务启动；报告下载和会员试用必须有真实受控资源，并继续等待权益与计费人工确认。
+> P4-1 仅可在 M1 全量验收及 merged-main CI-SHA 对齐、且权限逻辑另行取得人工批准后实施；P4-3 可在同一 M1 门槛通过后按独立任务实施。报告下载和会员试用必须有真实受控资源，并继续等待权益与计费人工确认。
 
 #### P4-1 鉴权与门控
 - 目标：按 [auth-membership.md](./auth-membership.md) 实现 JWT 鉴权守卫 + 等级校验 + 门控矩阵。
@@ -359,7 +360,7 @@ graph LR
 
 ### P5 — Admin 后台
 
-> P5-1/P5-2 在 P2.5 核心完成后先行，不等待 AI 或会员全部完成；P5-3 依赖 P3，P5-4 依赖 P4 权益关口，P5-5 依赖 P4-3 留资链路。
+> P5-1/P5-2 仅在 M1 全量验收及 merged-main CI-SHA 对齐后按独立任务启动，不等待 AI 或会员全部完成；P5-3 依赖 P3，P5-4 依赖 P4 权益关口，P5-5 依赖 P4-3 留资链路。
 
 #### P5-1 数据管理工作台
 - 目标：Refine 后台管理国家、10 模块数据、标签与覆盖状态；支持 `textMode=raw` 双语编辑。
