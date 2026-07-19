@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { availableParallelism, totalmem } from "node:os";
-import { monitorEventLoopDelay } from "node:perf_hooks";
+import { monitorEventLoopDelay, performance } from "node:perf_hooks";
 
 const CPU_MAX_PATH = "/sys/fs/cgroup/cpu.max";
 const MEMORY_MAX_PATH = "/sys/fs/cgroup/memory.max";
@@ -15,8 +15,37 @@ export interface CapacityProbe {
 export interface ProcessMetricSource {
   readonly close: () => void;
   readonly cpuSeconds: () => number;
-  readonly eventLoopLagSeconds: () => number;
+  readonly eventLoopLagWindow: () => EventLoopLagWindow;
   readonly residentMemoryBytes: () => number;
+}
+
+export interface EventLoopLagWindow {
+  readonly durationSeconds: number;
+  readonly p99Seconds: number;
+  readonly sequence: number;
+  readonly valid: boolean;
+}
+
+export interface EventLoopDelayMonitor {
+  readonly count: number;
+  disable(): boolean;
+  enable(): boolean;
+  percentile(percentile: number): number;
+  reset(): void;
+}
+
+export interface PeriodicSampler {
+  close(): void;
+}
+
+export interface ProcessMetricSourceOptions {
+  readonly eventLoopDelayMonitorFactory?:
+    | (() => EventLoopDelayMonitor)
+    | undefined;
+  readonly monotonicNowMs?: (() => number) | undefined;
+  readonly periodicSamplerFactory?:
+    | ((sample: () => void, intervalMilliseconds: number) => PeriodicSampler)
+    | undefined;
 }
 
 export type CapacityMetricSource =
@@ -39,21 +68,131 @@ const DEFAULT_CAPACITY_PROBE: CapacityProbe = Object.freeze({
   totalMemoryBytes: totalmem,
 });
 
-export function createProcessMetricSource(): ProcessMetricSource {
-  let lag: ReturnType<typeof monitorEventLoopDelay> | undefined;
+export function createProcessMetricSource(
+  options: ProcessMetricSourceOptions = {},
+): ProcessMetricSource {
+  const lag = (
+    options.eventLoopDelayMonitorFactory ??
+    (() => monitorEventLoopDelay({ resolution: 20 }))
+  )();
+  const monotonicNowMs = options.monotonicNowMs ?? performance.now.bind(performance);
+  let closed = false;
+  let sequence = 0;
+  let windowClean = true;
+  let windowStartedAtMs = readMonotonicNow(monotonicNowMs);
+  let eventLoopLagWindow = freezeEventLoopLagWindow({
+    durationSeconds: 0,
+    p99Seconds: 0,
+    sequence,
+    valid: false,
+  });
+
+  lag.enable();
+  const sampler = (
+    options.periodicSamplerFactory ?? createPeriodicSampler
+  )(() => {
+    const windowEndedAtMs = readMonotonicNow(monotonicNowMs);
+    const startedAtWasFinite = Number.isFinite(windowStartedAtMs);
+    const endedAtIsFinite = Number.isFinite(windowEndedAtMs);
+    const boundaryValid =
+      startedAtWasFinite &&
+      endedAtIsFinite &&
+      windowEndedAtMs > windowStartedAtMs;
+    const durationSeconds = boundaryValid
+        ? (windowEndedAtMs - windowStartedAtMs) / 1_000
+        : 0;
+    let p99Seconds = 0;
+    let measurementValid = false;
+    let observationCount = 0;
+
+    if (windowClean) {
+      try {
+        observationCount = lag.count;
+      } catch {
+        // A broken monitor must produce an invalid window, not escape the timer.
+      }
+    }
+
+    if (
+      windowClean &&
+      Number.isFinite(observationCount) &&
+      observationCount > 0
+    ) {
+      try {
+        const p99Nanoseconds = lag.percentile(99);
+        if (Number.isFinite(p99Nanoseconds) && p99Nanoseconds >= 0) {
+          p99Seconds = p99Nanoseconds / 1_000_000_000;
+          measurementValid = durationSeconds > 0;
+        }
+      } catch {
+        // The validity gauge distinguishes a failed sample from a healthy zero.
+      }
+    }
+
+    let resetSucceeded = false;
+    try {
+      lag.reset();
+      resetSucceeded = true;
+    } catch {
+      // The next window remains contaminated until a reset succeeds.
+    }
+
+    sequence += 1;
+    eventLoopLagWindow = freezeEventLoopLagWindow({
+      durationSeconds,
+      p99Seconds: measurementValid ? p99Seconds : 0,
+      sequence,
+      valid: measurementValid && resetSucceeded,
+    });
+    windowClean = resetSucceeded;
+    windowStartedAtMs = boundaryValid
+      ? windowEndedAtMs
+      : !startedAtWasFinite && endedAtIsFinite
+        ? windowEndedAtMs
+        : Number.NaN;
+  }, 1_000);
+
   return {
-    close: () => lag?.disable(),
+    close: () => {
+      if (closed) return;
+      closed = true;
+      try {
+        sampler.close();
+      } finally {
+        lag.disable();
+      }
+    },
     cpuSeconds: () => {
       const usage = process.cpuUsage();
       return (usage.user + usage.system) / 1_000_000;
     },
-    eventLoopLagSeconds: () => {
-      lag ??= monitorEventLoopDelay({ resolution: 20 });
-      lag.enable();
-      return lag.mean / 1_000_000_000;
-    },
+    eventLoopLagWindow: () => eventLoopLagWindow,
     residentMemoryBytes: () => process.memoryUsage.rss(),
   };
+}
+
+function createPeriodicSampler(
+  sample: () => void,
+  intervalMilliseconds: number,
+): PeriodicSampler {
+  const timer = setInterval(sample, intervalMilliseconds);
+  timer.unref();
+  return { close: () => clearInterval(timer) };
+}
+
+function freezeEventLoopLagWindow(
+  window: EventLoopLagWindow,
+): EventLoopLagWindow {
+  return Object.freeze({ ...window });
+}
+
+function readMonotonicNow(read: () => number): number {
+  try {
+    const value = read();
+    return Number.isFinite(value) ? value : Number.NaN;
+  } catch {
+    return Number.NaN;
+  }
 }
 
 export function resolveCapacityEnvironment(

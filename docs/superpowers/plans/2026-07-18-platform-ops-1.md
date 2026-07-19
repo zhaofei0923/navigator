@@ -250,12 +250,17 @@ navigator_db_operation_duration_seconds{operation}
 navigator_db_operations_in_flight{operation}
 navigator_process_cpu_seconds_total
 navigator_process_resident_memory_bytes
-navigator_event_loop_lag_seconds
+navigator_event_loop_lag_window_p99_seconds
+navigator_event_loop_lag_window_sequence
+navigator_event_loop_lag_window_valid
+navigator_event_loop_lag_window_duration_seconds
 navigator_process_cpu_capacity_cores
 navigator_process_memory_limit_bytes
 ```
 
 label allowlist 只含固定 method/route template/status/error/cache/operation 枚举；测试输入 ID/VN/任意 query/requestId 不增加 series。直方图 buckets 固定并有上界；registry 不能随用户值增长。
+
+event-loop 取证由后台固定 1 秒采样器维护“已完成窗口”快照：`p99_seconds` 是该独立 1 秒窗口内 `monitorEventLoopDelay` 的 p99，`sequence` 每完成一个窗口严格递增，`duration_seconds` 记录实际单调时长，`valid` 只在本窗口有观测且读取/重置全部成功时为 `1`。启动后尚无已完成窗口时固定 `sequence=0`、`valid=0`；采样、percentile 读取或重置失败的窗口必须 `valid=0`，不得把 `p99=0` 解释为健康零延迟。`MetricsRegistry.render()` 只读取已完成快照，不触发采样、percentile 计算、reset 或 sequence 变化；对同一快照的重复 Prometheus scrape 必须返回同一组四指标。
 
 `db_operations_in_flight` 明确叫逻辑操作，不冒充真实连接数；真实连接水位由 benchmark PostgreSQL `pg_stat_activity` 采集。CPU capacity 与 memory limit 在 Linux 优先解析 cgroup v2 `/sys/fs/cgroup/cpu.max`、`memory.max`，`max` 时回退 `os.availableParallelism()`/host memory，并把来源写入 benchmark environment artifact；parser 使用 fixture 测试，不把不存在/畸形 cgroup 文件解释成 0。
 
@@ -347,7 +352,7 @@ runner 使用版本化 scenario 文件中的固定目标 RPS、bounded concurren
 }
 ```
 
-每秒样本记录 achieved RPS、status、latency histogram、cache headers；另接受并严格校验 loopback-only `--metrics-url http://127.0.0.1:9464/metrics`，每秒抓取 API 指标，以 CPU counter 差分计算 API CPU、而不是误报负载发生器自身资源。输出 JSON：git SHA、scenario 文件 SHA-256、image digest、Node/Prisma/Postgres 版本、CPU/RAM/cgroup source、requested/achieved RPS、count、p50/p95/p99、2xx/4xx/5xx、cache hit/miss/stale、API RSS、API CPU、API event-loop lag。原始文件不得提交。
+每秒样本记录 achieved RPS、status、latency histogram、cache headers；另接受并严格校验 loopback-only `--metrics-url http://127.0.0.1:9464/metrics`，每秒抓取 API 指标，以 CPU counter 差分计算 API CPU、而不是误报负载发生器自身资源。负载开始前先取得一个有效 anchor，再轮询到精确的 `anchor.sequence + 1` 有效新窗口后才固定 `windowStart`；结果必须保存 anchor/baseline sequence、首次有效等待时间与相位同步等待时间。measurement 期必须取得连续 600 个 `valid=1` 的已完成 event-loop 序列，相邻 `sequence` 严格 `+1`；重复 scrape 的同一 sequence 不重复计数并最多等待 500ms，目标 sequence 无效、回退、跳号或超时仍无新窗口都使该轮 fail closed。场景 event-loop 汇总口径固定为这 600 个“单秒窗口 p99”的 p99（p99 of one-second-window p99），不得使用累计 mean 或将无效窗口的零值纳入汇总。输出 JSON schema v2：git SHA、scenario 文件 SHA-256、image digest、Node/Prisma/Postgres 版本、CPU/RAM/cgroup source、同步元数据、requested/achieved RPS、count、p50/p95/p99、2xx/4xx/5xx、cache hit/miss/stale、API RSS、API CPU、API event-loop lag。原始文件不得提交。
 
 `collect-pg-connections.mjs` 只接受固定容器名 `navigator-platform-ops-1-postgres` 和 ignored output path，内部使用 Node `spawn` 执行参数数组形式的 `docker exec`；SQL 是源码中固定的 `pg_stat_activity` 聚合，只筛选 `application_name='navigator-api'`，每秒输出 timestamp/active/idle/total JSONL。拒绝任意其他容器名、SQL、hostname 或命令片段；测试证明无 shell、无动态 SQL、停止信号后等待子进程退出。
 
@@ -555,7 +560,9 @@ trap - EXIT INT TERM
 
 **Step 3: 判定每档，不美化失败**
 
-通过阈值：achieved RPS ≥ 目标 95%；5xx < 0.1%；p95 < 150ms；p99 < 300ms；稳态 cache hit ≥80%；event-loop p99 <50ms；API 真实 DB 连接峰值 ≤7/10；CPU p95 ≤分配 CPU 70%；RSS ≤分配 RAM 75%。任一失败则该档标为“未承载”，记录首个瓶颈与横向扩容触发点。
+通过阈值：achieved RPS ≥ 目标 95%；5xx < 0.1%；p95 < 150ms；p99 < 300ms；稳态 cache hit ≥80%；600 个有效单秒窗口 p99 的汇总 p99 **严格 `< 50ms`**（等于 50ms 也失败）；API 真实 DB 连接峰值 ≤7/10；CPU p95 ≤分配 CPU 70%；RSS ≤分配 RAM 75%。任一失败则该档标为“未承载”，记录首个瓶颈与横向扩容触发点。
+
+旧 Task 8 原始证据使用了累计 event-loop mean，报告中的所谓 event-loop p99 无法从该 mean 逆向恢复，因此三档 event-loop 判定均失效。旧 artifact 必须以 superseded 历史保留、不删除不改写；修复后的 `100k` / `1m` / `10m` 必须使用新的唯一 run identity 全部重跑，重新生成 immutable artifacts/manifest 并绑定实际 Git SHA，不得覆盖或混用旧证据。在新三档全部通过前，不得以旧 event-loop 数值宣称 Task 8 容量验收完成。
 
 **Step 4: 写服务器要求表**
 

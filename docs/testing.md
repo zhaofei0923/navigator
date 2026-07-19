@@ -237,6 +237,14 @@ PostgreSQL；Prisma adapter 由 DB 集成测试负责，migration/import → dat
 
 `main.test.ts` 必须穿过真实 loopback Nest HTTP，证明已匹配健康路由和未知 404 均携带安全 `x-request-id` / `traceparent` 且各自产生一行日志，并证明 Nest 依赖初始化失败只 reject、不会在固定 bootstrap JSON 事件前直接终止进程。未知 path/query、国家/模块参数、任意非 correlation header、连接串、SQL、联系信息和异常文本不得进入日志；全局 middleware 覆盖 interceptor 无法进入的未知路由。提前 `close` 且 `writableFinished=false` 必须固定记录 499 aborted，异步 sink rejection 必须被隔离。
 
+### 6.6 Event-loop 窗口与容量取证
+
+`metrics-capacity.test.ts` 必须使用可控单调时钟、event-loop delay monitor 与固定 1 秒后台采样器，验证每个已完成窗口读取 percentile 99、仅在有观测且 percentile/reset 都成功时 `valid=true`、sequence 每个已完成窗口恰好递增 1，并使用实际单调时长。首次完成前固定为 `sequence=0`、`valid=false`；无观测、时钟、percentile 或 reset 失败的窗口必须 fail closed，不得用零值伪装健康样本。
+
+`metrics-registry.test.ts` 必须锁定四个无 label gauge 的精确名称：`navigator_event_loop_lag_window_p99_seconds`、`navigator_event_loop_lag_window_sequence`、`navigator_event_loop_lag_window_valid`、`navigator_event_loop_lag_window_duration_seconds`。连续多次 `render()` 必须是纯读：返回相同快照，不调用 percentile/reset，不使 sequence 递增；畸形或抛错的窗口读取统一降级为 `valid=0` 的脱敏快照。
+
+Task 8 runner 必须先读一个有效 anchor，再等到精确的 `anchor.sequence + 1` 有效新窗口后才启动负载，并在 schema v2 结果保存两者 sequence 和两段同步等待时间。固定相位测试必须覆盖 metrics 响应跨 sampler tick，以及 120 秒 warmup 后连续 600 秒 measurement。每个 measurement 期必须保存连续 600 个有效已完成序列：每项 `valid=1` 且相邻 sequence 严格 `+1`；重复 scrape 的同一 sequence 只重试、不重复计数，目标窗口无效、回退、跳号或 500ms 内仍无新 sequence 都使场景失败。event-loop 场景结果只能以这 600 个单秒窗口 p99 计算汇总 p99，门槛为严格 `< 50ms`，等于 50ms 不通过；判定使用未舍入值，展示精度不得改变结论。旧 Task 8 使用累计 mean 的三档证据不可重算真实 p99，必须作为 superseded 历史保留；修复后需以新 run identity 重跑三档、生成新 immutable manifest 并绑定实际 Git SHA，不得覆盖旧 artifact。
+
 ---
 
 ## 7. 一致性检查清单

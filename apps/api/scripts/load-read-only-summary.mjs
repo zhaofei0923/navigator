@@ -1,5 +1,7 @@
 import { LATENCY_BUCKETS_MS, MATRIX_SEED, assertMetricCapacity } from "./load-read-only-contract.mjs";
 
+const EVENT_LOOP_LAG_THRESHOLD_SECONDS = 0.05;
+
 export function buildLoadResult(input) {
   const buckets = input.buckets;
 
@@ -33,7 +35,10 @@ export function buildLoadResult(input) {
   return Object.freeze({
     achievedRps: round(count / input.scenario.measurementSeconds),
     apiCpu: summarizeCpu(samples, input.environment.cpu),
-    apiEventLoopLag: summarizeGauge(samples, ({ api }) => api.eventLoopLagSeconds, "Seconds"),
+    apiEventLoopLag: summarizeEventLoopLag(
+      samples,
+      input.scenario.measurementSeconds,
+    ),
     apiRss: summarizeRss(samples, input.environment.memory),
     cache: Object.freeze({ ...cache, hitRatio: count === 0 ? 0 : round(cache.hit / count) }),
     capacity: Object.freeze({ cpu: { ...input.environment.cpu }, memory: { ...input.environment.memory } }),
@@ -46,12 +51,15 @@ export function buildLoadResult(input) {
     loadGenerator: Object.freeze({ maxConcurrencyObserved: input.maxConcurrencyObserved }),
     matrix: Object.freeze({ seed: MATRIX_SEED, size: input.requestMatrix.length }),
     measurementWindow: Object.freeze({ durationSeconds: input.scenario.measurementSeconds }),
+    metricSynchronization: Object.freeze({
+      ...input.metricSynchronization,
+    }),
     requestedCount: input.scenario.targetRps * input.scenario.measurementSeconds,
     requestedRps: input.scenario.targetRps,
     samples: Object.freeze(samples),
     scenario: Object.freeze({ name: input.scenarioName, ...input.scenario }),
     scenarioFileSha256: input.scenarioFileSha256,
-    schemaVersion: 1,
+    schemaVersion: 2,
     status: Object.freeze(status),
     versions: Object.freeze({ ...input.environment.versions }),
   });
@@ -60,14 +68,25 @@ export function buildLoadResult(input) {
 function deriveApiSample(previous, current) {
   const intervalSeconds = (current.observedAt - previous.observedAt) / 1_000;
   const cpuSecondsDelta = current.metrics.cpuSecondsTotal - previous.metrics.cpuSecondsTotal;
+  const previousSequence = previous.metrics.eventLoopLagWindowSequence;
+  const currentSequence = current.metrics.eventLoopLagWindowSequence;
   if (!Number.isFinite(intervalSeconds) || intervalSeconds <= 0) throw new Error("LOAD_METRICS_TIME_INVALID");
   if (cpuSecondsDelta < 0) throw new Error("LOAD_METRICS_COUNTER_RESET");
+  if (currentSequence < previousSequence) throw new Error("LOAD_EVENT_LOOP_WINDOW_ROLLBACK");
+  if (currentSequence !== previousSequence + 1) throw new Error("LOAD_EVENT_LOOP_WINDOW_GAP");
+  if (current.metrics.eventLoopLagWindowValid !== 1 ||
+      current.metrics.eventLoopLagWindowDurationSeconds <= 0) {
+    throw new Error("LOAD_EVENT_LOOP_WINDOW_INVALID");
+  }
   const cpuCores = cpuSecondsDelta / intervalSeconds;
   return Object.freeze({
     cpuCores: round(cpuCores),
     cpuSecondsDelta,
     cpuUtilizationRatio: round(cpuCores / current.metrics.cpuCapacityCores),
-    eventLoopLagSeconds: current.metrics.eventLoopLagSeconds,
+    eventLoopLagWindowDurationSeconds: current.metrics.eventLoopLagWindowDurationSeconds,
+    eventLoopLagWindowP99Seconds: current.metrics.eventLoopLagWindowP99Seconds,
+    eventLoopLagWindowSequence: currentSequence,
+    eventLoopLagWindowValid: true,
     intervalSeconds,
     residentMemoryBytes: current.metrics.residentMemoryBytes,
   });
@@ -87,9 +106,13 @@ function percentiles(values) {
 }
 
 function percentile(values, ratio) {
+  return round(percentileValue(values, ratio));
+}
+
+function percentileValue(values, ratio) {
   if (values.length === 0) return 0;
   const sorted = [...values].sort((left, right) => left - right);
-  return round(sorted[Math.max(0, Math.ceil(sorted.length * ratio) - 1)]);
+  return sorted[Math.max(0, Math.ceil(sorted.length * ratio) - 1)];
 }
 
 function summarizeCpu(samples, cpu) {
@@ -114,12 +137,38 @@ function summarizeRss(samples, memory) {
   });
 }
 
-function summarizeGauge(samples, selector, suffix) {
-  const values = samples.map(selector);
-  const summary = percentiles(values);
+function summarizeEventLoopLag(samples, expectedWindowCount) {
+  if (samples.length !== expectedWindowCount) {
+    throw new Error("LOAD_EVENT_LOOP_WINDOW_COUNT_INVALID");
+  }
+  const values = samples.map(({ api }) => api.eventLoopLagWindowP99Seconds);
+  const durations = samples.map(
+    ({ api }) => api.eventLoopLagWindowDurationSeconds,
+  );
+  const rawP50 = percentileValue(values, 0.5);
+  const rawP95 = percentileValue(values, 0.95);
+  const rawP99 = percentileValue(values, 0.99);
+  const first = samples[0];
+  const last = samples.at(-1);
   return Object.freeze({
-    [`max${suffix}`]: values.length === 0 ? 0 : Math.max(...values),
-    [`p50${suffix}`]: summary.p50, [`p95${suffix}`]: summary.p95, [`p99${suffix}`]: summary.p99,
+    expectedWindowCount,
+    maxSeconds: values.length === 0 ? 0 : Math.max(...values),
+    p50Seconds: roundSeconds(rawP50),
+    p95Seconds: roundSeconds(rawP95),
+    p99Seconds: roundSeconds(rawP99),
+    passesThreshold: rawP99 < EVENT_LOOP_LAG_THRESHOLD_SECONDS,
+    sequenceEnd: last?.api.eventLoopLagWindowSequence ?? 0,
+    sequenceStart: first?.api.eventLoopLagWindowSequence ?? 0,
+    statistic: "p99-of-one-second-window-p99",
+    thresholdSeconds: EVENT_LOOP_LAG_THRESHOLD_SECONDS,
+    validWindowCount: samples.filter(
+      ({ api }) => api.eventLoopLagWindowValid,
+    ).length,
+    windowDurationSeconds: Object.freeze({
+      max: durations.length === 0 ? 0 : Math.max(...durations),
+      min: durations.length === 0 ? 0 : Math.min(...durations),
+      total: round(durations.reduce((sum, duration) => sum + duration, 0)),
+    }),
   });
 }
 
@@ -149,4 +198,8 @@ function sumValues(value) {
 
 function round(value) {
   return Math.round(value * 1_000_000) / 1_000_000;
+}
+
+function roundSeconds(value) {
+  return Math.round(value * 1_000_000_000) / 1_000_000_000;
 }

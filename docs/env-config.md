@@ -62,6 +62,8 @@
 
 `database` source 仅要求 `DATABASE_URL`，并读取三个可选的连接池/连接超时配置；`canonical` source 不读取或要求任何 `DATABASE_*` 变量。两个 source 都读取 `METRICS_PORT`、`READ_CACHE_TTL_SECONDS`、`READ_CACHE_STALE_IF_ERROR_SECONDS`、`READ_CACHE_MAX_ENTRIES` 与 `HEALTH_READY_TIMEOUT_MS`。API 的 scoped parser 除这五项外，只读取 `API_PORT`、`COUNTRY_READ_SOURCE`、`CANONICAL_REPOSITORY_ROOT`、`DATABASE_URL`、`DATABASE_POOL_MAX`、`DATABASE_POOL_TIMEOUT_SECONDS` 与 `DATABASE_CONNECT_TIMEOUT_SECONDS`，不会读取 Web BFF、认证、AI 或留资变量。M1 API 与 metrics 端口都固定监听 `127.0.0.1`；metrics server 只接受精确的 `GET /metrics`，不得通过公网或终端 BFF 暴露。外部业务流量必须先进入同机 TLS reverse proxy 或 Next BFF。该受信 gateway/BFF 必须删除终端客户端传入的 `x-request-id`，再由 gateway 或 loopback API 生成符合契约且不编码 PII、凭证或业务标识的不透明关联 token；将终端 header 原样透传不属于受支持部署。
 
+event-loop 容量取证固定暴露四个无 label gauge：`navigator_event_loop_lag_window_p99_seconds`、`navigator_event_loop_lag_window_sequence`、`navigator_event_loop_lag_window_valid`、`navigator_event_loop_lag_window_duration_seconds`。后台采样器每 1 秒完成一个独立窗口，快照完成后才递增 sequence；Prometheus `GET /metrics` 只读取最近一个已完成快照，不采样、不 reset、不改变 sequence。首个窗口完成前以 `sequence=0` / `valid=0` 暴露；窗口无观测或 percentile/reset 失败时 `valid=0`，此时 `p99_seconds=0` 只是无效占位，不表示事件循环延迟为零。这四项不由环境变量配置或放宽。
+
 API 在创建唯一 Prisma runtime 前生成受管连接 URL：增加 `connection_limit`、`pool_timeout`、`connect_timeout` 与固定的 `application_name=navigator-api`。原始 `DATABASE_URL` 不修改且不得写入日志；若原 URL 已含任一受管参数（即使值相同）则启动失败，错误只报告参数名。以 PostgreSQL `max_connections=100`、预留 20 条运维连接、每个 API 副本默认池上限 10 计算，API 副本硬上限为 8，部署配置不得超过该上限。
 
 只读响应缓存的单条序列化 JSON 固定预算为 **1 MiB**，进程内总缓存固定预算为 **16 MiB**；这两个安全预算不通过环境变量放宽。只有 DB runtime 明确定类的 typed `DatabaseUnavailableError` 可以在上述窗口内触发 stale 响应；数据完整性、404、校验、程序错误或未知错误均不得使用旧缓存掩盖。

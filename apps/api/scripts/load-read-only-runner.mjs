@@ -7,6 +7,10 @@ import {
 import { fetchMetrics, performRead } from "./load-read-only-http.mjs";
 import { buildLoadResult } from "./load-read-only-summary.mjs";
 
+const BASELINE_WINDOW_WAIT_MILLISECONDS = 2_000;
+const WINDOW_RETRY_INTERVAL_MILLISECONDS = 25;
+const WINDOW_RETRY_LIMIT_MILLISECONDS = 500;
+
 export async function runLoadScenario(options) {
   const baseUrl = assertLoopbackBaseUrl(options.baseUrl);
   const metricsUrl = assertLoopbackMetricsUrl(options.metricsUrl);
@@ -18,10 +22,15 @@ export async function runLoadScenario(options) {
   if (typeof fetchImpl !== "function") throw new Error("LOAD_FETCH_UNAVAILABLE");
   const clock = assertClock(options.clock ?? createMonotonicClock());
   const requestMatrix = assertRequestMatrix(options.requestMatrix ?? buildRequestMatrix());
-  const baseline = await fetchMetrics(fetchImpl, metricsUrl, clock);
-  assertMetricCapacity(baseline.metrics, environment);
+  const baselineState = await fetchSynchronizedMetricBaseline({
+    clock,
+    environment,
+    fetchImpl,
+    metricsUrl,
+  });
+  const baseline = baselineState.baseline;
 
-  const windowStart = clock.now();
+  const windowStart = baseline.observedAt;
   const measurementStart = windowStart + scenario.warmupSeconds * 1_000;
   const measurementEnd = measurementStart + scenario.measurementSeconds * 1_000;
   const controller = new AbortController();
@@ -40,7 +49,8 @@ export async function runLoadScenario(options) {
   };
   const requestScheduling = scheduleRequests(shared).then(() => ({}), (error) => ({ error }));
   const metricSampling = sampleMetricBoundaries({
-    baseline, clock, fetchImpl, metricsUrl, scenario, state, windowStart,
+    baseline, clock, environment, fetchImpl, metricsUrl, scenario, state,
+    windowStart,
   }).then((value) => ({ value }), (error) => ({ error }));
   const [requests, metrics] = await Promise.all([requestScheduling, metricSampling]);
   await Promise.all([...state.inFlight]);
@@ -53,6 +63,7 @@ export async function runLoadScenario(options) {
     lateCompletions: state.lateCompletions,
     maxConcurrencyObserved: state.maxActive,
     metricSamples: metrics.value,
+    metricSynchronization: baselineState.synchronization,
     requestMatrix,
     scenario,
     scenarioFileSha256,
@@ -106,19 +117,152 @@ async function executeScheduledRead(input) {
 async function sampleMetricBoundaries(input) {
   const totalSeconds = input.scenario.warmupSeconds + input.scenario.measurementSeconds;
   const samples = Array.from({ length: totalSeconds + 1 });
-  const inFlight = new Set();
   samples[0] = input.baseline;
-  for (let second = 1; second <= totalSeconds; second += 1) {
-    if (!await waitUntil(input.clock, input.windowStart + second * 1_000, input.state)) break;
-    const operation = fetchMetrics(
-      input.fetchImpl, input.metricsUrl, input.clock, input.state.controller.signal,
-    ).then((value) => { samples[second] = value; }, (error) => { failState(input.state, error); });
-    trackInFlight(inFlight, operation);
+  let previous = input.baseline;
+  try {
+    for (let second = 1; second <= totalSeconds; second += 1) {
+      const boundary = input.windowStart + second * 1_000;
+      if (!await waitUntil(input.clock, boundary, input.state)) break;
+      const current = await fetchExpectedMetricWindow({
+        ...input,
+        boundary,
+        previous,
+      });
+      samples[second] = current;
+      previous = current;
+    }
+  } catch (error) {
+    failState(input.state, error);
+    throw error;
   }
-  await Promise.all([...inFlight]);
   if (input.state.fatalError !== undefined) throw input.state.fatalError;
   if (samples.some((sample) => sample === undefined)) throw new Error("LOAD_METRICS_FETCH_FAILED");
   return Object.freeze(samples);
+}
+
+async function fetchSynchronizedMetricBaseline(input) {
+  const startedAt = input.clock.now();
+  const anchor = await fetchFirstValidMetricWindow(input, startedAt);
+  const baseline = await fetchNextBaselineMetricWindow(input, anchor);
+  return Object.freeze({
+    baseline,
+    synchronization: Object.freeze({
+      anchorSequence: anchor.metrics.eventLoopLagWindowSequence,
+      baselineSequence: baseline.metrics.eventLoopLagWindowSequence,
+      initialValidWaitMilliseconds: baselineSafeDuration(
+        startedAt,
+        anchor.observedAt,
+      ),
+      synchronizationWaitMilliseconds: baselineSafeDuration(
+        anchor.observedAt,
+        baseline.observedAt,
+      ),
+    }),
+  });
+}
+
+async function fetchFirstValidMetricWindow(input, startedAt) {
+  const deadline = startedAt + BASELINE_WINDOW_WAIT_MILLISECONDS;
+  let previousSequence = -1;
+  while (true) {
+    const sample = await fetchMetrics(
+      input.fetchImpl,
+      input.metricsUrl,
+      input.clock,
+    );
+    assertMetricCapacity(sample.metrics, input.environment);
+    const sequence = sample.metrics.eventLoopLagWindowSequence;
+    if (sequence < previousSequence) {
+      throw new Error("LOAD_EVENT_LOOP_WINDOW_ROLLBACK");
+    }
+    if (sample.metrics.eventLoopLagWindowValid === 1) return sample;
+    if (input.clock.now() >= deadline) {
+      throw new Error("LOAD_EVENT_LOOP_WINDOW_INVALID");
+    }
+    previousSequence = sequence;
+    await input.clock.sleepUntil(
+      Math.min(deadline, input.clock.now() + WINDOW_RETRY_INTERVAL_MILLISECONDS),
+    );
+  }
+}
+
+async function fetchNextBaselineMetricWindow(input, anchor) {
+  const anchorSequence = anchor.metrics.eventLoopLagWindowSequence;
+  const expectedSequence = anchorSequence + 1;
+  const deadline = anchor.observedAt + BASELINE_WINDOW_WAIT_MILLISECONDS;
+  while (true) {
+    const sample = await fetchMetrics(
+      input.fetchImpl,
+      input.metricsUrl,
+      input.clock,
+    );
+    assertMetricCapacity(sample.metrics, input.environment);
+    const sequence = sample.metrics.eventLoopLagWindowSequence;
+    if (sequence < anchorSequence) {
+      throw new Error("LOAD_EVENT_LOOP_WINDOW_ROLLBACK");
+    }
+    if (sequence > expectedSequence) {
+      throw new Error("LOAD_EVENT_LOOP_WINDOW_GAP");
+    }
+    if (sequence === expectedSequence) {
+      if (sample.metrics.eventLoopLagWindowValid !== 1) {
+        throw new Error("LOAD_EVENT_LOOP_WINDOW_INVALID");
+      }
+      return sample;
+    }
+    if (input.clock.now() >= deadline) {
+      throw new Error("LOAD_EVENT_LOOP_WINDOW_STALE");
+    }
+    await input.clock.sleepUntil(
+      Math.min(deadline, input.clock.now() + WINDOW_RETRY_INTERVAL_MILLISECONDS),
+    );
+  }
+}
+
+function baselineSafeDuration(startedAt, endedAt) {
+  const duration = endedAt - startedAt;
+  if (!Number.isFinite(duration) || duration < 0) {
+    throw new Error("LOAD_METRICS_TIME_INVALID");
+  }
+  return duration;
+}
+
+async function fetchExpectedMetricWindow(input) {
+  const previousSequence = input.previous.metrics.eventLoopLagWindowSequence;
+  const expectedSequence = previousSequence + 1;
+  const deadline = input.boundary + WINDOW_RETRY_LIMIT_MILLISECONDS;
+  while (true) {
+    const current = await fetchMetrics(
+      input.fetchImpl,
+      input.metricsUrl,
+      input.clock,
+      input.state.controller.signal,
+    );
+    assertMetricCapacity(current.metrics, input.environment);
+    const sequence = current.metrics.eventLoopLagWindowSequence;
+    if (sequence < previousSequence) {
+      throw new Error("LOAD_EVENT_LOOP_WINDOW_ROLLBACK");
+    }
+    if (sequence > expectedSequence) {
+      throw new Error("LOAD_EVENT_LOOP_WINDOW_GAP");
+    }
+    if (sequence === expectedSequence) {
+      if (current.metrics.eventLoopLagWindowValid !== 1) {
+        throw new Error("LOAD_EVENT_LOOP_WINDOW_INVALID");
+      }
+      return current;
+    }
+    if (input.clock.now() >= deadline) {
+      throw new Error("LOAD_EVENT_LOOP_WINDOW_STALE");
+    }
+    const retryAt = Math.min(
+      deadline,
+      input.clock.now() + WINDOW_RETRY_INTERVAL_MILLISECONDS,
+    );
+    if (!await waitUntil(input.clock, retryAt, input.state)) {
+      throw input.state.fatalError ?? new Error("LOAD_METRICS_FETCH_FAILED");
+    }
+  }
 }
 
 function measurementBucket(input, time) {

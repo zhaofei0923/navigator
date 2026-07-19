@@ -3,6 +3,7 @@ import {
   resolveCapacityEnvironment,
   type CapacityEnvironment,
   type CapacityProbe,
+  type EventLoopLagWindow,
   type ProcessMetricSource,
 } from "./metrics-capacity.js";
 import {
@@ -176,6 +177,9 @@ export class MetricsRegistry implements MetricsRecorder {
 
   render(): string {
     const lines: string[] = [];
+    const eventLoopLagWindow = readEventLoopLagWindow(
+      this.processMetrics.eventLoopLagWindow,
+    );
     addFamily(lines, "navigator_http_requests_total", "counter");
     for (const method of HTTP_METHODS) for (const route of HTTP_ROUTES) for (const status of HTTP_STATUSES) {
       addSample(lines, "navigator_http_requests_total", { method, route, status }, this.httpRequests.read(seriesKey([method, route, status])));
@@ -202,8 +206,14 @@ export class MetricsRegistry implements MetricsRecorder {
     addSample(lines, "navigator_process_cpu_seconds_total", {}, safeMetricRead(this.processMetrics.cpuSeconds));
     addFamily(lines, "navigator_process_resident_memory_bytes", "gauge");
     addSample(lines, "navigator_process_resident_memory_bytes", {}, safeMetricRead(this.processMetrics.residentMemoryBytes));
-    addFamily(lines, "navigator_event_loop_lag_seconds", "gauge");
-    addSample(lines, "navigator_event_loop_lag_seconds", {}, safeMetricRead(this.processMetrics.eventLoopLagSeconds));
+    addFamily(lines, "navigator_event_loop_lag_window_p99_seconds", "gauge");
+    addSample(lines, "navigator_event_loop_lag_window_p99_seconds", {}, eventLoopLagWindow.p99Seconds);
+    addFamily(lines, "navigator_event_loop_lag_window_sequence", "gauge");
+    addSample(lines, "navigator_event_loop_lag_window_sequence", {}, eventLoopLagWindow.sequence);
+    addFamily(lines, "navigator_event_loop_lag_window_valid", "gauge");
+    addSample(lines, "navigator_event_loop_lag_window_valid", {}, eventLoopLagWindow.valid ? 1 : 0);
+    addFamily(lines, "navigator_event_loop_lag_window_duration_seconds", "gauge");
+    addSample(lines, "navigator_event_loop_lag_window_duration_seconds", {}, eventLoopLagWindow.durationSeconds);
     addFamily(lines, "navigator_process_cpu_capacity_cores", "gauge");
     addSample(lines, "navigator_process_cpu_capacity_cores", {}, this.capacityEnvironment.cpuCapacityCores);
     addFamily(lines, "navigator_process_memory_limit_bytes", "gauge");
@@ -219,6 +229,43 @@ export class MetricsRegistry implements MetricsRecorder {
     } catch {
       // Metrics teardown must not prevent application shutdown.
     }
+  }
+}
+
+const INVALID_EVENT_LOOP_LAG_WINDOW: EventLoopLagWindow = Object.freeze({
+  durationSeconds: 0,
+  p99Seconds: 0,
+  sequence: 0,
+  valid: false,
+});
+
+function readEventLoopLagWindow(
+  read: () => EventLoopLagWindow,
+): EventLoopLagWindow {
+  try {
+    const window = read();
+    const { durationSeconds, p99Seconds, sequence, valid } = window;
+    if (
+      !Number.isFinite(durationSeconds) ||
+      durationSeconds < 0 ||
+      !Number.isFinite(p99Seconds) ||
+      p99Seconds < 0 ||
+      !Number.isSafeInteger(sequence) ||
+      sequence < 0 ||
+      typeof valid !== "boolean" ||
+      (valid && sequence === 0) ||
+      (valid && durationSeconds === 0)
+    ) {
+      return INVALID_EVENT_LOOP_LAG_WINDOW;
+    }
+    return Object.freeze({
+      durationSeconds,
+      p99Seconds: valid ? p99Seconds : 0,
+      sequence,
+      valid,
+    });
+  } catch {
+    return INVALID_EVENT_LOOP_LAG_WINDOW;
   }
 }
 

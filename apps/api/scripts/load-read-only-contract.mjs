@@ -16,7 +16,10 @@ const METRICS_URL_PATTERN = /^http:\/\/(?:127\.0\.0\.1|\[::1\]):([1-9][0-9]{0,4}
 const PROCESS_METRICS = Object.freeze({
   cpuSecondsTotal: "navigator_process_cpu_seconds_total",
   residentMemoryBytes: "navigator_process_resident_memory_bytes",
-  eventLoopLagSeconds: "navigator_event_loop_lag_seconds",
+  eventLoopLagWindowP99Seconds: "navigator_event_loop_lag_window_p99_seconds",
+  eventLoopLagWindowSequence: "navigator_event_loop_lag_window_sequence",
+  eventLoopLagWindowValid: "navigator_event_loop_lag_window_valid",
+  eventLoopLagWindowDurationSeconds: "navigator_event_loop_lag_window_duration_seconds",
   cpuCapacityCores: "navigator_process_cpu_capacity_cores",
   memoryLimitBytes: "navigator_process_memory_limit_bytes",
 });
@@ -140,7 +143,14 @@ export function parsePrometheusProcessMetrics(text) {
     if (!Number.isFinite(value) || value < 0) throw new Error("LOAD_METRICS_INVALID");
     values[field] = value;
   }
-  if (values.cpuCapacityCores <= 0 || values.memoryLimitBytes <= 0) throw new Error("LOAD_METRICS_INVALID");
+  if (values.cpuCapacityCores <= 0 || values.memoryLimitBytes <= 0 ||
+      !Number.isSafeInteger(values.eventLoopLagWindowSequence) ||
+      (values.eventLoopLagWindowValid !== 0 && values.eventLoopLagWindowValid !== 1) ||
+      (values.eventLoopLagWindowValid === 1 && values.eventLoopLagWindowSequence === 0) ||
+      (values.eventLoopLagWindowValid === 1 && values.eventLoopLagWindowDurationSeconds <= 0) ||
+      (values.eventLoopLagWindowValid === 0 && values.eventLoopLagWindowP99Seconds !== 0)) {
+    throw new Error("LOAD_METRICS_INVALID");
+  }
   return Object.freeze(values);
 }
 

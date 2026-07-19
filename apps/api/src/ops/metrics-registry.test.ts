@@ -10,7 +10,12 @@ import {
 const PROCESS_METRICS = Object.freeze({
   close: vi.fn(),
   cpuSeconds: () => 12.5,
-  eventLoopLagSeconds: () => 0.004,
+  eventLoopLagWindow: () => ({
+    durationSeconds: 1.002,
+    p99Seconds: 0.004,
+    sequence: 12,
+    valid: true,
+  }),
   residentMemoryBytes: () => 64 * 1024 * 1024,
 });
 
@@ -24,7 +29,7 @@ const HOST_CAPACITY = Object.freeze({
 });
 
 describe("bounded metrics registry", () => {
-  test("exports the DI token and all twelve planned metric families", () => {
+  test("exports the DI token and all fifteen planned metric families", () => {
     const registry = createRegistry();
     const recorder: MetricsRecorder = registry;
 
@@ -53,7 +58,10 @@ describe("bounded metrics registry", () => {
         "navigator_db_operations_in_flight",
         "navigator_process_cpu_seconds_total",
         "navigator_process_resident_memory_bytes",
-        "navigator_event_loop_lag_seconds",
+        "navigator_event_loop_lag_window_p99_seconds",
+        "navigator_event_loop_lag_window_sequence",
+        "navigator_event_loop_lag_window_valid",
+        "navigator_event_loop_lag_window_duration_seconds",
         "navigator_process_cpu_capacity_cores",
         "navigator_process_memory_limit_bytes",
       ]),
@@ -74,7 +82,16 @@ describe("bounded metrics registry", () => {
     expect(exposition).toContain(
       `navigator_process_resident_memory_bytes ${64 * 1024 * 1024}`,
     );
-    expect(exposition).toContain("navigator_event_loop_lag_seconds 0.004");
+    expect(exposition).toContain(
+      "navigator_event_loop_lag_window_p99_seconds 0.004",
+    );
+    expect(exposition).toContain(
+      "navigator_event_loop_lag_window_sequence 12",
+    );
+    expect(exposition).toContain("navigator_event_loop_lag_window_valid 1");
+    expect(exposition).toContain(
+      "navigator_event_loop_lag_window_duration_seconds 1.002",
+    );
     expect(exposition.endsWith("\n")).toBe(true);
   });
 
@@ -295,20 +312,102 @@ describe("bounded metrics registry", () => {
     });
   });
 
+  test("preserves invalid window identity and contains snapshot read failures", () => {
+    const invalidRegistry = createRegistry({
+      processMetrics: {
+        close: vi.fn(),
+        cpuSeconds: () => 0,
+        eventLoopLagWindow: () => ({
+          durationSeconds: 1.25,
+          p99Seconds: 5,
+          sequence: 7,
+          valid: false,
+        }),
+        residentMemoryBytes: () => 0,
+      },
+    });
+    const invalidExposition = invalidRegistry.render();
+    expect(invalidExposition).toContain(
+      "navigator_event_loop_lag_window_p99_seconds 0",
+    );
+    expect(invalidExposition).toContain(
+      "navigator_event_loop_lag_window_sequence 7",
+    );
+    expect(invalidExposition).toContain(
+      "navigator_event_loop_lag_window_duration_seconds 1.25",
+    );
+    expect(invalidExposition).toContain(
+      "navigator_event_loop_lag_window_valid 0",
+    );
+
+    const zeroSequenceRegistry = createRegistry({
+      processMetrics: {
+        close: vi.fn(),
+        cpuSeconds: () => 0,
+        eventLoopLagWindow: () => ({
+          durationSeconds: 1,
+          p99Seconds: 0.001,
+          sequence: 0,
+          valid: true,
+        }),
+        residentMemoryBytes: () => 0,
+      },
+    });
+    const zeroSequenceExposition = zeroSequenceRegistry.render();
+    expect(zeroSequenceExposition).toContain(
+      "navigator_event_loop_lag_window_p99_seconds 0",
+    );
+    expect(zeroSequenceExposition).toContain(
+      "navigator_event_loop_lag_window_valid 0",
+    );
+
+    const throwingRegistry = createRegistry({
+      processMetrics: {
+        close: vi.fn(),
+        cpuSeconds: () => 0,
+        eventLoopLagWindow: () => {
+          throw new Error("monitor unavailable");
+        },
+        residentMemoryBytes: () => 0,
+      },
+    });
+    expect(throwingRegistry.render()).toContain(
+      "navigator_event_loop_lag_window_sequence 0",
+    );
+    expect(throwingRegistry.render()).toContain(
+      "navigator_event_loop_lag_window_valid 0",
+    );
+  });
+
   test("closes the injected event-loop source exactly once", () => {
     const close = vi.fn();
     const registry = createRegistry({
       processMetrics: {
         close,
         cpuSeconds: () => Number.NaN,
-        eventLoopLagSeconds: () => Number.NEGATIVE_INFINITY,
+        eventLoopLagWindow: () => ({
+          durationSeconds: -1,
+          p99Seconds: Number.NEGATIVE_INFINITY,
+          sequence: 1.5,
+          valid: true,
+        }),
         residentMemoryBytes: () => -1,
       },
     });
 
     expect(registry.render()).toContain("navigator_process_cpu_seconds_total 0");
     expect(registry.render()).toContain("navigator_process_resident_memory_bytes 0");
-    expect(registry.render()).toContain("navigator_event_loop_lag_seconds 0");
+    const exposition = registry.render();
+    expect(exposition).toContain(
+      "navigator_event_loop_lag_window_p99_seconds 0",
+    );
+    expect(exposition).toContain(
+      "navigator_event_loop_lag_window_sequence 0",
+    );
+    expect(exposition).toContain("navigator_event_loop_lag_window_valid 0");
+    expect(exposition).toContain(
+      "navigator_event_loop_lag_window_duration_seconds 0",
+    );
     registry.close();
     registry.close();
     expect(close).toHaveBeenCalledOnce();

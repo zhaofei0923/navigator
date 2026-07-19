@@ -77,9 +77,23 @@ describe("scenario and metrics contracts", () => {
   });
 
   test("parses one finite sample for every required API process metric", () => {
-    const metrics = metricsText({ cpu: 12.5, rss: 123_456, lag: 0.004, cores: 2, memory: 1_000_000 });
+    const metrics = metricsText({
+      cores: 2,
+      cpu: 12.5,
+      eventLoopDuration: 1.002,
+      eventLoopP99: 0.004,
+      eventLoopSequence: 12,
+      eventLoopValid: 1,
+      memory: 1_000_000,
+      rss: 123_456,
+    });
     assert.deepEqual(parsePrometheusProcessMetrics(metrics), {
-      cpuCapacityCores: 2, cpuSecondsTotal: 12.5, eventLoopLagSeconds: 0.004,
+      cpuCapacityCores: 2,
+      cpuSecondsTotal: 12.5,
+      eventLoopLagWindowDurationSeconds: 1.002,
+      eventLoopLagWindowP99Seconds: 0.004,
+      eventLoopLagWindowSequence: 12,
+      eventLoopLagWindowValid: 1,
       memoryLimitBytes: 1_000_000, residentMemoryBytes: 123_456,
     });
     for (const invalid of [
@@ -87,7 +101,67 @@ describe("scenario and metrics contracts", () => {
       metrics.replace("navigator_process_cpu_seconds_total 12.5", "navigator_process_cpu_seconds_total 0x10"),
       metrics.replace("navigator_process_cpu_capacity_cores 2\n", ""),
       `${metrics}navigator_process_cpu_seconds_total 13\n`,
+      metrics.replace("navigator_event_loop_lag_window_sequence 12", "navigator_event_loop_lag_window_sequence NaN"),
+      metrics.replace("navigator_event_loop_lag_window_sequence 12", "navigator_event_loop_lag_window_sequence -1"),
+      metrics.replace("navigator_event_loop_lag_window_sequence 12", "navigator_event_loop_lag_window_sequence 0"),
+      metrics.replace("navigator_event_loop_lag_window_sequence 12", "navigator_event_loop_lag_window_sequence 1.5"),
+      metrics.replace("navigator_event_loop_lag_window_sequence 12", `navigator_event_loop_lag_window_sequence ${Number.MAX_SAFE_INTEGER + 1}`),
+      metrics.replace("navigator_event_loop_lag_window_valid 1", "navigator_event_loop_lag_window_valid NaN"),
+      metrics.replace("navigator_event_loop_lag_window_valid 1", "navigator_event_loop_lag_window_valid 2"),
+      metrics.replace("navigator_event_loop_lag_window_duration_seconds 1.002", "navigator_event_loop_lag_window_duration_seconds NaN"),
+      metrics.replace("navigator_event_loop_lag_window_duration_seconds 1.002", "navigator_event_loop_lag_window_duration_seconds 0"),
+      metrics.replace("navigator_event_loop_lag_window_valid 1", "navigator_event_loop_lag_window_valid 0"),
+      metrics.replace("navigator_event_loop_lag_window_p99_seconds 0.004", "navigator_event_loop_lag_window_p99_seconds NaN"),
+      metrics.replace("navigator_event_loop_lag_window_p99_seconds 0.004", "navigator_event_loop_lag_seconds 0.004"),
     ]) assert.throws(() => parsePrometheusProcessMetrics(invalid), { message: "LOAD_METRICS_INVALID" });
+
+    for (const metricName of [
+      "navigator_event_loop_lag_window_p99_seconds",
+      "navigator_event_loop_lag_window_sequence",
+      "navigator_event_loop_lag_window_valid",
+      "navigator_event_loop_lag_window_duration_seconds",
+    ]) {
+      const line = metrics.split("\n").find((candidate) => candidate.startsWith(`${metricName} `));
+      assert.ok(line);
+      assert.throws(() => parsePrometheusProcessMetrics(metrics.replace(`${line}\n`, "")), {
+        message: "LOAD_METRICS_INVALID",
+      });
+      assert.throws(() => parsePrometheusProcessMetrics(`${metrics}${line}\n`), {
+        message: "LOAD_METRICS_INVALID",
+      });
+    }
+  });
+
+  test("accepts an invalid event-loop window with zero p99 and nonnegative duration", () => {
+    const metrics = metricsText({
+      cores: 2,
+      cpu: 12.5,
+      eventLoopDuration: 1.25,
+      eventLoopP99: 0,
+      eventLoopSequence: 0,
+      eventLoopValid: 0,
+      memory: 1_000_000,
+      rss: 123_456,
+    });
+
+    assert.deepEqual(parsePrometheusProcessMetrics(metrics), {
+      cpuCapacityCores: 2,
+      cpuSecondsTotal: 12.5,
+      eventLoopLagWindowDurationSeconds: 1.25,
+      eventLoopLagWindowP99Seconds: 0,
+      eventLoopLagWindowSequence: 0,
+      eventLoopLagWindowValid: 0,
+      memoryLimitBytes: 1_000_000,
+      residentMemoryBytes: 123_456,
+    });
+
+    const nonzeroP99 = metrics.replace(
+      "navigator_event_loop_lag_window_p99_seconds 0",
+      "navigator_event_loop_lag_window_p99_seconds 0.001",
+    );
+    assert.throws(() => parsePrometheusProcessMetrics(nonzeroP99), {
+      message: "LOAD_METRICS_INVALID",
+    });
   });
 
   test("limits output to the selected scenario JSON in repository artifacts", () => {
@@ -109,11 +183,23 @@ function countBy(items, selector) {
   return Object.fromEntries(Object.entries(counts).sort(([left], [right]) => left.localeCompare(right)));
 }
 
-function metricsText({ cpu, rss, lag, cores, memory }) {
+function metricsText({
+  cores,
+  cpu,
+  eventLoopDuration,
+  eventLoopP99,
+  eventLoopSequence,
+  eventLoopValid,
+  memory,
+  rss,
+}) {
   return [
     `navigator_process_cpu_seconds_total ${cpu}`,
     `navigator_process_resident_memory_bytes ${rss}`,
-    `navigator_event_loop_lag_seconds ${lag}`,
+    `navigator_event_loop_lag_window_p99_seconds ${eventLoopP99}`,
+    `navigator_event_loop_lag_window_sequence ${eventLoopSequence}`,
+    `navigator_event_loop_lag_window_valid ${eventLoopValid}`,
+    `navigator_event_loop_lag_window_duration_seconds ${eventLoopDuration}`,
     `navigator_process_cpu_capacity_cores ${cores}`,
     `navigator_process_memory_limit_bytes ${memory}`,
     "",
