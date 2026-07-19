@@ -428,7 +428,8 @@ navigator_ops_container_started="true"
 
 for navigator_ops_attempt in $(seq 1 30); do
   if docker exec navigator-platform-ops-1-postgres \
-    pg_isready --username navigator_test --dbname navigator_platform_db_1_test
+    pg_isready --host 127.0.0.1 \
+      --username navigator_test --dbname navigator_platform_db_1_test
   then
     break
   fi
@@ -468,14 +469,15 @@ navigator_ops_api_pid=$!
 
 for navigator_ops_attempt in $(seq 1 60); do
   if ! kill -0 "$navigator_ops_api_pid" 2>/dev/null; then exit 1; fi
-  navigator_ops_ready=$(curl --fail --silent --show-error --max-time 2 \
+  navigator_ops_ready=$(curl --noproxy '*' \
+    --fail --silent --show-error --max-time 2 \
     http://127.0.0.1:3100/health/ready 2>/dev/null || true)
   if [ "$navigator_ops_ready" = '{"status":"ready"}' ]; then break; fi
   if [ "$navigator_ops_attempt" -eq 60 ]; then exit 1; fi
   sleep 1
 done
 
-curl --fail --silent --show-error --max-time 2 \
+curl --noproxy '*' --fail --silent --show-error --max-time 2 \
   http://127.0.0.1:9464/metrics | \
   rg '^navigator_process_cpu_seconds_total '
 
