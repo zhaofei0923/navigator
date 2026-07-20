@@ -42,6 +42,7 @@ import { parseBasicProfileTabularSnapshot } from "./collection/adapters/basic-pr
 import {
   readBasicBatchCountryInput,
   readBasicBatchGlobalInput,
+  BasicBatchExpectedBlockError,
 } from "./cli/basic-batch-filesystem-cache.js";
 import {
   createBasicCollectionAuditArtifactsV3,
@@ -367,10 +368,11 @@ describe("BASIC content-addressed batch cache and isolation", () => {
     )).rejects.toThrow("basic batch cache is invalid");
   });
 
-  test("limits concurrency to three and preserves unrelated successes", async () => {
+  test("limits concurrency to three and preserves ready artifacts across mixed outcomes", async () => {
     const root = createRoot();
     let active = 0;
     let maximum = 0;
+    const readyDirectory = join(root, "data", "staging", "indonesia", "run-ready");
     const result = await prepareBasicBatch({
       config: { countries: ["ID", "VN", "SA"], batchId: "batch-2" },
       globalSourceIds: [],
@@ -381,7 +383,15 @@ describe("BASIC content-addressed batch cache and isolation", () => {
         maximum = Math.max(maximum, active);
         await Promise.resolve();
         active -= 1;
-        if (countryCode === "VN") throw new Error("secret upstream detail");
+        if (countryCode === "VN") return { status: "blocked" as const, countryCode };
+        if (countryCode === "SA") throw new Error("secret upstream detail");
+        mkdirSync(readyDirectory, { recursive: true });
+        for (const name of [
+          "source-register.json",
+          "extracted-facts.json",
+          "market-overview.draft.json",
+          "review-report.json",
+        ]) writeFileSync(join(readyDirectory, name), `${name}\n`);
         return { status: "ready" as const, countryCode };
       },
     });
@@ -389,9 +399,35 @@ describe("BASIC content-addressed batch cache and isolation", () => {
     expect(maximum).toBeLessThanOrEqual(3);
     expect(result.results).toEqual([
       { countryCode: "ID", status: "ready" },
-      { countryCode: "VN", status: "error" },
-      { countryCode: "SA", status: "ready" },
+      { countryCode: "VN", status: "blocked" },
+      { countryCode: "SA", status: "error" },
     ]);
+    expect(readdirSync(readyDirectory).sort()).toEqual([
+      "extracted-facts.json",
+      "market-overview.draft.json",
+      "review-report.json",
+      "source-register.json",
+    ]);
+    expect(JSON.stringify(result)).not.toContain("secret");
+  });
+
+  test.each([
+    ["expected missing input", new BasicBatchExpectedBlockError(), "blocked"],
+    ["system failure", new Error("secret global failure"), "error"],
+  ] as const)("classifies a global %s without leaking details", async (_label, failure, status) => {
+    const root = createRoot();
+    const result = await prepareBasicBatch({
+      config: { countries: ["ID", "VN", "SA"], batchId: `batch-global-${status}` },
+      globalSourceIds: ["global-solar-atlas"],
+      cache: createFilesystemBasicBatchCache(root, `batch-global-${status}`),
+      captureGlobalSource: async () => { throw failure; },
+      prepareCountry: async (countryCode) => ({ status: "ready", countryCode }),
+    });
+
+    expect(result.results).toEqual(["ID", "VN", "SA"].map((countryCode) => ({
+      countryCode,
+      status,
+    })));
     expect(JSON.stringify(result)).not.toContain("secret");
   });
 });
@@ -474,8 +510,8 @@ describe("BASIC batch CLI", () => {
       "--conditions=development", "--import", "../../scripts/node-ts-source-hook.mjs",
       "src/cli/prepare-basic-batch.ts", "--countries=ID", "--batch-id=missing-input-fixture",
     ], { cwd: packageRoot, encoding: "utf8" });
-    expect(run.status).toBe(1);
-    expect(run.stdout).toContain('"countryCode":"ID","status":"error"');
+    expect(run.status).toBe(2);
+    expect(run.stdout).toContain('"countryCode":"ID","status":"blocked"');
     expect(run.stderr).not.toContain("inputs are not configured");
   });
 });

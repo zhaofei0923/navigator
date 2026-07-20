@@ -29,6 +29,13 @@ const pendingByCache = new WeakMap<object, Map<string, Promise<Uint8Array>>>();
 
 class MissingRegularFileError extends Error {}
 
+export class BasicBatchExpectedBlockError extends Error {
+  constructor() {
+    super("basic batch input is not configured");
+    this.name = "BasicBatchExpectedBlockError";
+  }
+}
+
 export function createFilesystemBasicBatchCache(
   repoRoot: string,
   batchId: string,
@@ -84,7 +91,7 @@ export async function readOptionalBasicBatchGlobalInput(
       await parent.close();
     }
   } catch (error) {
-    if (error instanceof MissingRegularFileError) return null;
+    if (error instanceof MissingRegularFileError || isCode(error, "ENOENT")) return null;
     throw new Error(INPUT_ERROR);
   }
 }
@@ -94,6 +101,30 @@ export async function readBasicBatchCountryInput(
   pathname: string,
 ): Promise<Uint8Array> {
   return readInput(repoRoot, pathname, MAX_COUNTRY_INPUT_BYTES);
+}
+
+export async function readOptionalBasicBatchCountryInput(
+  repoRoot: string,
+  pathname: string,
+): Promise<Uint8Array | null> {
+  try {
+    const root = resolve(repoRoot);
+    const target = resolve(pathname);
+    assertContained(root, target);
+    const parent = await openSafeDirectoryHierarchy(root, dirname(target), false);
+    try {
+      return await readRegularFileBounded(
+        childPath(parent, basename(target)),
+        MAX_COUNTRY_INPUT_BYTES,
+        true,
+      );
+    } finally {
+      await parent.close();
+    }
+  } catch (error) {
+    if (error instanceof MissingRegularFileError || isCode(error, "ENOENT")) return null;
+    throw new Error(INPUT_ERROR);
+  }
 }
 
 export async function readOptionalBasicBatchManualInput(
@@ -115,7 +146,7 @@ export async function readOptionalBasicBatchManualInput(
       await parent.close();
     }
   } catch (error) {
-    if (error instanceof MissingRegularFileError) return null;
+    if (error instanceof MissingRegularFileError || isCode(error, "ENOENT")) return null;
     throw new Error(INPUT_ERROR);
   }
 }
@@ -192,7 +223,8 @@ async function loadOrCapture(
         refs?.close() ?? Promise.resolve(),
       ]);
     }
-  } catch {
+  } catch (error) {
+    if (error instanceof BasicBatchExpectedBlockError) throw error;
     throw new Error(CACHE_ERROR);
   }
 }

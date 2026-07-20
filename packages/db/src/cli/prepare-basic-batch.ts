@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import {
   parseBasicBatchArguments,
@@ -34,8 +34,9 @@ import {
 } from "./basic-candidate-workspace.js";
 import {
   createFilesystemBasicBatchCache,
+  BasicBatchExpectedBlockError,
   readBasicBatchCountryInput,
-  readBasicBatchGlobalInput,
+  readOptionalBasicBatchCountryInput,
   readOptionalBasicBatchGlobalInput,
   readOptionalBasicBatchManualInput,
   type BasicBatchCache,
@@ -62,7 +63,7 @@ export interface PrepareBasicBatchInput {
   readonly prepareCountry: (
     countryCode: string,
     globalCaptures: ReadonlyMap<string, Uint8Array>,
-  ) => Promise<Readonly<{ status: "ready" | "blocked"; countryCode: string }>>;
+  ) => Promise<Readonly<{ status: BasicBatchCountryStatus; countryCode: string }>>;
 }
 
 const SAFE_SOURCE_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -120,12 +121,13 @@ export async function prepareBasicBatch(
         () => input.captureGlobalSource(sourceId),
       ));
     }
-  } catch {
+  } catch (error) {
+    const status = error instanceof BasicBatchExpectedBlockError ? "blocked" : "error";
     return Object.freeze({
       batchId: config.batchId,
       results: Object.freeze(config.countries.map((countryCode) => Object.freeze({
         countryCode,
-        status: "error" as const,
+        status,
       }))),
     });
   }
@@ -133,7 +135,10 @@ export async function prepareBasicBatch(
   const results = await Promise.all(config.countries.map(async (countryCode) => {
     try {
       const prepared = await input.prepareCountry(countryCode, captures);
-      if (prepared.countryCode !== countryCode || !["ready", "blocked"].includes(prepared.status)) {
+      if (
+        prepared.countryCode !== countryCode ||
+        !["ready", "blocked", "error"].includes(prepared.status)
+      ) {
         throw new Error("invalid result");
       }
       return Object.freeze({ countryCode, status: prepared.status });
@@ -180,7 +185,7 @@ export async function runPrepareBasicBatchCli(
 }
 
 export function createProductionBasicBatchCliDependencies(
-  repoRoot = resolve(new URL("../../../../", import.meta.url).pathname),
+  repoRoot = resolve(fileURLToPath(new URL("../../../../", import.meta.url))),
 ): BasicBatchCliDependencies {
   return Object.freeze({
     async run(config: BasicBatchConfig) {
@@ -199,20 +204,28 @@ export function createProductionBasicBatchCliDependencies(
           config,
           globalSourceIds: BASIC_GLOBAL_SOURCE_IDS,
           cache,
-          captureGlobalSource: (sourceId) => sourceId === "ember-electricity"
-            ? readReviewedEmberSnapshotOrUnavailable(repoRoot, join(
+          async captureGlobalSource(sourceId) {
+            const pathname = join(
               repoRoot, ".cache", "basic-country", "batches", config.batchId,
               "inputs", "global", `${sourceId}.snapshot`,
-            ), config.countries)
-            : readBasicBatchGlobalInput(repoRoot, join(
-              repoRoot, ".cache", "basic-country", "batches", config.batchId,
-              "inputs", "global", `${sourceId}.snapshot`,
-            )),
+            );
+            if (sourceId === "ember-electricity") {
+              return readReviewedEmberSnapshotOrUnavailable(
+                repoRoot, pathname, config.countries,
+              );
+            }
+            const bytes = await readOptionalBasicBatchGlobalInput(repoRoot, pathname);
+            if (bytes === null) throw new BasicBatchExpectedBlockError();
+            return bytes;
+          },
           async prepareCountry(countryCode, globalCaptures) {
-            const countryBytes = await readBasicBatchCountryInput(repoRoot, join(
+            const countryBytes = await readOptionalBasicBatchCountryInput(repoRoot, join(
               repoRoot, ".cache", "basic-country", "batches", config.batchId,
               "inputs", `${countryCode}.json`,
             ));
+            if (countryBytes === null) {
+              return Object.freeze({ status: "blocked" as const, countryCode });
+            }
             const manualCaptures = await readReviewedManualProfileCaptures(
               repoRoot, config.batchId, countryCode,
             );
@@ -224,6 +237,9 @@ export function createProductionBasicBatchCliDependencies(
               configPath: input.candidateConfigPath,
               transport: createProductionSourceTransport(),
             });
+            if (base.status === "blocked") {
+              return Object.freeze({ status: "blocked" as const, countryCode });
+            }
             if (base.status !== "ready" || base.candidate?.validation?.valid !== true) {
               throw new Error("basic batch base candidate is invalid");
             }
