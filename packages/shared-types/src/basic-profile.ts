@@ -280,7 +280,7 @@ function validDateParts(
   const year = Number(yearText);
   const month = Number(monthText);
   const day = Number(dayText);
-  if (!Number.isInteger(year) || year < 1 || month < 1 || month > 12) {
+  if (!Number.isInteger(year) || year < 100 || month < 1 || month > 12) {
     return false;
   }
   const leapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);

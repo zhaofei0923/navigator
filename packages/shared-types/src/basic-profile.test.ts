@@ -288,4 +288,41 @@ describe("BASIC v2 profile contract", () => {
 
     expect(parseBasicProfile(input)).toBeNull();
   });
+
+  test.each(["0000", "0001", "0099"])(
+    "rejects pre-0100 year %s for calendar dates and RFC3339 timestamps",
+    (year) => {
+      const calendar = cloneProfile();
+      firstField(calendar).checkedAt = `${year}-01-01`;
+      expect(parseBasicProfile(calendar)).toBeNull();
+
+      const timestamp = cloneProfile();
+      timestamp.updatedAt = `${year}-01-01T00:00:00Z`;
+      expect(parseBasicProfile(timestamp)).toBeNull();
+    },
+  );
+
+  test("accepts year 0100 for calendar dates and RFC3339 timestamps", () => {
+    const input = cloneProfile();
+    firstField(input).checkedAt = "0100-01-01";
+    input.updatedAt = "0100-01-01T00:00:00Z";
+
+    expect(parseBasicProfile(input)).not.toBeNull();
+  });
+
+  test.each([
+    ["1900", false],
+    ["2000", true],
+  ] as const)(
+    "applies Gregorian leap-century rules to year %s",
+    (year, accepted) => {
+      const calendar = cloneProfile();
+      firstField(calendar).checkedAt = `${year}-02-29`;
+      expect(parseBasicProfile(calendar) !== null).toBe(accepted);
+
+      const timestamp = cloneProfile();
+      timestamp.updatedAt = `${year}-02-29T00:00:00Z`;
+      expect(parseBasicProfile(timestamp) !== null).toBe(accepted);
+    },
+  );
 });
