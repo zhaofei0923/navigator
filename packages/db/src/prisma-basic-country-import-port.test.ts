@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
 import { MODULE_KEYS } from "@navigator/shared-types/schema";
-import type { PrismaClient } from "@prisma/client";
+import { Prisma, type PrismaClient } from "@prisma/client";
 import { describe, expect, test, vi } from "vitest";
 
 import {
@@ -65,7 +65,7 @@ describe("createPrismaBasicCountryImportPort", () => {
     const source = await readFile(sourcePath, "utf8");
 
     expect(source).not.toMatch(/new\s+PrismaClient|\$disconnect|\$(?:query|execute)Raw/u);
-    expect(source).not.toMatch(/from\s+["']@prisma\/client["']/u);
+    expect(source).toContain('import { Prisma } from "@prisma/client";');
   });
 
   test.each([
@@ -131,7 +131,7 @@ describe("createPrismaBasicCountryImportPort", () => {
     const marketArgs = firstCallArg(vi.mocked(transaction.marketOverview.upsert));
     expect(record(marketArgs.create).collectedAt).toBeInstanceOf(Date);
     expect(record(marketArgs.create).updatedAt).toBeInstanceOf(Date);
-    expect(record(marketArgs.create).basicProfile).toBeNull();
+    expect(record(marketArgs.create).basicProfile).toBe(Prisma.DbNull);
     const marketOperation = prepared.plan.operations.at(-1);
     if (marketOperation?.model !== "marketOverview") throw new TypeError("missing market operation");
     expect(record(marketArgs.create).keyIndicators).toEqual(marketOperation.args.create.keyIndicators);
@@ -153,6 +153,9 @@ describe("createPrismaBasicCountryImportPort", () => {
 
     expect(getRecord(readback?.marketOverview, "market overview").basicProfile)
       .toEqual(profile);
+    const marketArgs = firstCallArg(vi.mocked(state.transaction.marketOverview.upsert));
+    expect(record(marketArgs.create).basicProfile).toEqual(profile);
+    expect(record(marketArgs.create).basicProfile).not.toBe(Prisma.DbNull);
   });
 
   test.each([
@@ -283,7 +286,13 @@ function createStatefulTransaction(): { transaction: PrismaBasicCountryTransacti
     return value;
   });
   transaction.marketOverview.upsert = vi.fn(async (args) => {
-    marketOverview = record(args.create);
+    const create = record(args.create);
+    marketOverview = {
+      ...create,
+      basicProfile: create.basicProfile === Prisma.DbNull
+        ? null
+        : create.basicProfile,
+    };
     return marketOverview;
   });
   transaction.country.findUnique = vi.fn(async () => country === null ? null : {

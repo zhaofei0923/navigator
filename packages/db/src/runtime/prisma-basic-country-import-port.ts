@@ -1,4 +1,5 @@
 import { parseBasicProfile } from "@navigator/shared-types/basic-profile";
+import { Prisma } from "@prisma/client";
 
 import type {
   BasicCountryImportTransaction,
@@ -103,6 +104,10 @@ interface PrismaUpsertDelegate {
   upsert(args: Record<string, unknown>): Promise<unknown>;
 }
 
+interface PrismaMarketOverviewDelegate extends PrismaCountDelegate {
+  upsert(args: Prisma.MarketOverviewUpsertArgs): Promise<unknown>;
+}
+
 interface PrismaCountryDelegate extends PrismaUpsertDelegate {
   findUnique: PrismaBasicCountryReadTransaction["country"]["findUnique"];
 }
@@ -110,7 +115,7 @@ interface PrismaCountryDelegate extends PrismaUpsertDelegate {
 export interface PrismaBasicCountryTransaction extends PrismaBasicCountryReadTransaction {
   readonly country: PrismaCountryDelegate;
   readonly moduleCoverage: PrismaUpsertDelegate;
-  readonly marketOverview: PrismaCountDelegate & PrismaUpsertDelegate;
+  readonly marketOverview: PrismaMarketOverviewDelegate;
   readonly policy: PrismaCountDelegate;
   readonly risk: PrismaCountDelegate;
   readonly opportunity: PrismaCountDelegate;
@@ -274,7 +279,9 @@ function parseCoverageData(value: unknown): Record<string, unknown> {
   };
 }
 
-function parseMarketUpsert(operation: BasicSeedImportOperation): Record<string, unknown> {
+function parseMarketUpsert(
+  operation: BasicSeedImportOperation,
+): Prisma.MarketOverviewUpsertArgs {
   const args = exactRecord(operation.args, ["where", "create", "update"]);
   const where = exactRecord(args.where, ["countryCode"]);
   const create = parseMarketData(args.create);
@@ -283,10 +290,13 @@ function parseMarketUpsert(operation: BasicSeedImportOperation): Record<string, 
   if (create.countryCode !== countryCode || update.countryCode !== countryCode) {
     throw invalidOperation();
   }
-  return { where: { countryCode }, create, update };
+  return { where: { countryCode }, create, update } satisfies
+    Prisma.MarketOverviewUpsertArgs;
 }
 
-function parseMarketData(value: unknown): Record<string, unknown> {
+function parseMarketData(
+  value: unknown,
+): Prisma.MarketOverviewUncheckedCreateInput {
   const data = exactRecord(value, [
     "overview", "population", "gdp", "gdpGrowth", "energyDemand", "renewableTarget",
     "keyIndicators", "basicProfile", "source", "sourceUrl", "collectedAt", "updatedAt", "credibility",
@@ -315,10 +325,15 @@ function parseMarketData(value: unknown): Record<string, unknown> {
   };
 }
 
-function parseRequiredBasicProfile(value: unknown) {
+function parseRequiredBasicProfile(
+  value: unknown,
+): Prisma.InputJsonValue | Prisma.NullTypes.DbNull {
+  if (value === null) return Prisma.DbNull;
   const profile = parseBasicProfile(value);
-  if (value !== null && profile === null) throw invalidOperation();
-  return profile;
+  if (profile === null) throw invalidOperation();
+  const json = toPrismaInputJsonValue(profile);
+  if (json === null) throw invalidOperation();
+  return json;
 }
 
 function parseLocalizedText(value: unknown): Record<string, string> {
@@ -332,7 +347,7 @@ function parseLocalizedText(value: unknown): Record<string, string> {
   return { zh: value.zh, en: value.en };
 }
 
-function parseKeyIndicators(value: unknown): Record<string, unknown>[] {
+function parseKeyIndicators(value: unknown): Prisma.InputJsonObject[] {
   if (!Array.isArray(value) || value.length === 0) throw invalidOperation();
   return value.map((item) => {
     if (!hasExactOwnKeys(item, KEY_INDICATOR_KEYS)) throw invalidOperation();
@@ -345,15 +360,43 @@ function parseKeyIndicators(value: unknown): Record<string, unknown>[] {
   });
 }
 
-function parseMappedArray(
+function toPrismaInputJsonValue(
   value: unknown,
-  mapping: Readonly<Record<string, string>>,
-): string[] {
+): Prisma.InputJsonValue | null {
+  if (value === null) return null;
+  if (
+    typeof value === "string" ||
+    typeof value === "boolean" ||
+    (typeof value === "number" && Number.isFinite(value))
+  ) {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return value.map(toPrismaInputJsonValue);
+  }
+  if (isPlainRecord(value)) {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [
+        key,
+        toPrismaInputJsonValue(item),
+      ]),
+    );
+  }
+  throw invalidOperation();
+}
+
+function parseMappedArray<T extends string>(
+  value: unknown,
+  mapping: Readonly<Record<string, T>>,
+): T[] {
   if (!Array.isArray(value)) throw invalidOperation();
   return value.map((item) => mapToken(item, mapping));
 }
 
-function mapToken(value: unknown, mapping: Readonly<Record<string, string>>): string {
+function mapToken<T extends string>(
+  value: unknown,
+  mapping: Readonly<Record<string, T>>,
+): T {
   if (typeof value !== "string") throw invalidOperation();
   const mapped = mapping[value];
   if (mapped === undefined) throw invalidOperation();
