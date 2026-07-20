@@ -190,7 +190,16 @@ describe("Basic candidate native no-replace publisher", () => {
     const sourceIdentity = await directoryIdentity(sourceRoot, "canonical");
     const targetIdentity = await directoryIdentity(targetRoot, "example-land");
     try {
-      const invalidArguments: readonly unknown[][] = [
+      const invalidArguments: readonly (readonly [
+        unknown,
+        unknown,
+        unknown,
+        unknown,
+        unknown,
+        unknown,
+        unknown,
+        unknown,
+      ])[] = [
         [-1, "canonical", targetParent.fd, "example-land", sourceIdentity.dev, sourceIdentity.ino, targetIdentity.dev, targetIdentity.ino],
         [sourceParent.fd, "nested/name", targetParent.fd, "example-land", sourceIdentity.dev, sourceIdentity.ino, targetIdentity.dev, targetIdentity.ino],
         [sourceParent.fd, "canonical", -1, "example-land", sourceIdentity.dev, sourceIdentity.ino, targetIdentity.dev, targetIdentity.ino],
