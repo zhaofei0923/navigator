@@ -242,7 +242,10 @@ test("country detail renders ten module skeleton and switches language", async (
   );
   await expect(page.getByRole("heading", { name: "Market overview" })).toBeVisible();
   await expect(
-    page.getByText(/Installed renewable capacity reached 15,630 MW/),
+    page.getByText(
+      "Energy and mineral investment reached USD 31.7 billion in 2025, including USD 4.6 billion in electricity and USD 2.4 billion in renewables and conservation.",
+      { exact: true },
+    ),
   ).toBeVisible();
   await expect(
     page.getByRole("heading", { exact: true, name: "AI Advisor" }),
@@ -260,7 +263,12 @@ test("country detail renders ten module skeleton and switches language", async (
     page.getByRole("heading", { exact: true, name: "印度尼西亚" }),
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "市场概览" })).toBeVisible();
-  await expect(page.getByText(/可再生能源装机达到15,630兆瓦/)).toBeVisible();
+  await expect(
+    page.getByText(
+      "2025年能源与矿产领域投资为317亿美元，其中电力46亿美元、可再生能源与节能24亿美元。",
+      { exact: true },
+    ),
+  ).toBeVisible();
   await expect(page.getByText("数据建设中", { exact: true })).toHaveCount(9);
   const chineseVisibleText = await main.innerText();
   expect(chineseVisibleText).not.toContain("id_pol_001");
