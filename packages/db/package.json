@@ -20,6 +20,7 @@
     "precandidate:basic-country": "pnpm run build:basic-candidate-native",
     "candidate:basic-country": "node --conditions=development --import ../../scripts/node-ts-source-hook.mjs src/cli/candidate-basic-country.ts",
     "basic:prepare-batch": "node --conditions=development --import ../../scripts/node-ts-source-hook.mjs src/cli/prepare-basic-batch.ts",
+    "basic:review-pack": "node --conditions=development --experimental-transform-types --import ../../scripts/node-ts-source-hook.mjs src/cli/write-basic-review-pack.ts",
     "preflight:basic-activation": "node --conditions=development --import ../../scripts/node-ts-source-hook.mjs src/seed/basic-country-activation-preflight-cli.ts",
     "seed:approved-basic-country": "node --conditions=development --experimental-transform-types --import ../../scripts/node-ts-source-hook.mjs src/seed/approved-basic-country-import.ts",
     "import:approved-basic-publications": "node --conditions=development --experimental-transform-types --import ../../scripts/node-ts-source-hook.mjs src/seed/approved-basic-countries-prisma-import-cli.ts",
