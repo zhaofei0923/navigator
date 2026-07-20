@@ -22,7 +22,9 @@ import {
   closeBasicCandidateNativeDirectory,
   createBasicCandidateExclusiveDirectoryNative,
   ensureBasicCandidateDirectoryNative,
+  removeBasicCandidateDirectoryNative,
   renameBasicCandidateDirectoryChildNoReplaceNative,
+  unlinkBasicCandidateRegularFileNative,
 } from "./cli/basic-candidate-native-fs.js";
 
 const FIXED_ERROR = "basic candidate native filesystem operation failed";
@@ -87,6 +89,35 @@ describe("Basic candidate native no-replace publisher", () => {
 
     expect(await readdir(root)).toEqual(["target"]);
     expect(await readFile(join(root, "target", "artifact.json"), "utf8")).toBe("complete");
+  });
+
+  test("removes only identity-matched regular files and their empty directory", async () => {
+    const root = await createTemporaryRoot();
+    await mkdir(join(root, "temporary"), { mode: 0o700 });
+    await writeFile(join(root, "temporary", "artifact.json"), "complete", { mode: 0o600 });
+    const parent = await openDirectory(root);
+    const temporary = await openDirectory(join(root, "temporary"));
+    const directory = await directoryIdentity(root, "temporary");
+    const file = await lstat(join(root, "temporary", "artifact.json"), { bigint: true });
+    try {
+      expect(() => unlinkBasicCandidateRegularFileNative(
+        temporary.fd, "artifact.json", file.dev, file.ino + 1n,
+      )).toThrow(FIXED_ERROR);
+      expect(await readFile(join(root, "temporary", "artifact.json"), "utf8"))
+        .toBe("complete");
+
+      unlinkBasicCandidateRegularFileNative(
+        temporary.fd, "artifact.json", file.dev, file.ino,
+      );
+      expect(await readdir(join(root, "temporary"))).toEqual([]);
+      removeBasicCandidateDirectoryNative(
+        parent.fd, "temporary", directory.dev, directory.ino,
+      );
+      await expect(readdir(join(root, "temporary"))).rejects.toMatchObject({ code: "ENOENT" });
+    } finally {
+      await temporary.close();
+      await parent.close();
+    }
   });
 
   test("allows cooperating creators to ensure one held directory identity", async () => {

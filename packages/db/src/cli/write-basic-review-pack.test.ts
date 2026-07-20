@@ -11,7 +11,30 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
+
+const injectedWriteFailure = vi.hoisted(() => ({
+  callCount: 0,
+  failOnCall: null as number | null,
+}));
+
+vi.mock("./basic-candidate-constrained-fs.js", async (importOriginal) => {
+  const actual = await importOriginal<
+    typeof import("./basic-candidate-constrained-fs.js")
+  >();
+  return {
+    ...actual,
+    async writeBasicCandidateExclusiveFile(
+      ...arguments_: Parameters<typeof actual.writeBasicCandidateExclusiveFile>
+    ): ReturnType<typeof actual.writeBasicCandidateExclusiveFile> {
+      injectedWriteFailure.callCount += 1;
+      if (injectedWriteFailure.callCount === injectedWriteFailure.failOnCall) {
+        throw new Error("injected review file write failure");
+      }
+      return actual.writeBasicCandidateExclusiveFile(...arguments_);
+    },
+  };
+});
 
 import { createBasicCollectionAuditV3Fixture } from "../basic-collection-v3-test-fixture.js";
 import {
@@ -25,6 +48,8 @@ const roots = new Set<string>();
 afterEach(() => {
   for (const root of roots) rmSync(root, { recursive: true, force: true });
   roots.clear();
+  injectedWriteFailure.callCount = 0;
+  injectedWriteFailure.failOnCall = null;
 });
 
 describe("BASIC review pack CLI", () => {
@@ -78,6 +103,8 @@ describe("BASIC review pack CLI", () => {
     await expect(writeBasicReviewPack({
       repoRoot: root, countryCode: "XZ", runId: bundle.runId,
     })).rejects.toThrow("basic review pack write failed");
+    expect(readdirSync(join(root, ".cache", "basic-country", "XZ", bundle.runId)))
+      .toEqual(["review"]);
   });
 
   test("fails closed for zero or multiple matching slugs and redacts hostile input", async () => {
@@ -98,6 +125,20 @@ describe("BASIC review pack CLI", () => {
     })).rejects.toThrow(/^basic review pack write failed$/);
   });
 
+  test("removes the private temporary directory after a partial file write failure", async () => {
+    const root = createRepo();
+    const bundle = createBasicCollectionAuditV3Fixture();
+    writeCandidate(root, bundle);
+    injectedWriteFailure.failOnCall = 2;
+
+    await expect(writeBasicReviewPack({
+      repoRoot: root, countryCode: "XZ", runId: bundle.runId,
+    })).rejects.toThrow(/^basic review pack write failed$/);
+
+    expect(readdirSync(join(root, ".cache", "basic-country", "XZ", bundle.runId)))
+      .toEqual([]);
+  });
+
   test("rejects symlinked candidate artifacts through bounded nofollow reads", async () => {
     const root = createRepo();
     const bundle = createBasicCollectionAuditV3Fixture();
@@ -113,6 +154,45 @@ describe("BASIC review pack CLI", () => {
       repoRoot: root, countryCode: "XZ", runId: bundle.runId,
     })).rejects.toThrow(/^basic review pack write failed$/);
     expect(existsSync(join(root, ".cache", "basic-country"))).toBe(false);
+  });
+
+  test("rejects an isolated canonical market overview without an approved publication", async () => {
+    const root = createRepo();
+    const bundle = createBasicCollectionAuditV3Fixture();
+    writeCandidate(root, bundle);
+    const canonical = join(root, "data", bundle.countryDirectory);
+    mkdirSync(canonical, { recursive: true });
+    writeFileSync(join(canonical, "market-overview.json"), JSON.stringify({
+      basicProfile: bundle.marketOverviewDraft.basicProfile,
+    }));
+
+    await expect(writeBasicReviewPack({
+      repoRoot: root, countryCode: "XZ", runId: bundle.runId,
+    })).rejects.toThrow(/^basic review pack write failed$/);
+  });
+
+  test("rejects canonical files whose manifest and approval hashes do not validate", async () => {
+    const root = createRepo();
+    const bundle = createBasicCollectionAuditV3Fixture();
+    writeCandidate(root, bundle);
+    const canonical = join(root, "data", bundle.countryDirectory);
+    mkdirSync(canonical, { recursive: true });
+    writeFileSync(join(canonical, "country.json"), "{}\n");
+    writeFileSync(join(canonical, "market-overview.json"), JSON.stringify({
+      basicProfile: bundle.marketOverviewDraft.basicProfile,
+    }));
+    writeFileSync(join(canonical, "collection-manifest.json"), JSON.stringify({
+      schemaVersion: "basic-country-publication-manifest/v2",
+      activeRunId: bundle.runId,
+      mappingVersion: "basic-country-canonical/v2",
+      auditBundlePath: `data/staging/${bundle.countryDirectory}/${bundle.runId}`,
+      approvalReceiptPath: `data/approvals/${bundle.countryDirectory}/${bundle.runId}.json`,
+      approvalReceiptSha256: "0".repeat(64),
+    }));
+
+    await expect(writeBasicReviewPack({
+      repoRoot: root, countryCode: "XZ", runId: bundle.runId,
+    })).rejects.toThrow(/^basic review pack write failed$/);
   });
 });
 

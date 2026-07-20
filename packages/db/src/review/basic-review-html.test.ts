@@ -21,7 +21,9 @@ describe("BASIC local review HTML", () => {
     };
 
     const html = new TextDecoder().decode(renderBasicReviewHtml(
-      createBasicReviewModel({ candidate: mutated, previousProfile: null }),
+      createBasicReviewModel({
+        candidate: mutated, previousProfile: null, candidateArtifactSha256: artifactHashes(),
+      }),
     ));
 
     expect(html).toContain('class="lang zh"');
@@ -35,7 +37,7 @@ describe("BASIC local review HTML", () => {
 
   test("returns byte-identical output for the same review model", () => {
     const model = createBasicReviewModel({
-      candidate: fixture(), previousProfile: null,
+      candidate: fixture(), previousProfile: null, candidateArtifactSha256: artifactHashes(),
     });
     const first = renderBasicReviewHtml(model);
     const second = renderBasicReviewHtml(structuredClone(model));
@@ -54,4 +56,13 @@ type Mutable<T> = {
 
 function fixture(): BasicCollectionAuditBundleV3 {
   return createBasicCollectionAuditV3Fixture() as unknown as BasicCollectionAuditBundleV3;
+}
+
+function artifactHashes() {
+  return {
+    "source-register.json": "1".repeat(64),
+    "extracted-facts.json": "2".repeat(64),
+    "market-overview.draft.json": "3".repeat(64),
+    "review-report.json": "4".repeat(64),
+  } as const;
 }

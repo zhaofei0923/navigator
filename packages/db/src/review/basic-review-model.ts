@@ -6,6 +6,7 @@ import type {
 import type { LocalizedText } from "@navigator/shared-types/i18n";
 
 import type { BasicCollectionAuditBundleV3 } from "../collection/basic-collection-v3-contracts.js";
+import type { BasicCollectionAuditArtifactName } from "../collection/basic-offline-audit-artifacts.js";
 import { renderBasicNumericTemplate } from "./basic-bilingual-template.js";
 
 export const BASIC_REVIEW_SECTION_KEYS = [
@@ -76,6 +77,7 @@ export interface BasicReviewModel {
   readonly countryCode: string;
   readonly runId: string;
   readonly candidateUpdatedAt: string;
+  readonly candidateArtifactSha256: Readonly<Record<BasicCollectionAuditArtifactName, string>>;
   readonly sections: readonly Readonly<{
     key: BasicProfileCategoryKey;
     title: LocalizedText;
@@ -98,6 +100,7 @@ export interface BasicReviewModel {
 export interface BasicReviewModelInput {
   readonly candidate: BasicCollectionAuditBundleV3;
   readonly previousProfile: BasicProfile | null;
+  readonly candidateArtifactSha256: Readonly<Record<BasicCollectionAuditArtifactName, string>>;
 }
 
 export function createBasicReviewModel(input: BasicReviewModelInput): BasicReviewModel {
@@ -148,6 +151,7 @@ export function createBasicReviewModel(input: BasicReviewModelInput): BasicRevie
     countryCode: input.candidate.sourceRegister.countryCode,
     runId: input.candidate.runId,
     candidateUpdatedAt: profile.updatedAt,
+    candidateArtifactSha256: Object.freeze({ ...input.candidateArtifactSha256 }),
     sections: Object.freeze(sections),
     missing: Object.freeze(missing),
     conflicts: Object.freeze(input.candidate.reviewReport.conflicts.map((conflict) =>

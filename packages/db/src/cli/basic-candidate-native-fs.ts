@@ -21,6 +21,18 @@ type NativeOperations = Readonly<{
     expectedDev: bigint,
     expectedIno: bigint,
   ): unknown;
+  unlinkRegularFile(
+    parentDirFd: number,
+    name: string,
+    expectedDev: bigint,
+    expectedIno: bigint,
+  ): unknown;
+  removeDirectory(
+    parentDirFd: number,
+    name: string,
+    expectedDev: bigint,
+    expectedIno: bigint,
+  ): unknown;
 }>;
 
 export type BasicCandidateNativeDirectory = Readonly<{
@@ -111,6 +123,42 @@ export function renameBasicCandidateDirectoryChildNoReplaceNative(
   }
 }
 
+export function unlinkBasicCandidateRegularFileNative(
+  parentDirFd: unknown,
+  name: unknown,
+  expectedDev: unknown,
+  expectedIno: unknown,
+): void {
+  try {
+    if (nativeOperations === null || nativeOperations.unlinkRegularFile(
+      parseDirectoryFd(parentDirFd),
+      parseComponent(name),
+      parseIdentity(expectedDev),
+      parseIdentity(expectedIno),
+    ) !== "OK") invalid();
+  } catch {
+    invalid();
+  }
+}
+
+export function removeBasicCandidateDirectoryNative(
+  parentDirFd: unknown,
+  name: unknown,
+  expectedDev: unknown,
+  expectedIno: unknown,
+): void {
+  try {
+    if (nativeOperations === null || nativeOperations.removeDirectory(
+      parseDirectoryFd(parentDirFd),
+      parseComponent(name),
+      parseIdentity(expectedDev),
+      parseIdentity(expectedIno),
+    ) !== "OK") invalid();
+  } catch {
+    invalid();
+  }
+}
+
 function loadNativeOperations(): NativeOperations | null {
   let descriptor = -1;
   let result: NativeOperations | null = null;
@@ -147,20 +195,28 @@ function parseNativeOperations(binding: unknown): NativeOperations | null {
   ) return null;
   const ownKeys = Reflect.ownKeys(binding);
   if (
-    ownKeys.length !== 4 || ownKeys[0] !== "createExclusiveDirectory" ||
+    ownKeys.length !== 6 || ownKeys[0] !== "createExclusiveDirectory" ||
     ownKeys[1] !== "ensureDirectory" || ownKeys[2] !== "closeDirectory" ||
-    ownKeys[3] !== "renameNoReplace"
+    ownKeys[3] !== "renameNoReplace" || ownKeys[4] !== "unlinkRegularFile" ||
+    ownKeys[5] !== "removeDirectory"
   ) return null;
   const create = readFunction(binding, "createExclusiveDirectory");
   const ensure = readFunction(binding, "ensureDirectory");
   const close = readFunction(binding, "closeDirectory");
   const rename = readFunction(binding, "renameNoReplace");
-  if (create === null || ensure === null || close === null || rename === null) return null;
+  const unlink = readFunction(binding, "unlinkRegularFile");
+  const remove = readFunction(binding, "removeDirectory");
+  if (
+    create === null || ensure === null || close === null || rename === null ||
+    unlink === null || remove === null
+  ) return null;
   return Object.freeze({
     createExclusiveDirectory: create as NativeOperations["createExclusiveDirectory"],
     ensureDirectory: ensure as NativeOperations["ensureDirectory"],
     closeDirectory: close as NativeOperations["closeDirectory"],
     renameNoReplace: rename as NativeOperations["renameNoReplace"],
+    unlinkRegularFile: unlink as NativeOperations["unlinkRegularFile"],
+    removeDirectory: remove as NativeOperations["removeDirectory"],
   });
 }
 

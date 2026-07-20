@@ -1,25 +1,12 @@
 import { randomUUID } from "node:crypto";
-import { readdir } from "node:fs/promises";
-
-import { parseBasicProfile, type BasicProfile } from "@navigator/shared-types/basic-profile";
-
-import { parseBasicStrictJsonText } from "../collection/basic-strict-json.js";
-import {
-  BASIC_COLLECTION_AUDIT_V3_SCHEMA_VERSION,
-  type BasicCollectionAuditBundleV3,
-} from "../collection/basic-collection-v3-contracts.js";
-import { validateBasicCollectionAuditArtifactValuesVersioned } from "../collection/basic-collection-versioned-loader.js";
-import type { BasicCollectionAuditArtifactName } from "../collection/basic-offline-audit-artifacts.js";
 import { renderBasicReviewHtml } from "../review/basic-review-html.js";
 import { createBasicReviewModel } from "../review/basic-review-model.js";
-import { SAFE_COUNTRY_DIRECTORY } from "../seed/basic-country-validation-utils.js";
+import { loadApprovedPreviousBasicProfileVersioned } from "../review/basic-approved-publication-profile.js";
 import {
-  cleanupBasicCandidateTemporaryDirectory,
   closeBasicCandidateHeldDirectories,
   createBasicCandidateExclusiveDirectory,
   ensureBasicCandidateDirectoryChild,
   openBasicCandidateDirectoryChild,
-  readBasicCandidateBoundedRegularFile,
   requireBasicCandidateDirectoryEntries,
   requireBasicCandidateHeldChild,
   setBasicCandidateDirectoryMode,
@@ -30,101 +17,51 @@ import {
   type BasicCandidateHeldDirectory,
 } from "./basic-candidate-constrained-fs.js";
 import { renameBasicCandidateDirectoryChildNoReplaceNative } from "./basic-candidate-native-fs.js";
+import { locateBasicReviewCandidateSnapshot } from "./basic-review-candidate-snapshot.js";
+import {
+  cleanupBasicReviewPackTemporaryDirectory,
+  type BasicReviewPackTemporaryFile,
+} from "./basic-review-pack-temp-cleanup.js";
 
 export interface BasicReviewPackIdentity {
   readonly countryCode: string;
   readonly runId: string;
 }
 
-const ARTIFACT_NAMES = Object.freeze([
-  "source-register.json",
-  "extracted-facts.json",
-  "market-overview.draft.json",
-  "review-report.json",
-] as const satisfies readonly BasicCollectionAuditArtifactName[]);
 const REVIEW_NAMES = Object.freeze(["index.html", "review.json"] as const);
-const MAX_JSON_BYTES = 2 * 1024 * 1024;
+
+export interface BasicReviewPackFilesystemHooks {
+  readonly beforeAtomicPublish?: () => void | Promise<void>;
+}
 
 export async function generateBasicReviewPackFiles(
   root: BasicCandidateHeldDirectory,
+  repoRoot: string,
   identity: BasicReviewPackIdentity,
+  hooks: BasicReviewPackFilesystemHooks = {},
 ): Promise<void> {
-  const located = await locateCandidate(root, identity);
-  const previousProfile = await readPreviousProfile(root, located.countryDirectory);
-  const model = createBasicReviewModel({ candidate: located.candidate, previousProfile });
-  await writeReviewDirectory(root, identity, model);
-}
-
-async function locateCandidate(
-  root: BasicCandidateHeldDirectory,
-  input: BasicReviewPackIdentity,
-): Promise<Readonly<{ countryDirectory: string; candidate: BasicCollectionAuditBundleV3 }>> {
-  let data: BasicCandidateHeldDirectory | null = null;
-  let staging: BasicCandidateHeldDirectory | null = null;
+  const located = await locateBasicReviewCandidateSnapshot(root, identity);
   try {
-    data = await openBasicCandidateDirectoryChild(root, "data");
-    staging = await openBasicCandidateDirectoryChild(data, "staging");
-    const stagingPath = `/proc/self/fd/${staging.handle.fd}/`;
-    const entries = (await readdir(stagingPath)).sort();
-    if (entries.some((entry) => !SAFE_COUNTRY_DIRECTORY.test(entry))) throw new Error("invalid");
-    const matches: Array<Readonly<{
-      countryDirectory: string;
-      candidate: BasicCollectionAuditBundleV3;
-    }>> = [];
-    for (const countryDirectory of entries) {
-      const candidate = await tryReadCandidate(staging, countryDirectory, input.runId);
-      if (candidate !== null && candidate.sourceRegister.countryCode === input.countryCode) {
-        matches.push(Object.freeze({ countryDirectory, candidate }));
-      }
-    }
-    if (!sameStrings(entries, (await readdir(stagingPath)).sort()) || matches.length !== 1) {
-      throw new Error("invalid");
-    }
-    return matches[0]!;
-  } finally {
-    await closeBasicCandidateHeldDirectories([staging, data]);
-  }
-}
-
-async function tryReadCandidate(
-  staging: BasicCandidateHeldDirectory,
-  countryDirectory: string,
-  runId: string,
-): Promise<BasicCollectionAuditBundleV3 | null> {
-  let country: BasicCandidateHeldDirectory | null = null;
-  let run: BasicCandidateHeldDirectory | null = null;
-  try {
-    country = await openBasicCandidateDirectoryChild(staging, countryDirectory);
-    try {
-      run = await openBasicCandidateDirectoryChild(country, runId);
-    } catch (error) {
-      if (errorCode(error) === "ENOENT") return null;
-      throw error;
-    }
-    await requireBasicCandidateDirectoryEntries(run, ARTIFACT_NAMES);
-    const artifacts = Object.fromEntries(await Promise.all(ARTIFACT_NAMES.map(async (name) => {
-      const bytes = await readBasicCandidateBoundedRegularFile(run!, name, MAX_JSON_BYTES);
-      return [name, parseBasicStrictJsonText(
-        new TextDecoder("utf-8", { fatal: true }).decode(bytes),
-      )] as const;
-    }))) as Readonly<Record<BasicCollectionAuditArtifactName, unknown>>;
-    await requireBasicCandidateDirectoryEntries(run, ARTIFACT_NAMES);
-    const candidate = validateBasicCollectionAuditArtifactValuesVersioned(
-      countryDirectory, runId, artifacts,
+    const previousProfile = await readPreviousProfile(
+      root, repoRoot, located.countryDirectory,
     );
-    if (candidate.sourceRegister.schemaVersion !== BASIC_COLLECTION_AUDIT_V3_SCHEMA_VERSION) {
-      throw new Error("invalid");
-    }
-    return candidate as BasicCollectionAuditBundleV3;
+    const model = createBasicReviewModel({
+      candidate: located.candidate,
+      previousProfile,
+      candidateArtifactSha256: located.artifactSha256,
+    });
+    await located.verify();
+    await writeReviewDirectory(root, identity, model, located.verify, hooks);
   } finally {
-    await closeBasicCandidateHeldDirectories([run, country]);
+    await located.close();
   }
 }
 
 async function readPreviousProfile(
   root: BasicCandidateHeldDirectory,
+  repoRoot: string,
   countryDirectory: string,
-): Promise<BasicProfile | null> {
+): Promise<ReturnType<typeof loadApprovedPreviousBasicProfileVersioned>> {
   let data: BasicCandidateHeldDirectory | null = null;
   let country: BasicCandidateHeldDirectory | null = null;
   try {
@@ -135,22 +72,7 @@ async function readPreviousProfile(
       if (errorCode(error) === "ENOENT") return null;
       throw error;
     }
-    let bytes: Uint8Array;
-    try {
-      bytes = await readBasicCandidateBoundedRegularFile(
-        country, "market-overview.json", MAX_JSON_BYTES,
-      );
-    } catch (error) {
-      if (errorCode(error) === "ENOENT") return null;
-      throw error;
-    }
-    const value = parseBasicStrictJsonText(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
-    if (typeof value !== "object" || value === null || Array.isArray(value)) throw new Error("invalid");
-    const profileValue = value.basicProfile;
-    if (profileValue === undefined || profileValue === null) return null;
-    const profile = parseBasicProfile(profileValue);
-    if (profile === null) throw new Error("invalid");
-    return profile;
+    return loadApprovedPreviousBasicProfileVersioned(repoRoot, countryDirectory);
   } finally {
     await closeBasicCandidateHeldDirectories([country, data]);
   }
@@ -160,11 +82,14 @@ async function writeReviewDirectory(
   root: BasicCandidateHeldDirectory,
   input: BasicReviewPackIdentity,
   model: ReturnType<typeof createBasicReviewModel>,
+  verifyCandidate: () => Promise<void>,
+  hooks: BasicReviewPackFilesystemHooks,
 ): Promise<void> {
   const held: BasicCandidateHeldDirectory[] = [];
   let temporary: BasicCandidateHeldDirectory | null = null;
   let parent: BasicCandidateHeldDirectory | null = null;
   let temporaryName: string | null = null;
+  const temporaryFiles: BasicReviewPackTemporaryFile[] = [];
   let published = false;
   try {
     let current = root;
@@ -192,11 +117,19 @@ async function writeReviewDirectory(
     const html = renderBasicReviewHtml(model);
     const json = new TextEncoder().encode(`${JSON.stringify(model)}\n`);
     const htmlIdentity = await writeBasicCandidateExclusiveFile(temporary, "index.html", html);
+    temporaryFiles.push(Object.freeze({
+      name: "index.html", identity: htmlIdentity, content: html,
+    }));
     const jsonIdentity = await writeBasicCandidateExclusiveFile(temporary, "review.json", json);
+    temporaryFiles.push(Object.freeze({
+      name: "review.json", identity: jsonIdentity, content: json,
+    }));
     await syncBasicCandidateDirectory(temporary);
     await verifyReviewFiles(temporary, htmlIdentity, html, jsonIdentity, json);
     await requireReviewHierarchy(hierarchy);
     await requireBasicCandidateHeldChild(parent, temporaryName, temporary);
+    await hooks.beforeAtomicPublish?.();
+    await verifyCandidate();
     renameBasicCandidateDirectoryChildNoReplaceNative(
       parent.handle.fd, temporaryName, "review", temporary.identity.dev, temporary.identity.ino,
     );
@@ -207,10 +140,18 @@ async function writeReviewDirectory(
     await requireBasicCandidateHeldChild(parent, "review", temporary);
     await verifyReviewFiles(temporary, htmlIdentity, html, jsonIdentity, json);
   } finally {
-    if (!published && parent !== null && temporary !== null && temporaryName !== null) {
-      await cleanupBasicCandidateTemporaryDirectory(parent, temporaryName, temporary);
+    try {
+      if (
+        !published && parent !== null && temporary !== null &&
+        temporaryName !== null
+      ) {
+        await cleanupBasicReviewPackTemporaryDirectory(
+          parent, temporaryName, temporary, temporaryFiles,
+        );
+      }
+    } finally {
+      await closeBasicCandidateHeldDirectories([...held, temporary]);
     }
-    await closeBasicCandidateHeldDirectories([...held, temporary]);
   }
 }
 
@@ -240,8 +181,4 @@ async function requireReviewHierarchy(
 
 function errorCode(error: unknown): string | undefined {
   return (error as NodeJS.ErrnoException | null)?.code;
-}
-
-function sameStrings(left: readonly string[], right: readonly string[]): boolean {
-  return left.length === right.length && left.every((value, index) => value === right[index]);
 }

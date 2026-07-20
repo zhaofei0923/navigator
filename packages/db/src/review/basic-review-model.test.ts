@@ -10,9 +10,17 @@ import {
 describe("BASIC local review model", () => {
   test("keeps the exact eight-category order and side-by-side bilingual fields", () => {
     const bundle = fixture();
-    const model = createBasicReviewModel({ candidate: bundle, previousProfile: null });
+    const model = createBasicReviewModel({
+      candidate: bundle, previousProfile: null, candidateArtifactSha256: artifactHashes(),
+    });
 
     expect(model.sections.map(({ key }) => key)).toEqual(BASIC_REVIEW_SECTION_KEYS);
+    expect(model.candidateArtifactSha256).toEqual({
+      "source-register.json": "1".repeat(64),
+      "extracted-facts.json": "2".repeat(64),
+      "market-overview.draft.json": "3".repeat(64),
+      "review-report.json": "4".repeat(64),
+    });
     for (const section of model.sections) {
       expect(section.title.zh).not.toBe("");
       expect(section.title.en).not.toBe("");
@@ -50,7 +58,9 @@ describe("BASIC local review model", () => {
     ) as Mutable<BasicCollectionAuditBundleV3["marketOverviewDraft"]["basicProfile"]>;
     previous.categories.electricityMarket.fields[0]!.value = 99;
 
-    const model = createBasicReviewModel({ candidate: current, previousProfile: previous });
+    const model = createBasicReviewModel({
+      candidate: current, previousProfile: previous, candidateArtifactSha256: artifactHashes(),
+    });
 
     expect(model.missing).toContainEqual(expect.objectContaining({
       fieldPath: expect.stringContaining("electricityAccess"),
@@ -83,4 +93,13 @@ type Mutable<T> = {
 
 function fixture(): BasicCollectionAuditBundleV3 {
   return createBasicCollectionAuditV3Fixture() as unknown as BasicCollectionAuditBundleV3;
+}
+
+function artifactHashes() {
+  return {
+    "source-register.json": "1".repeat(64),
+    "extracted-facts.json": "2".repeat(64),
+    "market-overview.draft.json": "3".repeat(64),
+    "review-report.json": "4".repeat(64),
+  } as const;
 }

@@ -326,11 +326,87 @@ static napi_value rename_no_replace(napi_env env, napi_callback_info info) {
 #endif
 }
 
+static napi_value unlink_regular_file(napi_env env, napi_callback_info info) {
+  size_t argument_count = 4U;
+  napi_value arguments[4] = {NULL, NULL, NULL, NULL};
+  int parent_fd = -1;
+  uint64_t expected_dev = 0U;
+  uint64_t expected_ino = 0U;
+  basic_component name = {{0}};
+  struct stat parent_details;
+  struct stat child_details;
+
+  if (napi_get_cb_info(env, info, &argument_count, arguments, NULL, NULL) != napi_ok ||
+      argument_count != 4U ||
+      !read_directory_fd(env, arguments[0], &parent_fd) ||
+      !read_component(env, arguments[1], &name) ||
+      !read_identity(env, arguments[2], &expected_dev) ||
+      !read_identity(env, arguments[3], &expected_ino)) {
+    return make_status(env, "ERR_INVALID");
+  }
+  if (fstat(parent_fd, &parent_details) != 0 || !S_ISDIR(parent_details.st_mode)) {
+    return make_status(env, "ERR_INVALID");
+  }
+  if (fstatat(parent_fd, name.bytes, &child_details, AT_SYMLINK_NOFOLLOW) != 0 ||
+      !S_ISREG(child_details.st_mode) ||
+      (uint64_t)child_details.st_dev != expected_dev ||
+      (uint64_t)child_details.st_ino != expected_ino) {
+    return make_status(env, "ERR_FAILED");
+  }
+  if (unlinkat(parent_fd, name.bytes, 0) != 0) {
+    return make_status(env, failure_status(errno));
+  }
+  if (fstatat(parent_fd, name.bytes, &child_details, AT_SYMLINK_NOFOLLOW) == 0 ||
+      errno != ENOENT) {
+    return make_status(env, "ERR_FAILED");
+  }
+  return make_status(env, "OK");
+}
+
+static napi_value remove_directory(napi_env env, napi_callback_info info) {
+  size_t argument_count = 4U;
+  napi_value arguments[4] = {NULL, NULL, NULL, NULL};
+  int parent_fd = -1;
+  uint64_t expected_dev = 0U;
+  uint64_t expected_ino = 0U;
+  basic_component name = {{0}};
+  struct stat parent_details;
+  struct stat child_details;
+
+  if (napi_get_cb_info(env, info, &argument_count, arguments, NULL, NULL) != napi_ok ||
+      argument_count != 4U ||
+      !read_directory_fd(env, arguments[0], &parent_fd) ||
+      !read_component(env, arguments[1], &name) ||
+      !read_identity(env, arguments[2], &expected_dev) ||
+      !read_identity(env, arguments[3], &expected_ino)) {
+    return make_status(env, "ERR_INVALID");
+  }
+  if (fstat(parent_fd, &parent_details) != 0 || !S_ISDIR(parent_details.st_mode)) {
+    return make_status(env, "ERR_INVALID");
+  }
+  if (fstatat(parent_fd, name.bytes, &child_details, AT_SYMLINK_NOFOLLOW) != 0 ||
+      !S_ISDIR(child_details.st_mode) ||
+      (uint64_t)child_details.st_dev != expected_dev ||
+      (uint64_t)child_details.st_ino != expected_ino) {
+    return make_status(env, "ERR_FAILED");
+  }
+  if (unlinkat(parent_fd, name.bytes, AT_REMOVEDIR) != 0) {
+    return make_status(env, failure_status(errno));
+  }
+  if (fstatat(parent_fd, name.bytes, &child_details, AT_SYMLINK_NOFOLLOW) == 0 ||
+      errno != ENOENT) {
+    return make_status(env, "ERR_FAILED");
+  }
+  return make_status(env, "OK");
+}
+
 NAPI_MODULE_INIT() {
   napi_value create_operation = NULL;
   napi_value ensure_operation = NULL;
   napi_value close_operation = NULL;
   napi_value operation = NULL;
+  napi_value unlink_operation = NULL;
+  napi_value remove_operation = NULL;
   if (napi_create_function(
         env,
         "createExclusiveDirectory",
@@ -372,6 +448,26 @@ NAPI_MODULE_INIT() {
         &operation
       ) != napi_ok ||
       napi_set_named_property(env, exports, "renameNoReplace", operation) != napi_ok) {
+    return NULL;
+  }
+  if (napi_create_function(
+        env,
+        "unlinkRegularFile",
+        NAPI_AUTO_LENGTH,
+        unlink_regular_file,
+        NULL,
+        &unlink_operation
+      ) != napi_ok ||
+      napi_set_named_property(env, exports, "unlinkRegularFile", unlink_operation) != napi_ok ||
+      napi_create_function(
+        env,
+        "removeDirectory",
+        NAPI_AUTO_LENGTH,
+        remove_directory,
+        NULL,
+        &remove_operation
+      ) != napi_ok ||
+      napi_set_named_property(env, exports, "removeDirectory", remove_operation) != napi_ok) {
     return NULL;
   }
   return exports;

@@ -51,10 +51,11 @@ export async function writeBasicReviewPack(
       `--country=${input.countryCode}`,
       `--run-id=${input.runId}`,
     ]);
-    const workspace = await openBasicCandidateWorkspace(resolve(input.repoRoot));
+    const repoRoot = resolve(input.repoRoot);
+    const workspace = await openBasicCandidateWorkspace(repoRoot);
     try {
       const root = getBasicCandidateWorkspaceRootDirectory(workspace);
-      await generateBasicReviewPackFiles(root, validated);
+      await generateBasicReviewPackFiles(root, repoRoot, validated);
       return Object.freeze({
         status: "written",
         relativeDirectory: `.cache/basic-country/${validated.countryCode}/${validated.runId}/review`,
