@@ -5,6 +5,7 @@ import {
   readlinkSync,
   readdirSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -20,7 +21,32 @@ const injected = vi.hoisted(() => ({
   targetCloseCalls: 0,
   activeCloseCalls: 0,
   workspaceCloseCalls: 0,
+  activeMissing: false,
 }));
+
+vi.mock("./cli/basic-candidate-constrained-fs.js", async (importOriginal) => {
+  const actual = await importOriginal<
+    typeof import("./cli/basic-candidate-constrained-fs.js")
+  >();
+  return {
+    ...actual,
+    async openBasicCandidateDirectoryChild(
+      ...args: Parameters<typeof actual.openBasicCandidateDirectoryChild>
+    ): ReturnType<typeof actual.openBasicCandidateDirectoryChild> {
+      if (!injected.stub) return actual.openBasicCandidateDirectoryChild(...args);
+      if (args[1] === "example-land" && injected.activeMissing) {
+        throw Object.assign(new Error("synthetic missing child"), { code: "ENOENT" });
+      }
+      return Object.freeze({ marker: args[1] }) as never;
+    },
+    async closeBasicCandidateHeldDirectories(
+      ...args: Parameters<typeof actual.closeBasicCandidateHeldDirectories>
+    ): ReturnType<typeof actual.closeBasicCandidateHeldDirectories> {
+      if (injected.stub) return;
+      return actual.closeBasicCandidateHeldDirectories(...args);
+    },
+  };
+});
 
 vi.mock("./cli/basic-candidate-workspace.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./cli/basic-candidate-workspace.js")>();
@@ -138,6 +164,15 @@ import { createBasicCollectionAuditV2Fixture } from "./basic-collection-test-fix
 import { createBasicCountryPublicationFixture } from "./basic-publication-test-fixture.js";
 import { createBasicCountryPublicationV3Fixture } from "./basic-publication-v3-test-fixture.js";
 import {
+  closeBasicCandidateWorkspace,
+  getBasicCandidateWorkspaceRootDirectory,
+  openBasicCandidateWorkspace,
+} from "./cli/basic-candidate-workspace.js";
+import {
+  getApprovedBasicPublicationSnapshotState,
+  locateApprovedBasicPublicationSnapshot,
+} from "./cli/basic-publication-snapshot.js";
+import {
   parseBasicRefreshArguments,
   refreshBasicCountry,
   runBasicRefreshCli,
@@ -155,6 +190,7 @@ afterEach(() => {
   injected.targetCloseCalls = 0;
   injected.activeCloseCalls = 0;
   injected.workspaceCloseCalls = 0;
+  injected.activeMissing = false;
 });
 
 describe("approved BASIC refresh CLI", () => {
@@ -206,7 +242,6 @@ describe("approved BASIC refresh CLI", () => {
       ["--country=XZ,YY", "--run-id=run-target", "--approval-file=data/approvals/example-land/run-target.json"],
       ["--country=XZ", "--run-id=run-target", "--approval-file=/tmp/run-target.json"],
       ["--country=XZ", "--run-id=run-target", "--approval-file=data/approvals/example-land/../example-land/run-target.json"],
-      ["--country=XZ", "--country=YY", "--run-id=run-target"],
       ["--country=XZ", "--run-id=run-target", "positional"],
       ["--country=XZ", "--run-id=run-target", "--unknown=value"],
     ];
@@ -215,6 +250,17 @@ describe("approved BASIC refresh CLI", () => {
         /^basic refresh input is invalid$/,
       );
     }
+  });
+
+  test.each([
+    "--country=YY",
+    "--run-id=run-target",
+    "--approval-file=data/approvals/example-land/run-target.json",
+  ])("rejects duplicate %s while every other required argument remains valid", (duplicate) => {
+    expect(() => parseBasicRefreshArguments([
+      ...validArguments(),
+      duplicate,
+    ])).toThrow(/^basic refresh input is invalid$/);
   });
 
   test("writes one exact JSON result and opens one trusted workspace", async () => {
@@ -250,6 +296,33 @@ describe("approved BASIC refresh CLI", () => {
       postCommitVerified: false,
     });
     expect(stderr).toEqual([]);
+  });
+
+  test("returns stable missing-active guidance from the service boundary", async () => {
+    const setup = createRefreshSetup();
+    rmSync(join(setup.root, "data", "example-land"), { recursive: true });
+
+    await expect(refreshBasicCountry(setup.input)).rejects.toThrow(
+      /^basic refresh requires an active publication; use basic:publish$/,
+    );
+    expect(heldPathsUnder(setup.root)).toEqual([]);
+  });
+
+  test("prints stable missing-active guidance and exit 1 from the CLI", async () => {
+    injected.stub = true;
+    injected.activeMissing = true;
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+
+    expect(await runBasicRefreshCli(validArguments(), output(stdout, stderr))).toBe(1);
+    expect(stdout).toEqual([]);
+    expect(stderr.join("")).toBe(
+      "basic refresh requires an active publication; use basic:publish\n",
+    );
+    expect(injected.openCalls).toBe(1);
+    expect(injected.targetCloseCalls).toBe(0);
+    expect(injected.activeCloseCalls).toBe(0);
+    expect(injected.workspaceCloseCalls).toBe(1);
   });
 
   test.each(["target", "active", "workspace"] as const)(
@@ -291,8 +364,36 @@ describe("approved BASIC refresh CLI", () => {
     expect(heldPathsUnder(setup.root)).toEqual([]);
   });
 
+  test("refreshes a valid active v3 publication to approved target v3 exact bytes", async () => {
+    const setup = createV3RefreshSetup();
+    const previous = readCanonical(setup.root);
+    const expected = await expectedTargetCanonical(setup);
+
+    await expect(refreshBasicCountry(setup.input)).resolves.toEqual({
+      status: "refreshed",
+      countryCode: "XZ",
+      countryDirectory: "example-land",
+      previousRunId: "run-active",
+      activeRunId: "run-target",
+      postCommitVerified: true,
+    });
+
+    expect(readCanonical(setup.root)).toEqual(expected);
+    expect(readFileSync(
+      join(setup.root, "data", "other-country", "keep.txt"),
+      "utf8",
+    )).toBe("keep");
+    const cache = join(setup.root, ".cache", "basic-country-refresh");
+    const entries = readdirSync(cache);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatch(/^recovery-[0-9a-f-]{36}$/);
+    const recovery = join(cache, entries[0]!);
+    expect(statSync(recovery).mode & 0o777).toBe(0o700);
+    expect(readCanonicalDirectory(recovery)).toEqual(previous);
+    expect(heldPathsUnder(setup.root)).toEqual([]);
+  });
+
   test.each([
-    "missing-active",
     "same-run",
     "country-mismatch",
     "missing-target-receipt",
@@ -305,9 +406,7 @@ describe("approved BASIC refresh CLI", () => {
           kind === "stale-target" ? "2026-07-11T00:00:00Z" : "2026-07-12T00:00:00Z",
           kind === "country-mismatch" ? "EX" : "XZ",
         );
-    if (kind === "missing-active") {
-      rmSync(join(setup.root, "data", "example-land"), { recursive: true });
-    } else if (kind === "missing-target-receipt") {
+    if (kind === "missing-target-receipt") {
       rmSync(join(setup.root, setup.input.approvalFile));
     } else if (kind === "target-hash-drift") {
       const receiptPath = join(setup.root, setup.input.approvalFile);
@@ -358,6 +457,15 @@ function createSameRunSetup() {
   return Object.freeze({ root, target, input: input(root, "run-target") });
 }
 
+function createV3RefreshSetup() {
+  const root = createRepo();
+  const active = createTarget("run-active", "2026-07-11T00:00:00Z");
+  writePublicationV3(root, active, true);
+  const target = createTarget("run-target", "2026-07-12T00:00:00Z");
+  writePublicationV3(root, target, false);
+  return Object.freeze({ root, target, input: input(root, "run-target") });
+}
+
 function createRepo(): string {
   const root = mkdtempSync(join(
     process.platform === "linux" ? "/tmp" : tmpdir(),
@@ -372,6 +480,8 @@ function createRepo(): string {
     JSON.stringify({ name: "@navigator/db" }),
   );
   mkdirSync(join(root, "data", "staging"), { recursive: true });
+  mkdirSync(join(root, "data", "other-country"));
+  writeFileSync(join(root, "data", "other-country", "keep.txt"), "keep");
   return root;
 }
 
@@ -528,6 +638,35 @@ function expectCloseCalls(): void {
   expect(injected.targetCloseCalls).toBe(1);
   expect(injected.activeCloseCalls).toBe(1);
   expect(injected.workspaceCloseCalls).toBe(1);
+}
+
+async function expectedTargetCanonical(
+  setup: ReturnType<typeof createV3RefreshSetup>,
+): Promise<Readonly<Record<string, Uint8Array>>> {
+  const workspace = await openBasicCandidateWorkspace(setup.root);
+  const target = await locateApprovedBasicPublicationSnapshot(
+    getBasicCandidateWorkspaceRootDirectory(workspace),
+    setup.input,
+  );
+  try {
+    return getApprovedBasicPublicationSnapshotState(target).serialized;
+  } finally {
+    await target.close();
+    await closeBasicCandidateWorkspace(workspace);
+  }
+}
+
+function readCanonical(root: string): Readonly<Record<string, Uint8Array>> {
+  return readCanonicalDirectory(join(root, "data", "example-land"));
+}
+
+function readCanonicalDirectory(
+  directory: string,
+): Readonly<Record<string, Uint8Array>> {
+  return Object.fromEntries(readdirSync(directory).sort().map((name) => [
+    name,
+    new Uint8Array(readFileSync(join(directory, name))),
+  ]));
 }
 
 function heldPathsUnder(root: string): string[] {

@@ -246,6 +246,10 @@ CLI 从一个经验证的 repository root 打开并持有全部 filesystem capab
 回执 hash 完全一致。目标在 private mode-`0700` transaction 中完成 exact-three 确定性构造、fsync
 和 approved-publication validation 后，立即在 commit 前重新验证 active/target 的 held identity 与
 bytes。任何 commit 前错误只返回固定脱敏错误，不创建或补全批准，不改变 canonical。
+若唯一已确认的前置状态是 canonical country 目录不存在，service 与 CLI 固定返回
+`basic refresh requires an active publication; use basic:publish`，且 CLI exit code 为 `1`；该提示不含
+路径或 filesystem 细节。symlink、权限、identity、内容或其他读取失败仍使用通用脱敏错误，不得伪装成
+首次发布提示。
 
 Linux 原生 `renameat2(RENAME_EXCHANGE)` 成功交换 transaction `canonical` 与
 `data/<countryDirectory>` 的时刻是刷新 **commit point**；没有 JavaScript rename、copy、普通 rename、

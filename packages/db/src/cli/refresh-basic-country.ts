@@ -7,6 +7,11 @@ import {
   type PublishBasicCountryInput,
 } from "./publish-basic-country.js";
 import {
+  closeBasicCandidateHeldDirectories,
+  openBasicCandidateDirectoryChild,
+  type BasicCandidateHeldDirectory,
+} from "./basic-candidate-constrained-fs.js";
+import {
   closeBasicCandidateWorkspace,
   getBasicCandidateWorkspaceRootDirectory,
   openBasicCandidateWorkspace,
@@ -23,6 +28,9 @@ import { writeRefreshedBasicPublication } from "./basic-refresh-writer.js";
 
 const INPUT_ERROR = "basic refresh input is invalid";
 const REFRESH_ERROR = "basic refresh failed";
+const MISSING_ACTIVE_ERROR =
+  "basic refresh requires an active publication; use basic:publish";
+const MISSING_ACTIVE = Object.freeze({});
 const USAGE =
   "Usage: pnpm basic:refresh --country=ID --run-id=<runId> --approval-file=<path>";
 
@@ -53,6 +61,7 @@ export async function refreshBasicCountry(
   let target: ApprovedBasicPublicationSnapshot | null = null;
   let result: RefreshBasicCountryResult | null = null;
   let failed = false;
+  let missingActive = false;
   try {
     const parsed = parseBasicRefreshArguments([
       `--country=${input.countryCode}`,
@@ -63,6 +72,9 @@ export async function refreshBasicCountry(
 
     workspace = await openBasicCandidateWorkspace(resolve(input.repoRoot));
     const root = getBasicCandidateWorkspaceRootDirectory(workspace);
+    if (await isActiveBasicPublicationMissing(root, parsed.countryDirectory)) {
+      throw MISSING_ACTIVE;
+    }
     active = await locateActiveBasicPublicationSnapshot(
       root,
       parsed.countryDirectory,
@@ -79,8 +91,9 @@ export async function refreshBasicCountry(
       activeRunId: target.runId,
       postCommitVerified: writeResult.postCommitVerified,
     });
-  } catch {
-    failed = true;
+  } catch (error) {
+    if (error === MISSING_ACTIVE) missingActive = true;
+    else failed = true;
   } finally {
     const closers: readonly (() => Promise<void>)[] = [
       async () => { await target?.close(); },
@@ -99,8 +112,33 @@ export async function refreshBasicCountry(
     }
   }
 
+  if (missingActive && !failed) throw new Error(MISSING_ACTIVE_ERROR);
   if (failed || result === null) throw new Error(REFRESH_ERROR);
   return result;
+}
+
+async function isActiveBasicPublicationMissing(
+  root: BasicCandidateHeldDirectory,
+  countryDirectory: string,
+): Promise<boolean> {
+  let data: BasicCandidateHeldDirectory | null = null;
+  let canonical: BasicCandidateHeldDirectory | null = null;
+  try {
+    data = await openBasicCandidateDirectoryChild(root, "data");
+    try {
+      canonical = await openBasicCandidateDirectoryChild(data, countryDirectory);
+      return false;
+    } catch (error) {
+      if (errorCode(error) === "ENOENT") return true;
+      throw error;
+    }
+  } finally {
+    await closeBasicCandidateHeldDirectories([canonical, data]);
+  }
+}
+
+function errorCode(error: unknown): string | undefined {
+  return (error as NodeJS.ErrnoException | null)?.code;
 }
 
 function requireIdentityAgreement(
@@ -150,10 +188,16 @@ export async function runBasicRefreshCli(
     const result = await refreshBasicCountry({ repoRoot, ...parsed });
     output.writeStdout(`${JSON.stringify(result)}\n`);
     return 0;
-  } catch {
-    output.writeStderr("basic refresh error\n");
+  } catch (error) {
+    output.writeStderr(
+      `${isMissingActiveError(error) ? MISSING_ACTIVE_ERROR : "basic refresh error"}\n`,
+    );
     return 1;
   }
+}
+
+function isMissingActiveError(error: unknown): boolean {
+  return error instanceof Error && error.message === MISSING_ACTIVE_ERROR;
 }
 
 const entrypoint = process.argv[1] ? pathToFileURL(process.argv[1]).href : "";
