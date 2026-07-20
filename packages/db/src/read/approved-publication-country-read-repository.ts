@@ -9,7 +9,7 @@ import {
   type JsonValue,
 } from "@navigator/shared-types/country-runtime";
 
-import { loadApprovedBasicCountryPublicationV2 } from "../collection/basic-publication-loader.js";
+import { loadApprovedBasicCountryPublicationVersioned } from "../collection/basic-publication-versioned-loader.js";
 import { discoverApprovedBasicCountryDirectories } from "../seed/approved-basic-publications-validation.js";
 import { normalizeCountryReadSnapshot } from "./country-read-normalization.js";
 
@@ -56,7 +56,7 @@ function loadApprovedSnapshots(
     if (directories.length === 0) throw invalidRuntime();
 
     const snapshots = directories.map((countryDirectory) => {
-      const publication = loadApprovedBasicCountryPublicationV2(
+      const publication = loadApprovedBasicCountryPublicationVersioned(
         repositoryRoot,
         countryDirectory,
       );

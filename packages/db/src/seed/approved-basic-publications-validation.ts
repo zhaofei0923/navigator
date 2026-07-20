@@ -2,10 +2,16 @@ import { readdirSync } from "node:fs";
 import { dirname, isAbsolute, join, normalize, parse, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { loadApprovedBasicCountryPublicationV2 } from "../collection/basic-publication-loader.js";
+import type { BasicCountryPublicationVersionedValidationResult } from "../collection/basic-publication-contracts.js";
+import { loadApprovedBasicCountryPublicationVersioned } from "../collection/basic-publication-versioned-loader.js";
 import { SAFE_COUNTRY_DIRECTORY } from "./basic-country-validation-utils.js";
 
 const RESERVED_DATA_DIRECTORIES = new Set(["approvals", "staging"]);
+
+type ApprovedBasicCountryPublicationLoader = (
+  repoRoot: string,
+  countryDirectory: string,
+) => BasicCountryPublicationVersionedValidationResult;
 
 export interface ApprovedBasicPublicationsValidationResult {
   readonly countryDirectories: readonly string[];
@@ -48,8 +54,8 @@ export function discoverApprovedBasicCountryDirectories(
 
 export function validateApprovedBasicCountryPublications(
   repoRoot: string,
-  loadPublication: typeof loadApprovedBasicCountryPublicationV2 =
-    loadApprovedBasicCountryPublicationV2,
+  loadPublication: ApprovedBasicCountryPublicationLoader =
+    loadApprovedBasicCountryPublicationVersioned,
 ): ApprovedBasicPublicationsValidationResult {
   const countryDirectories = discoverApprovedBasicCountryDirectories(repoRoot);
 

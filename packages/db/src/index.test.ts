@@ -63,10 +63,12 @@ import type {
   BasicCollectionAuditBundleV2,
   BasicDeterministicCandidateResult,
   BasicApprovedCountryPublicationV2,
+  BasicApprovedCountryPublicationVersioned,
   BasicCountryPublicationApprovalReceipt,
   BasicCountryPublicationBlockerCode,
   BasicCountryPublicationManifestV2,
   BasicCountryPublicationValidationResult,
+  BasicCountryPublicationVersionedValidationResult,
 } from "./index.js";
 
 // @ts-expect-error BasicHermesSourcedObservation is package-private.
@@ -208,6 +210,7 @@ import {
   loadBasicCollectionAuditBundle,
   loadBasicCollectionAuditBundleVersioned,
   loadApprovedBasicCountryPublicationV2,
+  loadApprovedBasicCountryPublicationVersioned,
   loadBasicCountryBundle,
   preflightBasicCountryActivation,
   runBasicDeterministicCandidate,
@@ -281,7 +284,7 @@ describe("@navigator/db", () => {
       name === "BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION" ||
       name === "BASIC_DETERMINISTIC_STAGE_NAMES" ||
       name.includes("BasicDeterministicCandidate") ||
-      name.endsWith("Versioned"));
+      name === "loadBasicCollectionAuditBundleVersioned");
     expect(deterministicV2Exports.sort()).toEqual([
       "BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION",
       "BASIC_DETERMINISTIC_STAGE_NAMES",
@@ -344,6 +347,15 @@ describe("@navigator/db", () => {
     ] | null = null;
 
     expect(publicPublicationTypeWitness).toBeNull();
+  });
+
+  test("exports the versioned approved BASIC publication loader and common result", () => {
+    expect(loadApprovedBasicCountryPublicationVersioned).toBeTypeOf("function");
+    const typeWitness: [
+      BasicApprovedCountryPublicationVersioned,
+      BasicCountryPublicationVersionedValidationResult,
+    ] | null = null;
+    expect(typeWitness).toBeNull();
   });
 
   test("keeps Basic v2 publication implementation helpers package-private", () => {

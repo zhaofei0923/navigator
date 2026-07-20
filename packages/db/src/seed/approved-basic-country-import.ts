@@ -1,7 +1,8 @@
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { loadApprovedBasicCountryPublicationV2 } from "../collection/basic-publication-loader.js";
+import type { BasicCountryPublicationVersionedValidationResult } from "../collection/basic-publication-contracts.js";
+import { loadApprovedBasicCountryPublicationVersioned } from "../collection/basic-publication-versioned-loader.js";
 import { buildBasicCountryImportPlan } from "./basic-country-import.js";
 import type { BasicCountryImportPlan } from "./basic-country-import-types.js";
 import type {
@@ -13,6 +14,11 @@ import { isPlainRecord } from "./basic-country-validation-utils.js";
 
 const PREPARED_APPROVED_BASIC_COUNTRY_IMPORTS = new WeakSet<object>();
 
+type ApprovedBasicCountryPublicationLoader = (
+  repoRoot: string,
+  countryDirectory: string,
+) => BasicCountryPublicationVersionedValidationResult;
+
 export interface PreparedApprovedBasicCountryImport {
   readonly countryDirectory: string;
   readonly countryCode: string;
@@ -23,8 +29,8 @@ export interface PreparedApprovedBasicCountryImport {
 export function prepareApprovedBasicCountryImport(
   repoRoot: string,
   countryDirectory: string,
-  loadPublication: typeof loadApprovedBasicCountryPublicationV2 =
-    loadApprovedBasicCountryPublicationV2,
+  loadPublication: ApprovedBasicCountryPublicationLoader =
+    loadApprovedBasicCountryPublicationVersioned,
 ): PreparedApprovedBasicCountryImport {
   const publication = loadPublication(repoRoot, countryDirectory);
   if (!publication.valid) {
@@ -63,7 +69,7 @@ export function buildApprovedBasicCountryPublicationImportPlan(
 
 function createBasicCountryBundle(
   publication: Extract<
-    ReturnType<typeof loadApprovedBasicCountryPublicationV2>,
+    BasicCountryPublicationVersionedValidationResult,
     { valid: true }
   >["data"],
 ): BasicCountryBundle {

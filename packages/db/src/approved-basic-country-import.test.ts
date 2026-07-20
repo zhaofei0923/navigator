@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, test } from "vitest";
 
+import { writeBasicCountryPublicationV3RepositoryFixture } from "./basic-publication-v3-test-fixture.js";
 import {
   buildApprovedBasicCountryPublicationImportPlan,
   isPreparedApprovedBasicCountryImportFromLoader,
@@ -62,6 +63,30 @@ describe("approved Basic country publication import", () => {
       canonical: prepared.canonical,
       plan: prepared.plan,
     })).toBe(false);
+  });
+
+  test("prepares a v3 canonical profile through the default loader", () => {
+    const fixture = writeBasicCountryPublicationV3RepositoryFixture();
+    try {
+      const prepared = prepareApprovedBasicCountryImport(
+        fixture.root,
+        fixture.countryDirectory,
+      );
+
+      expect(prepared.canonical.marketOverview.basicProfile).toEqual(
+        fixture.publication.canonical.marketOverview.basicProfile,
+      );
+      expect(prepared.plan.operations.at(-1)).toMatchObject({
+        model: "marketOverview",
+        args: {
+          create: {
+            basicProfile: fixture.publication.canonical.marketOverview.basicProfile,
+          },
+        },
+      });
+    } finally {
+      fixture.cleanup();
+    }
   });
 
   test.each([

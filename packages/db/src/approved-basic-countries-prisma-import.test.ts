@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, test, vi } from "vitest";
 
+import { writeBasicCountryPublicationV3RepositoryFixture } from "./basic-publication-v3-test-fixture.js";
 import { loadApprovedBasicCountryPublicationV2 } from "./collection/basic-publication-loader.js";
 import {
   importAllApprovedBasicCountries,
@@ -46,6 +47,20 @@ describe("approved BASIC country Prisma import orchestration", () => {
       expect(Object.isFrozen(country)).toBe(true);
       expect(Object.isFrozen(country.canonical)).toBe(true);
       expect(Object.isFrozen(country.plan)).toBe(true);
+    }
+  });
+
+  test("prepares a v3 publication through the default batch loader", () => {
+    const fixture = writeBasicCountryPublicationV3RepositoryFixture();
+    try {
+      const prepared = prepareAllApprovedBasicCountryImports(fixture.root);
+
+      expect(prepared).toHaveLength(1);
+      expect(prepared[0]?.canonical.marketOverview.basicProfile).toEqual(
+        fixture.publication.canonical.marketOverview.basicProfile,
+      );
+    } finally {
+      fixture.cleanup();
     }
   });
 

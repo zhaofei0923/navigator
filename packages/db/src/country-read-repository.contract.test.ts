@@ -11,6 +11,7 @@ import {
 import { MODULE_KEYS } from "@navigator/shared-types/schema";
 import { describe, expect, test } from "vitest";
 
+import { writeBasicCountryPublicationV3RepositoryFixture } from "./basic-publication-v3-test-fixture.js";
 import { loadApprovedBasicCountryPublicationV2 } from "./collection/basic-publication-loader.js";
 import {
   ApprovedPublicationCountryReadRepositoryError,
@@ -278,6 +279,26 @@ for (const harness of harnesses) {
     });
   });
 }
+
+describe("approved publication v3 adapter", () => {
+  test("reads an approved v3 profile from canonical data", async () => {
+    const fixture = writeBasicCountryPublicationV3RepositoryFixture();
+    try {
+      const repository = createApprovedPublicationCountryReadRepository({
+        repositoryRoot: fixture.root,
+      });
+
+      const snapshot = await repository.findByCode(
+        fixture.publication.approvalReceipt.countryCode,
+      );
+      expect(snapshot?.marketOverview?.basicProfile).toEqual(
+        fixture.publication.canonical.marketOverview.basicProfile,
+      );
+    } finally {
+      fixture.cleanup();
+    }
+  });
+});
 
 describe("approved publication adapter error boundary", () => {
   test("redacts a sensitive invalid-root loader failure behind the stable runtime error", () => {

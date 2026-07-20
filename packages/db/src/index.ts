@@ -56,6 +56,9 @@ export {
   loadApprovedBasicCountryPublicationV2,
 } from "./collection/basic-publication-loader.js";
 export {
+  loadApprovedBasicCountryPublicationVersioned,
+} from "./collection/basic-publication-versioned-loader.js";
+export {
   runBasicDeterministicCandidate,
 } from "./collection/basic-deterministic-candidate.js";
 export { validateBasicCollectionAuditBundle } from "./collection/basic-collection-validator.js";
@@ -203,11 +206,13 @@ export type {
   BasicCollectionAuditBundleV2,
 } from "./collection/basic-collection-v2-contracts.js";
 export type {
+  BasicApprovedCountryPublicationVersioned,
   BasicApprovedCountryPublicationV2,
   BasicCountryPublicationApprovalReceipt,
   BasicCountryPublicationBlockerCode,
   BasicCountryPublicationManifestV2,
   BasicCountryPublicationValidationResult,
+  BasicCountryPublicationVersionedValidationResult,
 } from "./collection/basic-publication-contracts.js";
 export type {
   BasicDeterministicCandidateResult,

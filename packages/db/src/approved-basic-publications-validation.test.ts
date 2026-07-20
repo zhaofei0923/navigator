@@ -11,6 +11,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, test } from "vitest";
 
+import { writeBasicCountryPublicationV3RepositoryFixture } from "./basic-publication-v3-test-fixture.js";
 import { loadApprovedBasicCountryPublicationV2 } from "./collection/basic-publication-loader.js";
 import {
   discoverApprovedBasicCountryDirectories,
@@ -70,6 +71,18 @@ describe("approved Basic publications build validation", () => {
       ],
       countryCodes: ["BR", "ID", "SA", "ZA", "AE", "VN"],
     });
+  });
+
+  test("validates a canonical v3 country through the default publication gate", () => {
+    const fixture = writeBasicCountryPublicationV3RepositoryFixture();
+    try {
+      expect(validateApprovedBasicCountryPublications(fixture.root)).toEqual({
+        countryDirectories: [fixture.countryDirectory],
+        countryCodes: [fixture.publication.canonical.country.code],
+      });
+    } finally {
+      fixture.cleanup();
+    }
   });
 
   test("fails closed when a canonical directory has no approved publication", () => {

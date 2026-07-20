@@ -1,3 +1,7 @@
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import { createBasicCollectionAuditArtifactsV3, serializeBasicCollectionAuditArtifactsV3 } from "./collection/basic-audit-v3-artifacts.js";
 import { createBasicCollectionAuditV3Fixture } from "./basic-collection-v3-test-fixture.js";
 import type { BasicCollectionAuditBundleV3 } from "./collection/basic-collection-v3-contracts.js";
@@ -81,4 +85,37 @@ export function createBasicCountryPublicationV3Fixture() {
     canonical,
     validationInput,
   };
+}
+
+export function writeBasicCountryPublicationV3RepositoryFixture() {
+  const publication = createBasicCountryPublicationV3Fixture();
+  const root = mkdtempSync(join(tmpdir(), "basic-publication-v3-consumer-"));
+  const countryDirectory = publication.approvalReceipt.countryDirectory;
+  const runId = publication.approvalReceipt.runId;
+  const canonicalDirectory = join(root, "data", countryDirectory);
+  const candidateDirectory = join(root, "data", "staging", countryDirectory, runId);
+  const approvalDirectory = join(root, "data", "approvals", countryDirectory);
+  mkdirSync(canonicalDirectory, { recursive: true });
+  mkdirSync(candidateDirectory, { recursive: true });
+  mkdirSync(approvalDirectory, { recursive: true });
+  writeJson(join(canonicalDirectory, "collection-manifest.json"), publication.manifest);
+  writeJson(join(canonicalDirectory, "country.json"), publication.canonical.country);
+  writeJson(
+    join(canonicalDirectory, "market-overview.json"),
+    publication.canonical.marketOverview,
+  );
+  writeFileSync(join(approvalDirectory, `${runId}.json`), publication.approvalReceiptBytes);
+  for (const [name, bytes] of Object.entries(publication.candidateArtifactBytes)) {
+    writeFileSync(join(candidateDirectory, name), bytes);
+  }
+  return Object.freeze({
+    root,
+    countryDirectory,
+    publication,
+    cleanup: () => rmSync(root, { recursive: true, force: true }),
+  });
+}
+
+function writeJson(pathname: string, value: unknown): void {
+  writeFileSync(pathname, `${JSON.stringify(value)}\n`, "utf8");
 }

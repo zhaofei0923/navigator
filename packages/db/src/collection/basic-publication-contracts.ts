@@ -104,6 +104,22 @@ export interface BasicApprovedCountryPublicationV3 {
   readonly canonical: BasicCanonicalData;
 }
 
+export type BasicApprovedCountryPublicationVersioned =
+  | BasicApprovedCountryPublicationV2
+  | BasicApprovedCountryPublicationV3;
+
+export type BasicCountryPublicationVersionedValidationResult =
+  | Readonly<{
+      valid: true;
+      blockerCode: null;
+      data: BasicApprovedCountryPublicationVersioned;
+    }>
+  | Readonly<{
+      valid: false;
+      blockerCode: BasicCountryPublicationBlockerCode;
+      data: null;
+    }>;
+
 export type BasicCountryPublicationValidationResultV3 =
   | Readonly<{
       valid: true;

@@ -1,4 +1,5 @@
-import { loadApprovedBasicCountryPublicationV2 } from "../collection/basic-publication-loader.js";
+import type { BasicCountryPublicationVersionedValidationResult } from "../collection/basic-publication-contracts.js";
+import { loadApprovedBasicCountryPublicationVersioned } from "../collection/basic-publication-versioned-loader.js";
 import {
   importPreparedApprovedBasicCountry,
   type BasicCountryImportResult,
@@ -13,10 +14,15 @@ import { discoverApprovedBasicCountryDirectories } from "./approved-basic-public
 const INVALID_APPROVED_BASIC_PUBLICATION_SET =
   "Approved Basic publication set is invalid";
 
+type ApprovedBasicCountryPublicationLoader = (
+  repoRoot: string,
+  countryDirectory: string,
+) => BasicCountryPublicationVersionedValidationResult;
+
 export function prepareAllApprovedBasicCountryImports(
   repoRoot: string,
-  loadPublication: typeof loadApprovedBasicCountryPublicationV2 =
-    loadApprovedBasicCountryPublicationV2,
+  loadPublication: ApprovedBasicCountryPublicationLoader =
+    loadApprovedBasicCountryPublicationVersioned,
 ): readonly PreparedApprovedBasicCountryImport[] {
   const countryDirectories = discoverApprovedBasicCountryDirectories(repoRoot);
   const prepared = countryDirectories.map((countryDirectory) =>
