@@ -175,6 +175,7 @@ model MarketOverview {
   energyDemand    Json       @map("energy_demand")
   renewableTarget Json       @map("renewable_target")
   keyIndicators   Json       @map("key_indicators")
+  basicProfile    Json?      @map("basic_profile")
   source          String
   sourceUrl       String?    @map("source_url")
   collectedAt     DateTime   @map("collected_at")

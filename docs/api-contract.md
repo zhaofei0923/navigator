@@ -129,6 +129,11 @@
 - 列表型模块返回分页 `items`；对象型模块（`market-overview` / `entry-strategy`）返回单对象 `item`。
 - 仅返回 `reviewStatus = published` 且 `credibility != UNVERIFIED` 的数据（除非 admin 端带权限，见 §7）。
 - `risk` 项的 `category` 只能使用 [data-schema.md §7.5](./data-schema.md) 的固定机器值；展示标签由客户端 i18n 提供。
+- `market-overview.item.basicProfile` 为 [data-schema.md §5.1.1](./data-schema.md) 的可空
+  `basic-market-profile/v2` 投影；旧记录返回 `null`。其八个 category、字段级引用和
+  `NOT_AVAILABLE` 证据结构不改变既有覆盖状态字段。`textMode=raw` 保留完整双语结构；
+  `textMode=localized` 对 `label`、双语 `value`、`reason`、`note` 与来源 `title` 应用 §0.2
+  的语言选择与降级标记规则。
 
 **返回示例（列表型，localized 模式）**：
 ```json

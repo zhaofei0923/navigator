@@ -47,6 +47,7 @@ export {
   type ModuleCoverageDecision,
 } from "./coverage.js";
 export { pickLocale, type LocalizedText } from "./i18n.js";
+export * from "./basic-profile.js";
 export * from "./country-api.js";
 export * from "./country-query.js";
 export * from "./country-formatter.js";

@@ -171,8 +171,78 @@ interface LocalizedText {
 | `energyDemand` | `LocalizedText` | 能源需求概况 |
 | `renewableTarget` | `LocalizedText` | 可再生能源目标 |
 | `keyIndicators` | `Indicator[]` | 关键指标数组（见下） |
+| `basicProfile` | `BasicProfile \| null` | 可选 BASIC v2 八类市场画像；旧数据缺省时按 `null` 处理（见 §5.1.1） |
 
 `Indicator`：`{ label: LocalizedText; value: string; unit: string; year: number }`
+
+#### 5.1.1 BASIC v2 市场画像（BasicProfile）
+
+`basicProfile` 是 `market-overview` 上的可空、国家中立 JSON 投影，不改变既有
+`MarketOverview` 核心字段、覆盖等级判定或 AI 检索边界。schema version 固定为
+`basic-market-profile/v2`。既有 canonical 输入省略该字段时，在数据库边界归一化为
+`null`；既有 canonical 文件本身不因本字段而重写。
+
+顶层对象必须且只能包含：
+
+```ts
+interface BasicProfile {
+  schemaVersion: 'basic-market-profile/v2';
+  categories: BasicProfileCategories;
+  sources: BasicProfileSource[];
+  updatedAt: string; // RFC3339
+}
+```
+
+`categories` 必须且只能包含以下八个固定 key，所有国家顺序与结构一致：
+
+```
+countryBasics
+electricityMarket
+energyAccess
+renewableCapacity
+solarResource
+windResource
+policyOverview
+marketSummary
+```
+
+每个 category 必须且只能包含 `{ fields: BasicProfileField[] }`。同一 category 内
+`field.key` 必须是唯一的 lower camel token。每个 field 必须且只能包含下列字段：
+
+| 字段 | 类型 | 约束 |
+|------|------|------|
+| `key` | `string` | lower camel token，同一 category 内唯一 |
+| `label` | `LocalizedText` | 双语字段标签 |
+| `status` | `'AVAILABLE' \| 'NOT_AVAILABLE'` | 字段证据状态 |
+| `value` | `finite number \| non-empty string \| LocalizedText \| null` | 经过来源核验的值 |
+| `unit` | `non-empty string \| null` | 单位；不适用时为 `null` |
+| `year` | `integer \| null` | 数据年份；不适用时为 `null` |
+| `sourceIds` | `string[]` | 非空、数组内唯一，引用本 profile 的 `sources[].id` |
+| `checkedAt` | `string` | 有效 `YYYY-MM-DD` 日期 |
+| `reason` | `LocalizedText \| null` | 不可得原因 |
+| `note` | `LocalizedText \| null` | 可选双语限定说明 |
+
+状态不变量：
+
+- `AVAILABLE`：`value` 非 `null`，至少一个唯一 `sourceId`，且 `reason = null`。
+- `NOT_AVAILABLE`：`value = null`、`unit = null`、`year = null`，至少一个唯一的已检查
+  `sourceId`，且 `reason.zh` 与 `reason.en` 都是非空文本。
+- 每个被引用的 `sourceId` 必须在 `sources` 中恰好存在一次。
+
+每个 source 必须且只能包含：
+
+| 字段 | 类型 | 约束 |
+|------|------|------|
+| `id` | `non-empty string` | profile 内唯一，供 field 引用 |
+| `publisher` | `non-empty string` | 发布机构 |
+| `title` | `LocalizedText` | 双语来源标题 |
+| `url` | `string` | 仅允许绝对 HTTP(S) URL |
+| `publishedAt` | `RFC3339 \| null` | 来源发布时间 |
+| `retrievedAt` | `RFC3339` | 实际获取时间 |
+| `credibility` | `Credibility` | 使用 §1.5 固定枚举 |
+
+`energyAccess` 仅收录电力可及率，不采集 clean cooking。此投影不生成
+`KnowledgeChunk`，也不改变 §3.1 的 AI 可用性硬约束。
 
 ### 5.2 policy（政策法规）
 数组，每条为一项政策/法规。
