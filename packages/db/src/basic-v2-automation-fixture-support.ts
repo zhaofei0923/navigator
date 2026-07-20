@@ -159,7 +159,7 @@ export function snapshot(bytes: Record<string, Uint8Array>): Record<string, stri
   return Object.fromEntries(Object.entries(bytes).map(([name, value]) => [name, createHash("sha256").update(value).digest("hex")]));
 }
 
-function reviewedGlobalProfile(fixture: StrictFixture, countryCode: string, captures: ReadonlyMap<string, Uint8Array>) {
+export function reviewedGlobalProfile(fixture: StrictFixture, countryCode: string, captures: ReadonlyMap<string, Uint8Array>) {
   const rows = new Map(BASIC_GLOBAL_SOURCE_IDS.map((sourceId) => {
     const bytes = captures.get(sourceId);
     if (bytes === undefined) throw new Error("missing captured source");
