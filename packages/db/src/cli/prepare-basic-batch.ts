@@ -97,8 +97,11 @@ export async function prepareBasicBatch(input: PrepareBasicBatchInput): Promise<
         throw new Error("invalid result");
       }
       return Object.freeze({ countryCode, status: prepared.status });
-    } catch {
-      return Object.freeze({ countryCode, status: "error" as const });
+    } catch (error) {
+      return Object.freeze({
+        countryCode,
+        status: error instanceof BasicBatchExpectedBlockError ? "blocked" as const : "error" as const,
+      });
     }
   }));
   return Object.freeze({ batchId: config.batchId, results: Object.freeze(results) });

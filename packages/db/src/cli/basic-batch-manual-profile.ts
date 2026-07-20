@@ -2,7 +2,10 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 
 import { validateBasicBatchConfig } from "./basic-batch-config.js";
-import { readOptionalBasicBatchManualInput } from "./basic-batch-filesystem-cache.js";
+import {
+  BasicBatchExpectedBlockError,
+  readOptionalBasicBatchManualInput,
+} from "./basic-batch-filesystem-cache.js";
 import type { ReviewedGlobalProfileInput } from "./basic-batch-production-input.js";
 
 const COUNTRY_INPUT_ERROR = "basic batch country input is invalid";
@@ -53,18 +56,14 @@ export function bindReviewedManualProfileCaptures(
     const manualAudits = uniqueById(manualProfile.auditSources, ({ sourceId }) => sourceId);
     if (
       manualProfile.updatedAt !== globalProfile.updatedAt ||
-      !sameStrings([...manualSources.keys()].sort(compareText), [...manualAudits.keys()].sort(compareText)) ||
-      !sameStrings([...manualSources.keys()].sort(compareText), [...captures.keys()].sort(compareText))
+      !sameStrings([...manualSources.keys()].sort(compareText), [...manualAudits.keys()].sort(compareText))
     ) countryInputInvalid();
 
-    for (const [sourceId, bytes] of captures) {
-      const source = manualSources.get(sourceId);
-      const audit = manualAudits.get(sourceId);
+    for (const [sourceId, source] of manualSources) {
       const policy = MANUAL_SOURCE_POLICIES[sourceId as keyof typeof MANUAL_SOURCE_POLICIES];
+      const audit = manualAudits.get(sourceId);
       if (
-        source === undefined || audit === undefined || policy === undefined ||
-        !(bytes instanceof Uint8Array) || bytes.byteLength === 0 ||
-        audit.contentSha256 !== sha256(bytes) || source.publisher !== policy.publisher ||
+        audit === undefined || policy === undefined || source.publisher !== policy.publisher ||
         !approvedManualSourceUrl(source.url, policy.urlPrefix) ||
         audit.sourceName !== source.publisher || audit.sourceUrl !== source.url ||
         audit.retrievedAt !== source.retrievedAt || audit.publishedAt !== source.publishedAt ||
@@ -72,11 +71,11 @@ export function bindReviewedManualProfileCaptures(
         audit.sourceFamily !== policy.family || audit.accessStatus !== "open" ||
         audit.discoveryOnly || audit.promptInjectionRisk !== "none"
       ) countryInputInvalid();
-      const capture = parseManualProfileCapture(bytes, countryCode, sourceId);
-      if (
-        capture.retrievedAt !== audit.retrievedAt ||
-        !sameStrings([...capture.evidenceLocators].sort(compareText), [...audit.evidenceLocators].sort(compareText))
-      ) countryInputInvalid();
+    }
+    for (const [sourceId, bytes] of captures) {
+      if (!manualSources.has(sourceId) || !(bytes instanceof Uint8Array) || bytes.byteLength === 0) {
+        countryInputInvalid();
+      }
     }
 
     const globalFieldPaths = new Set(globalProfile.fields.map(({ category, field }) => `${category}.${field.key}`));
@@ -116,8 +115,22 @@ export function bindReviewedManualProfileCaptures(
     for (const sourceId of manualSources.keys()) {
       if (!manualProfile.fields.some(({ field }) => field.sourceIds.includes(sourceId))) countryInputInvalid();
     }
+    for (const [sourceId, bytes] of captures) {
+      const audit = manualAudits.get(sourceId);
+      if (audit === undefined || audit.contentSha256 !== sha256(bytes)) countryInputInvalid();
+      const capture = parseManualProfileCapture(bytes, countryCode, sourceId);
+      if (
+        capture.retrievedAt !== audit.retrievedAt ||
+        !sameStrings([...capture.evidenceLocators].sort(compareText), [...audit.evidenceLocators].sort(compareText))
+      ) countryInputInvalid();
+    }
+    if (!sameStrings(
+      [...manualSources.keys()].sort(compareText),
+      [...captures.keys()].sort(compareText),
+    )) throw new BasicBatchExpectedBlockError();
     return mergeReviewedManualProfile(globalProfile, manualProfile);
-  } catch {
+  } catch (error) {
+    if (error instanceof BasicBatchExpectedBlockError) throw error;
     throw new Error(COUNTRY_INPUT_ERROR);
   }
 }

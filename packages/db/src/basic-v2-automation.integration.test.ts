@@ -15,6 +15,7 @@ import {
   parseProductionCountryInput,
   prepareBasicBatch,
 } from "./cli/prepare-basic-batch.js";
+import { BasicBatchExpectedBlockError } from "./cli/basic-batch-filesystem-cache.js";
 import { publishBasicCountry } from "./cli/publish-basic-country.js";
 import { writeBasicReviewPack } from "./cli/write-basic-review-pack.js";
 import { BASIC_GLOBAL_SOURCE_IDS } from "./collection/adapters/basic-global-source-pack.js";
@@ -59,7 +60,7 @@ describe("strict synthetic BASIC v2 automation fixture flow", () => {
         "policyOverview.summary", "windResource.resourceSummary", "marketSummary.opportunitySummary",
       ]));
     expect(() => parseProductionCountryInput(countryCode, input, captures, new Map()))
-      .toThrow("basic batch country input is invalid");
+      .toThrow(BasicBatchExpectedBlockError);
     const tamperedInput = structuredClone(input);
     tamperedInput.globalSourceSha256["global-solar-atlas"] = "0".repeat(64);
     expect(() => parseProductionCountryInput(
