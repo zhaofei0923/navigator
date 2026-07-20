@@ -370,7 +370,10 @@ async function readRegularFileBounded(
 ): Promise<Uint8Array> {
   let handle;
   try {
-    handle = await open(pathname, constants.O_RDONLY | constants.O_NOFOLLOW);
+    handle = await open(
+      pathname,
+      constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK,
+    );
   } catch (error) {
     if (missingAllowed && isCode(error, "ENOENT")) throw new MissingRegularFileError();
     throw error;
