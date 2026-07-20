@@ -1,5 +1,19 @@
 import { CREDIBILITIES, type Credibility } from "./schema.js";
 import type { LocalizedText } from "./i18n.js";
+import {
+  LOWER_CAMEL_TOKEN,
+  calendarDate,
+  exactRecord,
+  httpUrl,
+  invalidBasicProfile,
+  localizedText,
+  nonEmptyString,
+  nullableInteger,
+  nullableLocalizedText,
+  nullableNonEmptyString,
+  parseProfileValue,
+  rfc3339,
+} from "./basic-profile-parser-helpers.js";
 
 export const BASIC_PROFILE_SCHEMA_VERSION = "basic-market-profile/v2" as const;
 
@@ -106,17 +120,13 @@ const SOURCE_KEYS = [
   "retrievedAt",
   "credibility",
 ] as const;
-const LOCALIZED_TEXT_KEYS = ["zh", "en"] as const;
-const LOWER_CAMEL_TOKEN = /^[a-z][A-Za-z0-9]*$/;
-const CALENDAR_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
-const RFC3339 = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-](\d{2}):(\d{2}))$/;
 
 export function parseBasicProfile(value: unknown): BasicProfile | null {
   if (value === null || value === undefined) return null;
 
   try {
     const profile = exactRecord(value, PROFILE_KEYS);
-    if (profile.schemaVersion !== BASIC_PROFILE_SCHEMA_VERSION) invalid();
+    if (profile.schemaVersion !== BASIC_PROFILE_SCHEMA_VERSION) invalidBasicProfile();
 
     const sources = parseSources(profile.sources);
     const sourceIds = new Set(sources.map(({ id }) => id));
@@ -148,12 +158,12 @@ function parseCategory(
   sourceIds: ReadonlySet<string>,
 ): BasicProfileCategory {
   const record = exactRecord(value, CATEGORY_KEYS);
-  if (!Array.isArray(record.fields)) invalid();
+  if (!Array.isArray(record.fields)) invalidBasicProfile();
 
   const keys = new Set<string>();
   const fields = record.fields.map((field) => {
     const parsed = parseField(field, sourceIds);
-    if (keys.has(parsed.key)) invalid();
+    if (keys.has(parsed.key)) invalidBasicProfile();
     keys.add(parsed.key);
     return parsed;
   });
@@ -161,19 +171,19 @@ function parseCategory(
   if (
     fields.length !== requiredKeys.length ||
     requiredKeys.some((key) => !keys.has(key))
-  ) invalid();
+  ) invalidBasicProfile();
   return { fields };
 }
 
 function parseField(value: unknown, knownSourceIds: ReadonlySet<string>): BasicProfileField {
   const record = exactRecord(value, FIELD_KEYS);
   const key = record.key;
-  if (typeof key !== "string" || !LOWER_CAMEL_TOKEN.test(key)) invalid();
+  if (typeof key !== "string" || !LOWER_CAMEL_TOKEN.test(key)) invalidBasicProfile();
 
   const label = localizedText(record.label, false);
   const status = record.status;
-  if (status !== "AVAILABLE" && status !== "NOT_AVAILABLE") invalid();
-  const fieldValue = profileValue(record.value);
+  if (status !== "AVAILABLE" && status !== "NOT_AVAILABLE") invalidBasicProfile();
+  const fieldValue = parseProfileValue(record.value);
   const unit = nullableNonEmptyString(record.unit);
   const year = nullableInteger(record.year);
   const sourceIds = referencedSourceIds(record.sourceIds, knownSourceIds);
@@ -185,7 +195,7 @@ function parseField(value: unknown, knownSourceIds: ReadonlySet<string>): BasicP
     (status === "AVAILABLE" && (fieldValue === null || reason !== null)) ||
     (status === "NOT_AVAILABLE" &&
       (fieldValue !== null || unit !== null || year !== null || reason === null))
-  ) invalid();
+  ) invalidBasicProfile();
 
   return {
     key,
@@ -202,15 +212,15 @@ function parseField(value: unknown, knownSourceIds: ReadonlySet<string>): BasicP
 }
 
 function parseSources(value: unknown): readonly BasicProfileSource[] {
-  if (!Array.isArray(value)) invalid();
+  if (!Array.isArray(value)) invalidBasicProfile();
   const ids = new Set<string>();
   return value.map((source) => {
     const record = exactRecord(source, SOURCE_KEYS);
     const id = nonEmptyString(record.id);
-    if (ids.has(id)) invalid();
+    if (ids.has(id)) invalidBasicProfile();
     ids.add(id);
     const credibility = record.credibility;
-    if (!CREDIBILITIES.includes(credibility as Credibility)) invalid();
+    if (!CREDIBILITIES.includes(credibility as Credibility)) invalidBasicProfile();
 
     return {
       id,
@@ -228,112 +238,9 @@ function referencedSourceIds(
   value: unknown,
   knownSourceIds: ReadonlySet<string>,
 ): readonly string[] {
-  if (!Array.isArray(value) || value.length === 0) invalid();
+  if (!Array.isArray(value) || value.length === 0) invalidBasicProfile();
   const ids = value.map(nonEmptyString);
-  if (new Set(ids).size !== ids.length) invalid();
-  if (ids.some((id) => !knownSourceIds.has(id))) invalid();
+  if (new Set(ids).size !== ids.length) invalidBasicProfile();
+  if (ids.some((id) => !knownSourceIds.has(id))) invalidBasicProfile();
   return ids;
-}
-
-function profileValue(value: unknown): BasicProfileFieldValue {
-  if (value === null) return null;
-  if (typeof value === "number") {
-    if (!Number.isFinite(value)) invalid();
-    return value;
-  }
-  if (typeof value === "string") return nonEmptyString(value);
-  return localizedText(value, false);
-}
-
-function nullableNonEmptyString(value: unknown): string | null {
-  return value === null ? null : nonEmptyString(value);
-}
-
-function nonEmptyString(value: unknown): string {
-  if (typeof value !== "string" || value.trim() === "") invalid();
-  return value;
-}
-
-function nullableInteger(value: unknown): number | null {
-  if (value === null) return null;
-  if (typeof value !== "number" || !Number.isInteger(value)) invalid();
-  return value;
-}
-
-function nullableLocalizedText(value: unknown, nonEmpty: boolean): LocalizedText | null {
-  return value === null ? null : localizedText(value, nonEmpty);
-}
-
-function localizedText(value: unknown, nonEmpty: boolean): LocalizedText {
-  const record = exactRecord(value, LOCALIZED_TEXT_KEYS);
-  if (typeof record.zh !== "string" || typeof record.en !== "string") invalid();
-  if (nonEmpty && (record.zh.trim() === "" || record.en.trim() === "")) invalid();
-  return { zh: record.zh, en: record.en };
-}
-
-function httpUrl(value: unknown): string {
-  const text = nonEmptyString(value);
-  const parsed = new URL(text);
-  if (
-    (parsed.protocol !== "http:" && parsed.protocol !== "https:") ||
-    parsed.hostname === "" || parsed.username !== "" || parsed.password !== ""
-  ) invalid();
-  return text;
-}
-
-function calendarDate(value: unknown): string {
-  if (typeof value !== "string") invalid();
-  const match = CALENDAR_DATE.exec(value);
-  if (match === null || !validDateParts(match[1], match[2], match[3])) invalid();
-  return value;
-}
-
-function rfc3339(value: unknown): string {
-  if (typeof value !== "string") invalid();
-  const match = RFC3339.exec(value);
-  if (
-    match === null ||
-    !validDateParts(match[1], match[2], match[3]) ||
-    Number(match[4]) > 23 ||
-    Number(match[5]) > 59 ||
-    Number(match[6]) > 59 ||
-    (match[7] !== undefined && Number(match[7]) > 23) ||
-    (match[8] !== undefined && Number(match[8]) > 59) ||
-    !Number.isFinite(Date.parse(value))
-  ) invalid();
-  return value;
-}
-
-function validDateParts(
-  yearText: string | undefined, monthText: string | undefined,
-  dayText: string | undefined,
-): boolean {
-  const year = Number(yearText);
-  const month = Number(monthText);
-  const day = Number(dayText);
-  if (!Number.isInteger(year) || year < 100 || month < 1 || month > 12) {
-    return false;
-  }
-  const leapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
-  const daysByMonth = [
-    31, leapYear ? 29 : 28, 31, 30, 31, 30,
-    31, 31, 30, 31, 30, 31,
-  ] as const;
-  return Number.isInteger(day) && day >= 1 && day <= daysByMonth[month - 1]!;
-}
-
-function exactRecord<const Keys extends readonly string[]>(
-  value: unknown, keys: Keys,
-): Record<Keys[number], unknown> {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) invalid();
-  const ownKeys = Reflect.ownKeys(value);
-  if (
-    ownKeys.length !== keys.length ||
-    ownKeys.some((key) => typeof key !== "string" || !keys.includes(key))
-  ) invalid();
-  return value as Record<Keys[number], unknown>;
-}
-
-function invalid(): never {
-  throw new Error("invalid BASIC profile");
 }
