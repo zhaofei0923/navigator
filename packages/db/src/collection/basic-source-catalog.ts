@@ -158,6 +158,8 @@ const CONTROL_CHARACTER = /[\u0000-\u001F\u007F]/;
 const PRE_ENCODED = /%[0-9A-Fa-f]{2}/;
 const INDICATOR_FIELD_PATH =
   /^marketOverview\.keyIndicators\[(0|[1-9]\d*)\]\.(label|value|unit|year)$/;
+const BASIC_PROFILE_FIELD_PATH =
+  /^marketOverview\.basicProfile\.categories\.(?:countryBasics|electricityMarket|energyAccess|renewableCapacity|solarResource|windResource|policyOverview|marketSummary)\.fields\.[a-z][A-Za-z0-9]*$/;
 const ALLOWED_FIELD_PATHS = new Set<string>(
   BASIC_COLLECTION_REQUIRED_STATIC_FACT_PATHS,
 );
@@ -500,7 +502,10 @@ function urlText(value: unknown): string {
 
 function allowedFieldPath(value: unknown): string {
   const result = text(value);
-  if (!ALLOWED_FIELD_PATHS.has(result) && !INDICATOR_FIELD_PATH.test(result)) {
+  if (
+    !ALLOWED_FIELD_PATHS.has(result) && !INDICATOR_FIELD_PATH.test(result) &&
+    !BASIC_PROFILE_FIELD_PATH.test(result)
+  ) {
     invalid();
   }
   return result;

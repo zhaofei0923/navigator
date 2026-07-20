@@ -1,7 +1,9 @@
 import { randomUUID } from "node:crypto";
 
 import { serializeBasicCollectionAuditArtifactsV2 } from "../collection/basic-audit-v2-artifacts.js";
+import { serializeBasicCollectionAuditArtifactsV3 } from "../collection/basic-audit-v3-artifacts.js";
 import { isBasicCollectionAuditValidationResultV2FromValidator } from "../collection/basic-collection-v2-validator.js";
+import { isBasicCollectionAuditValidationResultV3FromValidator } from "../collection/basic-collection-v3-validator.js";
 import type { BasicCollectionAuditArtifactName } from "../collection/basic-offline-audit-artifacts.js";
 import { validArtifacts } from "../collection/basic-deterministic-candidate-guards.js";
 import {
@@ -30,6 +32,10 @@ import {
 import { renameBasicCandidateDirectoryChildNoReplaceNative } from "./basic-candidate-native-fs.js";
 import { isBasicCandidateProductionResult } from "./basic-candidate-composition.js";
 import {
+  isBasicV3CandidateProductionResult,
+  type BasicV3CandidateCompositionResult,
+} from "./basic-v3-candidate-composition.js";
+import {
   getBasicCandidateWorkspaceRootDirectory,
   type BasicCandidateWorkspace,
 } from "./basic-candidate-workspace.js";
@@ -42,6 +48,11 @@ export interface BasicCandidateArtifactWriteInput {
 
 export interface BasicCandidateArtifactWriteResult {
   readonly status: "written";
+}
+
+export interface BasicCandidateArtifactWriteInputV3 {
+  readonly workspace: BasicCandidateWorkspace;
+  readonly candidate: BasicV3CandidateCompositionResult;
 }
 
 type AuthenticatedArtifacts = Readonly<{
@@ -73,6 +84,35 @@ const WRITTEN_RESULT: BasicCandidateArtifactWriteResult = Object.freeze({
 export async function writeBasicCandidateArtifacts(
   value: BasicCandidateArtifactWriteInput,
 ): Promise<BasicCandidateArtifactWriteResult> {
+  try {
+    const input = exactDataRecord(value, INPUT_KEYS);
+    return await writeAuthenticatedCandidate(
+      input.get("workspace") as BasicCandidateWorkspace,
+      authenticateCandidate(input.get("candidate")),
+    );
+  } catch {
+    throw new Error("basic candidate artifact write failed");
+  }
+}
+
+export async function writeBasicCandidateArtifactsV3(
+  value: BasicCandidateArtifactWriteInputV3,
+): Promise<BasicCandidateArtifactWriteResult> {
+  try {
+    const input = exactDataRecord(value, INPUT_KEYS);
+    return await writeAuthenticatedCandidate(
+      input.get("workspace") as BasicCandidateWorkspace,
+      authenticateCandidateV3(input.get("candidate")),
+    );
+  } catch {
+    throw new Error("basic candidate artifact write failed");
+  }
+}
+
+async function writeAuthenticatedCandidate(
+  workspace: BasicCandidateWorkspace,
+  authenticated: AuthenticatedArtifacts,
+): Promise<BasicCandidateArtifactWriteResult> {
   let root: BasicCandidateHeldDirectory | null = null;
   let data: BasicCandidateHeldDirectory | null = null;
   let staging: BasicCandidateHeldDirectory | null = null;
@@ -84,11 +124,9 @@ export async function writeBasicCandidateArtifacts(
   let published = false;
   let completed = false;
   try {
-    const input = exactDataRecord(value, INPUT_KEYS);
-    const authenticated = authenticateCandidate(input.get("candidate"));
     runId = authenticated.runId;
     root = getBasicCandidateWorkspaceRootDirectory(
-      input.get("workspace") as BasicCandidateWorkspace,
+      workspace,
     );
     data = await prepareDirectory(root, "data", 0o755);
     staging = await prepareDirectory(data, "staging", 0o700);
@@ -148,6 +186,22 @@ export async function writeBasicCandidateArtifacts(
       data,
     ]);
   }
+}
+
+function authenticateCandidateV3(value: unknown): AuthenticatedArtifacts {
+  if (!isBasicV3CandidateProductionResult(value)) invalid();
+  const validation = value.validation;
+  if (
+    value.status !== "ready" ||
+    !isBasicCollectionAuditValidationResultV3FromValidator(validation) ||
+    !validation.valid || !validation.readyForHumanReview ||
+    validation.blockers.length !== 0
+  ) invalid();
+  const { countryDirectory, runId } = validation.data;
+  if (!SAFE_COUNTRY_DIRECTORY.test(countryDirectory) || !SAFE_RUN_ID.test(runId)) invalid();
+  const serialized = serializeBasicCollectionAuditArtifactsV3(value.artifacts);
+  if (!sameStrings(Object.keys(serialized), ARTIFACT_NAMES)) invalid();
+  return Object.freeze({ countryDirectory, runId, serialized });
 }
 
 function authenticateCandidate(value: unknown): AuthenticatedArtifacts {

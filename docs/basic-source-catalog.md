@@ -145,18 +145,24 @@ sourceCountryId
 
 所有 HTML/PDF entry 都必须使用唯一 generic capture executor 身份。Parser 已复核该身份；未来 document runner 还必须在 cache/network 前再次复核。Generic executor 只捕获原始字节和 hash，不解析正文，不声明 source-specific metadata，也不产生 preliminary facts。
 
-## 7. 已登记生产来源
+## 7. 已登记生产来源与 BASIC v2 可复用来源包
 
-Catalog 保留四个覆盖所有国家的 `open` World Bank JSON deterministic sources，`countryMappings = []`：
+Catalog 保留原四个覆盖所有国家的 `open` World Bank JSON deterministic sources，并追加两个只归属 BASIC profile 的 World Bank 指标；`countryMappings = []`：
 
 | sourceId | 用途 | fieldPaths |
 |---|---|---|
 | `world-bank-country` | ISO2 与英文国家名 | `country.code`, `country.name` |
+| `world-bank-electricity-access` | 通电率 | `marketOverview.basicProfile.categories.energyAccess.fields.electricityAccess` |
 | `world-bank-gdp` | GDP | `marketOverview.gdp` |
 | `world-bank-gdp-growth` | GDP 增速 | `marketOverview.gdpGrowth` |
+| `world-bank-gdp-per-capita` | 人均 GDP | `marketOverview.basicProfile.categories.countryBasics.fields.gdpPerCapita` |
 | `world-bank-population` | 人口 | `marketOverview.population` |
 
-请求 URL、query 顺序和 adapter output 与既有 P1-6B fixtures 保持一致。Catalog 使用 World Bank Indicators API 和 World Development Indicators 的已审核归属信息；参考 [World Bank Indicators API documentation](https://datahelpdesk.worldbank.org/knowledgebase/articles/889392-about-the-indicators-api-documentation) 与 [World Bank public licenses](https://datacatalog.worldbank.org/public-licenses)。
+原四条请求 URL、query 顺序和 adapter output 与既有 P1-6B fixtures 保持一致。BASIC profile 来源包严格解析人口、GDP、人均 GDP、GDP 增速和通电率的 JSON envelope；`null` 只能转为带双语原因、来源和核查日期的 `NOT_AVAILABLE`，不得伪造数值。Catalog 使用 World Bank Indicators API 和 World Development Indicators 的已审核归属信息；参考 [World Bank Indicators API documentation](https://datahelpdesk.worldbank.org/knowledgebase/articles/889392-about-the-indicators-api-documentation) 与 [World Bank public licenses](https://datacatalog.worldbank.org/public-licenses)。
+
+批处理另外登记四个全局内容快照 ID：`ember-electricity`、`global-solar-atlas`、`global-wind-atlas`、`irenastat-capacity`。每批只捕获一次并写入内容寻址 cache，各国绑定同一 hash；World Bank 仍按国家独立请求，不进入全局去重。IRENASTAT、Global Solar Atlas 与 Global Wind Atlas 在稳定 API 合同另行批准前只接受已审核不可变表格快照。Ember 只允许通过 `x-api-key` header 注入凭证，URL、cache、摘要和错误均不得包含 key；未配置已批准凭证时，对应字段必须作为已核查 `NOT_AVAILABLE` 进入人工审核输入。
+
+IEA Policies 与 RISE 固定为 `iea-policies`、`rise-policy-review` 人工政策复核来源。二者以及国家特有政策文件、风资源摘要和市场摘要不得由批处理自动生成事实。fixture-backed tabular adapter 只解析 exact header、ISO2、八类 category、lower-camel field key、有限数值/年份和证据 locator。
 
 单国任务可在同一 exact contract 下增加 country-scoped HTML/PDF manual sources。当前已登记：
 
@@ -178,9 +184,9 @@ Catalog 保留四个覆盖所有国家的 `open` World Bank JSON deterministic s
 | `vietnam-chinhphu-adjusted-pdp8-2025` | VN | HTML | Government of Viet Nam | 调整后的电力规划 VIII 目标与产业方向 |
 | `vietnam-evn-annual-report-2024-2025` | VN | PDF | Vietnam Electricity (EVN) | 2024 年装机、电力生产与购入基线 |
 
-Catalog `2026-07-17.2` 共登记 19 条来源，canonical SHA-256 为 `6d4c6a27367eb36e4fe20df8fe78a9c9a9e865f84af563a22e31069c176d6f0a`，`countryMappings = []`。其中 EPE 新闻页按其页脚声明登记为 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.pt_BR)；本版本新增的其余七条来源不主张开放内容许可。EPE 新闻页、South Africa IRP、UAE Wind Program 页面和 UAE Energy Strategy 2050 页面只支持受控 `industryTags`，不支持任何 exact controlled `techTags`；只有明确写出 Onshore Wind 的 South Africa RMIPPPP 页面保留 `techTags` ownership，后续 candidate 只能归一化该精确枚举，不能推断储能化学体系或光伏设备类型。
+Catalog `2026-07-20.1` 共登记 21 条来源，canonical SHA-256 为 `6afa620bfef537573e7a52522fa0ef10e4d23bb1a1b291e28401628370f2c249`，`countryMappings = []`。其中 EPE 新闻页按其页脚声明登记为 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.pt_BR)；其余既有来源许可姿态不变，新增两条 World Bank profile 来源继续使用 World Bank 已登记的 CC BY 4.0 归属。EPE 新闻页、South Africa IRP、UAE Wind Program 页面和 UAE Energy Strategy 2050 页面只支持受控 `industryTags`，不支持任何 exact controlled `techTags`；只有明确写出 Onshore Wind 的 South Africa RMIPPPP 页面保留 `techTags` ownership，后续 candidate 只能归一化该精确枚举，不能推断储能化学体系或光伏设备类型。
 
-这些 manual sources 只通过 `basic-manual-document-capture@1.0.0` 捕获原始 bytes/hash；HTML/PDF evidence 绝不直接解析为 candidate facts。事实、双语编辑输入和 source check 必须继续由绑定 capture hash 的人工 observation plan 与人工审核提供。当前 catalog 不包含 IMF、IRENA、Ember 或 credentialed source。
+这些 manual sources 只通过 `basic-manual-document-capture@1.0.0` 捕获原始 bytes/hash；HTML/PDF evidence 绝不直接解析为 candidate facts。事实、双语编辑输入和 source check 必须继续由绑定 capture hash 的人工 observation plan 与人工审核提供。JSON catalog 不包含 IMF，也不把 IRENA/Atlas 人工快照伪装成网络 API；Ember credentialed policy 由 BASIC v2 来源包单独约束，不进入仍只允许 `open` source 的旧 execution plan。
 
 巴西后续 observation plan 必须保持以下口径：EPE 新闻页发布于 `2026-06-03`；安全的关键指标组固定为组 0 的 2025 年最终电力消费同比增长 `2.7%`、组 1 的太阳能装机 `64,793 MW`、组 2 的风电装机 `34,707 MW`。新闻页的 `86.8%` 是 2025 年“可再生能源在电力矩阵中的占比”，而未登记的动态 BEN 章节以另一国内电力供应口径给出 `86.6%`；本任务不选择任何数值型可再生能源占比指标，也不得混用两个定义。`20.4 TWh` 是增量，不是总供应量。IPEA 只支持“到 2030 年维持全国能源矩阵较高可再生能源占比”的定性目标，不能表述为电力矩阵数值目标或法律目标。
 

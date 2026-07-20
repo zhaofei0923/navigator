@@ -71,6 +71,31 @@ describe("Basic source catalog parser", () => {
     expect(BASIC_MANUAL_DOCUMENT_ADAPTER_VERSION).toBe("1.0.0");
   });
 
+  test("accepts only the anchored eight-category BASIC profile field path grammar", () => {
+    const accepted = changedSource(validCatalog(), (source) => {
+      source.fieldPaths = [
+        "marketOverview.basicProfile.categories.energyAccess.fields.electricityAccess",
+      ];
+    });
+    expect(parseBasicSourceCatalog(accepted).catalog.sources[0]?.fieldPaths).toEqual([
+      "marketOverview.basicProfile.categories.energyAccess.fields.electricityAccess",
+    ]);
+
+    for (const fieldPath of [
+      "marketOverview.basicProfile.categories.cleanCooking.fields.cleanCookingAccess",
+      "marketOverview.basicProfile.categories.energyAccess.fields.ElectricityAccess",
+      "marketOverview.basicProfile.categories.energyAccess.fields.electricityAccess.value",
+      "marketOverview.basicProfile.categories.energyAccess",
+    ]) {
+      const rejected = changedSource(validCatalog(), (source) => {
+        source.fieldPaths = [fieldPath];
+      });
+      expect(() => parseBasicSourceCatalog(rejected)).toThrow(
+        "basic source catalog is invalid",
+      );
+    }
+  });
+
   test.each([
     ["an extra top-level key", () => ({ ...validCatalog(), extra: true })],
     [
@@ -698,7 +723,7 @@ describe("Basic source adapter registry", () => {
 });
 
 describe("committed Basic source catalog", () => {
-  test("registers the nineteen reviewed Basic sources in deterministic order", () => {
+  test("registers the twenty-one reviewed Basic sources in deterministic order", () => {
     const catalog = readCommittedCatalog();
     const sourceIds = [
       "brazil-epe-ben-2026-summary",
@@ -717,8 +742,10 @@ describe("committed Basic source catalog", () => {
       "vietnam-chinhphu-adjusted-pdp8-2025",
       "vietnam-evn-annual-report-2024-2025",
       "world-bank-country",
+      "world-bank-electricity-access",
       "world-bank-gdp",
       "world-bank-gdp-growth",
+      "world-bank-gdp-per-capita",
       "world-bank-population",
     ] as const;
     const worldBankSourceIds = [
@@ -728,10 +755,10 @@ describe("committed Basic source catalog", () => {
       "world-bank-population",
     ] as const;
 
-    expect(catalog.catalog.catalogVersion).toBe("2026-07-17.2");
+    expect(catalog.catalog.catalogVersion).toBe("2026-07-20.1");
     expect(catalog.catalog.countryMappings).toEqual([]);
     expect(catalog.catalogSha256).toBe(
-      "6d4c6a27367eb36e4fe20df8fe78a9c9a9e865f84af563a22e31069c176d6f0a",
+      "6afa620bfef537573e7a52522fa0ef10e4d23bb1a1b291e28401628370f2c249",
     );
     expect(catalog.catalog.sources.map(({ sourceId }) => sourceId)).toEqual(
       sourceIds,
@@ -761,7 +788,7 @@ describe("committed Basic source catalog", () => {
     expectReviewedManualDocumentBindings(plan.sources, "BR");
 
     expect(plan).toMatchObject({
-      catalogVersion: "2026-07-17.2",
+      catalogVersion: "2026-07-20.1",
       countryCode: "BR",
     });
     expect(plan.sources.map(({ source, request }) => ({
@@ -835,7 +862,7 @@ describe("committed Basic source catalog", () => {
     expectReviewedManualDocumentBindings(plan.sources, "ZA");
 
     expect(plan).toMatchObject({
-      catalogVersion: "2026-07-17.2",
+      catalogVersion: "2026-07-20.1",
       countryCode: "ZA",
     });
     expect(plan.sources.map(({ source, request }) => ({
@@ -923,7 +950,7 @@ describe("committed Basic source catalog", () => {
     expectReviewedManualDocumentBindings(plan.sources, "AE");
 
     expect(plan).toMatchObject({
-      catalogVersion: "2026-07-17.2",
+      catalogVersion: "2026-07-20.1",
       countryCode: "AE",
     });
     expect(plan.sources.map(({ source, request }) => ({
@@ -1043,7 +1070,7 @@ describe("committed Basic source catalog", () => {
     });
 
     expect(plan).toMatchObject({
-      catalogVersion: "2026-07-17.2",
+      catalogVersion: "2026-07-20.1",
       countryCode: "SA",
     });
     expect(plan.sources.map(({ source, request }) => ({
@@ -1138,7 +1165,7 @@ describe("committed Basic source catalog", () => {
     });
 
     expect(plan).toMatchObject({
-      catalogVersion: "2026-07-17.2",
+      catalogVersion: "2026-07-20.1",
       countryCode: "ID",
       sources: [
         {
@@ -1249,7 +1276,7 @@ describe("committed Basic source catalog", () => {
     const entry = plan.sources[0]!;
 
     expect(plan).toMatchObject({
-      catalogVersion: "2026-07-17.2",
+      catalogVersion: "2026-07-20.1",
       countryCode: "VN",
     });
     expect({
@@ -1299,7 +1326,7 @@ describe("committed Basic source catalog", () => {
     const entry = plan.sources[0]!;
 
     expect(plan).toMatchObject({
-      catalogVersion: "2026-07-17.2",
+      catalogVersion: "2026-07-20.1",
       countryCode: "VN",
     });
     expect({

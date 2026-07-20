@@ -19,6 +19,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 const productionCandidates = vi.hoisted(() => new WeakSet<object>());
+const productionV3Candidates = vi.hoisted(() => new WeakSet<object>());
 
 vi.mock("./cli/basic-candidate-composition.js", () => ({
   isBasicCandidateProductionResult(value: unknown) {
@@ -26,7 +27,18 @@ vi.mock("./cli/basic-candidate-composition.js", () => ({
   },
 }));
 
+vi.mock("./cli/basic-v3-candidate-composition.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./cli/basic-v3-candidate-composition.js")>();
+  return {
+    ...actual,
+    isBasicV3CandidateProductionResult(value: unknown) {
+      return typeof value === "object" && value !== null && productionV3Candidates.has(value);
+    },
+  };
+});
+
 import { createBasicCollectionAuditV2Fixture } from "./basic-collection-test-fixture.js";
+import { createBasicCollectionAuditV3Fixture } from "./basic-collection-v3-test-fixture.js";
 import {
   BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION,
   classifyBasicV2FieldPath,
@@ -37,7 +49,9 @@ import { createBasicDeterministicFailureResult } from "./collection/basic-determ
 import { createBasicDeterministicSuccessResult } from "./collection/basic-deterministic-candidate-result.js";
 import {
   writeBasicCandidateArtifacts as writeBasicCandidateArtifactsWithWorkspace,
+  writeBasicCandidateArtifactsV3,
 } from "./cli/basic-candidate-artifact-writer.js";
+import { createBasicV3CandidateComposition } from "./cli/basic-v3-candidate-composition.js";
 import {
   closeBasicCandidateWorkspace,
   openBasicCandidateWorkspace,
@@ -360,6 +374,46 @@ describe("Basic candidate atomic artifact writer", () => {
       /"schemaVersion":"basic-country-audit\/v2"/,
     );
     expect(fsFailure.renameCalls).toBe(0);
+  });
+
+  test("writes a separately authenticated v3 draft as exactly four staging files", async () => {
+    const repoRoot = await createRepoRoot();
+    const workspace = await openBasicCandidateWorkspace(repoRoot);
+    const candidate = v3Candidate();
+    productionV3Candidates.add(candidate);
+    try {
+      await expect(writeBasicCandidateArtifactsV3({ workspace, candidate }))
+        .resolves.toEqual({ status: "written" });
+      const target = join(repoRoot, "data", "staging", "example-land", "run-001");
+      expect((await readdir(target)).sort()).toEqual([
+        "extracted-facts.json",
+        "market-overview.draft.json",
+        "review-report.json",
+        "source-register.json",
+      ]);
+      expect(await readFile(join(target, "source-register.json"), "utf8"))
+        .toContain('"schemaVersion":"basic-country-audit/v3"');
+      expect(await pathExists(join(repoRoot, "data", "example-land"))).toBe(false);
+      expect(await pathExists(join(target, "collection-manifest.json"))).toBe(false);
+    } finally {
+      await closeBasicCandidateWorkspace(workspace);
+    }
+  });
+
+  test("rejects forged v3 candidates without exposing internal details", async () => {
+    const repoRoot = await createRepoRoot();
+    const workspace = await openBasicCandidateWorkspace(repoRoot);
+    try {
+      const authentic = v3Candidate();
+      productionV3Candidates.add(authentic);
+      const forged = structuredClone(authentic);
+      await expect(writeBasicCandidateArtifactsV3({
+        workspace,
+        candidate: Object.assign(forged, { secret: "SECRET-INTERNAL-DETAIL" }) as never,
+      })).rejects.toThrow(/^basic candidate artifact write failed$/);
+    } finally {
+      await closeBasicCandidateWorkspace(workspace);
+    }
   });
 
   test("writes only through an already verified workspace capability", async () => {
@@ -742,6 +796,27 @@ async function buildReadyCandidate() {
   const candidate = await runBasicDeterministicCandidate(createReadyCandidateInput());
   productionCandidates.add(candidate);
   return candidate;
+}
+
+function v3Candidate() {
+  const fixture = createBasicCollectionAuditV3Fixture();
+  return createBasicV3CandidateComposition({
+    baseBundle: {
+      ...structuredClone(fixture),
+      sourceRegister: { ...fixture.sourceRegister, schemaVersion: "basic-country-audit/v2" },
+      extractedFacts: {
+        ...fixture.extractedFacts,
+        schemaVersion: "basic-country-audit/v2",
+        facts: fixture.extractedFacts.facts.filter(({ fieldPath }) =>
+          !fieldPath.startsWith("marketOverview.basicProfile.")),
+      },
+      marketOverviewDraft: Object.fromEntries(
+        Object.entries(fixture.marketOverviewDraft).filter(([key]) => key !== "basicProfile"),
+      ),
+      reviewReport: { ...fixture.reviewReport, schemaVersion: "basic-country-audit/v2" },
+    },
+    basicProfile: fixture.marketOverviewDraft.basicProfile,
+  });
 }
 
 function createReadyCandidateInput() {

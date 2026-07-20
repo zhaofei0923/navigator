@@ -1,5 +1,9 @@
 import { worldBankCountryAdapter } from "./adapters/world-bank-country.js";
 import { WORLD_BANK_CORE_INDICATOR_ADAPTERS } from "./adapters/world-bank-indicators.js";
+import {
+  WORLD_BANK_BASIC_PROFILE_ADAPTERS,
+  type WorldBankBasicProfileAdapter,
+} from "./adapters/world-bank-basic-profile.js";
 import type {
   BasicDeterministicSourceAdapter,
   BasicSourceRequest,
@@ -21,6 +25,30 @@ const REGISTRY = new Map(
     adapter,
   ] as const),
 );
+const BASIC_PROFILE_REGISTRY = new Map(
+  WORLD_BANK_BASIC_PROFILE_ADAPTERS.map((adapter) => [adapter.sourceId, adapter] as const),
+);
+
+export function resolveBasicProfileWorldBankAdapter(
+  entry: BasicSourceExecutionPlanEntry,
+  countryCode: string,
+): WorldBankBasicProfileAdapter {
+  try {
+    if (!ISO2.test(countryCode)) invalid();
+    const source = entry.source;
+    const adapter = BASIC_PROFILE_REGISTRY.get(source.sourceId);
+    if (
+      adapter === undefined || source.adapterId !== adapter.sourceId ||
+      source.adapterVersion !== "1.0.0" || source.adapterKind !== "deterministic" ||
+      source.format !== "json" || source.accessMode !== "open"
+    ) invalid();
+    const request = adapter.request(countryCode);
+    if (entry.request.url !== request.url || entry.request.accept !== request.headers.Accept) invalid();
+    return adapter;
+  } catch {
+    throw new Error(BINDING_ERROR);
+  }
+}
 
 export function resolveBasicSourceAdapter(
   entry: BasicSourceExecutionPlanEntry,

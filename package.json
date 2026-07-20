@@ -5,6 +5,7 @@
   "packageManager": "pnpm@11.10.0",
   "scripts": {
     "candidate:basic-country": "pnpm --filter @navigator/db candidate:basic-country",
+    "basic:prepare-batch": "pnpm --filter @navigator/db basic:prepare-batch",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "node --test scripts/run-platform-e2e.test.mjs && vitest run tests && turbo run test",

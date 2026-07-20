@@ -27,13 +27,20 @@ const EMPTY_SUMMARY: BasicCollectionAuditSummary = {
   sourceCount: 0,
   factCount: 0,
 };
+const VALIDATOR_RESULTS = new WeakSet<object>();
+
+export function isBasicCollectionAuditValidationResultV3FromValidator(
+  value: unknown,
+): value is BasicCollectionAuditValidationResultV3 {
+  return typeof value === "object" && value !== null && VALIDATOR_RESULTS.has(value);
+}
 
 export function validateBasicCollectionAuditBundleV3(
   value: unknown,
 ): BasicCollectionAuditValidationResultV3 {
   try {
     const parsed = parseBasicCollectionAuditBundleV3(value);
-    if (parsed.data === null) return invalid(parsed.errors, parsed.summary);
+    if (parsed.data === null) return authenticate(invalid(parsed.errors, parsed.summary));
 
     const v2Validation = validateBasicCollectionAuditBundleV2(toV2Bundle(parsed.data));
     const profileErrors = validateProfileFacts(parsed.data);
@@ -42,22 +49,29 @@ export function validateBasicCollectionAuditBundleV3(
       ...profileErrors,
     ];
     if (errors.length > 0) {
-      return invalid(errors, parsed.summary, v2Validation.blockers);
+      return authenticate(invalid(errors, parsed.summary, v2Validation.blockers));
     }
-    return deepFreezeBasicOfflineValue({
+    return authenticate(deepFreezeBasicOfflineValue({
       valid: true,
       data: parsed.data,
       errors: [] as const,
       readyForHumanReview: v2Validation.readyForHumanReview,
       blockers: [...v2Validation.blockers],
       summary: parsed.summary,
-    });
+    }));
   } catch {
-    return invalid(
+    return authenticate(invalid(
       ["bundle must be a safely parseable v3 audit bundle"],
       EMPTY_SUMMARY,
-    );
+    ));
   }
+}
+
+function authenticate(
+  result: BasicCollectionAuditValidationResultV3,
+): BasicCollectionAuditValidationResultV3 {
+  VALIDATOR_RESULTS.add(result);
+  return result;
 }
 
 function validateProfileFacts(bundle: BasicCollectionAuditBundleV3): string[] {
