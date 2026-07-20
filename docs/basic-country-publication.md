@@ -225,3 +225,48 @@ native ABI 必须区分 `OK` 与 `COMMITTED_UNVERIFIED`：后者表示 `renameat
 
 现有 v2 parser、materializer、validator、loader 和六国 canonical bytes 保持不变；v3 profile
 只由新的 v3 parser/materializer/validator/CLI 路径处理。
+
+## 11. Basic v3 单国刷新 CLI
+
+刷新既有已批准 BASIC publication 必须使用独立的 `basic:refresh` capability；不得删除既有
+canonical 目录后复用 `basic:publish`，也不得给首次发布命令增加 replace 参数。命令只接受一个
+国家、一个不同的新 run 和由该 country/run identity 精确派生的既有批准回执：
+
+```bash
+pnpm basic:refresh \
+  --country=ID \
+  --run-id=<newRunId> \
+  --approval-file=data/approvals/<countryDirectory>/<newRunId>.json
+```
+
+CLI 从一个经验证的 repository root 打开并持有全部 filesystem capabilities。它先稳定读取并验证
+当前 active v2 或 v3 exact-three publication，再稳定读取目标 v3 candidate 与
+`basic-country-publication-approval/v1` 回执；active、target 与命令参数的 country identity 必须完全
+一致，run 必须不同，目标 `decidedAt` 必须严格晚于 active 回执，并且 target 四文件 bytes 必须与
+回执 hash 完全一致。目标在 private mode-`0700` transaction 中完成 exact-three 确定性构造、fsync
+和 approved-publication validation 后，立即在 commit 前重新验证 active/target 的 held identity 与
+bytes。任何 commit 前错误只返回固定脱敏错误，不创建或补全批准，不改变 canonical。
+
+Linux 原生 `renameat2(RENAME_EXCHANGE)` 成功交换 transaction `canonical` 与
+`data/<countryDirectory>` 的时刻是刷新 **commit point**；没有 JavaScript rename、copy、普通 rename、
+跨 filesystem 或不支持 ABI 的 fallback。commit 后发生 native 后验、held-child、exact-three、fsync、
+validator 或 capability close 失败时，结果仍固定为 `status: "refreshed"`，仅将
+`postCommitVerified` 设为 `false`，不得把已提交刷新报告为未提交，也不得自动回滚。
+
+旧 canonical exact-three tree 不做逐文件删除。writer 创建 private mode-`0700`
+`recovery-<transactionUuid>` 空占位，并通过同一 authenticated `RENAME_EXCHANGE` 将完整旧 tree 原子
+保留到 `.cache/basic-country-refresh/recovery-<transactionUuid>`。只允许按已登记 identity 删除交换后
+的空占位和空 transaction wrapper；任何 retention 或清理失败都必须保留一棵完整旧 tree。即使刷新
+完全验证通过，recovery artifact 也继续作为受限恢复证据保留；其 garbage collection 是未来独立、
+明确审核的任务，本 CLI 不实现 deferred GC。
+
+rollback 不由 CLI 执行。需要回退时，对包含该单国 canonical 与回执变更的 publication commit 执行
+单独审核的 `git revert <publication-commit>`，随后重新运行 approved-publication validation、lint、
+typecheck、tests、E2E、合并/推送策略与 CI-SHA 对齐。禁止直接恢复文件、force push、hard reset，或
+删除旧 candidate/receipt/recovery history。
+
+刷新只改变 repository 中该国的 canonical tracked bytes；它不调用 Prisma、不连接或写入
+PostgreSQL、不导入 seed、不修改 KnowledgeChunk 或 AI index、不调用 API/Web service，也不改变
+`aiUsable=false`、BASIC 覆盖和其余九个 `BUILDING`/`dataCount=0` 模块。持久数据库或 AI runtime 的
+任何更新都属于另一项需要明确授权的任务。命令不支持 batch，不自动批准，不修改 candidate、回执、
+其他国家、deep-module 数据或 schema。

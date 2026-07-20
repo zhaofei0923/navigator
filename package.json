@@ -8,6 +8,7 @@
     "basic:prepare-batch": "pnpm --filter @navigator/db basic:prepare-batch",
     "basic:review-pack": "pnpm --filter @navigator/db basic:review-pack",
     "basic:publish": "pnpm --filter @navigator/db basic:publish",
+    "basic:refresh": "pnpm --filter @navigator/db basic:refresh",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "node --test scripts/run-platform-e2e.test.mjs && vitest run tests && turbo run test",

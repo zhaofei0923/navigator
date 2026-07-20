@@ -25,6 +25,8 @@
     "basic:review-pack": "node --conditions=development --experimental-transform-types --import ../../scripts/node-ts-source-hook.mjs src/cli/write-basic-review-pack.ts",
     "prebasic:publish": "pnpm run build:basic-candidate-native",
     "basic:publish": "node --conditions=development --experimental-transform-types --import ../../scripts/node-ts-source-hook.mjs src/cli/publish-basic-country.ts",
+    "prebasic:refresh": "pnpm run build:basic-candidate-native",
+    "basic:refresh": "node --conditions=development --experimental-transform-types --import ../../scripts/node-ts-source-hook.mjs src/cli/refresh-basic-country.ts",
     "preflight:basic-activation": "node --conditions=development --import ../../scripts/node-ts-source-hook.mjs src/seed/basic-country-activation-preflight-cli.ts",
     "seed:approved-basic-country": "node --conditions=development --experimental-transform-types --import ../../scripts/node-ts-source-hook.mjs src/seed/approved-basic-country-import.ts",
     "import:approved-basic-publications": "node --conditions=development --experimental-transform-types --import ../../scripts/node-ts-source-hook.mjs src/seed/approved-basic-countries-prisma-import-cli.ts",

@@ -245,6 +245,49 @@ PostgreSQL；Prisma adapter 由 DB 集成测试负责，migration/import → dat
 
 Task 8 runner 必须先读一个有效 anchor，再等到精确的 `anchor.sequence + 1` 有效新窗口后才启动负载，并在 schema v2 结果保存两者 sequence 和两段同步等待时间。固定相位测试必须覆盖 metrics 响应跨 sampler tick，以及 120 秒 warmup 后连续 600 秒 measurement。每个 measurement 期必须保存连续 600 个有效已完成序列：每项 `valid=1` 且相邻 sequence 严格 `+1`；重复 scrape 的同一 sequence 只重试、不重复计数，目标窗口无效、回退、跳号或 500ms 内仍无新 sequence 都使场景失败。event-loop 场景结果只能以这 600 个单秒窗口 p99 计算汇总 p99，门槛为严格 `< 50ms`，等于 50ms 不通过；判定使用未舍入值，展示精度不得改变结论。旧 Task 8 使用累计 mean 的三档证据不可重算真实 p99，必须作为 superseded 历史保留；修复后需以新 run identity 重跑三档、生成新 immutable manifest 并绑定实际 Git SHA，不得覆盖旧 artifact。
 
+### 6.7 BASIC 单国刷新验收
+
+刷新测试必须在 Linux filesystem clean-build native helper，并分别锁定 native exchange、writer 状态机、
+CLI 与首次发布回归：
+
+```bash
+rm -f packages/db/.cache/native/basic-candidate-fs.node
+pnpm --filter @navigator/db run build:basic-candidate-native
+pnpm --filter @navigator/db exec vitest run \
+  src/basic-candidate-native-fs.test.ts \
+  src/basic-refresh-writer.test.ts \
+  src/refresh-basic-country.test.ts \
+  src/publish-basic-country.test.ts \
+  src/basic-publication-versioned-loader.test.ts
+pnpm basic:refresh --help
+pnpm basic:publish --help
+```
+
+测试必须覆盖 active v2/v3、target v3、same-run/country/stale/hash drift fail closed、commit 前 active
+byte identity、不确定 commit 后 `status=refreshed`/`postCommitVerified=false`、每个 capability 的 finally
+close、safe-retention exchange 及其 fsync/verification/空 wrapper cleanup failure。每个 commit 后 case
+必须保留一棵完整 exact-three 旧 canonical tree，禁止 partial tree、自动 rollback 或 recovery tree
+unlink。CLI 测试不得创建批准、执行真实国家刷新、连接数据库、创建 KnowledgeChunk 或写 AI index；
+`basic:publish` 的 help、no-replace 和返回契约必须保持不变。
+
+最终分支 gate 为：
+
+```bash
+rm -f packages/db/.cache/native/basic-candidate-fs.node
+pnpm --filter @navigator/db run build:basic-candidate-native
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm turbo run lint typecheck test --force
+pnpm --filter @navigator/db prisma:validate
+pnpm --filter @navigator/db validate:approved-basic-publications
+pnpm test:e2e
+git diff --check
+```
+
+真实单国 refresh 仅能在 CLI 能力独立审核通过、目标 candidate bytes 被外部人工回执精确授权的后续
+country publication task 中执行，不属于通用 CLI 测试或实现任务。
+
 ---
 
 ## 7. 一致性检查清单
