@@ -107,6 +107,7 @@ export const GOLDEN_ID_MARKET_OVERVIEW = {
     { label: { zh: "可再生能源装机容量", en: "Installed renewable capacity" }, value: "15630", unit: "MW", year: 2025 },
     { label: { zh: "人均用电量", en: "Electricity consumption per capita" }, value: "1584", unit: "kWh/person", year: 2025 },
   ],
+  basicProfile: null,
   source: "Indonesia Ministry of Energy and Mineral Resources",
   sourceUrl: "https://www.esdm.go.id/en/media-center/news-archives/capaian-positif-tahun-2025-negara-hadir-penuhi-kebutuhan-energi-masyarakat",
   collectedAt: "2026-07-13T14:09:07.223Z",
