@@ -244,6 +244,26 @@ marketSummary
 `energyAccess` 仅收录电力可及率，不采集 clean cooking。此投影不生成
 `KnowledgeChunk`，也不改变 §3.1 的 AI 可用性硬约束。
 
+八类字段采用下列国家中立的精确清单；每个 category 的 `fields` 必须恰好包含对应
+key，不得缺失、留空或增加临时字段：
+
+| category | 必需 field key |
+|----------|----------------|
+| `countryBasics` | `countryCode`、`countryName`、`region`、`population`、`gdp`、`gdpPerCapita`、`gdpGrowth` |
+| `electricityMarket` | `totalGeneration`、`electricityConsumption`、`electricityMix`、`renewableGenerationShare` |
+| `energyAccess` | `electricityAccess` |
+| `renewableCapacity` | `totalRenewableCapacity`、`solarCapacity`、`windCapacity`、`hydroCapacity` |
+| `solarResource` | `ghi`、`pvout`、`solarPotentialSummary` |
+| `windResource` | `onshoreWindClass`、`offshoreWindClass`、`resourceSummary` |
+| `policyOverview` | `summary` |
+| `marketSummary` | `opportunitySummary` |
+
+每个必需字段都必须按上述状态不变量表示：有审核事实时使用 `AVAILABLE`；缺失指标也
+必须保留该字段并使用 `NOT_AVAILABLE`，同时提供非空 `sourceIds`、有效 `checkedAt`
+以及中英文均非空的 `reason`。因此，空或部分 `BasicProfile` 不得进入候选
+`ready-for-human-review`，也不得发布。`countryName` 表示中英双语国家名；
+`energyAccess` 不得加入清洁烹饪率。
+
 ### 5.2 policy（政策法规）
 数组，每条为一项政策/法规。
 

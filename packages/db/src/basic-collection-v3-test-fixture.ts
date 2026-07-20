@@ -1,26 +1,61 @@
 import type {
   BasicProfile,
+  BasicProfileCategoryKey,
   BasicProfileCategories,
 } from "@navigator/shared-types/basic-profile";
 
 import { createBasicCollectionAuditV2Fixture } from "./basic-collection-test-fixture.js";
 
-const PROFILE_FIELD_ENTRIES = [
-  ["countryBasics", "countryClassification", "Example classification"],
-  ["electricityMarket", "annualElectricitySales", 125],
-  ["energyAccess", "electricityAccess", 98.5],
-  ["renewableCapacity", "installedRenewableCapacity", 20],
-  ["solarResource", "solarResourceSummary", "Example solar resource"],
-  ["windResource", "windResourceSummary", "Example wind resource"],
-  ["policyOverview", "renewablePolicySummary", "Example renewable policy"],
-  ["marketSummary", "marketReadiness", "Example market readiness"],
-] as const;
+const PROFILE_FIELDS = {
+  countryBasics: [
+    ["countryCode", "XZ"],
+    ["countryName", { zh: "示例国家", en: "Example Land" }],
+    ["region", { zh: "示例区域", en: "Example region" }],
+    ["population", 1_000_000],
+    ["gdp", 25_000_000_000],
+    ["gdpPerCapita", 25_000],
+    ["gdpGrowth", 5.2],
+  ],
+  electricityMarket: [
+    ["totalGeneration", 125],
+    ["electricityConsumption", 110],
+    ["electricityMix", { zh: "示例电力结构", en: "Example electricity mix" }],
+    ["renewableGenerationShare", 45],
+  ],
+  energyAccess: [["electricityAccess", 98.5]],
+  renewableCapacity: [
+    ["totalRenewableCapacity", 20],
+    ["solarCapacity", 8],
+    ["windCapacity", 5],
+    ["hydroCapacity", 7],
+  ],
+  solarResource: [
+    ["ghi", 5.1],
+    ["pvout", 4.3],
+    ["solarPotentialSummary", { zh: "示例太阳能潜力", en: "Example solar potential" }],
+  ],
+  windResource: [
+    ["onshoreWindClass", "good"],
+    ["offshoreWindClass", "very-good"],
+    ["resourceSummary", { zh: "示例风能资源", en: "Example wind resource" }],
+  ],
+  policyOverview: [[
+    "summary", { zh: "示例可再生能源政策", en: "Example renewable policy" },
+  ]],
+  marketSummary: [[
+    "opportunitySummary", { zh: "示例市场机会", en: "Example market opportunity" },
+  ]],
+} as const;
+
+const PROFILE_FIELD_ENTRIES = Object.entries(PROFILE_FIELDS).flatMap(
+  ([category, fields]) => fields.map(([key, value]) => [category, key, value] as const),
+);
 
 export function createBasicCollectionAuditV3Fixture() {
   const v2 = createBasicCollectionAuditV2Fixture();
-  const categories = Object.fromEntries(PROFILE_FIELD_ENTRIES.map(
-    ([category, key, value]) => [category, {
-      fields: [{
+  const categories = Object.fromEntries(Object.entries(PROFILE_FIELDS).map(
+    ([category, entries]) => [category, {
+      fields: entries.map(([key, value]) => ({
         key,
         label: { zh: `${key} 中文标签`, en: `${key} label` },
         status: "AVAILABLE" as const,
@@ -31,7 +66,7 @@ export function createBasicCollectionAuditV3Fixture() {
         checkedAt: "2026-07-09",
         reason: null,
         note: null,
-      }],
+      })),
     }],
   )) as unknown as BasicProfileCategories;
   const basicProfile: BasicProfile = {
@@ -49,7 +84,9 @@ export function createBasicCollectionAuditV3Fixture() {
     updatedAt: "2026-07-10T00:00:00Z",
   };
   const profileFacts = PROFILE_FIELD_ENTRIES.map(([category, key]) => {
-    const field = categories[category].fields[0]!;
+    const field = categories[category as BasicProfileCategoryKey].fields.find(
+      (candidate) => candidate.key === key,
+    )!;
     return {
       factId: `fact-profile-${category}-${key}`,
       fieldPath: `marketOverview.basicProfile.categories.${category}.fields.${key}`,

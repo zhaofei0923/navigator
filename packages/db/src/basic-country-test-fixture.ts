@@ -1,9 +1,10 @@
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type {
-  BasicProfile,
-  BasicProfileCategory,
+import {
+  BASIC_PROFILE_REQUIRED_FIELD_KEYS,
+  type BasicProfile,
+  type BasicProfileCategories,
 } from "@navigator/shared-types/basic-profile";
 
 import { createBasicCountryBundle } from "./seed/basic-country-template.js";
@@ -18,45 +19,29 @@ export function createValidBundle(): BasicCountryBundle {
 }
 
 export function createValidBasicProfile(): BasicProfile {
-  const emptyCategory = (): BasicProfileCategory => ({ fields: [] });
+  const categories = Object.fromEntries(Object.entries(
+    BASIC_PROFILE_REQUIRED_FIELD_KEYS,
+  ).map(
+    ([category, keys]) => [category, {
+      fields: keys.map((key) => ({
+        key,
+        label: { zh: `${key} 标签`, en: `${key} label` },
+        status: "AVAILABLE" as const,
+        value: key === "countryName"
+          ? { zh: "越南", en: "Vietnam" }
+          : key === "countryCode" ? "VN" : `${key} value`,
+        unit: null,
+        year: null,
+        sourceIds: ["source-1"],
+        checkedAt: "2026-07-20",
+        reason: null,
+        note: null,
+      })),
+    }],
+  )) as unknown as BasicProfileCategories;
   return {
     schemaVersion: "basic-market-profile/v2",
-    categories: {
-      countryBasics: {
-        fields: [{
-          key: "officialName",
-          label: { zh: "官方名称", en: "Official name" },
-          status: "AVAILABLE",
-          value: { zh: "越南社会主义共和国", en: "Socialist Republic of Viet Nam" },
-          unit: null,
-          year: null,
-          sourceIds: ["source-1"],
-          checkedAt: "2026-07-20",
-          reason: null,
-          note: null,
-        }],
-      },
-      electricityMarket: emptyCategory(),
-      energyAccess: {
-        fields: [{
-          key: "electricityAccess",
-          label: { zh: "电力可及率", en: "Electricity access" },
-          status: "NOT_AVAILABLE",
-          value: null,
-          unit: null,
-          year: null,
-          sourceIds: ["source-1"],
-          checkedAt: "2026-07-20",
-          reason: { zh: "官方来源未提供", en: "Not reported by the official source" },
-          note: null,
-        }],
-      },
-      renewableCapacity: emptyCategory(),
-      solarResource: emptyCategory(),
-      windResource: emptyCategory(),
-      policyOverview: emptyCategory(),
-      marketSummary: emptyCategory(),
-    },
+    categories,
     sources: [{
       id: "source-1",
       publisher: "Example authority",

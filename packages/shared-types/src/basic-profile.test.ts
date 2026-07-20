@@ -2,6 +2,7 @@ import { describe, expect, expectTypeOf, test } from "vitest";
 
 import {
   BASIC_PROFILE_CATEGORY_KEYS,
+  BASIC_PROFILE_REQUIRED_FIELD_KEYS,
   BASIC_PROFILE_SCHEMA_VERSION,
   parseBasicProfile,
   type BasicProfile,
@@ -17,6 +18,25 @@ const CATEGORY_KEYS = [
   "policyOverview",
   "marketSummary",
 ] as const;
+
+const REQUIRED_FIELD_KEYS = {
+  countryBasics: [
+    "countryCode", "countryName", "region", "population", "gdp",
+    "gdpPerCapita", "gdpGrowth",
+  ],
+  electricityMarket: [
+    "totalGeneration", "electricityConsumption", "electricityMix",
+    "renewableGenerationShare",
+  ],
+  energyAccess: ["electricityAccess"],
+  renewableCapacity: [
+    "totalRenewableCapacity", "solarCapacity", "windCapacity", "hydroCapacity",
+  ],
+  solarResource: ["ghi", "pvout", "solarPotentialSummary"],
+  windResource: ["onshoreWindClass", "offshoreWindClass", "resourceSummary"],
+  policyOverview: ["summary"],
+  marketSummary: ["opportunitySummary"],
+} as const;
 
 function localized(zh = "中文", en = "English") {
   return { zh, en };
@@ -44,13 +64,7 @@ function validProfile(): Record<string, unknown> {
       CATEGORY_KEYS.map((categoryKey) => [
         categoryKey,
         {
-          fields: [
-            availableField(
-              categoryKey === "energyAccess"
-                ? "electricityAccess"
-                : `${categoryKey}Value`,
-            ),
-          ],
+          fields: REQUIRED_FIELD_KEYS[categoryKey].map((key) => availableField(key)),
         },
       ]),
     ),
@@ -91,6 +105,10 @@ describe("BASIC v2 profile contract", () => {
   test("exports the approved schema version and all eight ordered category keys", () => {
     expect(BASIC_PROFILE_SCHEMA_VERSION).toBe("basic-market-profile/v2");
     expect(BASIC_PROFILE_CATEGORY_KEYS).toEqual(CATEGORY_KEYS);
+    expect(BASIC_PROFILE_REQUIRED_FIELD_KEYS).toEqual(REQUIRED_FIELD_KEYS);
+    expect(Object.isFrozen(BASIC_PROFILE_REQUIRED_FIELD_KEYS)).toBe(true);
+    expect(Object.values(BASIC_PROFILE_REQUIRED_FIELD_KEYS).every(Object.isFrozen))
+      .toBe(true);
     expectTypeOf(BASIC_PROFILE_SCHEMA_VERSION).toEqualTypeOf<
       "basic-market-profile/v2"
     >();
@@ -107,22 +125,16 @@ describe("BASIC v2 profile contract", () => {
 
   test("accepts NOT_AVAILABLE only with checked sources and a bilingual reason", () => {
     const input = cloneProfile();
-    profileCategories(input).energyAccess = {
-      fields: [
-        {
-          key: "electricityAccess",
-          label: localized("电力可及率", "Electricity access"),
-          status: "NOT_AVAILABLE",
-          value: null,
-          unit: null,
-          year: null,
-          sourceIds: ["official-source"],
-          checkedAt: "2026-07-20",
-          reason: localized("官方来源暂无数据", "No data in the official source"),
-          note: null,
-        },
-      ],
-    };
+    Object.assign(firstField(input, "energyAccess"), {
+      status: "NOT_AVAILABLE",
+      value: null,
+      unit: null,
+      year: null,
+      sourceIds: ["official-source"],
+      checkedAt: "2026-07-20",
+      reason: localized("官方来源暂无数据", "No data in the official source"),
+      note: null,
+    });
 
     expect(parseBasicProfile(input)).toEqual(input);
   });
@@ -209,6 +221,31 @@ describe("BASIC v2 profile contract", () => {
     expect(parseBasicProfile(duplicate)).toBeNull();
   });
 
+  test.each(CATEGORY_KEYS)(
+    "rejects %s when its required fields are empty or partial",
+    (categoryKey) => {
+      const empty = cloneProfile();
+      (profileCategories(empty)[categoryKey] as { fields: unknown[] }).fields = [];
+      expect(parseBasicProfile(empty)).toBeNull();
+
+      const partial = cloneProfile();
+      (profileCategories(partial)[categoryKey] as { fields: unknown[] }).fields.pop();
+      expect(parseBasicProfile(partial)).toBeNull();
+    },
+  );
+
+  test.each(CATEGORY_KEYS)(
+    "rejects an unapproved extra field in %s",
+    (categoryKey) => {
+      const input = cloneProfile();
+      (profileCategories(input)[categoryKey] as { fields: unknown[] }).fields.push(
+        availableField("unapprovedField"),
+      );
+
+      expect(parseBasicProfile(input)).toBeNull();
+    },
+  );
+
   test.each(["cleanCooking", "energyAccessSummary"])(
     "rejects non-electricity energyAccess field key %s",
     (key) => {
@@ -219,11 +256,11 @@ describe("BASIC v2 profile contract", () => {
     },
   );
 
-  test("does not restrict field keys in other categories to electricityAccess", () => {
+  test("rejects an out-of-contract field key outside energy access", () => {
     const input = cloneProfile();
     firstField(input, "countryBasics").key = "cleanCooking";
 
-    expect(parseBasicProfile(input)).not.toBeNull();
+    expect(parseBasicProfile(input)).toBeNull();
   });
 
   test.each([

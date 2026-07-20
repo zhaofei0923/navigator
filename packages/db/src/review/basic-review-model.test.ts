@@ -48,7 +48,7 @@ describe("BASIC local review model", () => {
     ];
     const conflictFactIds = current.extractedFacts.facts.slice(0, 2).map(({ factId }) => factId);
     current.reviewReport.conflicts = [{
-      fieldPath: "marketOverview.basicProfile.categories.electricityMarket.fields.annualElectricitySales",
+      fieldPath: "marketOverview.basicProfile.categories.electricityMarket.fields.totalGeneration",
       factIds: conflictFactIds,
       resolution: "unresolved",
       notes: "<script>conflict</script>",
@@ -74,7 +74,7 @@ describe("BASIC local review model", () => {
       })),
     })]);
     expect(model.differences).toContainEqual(expect.objectContaining({
-      fieldPath: expect.stringContaining("annualElectricitySales"),
+      fieldPath: expect.stringContaining("totalGeneration"),
       change: "changed",
     }));
     expect(model.checklist.map(({ key }) => key)).toEqual([

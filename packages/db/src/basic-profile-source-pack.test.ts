@@ -226,8 +226,8 @@ describe("profile facts and v3 assembly", () => {
       profile: fixture.marketOverviewDraft.basicProfile,
       sourceRegister: fixture.sourceRegister,
     });
-    expect(facts).toHaveLength(8);
-    expect(new Set(facts.map(({ fieldPath }) => fieldPath)).size).toBe(8);
+    expect(facts).toHaveLength(24);
+    expect(new Set(facts.map(({ fieldPath }) => fieldPath)).size).toBe(24);
     expect(facts.every(({ evidence }) => evidence.length === 1)).toBe(true);
 
     const assembled = assembleBasicCollectionAuditBundleV3({

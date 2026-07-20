@@ -16,6 +16,33 @@ export const BASIC_PROFILE_CATEGORY_KEYS = [
 
 export type BasicProfileCategoryKey =
   (typeof BASIC_PROFILE_CATEGORY_KEYS)[number];
+
+export const BASIC_PROFILE_REQUIRED_FIELD_KEYS = Object.freeze({
+  countryBasics: Object.freeze([
+    "countryCode", "countryName", "region", "population", "gdp",
+    "gdpPerCapita", "gdpGrowth",
+  ] as const),
+  electricityMarket: Object.freeze([
+    "totalGeneration", "electricityConsumption", "electricityMix",
+    "renewableGenerationShare",
+  ] as const),
+  energyAccess: Object.freeze(["electricityAccess"] as const),
+  renewableCapacity: Object.freeze([
+    "totalRenewableCapacity", "solarCapacity", "windCapacity", "hydroCapacity",
+  ] as const),
+  solarResource: Object.freeze(["ghi", "pvout", "solarPotentialSummary"] as const),
+  windResource: Object.freeze([
+    "onshoreWindClass", "offshoreWindClass", "resourceSummary",
+  ] as const),
+  policyOverview: Object.freeze(["summary"] as const),
+  marketSummary: Object.freeze(["opportunitySummary"] as const),
+}) satisfies Readonly<
+  Record<BasicProfileCategoryKey, readonly string[]>
+>;
+
+export type BasicProfileRequiredFieldKey<
+  Category extends BasicProfileCategoryKey = BasicProfileCategoryKey,
+> = (typeof BASIC_PROFILE_REQUIRED_FIELD_KEYS)[Category][number];
 export type BasicProfileFieldStatus = "AVAILABLE" | "NOT_AVAILABLE";
 export type BasicProfileFieldValue = number | string | LocalizedText | null;
 
@@ -126,11 +153,15 @@ function parseCategory(
   const keys = new Set<string>();
   const fields = record.fields.map((field) => {
     const parsed = parseField(field, sourceIds);
-    if (categoryKey === "energyAccess" && parsed.key !== "electricityAccess") invalid();
     if (keys.has(parsed.key)) invalid();
     keys.add(parsed.key);
     return parsed;
   });
+  const requiredKeys = BASIC_PROFILE_REQUIRED_FIELD_KEYS[categoryKey];
+  if (
+    fields.length !== requiredKeys.length ||
+    requiredKeys.some((key) => !keys.has(key))
+  ) invalid();
   return { fields };
 }
 

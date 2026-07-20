@@ -13,6 +13,25 @@ describe("Basic collection audit v3 validation", () => {
       });
   });
 
+  test("does not mark an empty or partial required BASIC profile ready", () => {
+    const empty = mutableFixture();
+    empty.marketOverviewDraft.basicProfile.categories.policyOverview.fields = [];
+    empty.extractedFacts.facts.splice(profileFactIndex(empty, "policyOverview"), 1);
+    expectInvalid(empty, "valid required basic-market-profile/v2");
+
+    const partial = mutableFixture();
+    const solarFields = partial.marketOverviewDraft.basicProfile.categories
+      .solarResource.fields;
+    const omitted = solarFields.pop();
+    if (omitted === undefined) throw new Error("fixture field missing");
+    const omittedFact = partial.extractedFacts.facts.findIndex(({ fieldPath }) =>
+      fieldPath.endsWith(`solarResource.fields.${omitted.key}`)
+    );
+    if (omittedFact < 0) throw new Error("fixture fact missing");
+    partial.extractedFacts.facts.splice(omittedFact, 1);
+    expectInvalid(partial, "valid required basic-market-profile/v2");
+  });
+
   test("requires an exact draft-field to semantic-fact bijection", () => {
     const missing = mutableFixture();
     missing.extractedFacts.facts.splice(profileFactIndex(missing, "countryBasics"), 1);
@@ -21,6 +40,9 @@ describe("Basic collection audit v3 validation", () => {
     const unresolved = mutableFixture();
     profileFact(unresolved, "countryBasics").fieldPath =
       "marketOverview.basicProfile.categories.countryBasics.fields.unregisteredField";
+    unresolved.extractedFacts.facts.sort((left, right) =>
+      left.fieldPath.localeCompare(right.fieldPath),
+    );
     expectInvalid(unresolved, "resolve to exactly one");
   });
 
