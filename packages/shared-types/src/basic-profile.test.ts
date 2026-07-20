@@ -43,7 +43,15 @@ function validProfile(): Record<string, unknown> {
     categories: Object.fromEntries(
       CATEGORY_KEYS.map((categoryKey) => [
         categoryKey,
-        { fields: [availableField(`${categoryKey}Value`)] },
+        {
+          fields: [
+            availableField(
+              categoryKey === "energyAccess"
+                ? "electricityAccess"
+                : `${categoryKey}Value`,
+            ),
+          ],
+        },
       ]),
     ),
     sources: [
@@ -199,6 +207,23 @@ describe("BASIC v2 profile contract", () => {
     };
     category.fields.push(availableField(category.fields[0]!.key as string));
     expect(parseBasicProfile(duplicate)).toBeNull();
+  });
+
+  test.each(["cleanCooking", "energyAccessSummary"])(
+    "rejects non-electricity energyAccess field key %s",
+    (key) => {
+      const input = cloneProfile();
+      firstField(input, "energyAccess").key = key;
+
+      expect(parseBasicProfile(input)).toBeNull();
+    },
+  );
+
+  test("does not restrict field keys in other categories to electricityAccess", () => {
+    const input = cloneProfile();
+    firstField(input, "countryBasics").key = "cleanCooking";
+
+    expect(parseBasicProfile(input)).not.toBeNull();
   });
 
   test.each([

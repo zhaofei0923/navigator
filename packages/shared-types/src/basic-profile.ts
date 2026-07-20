@@ -37,10 +37,8 @@ export interface BasicProfileCategory {
 }
 
 export type BasicProfileCategories = Readonly<Record<
-  BasicProfileCategoryKey,
-  BasicProfileCategory
+  BasicProfileCategoryKey, BasicProfileCategory
 >>;
-
 export interface BasicProfileSource {
   readonly id: string;
   readonly publisher: string;
@@ -113,18 +111,22 @@ function parseCategories(value: unknown, sourceIds: ReadonlySet<string>): BasicP
   const record = exactRecord(value, BASIC_PROFILE_CATEGORY_KEYS);
   const entries = BASIC_PROFILE_CATEGORY_KEYS.map((categoryKey) => [
     categoryKey,
-    parseCategory(record[categoryKey], sourceIds),
+    parseCategory(categoryKey, record[categoryKey], sourceIds),
   ] as const);
   return Object.fromEntries(entries) as BasicProfileCategories;
 }
 
-function parseCategory(value: unknown, sourceIds: ReadonlySet<string>): BasicProfileCategory {
+function parseCategory(
+  categoryKey: BasicProfileCategoryKey, value: unknown,
+  sourceIds: ReadonlySet<string>,
+): BasicProfileCategory {
   const record = exactRecord(value, CATEGORY_KEYS);
   if (!Array.isArray(record.fields)) invalid();
 
   const keys = new Set<string>();
   const fields = record.fields.map((field) => {
     const parsed = parseField(field, sourceIds);
+    if (categoryKey === "energyAccess" && parsed.key !== "electricityAccess") invalid();
     if (keys.has(parsed.key)) invalid();
     keys.add(parsed.key);
     return parsed;
