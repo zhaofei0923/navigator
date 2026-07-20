@@ -44,6 +44,7 @@ export interface ApprovedBasicPublicationSnapshot {
   readonly countryDirectory: string;
   readonly countryCode: string;
   readonly runId: string;
+  readonly decidedAt: string;
   readonly close: () => Promise<void>;
 }
 
@@ -184,6 +185,7 @@ export async function locateApprovedBasicPublicationSnapshot(
       countryDirectory: input.countryDirectory,
       countryCode: input.countryCode,
       runId: input.runId,
+      decidedAt: approval.decidedAt,
       async close() {
         if (closed) return;
         closed = true;

@@ -1,47 +1,15 @@
-import { parseBasicProfile, type BasicProfile } from "@navigator/shared-types/basic-profile";
+import type { BasicProfile } from "@navigator/shared-types/basic-profile";
 
-import { BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION } from "../collection/basic-collection-v2-contracts.js";
-import { BASIC_COLLECTION_AUDIT_V3_SCHEMA_VERSION } from "../collection/basic-collection-v3-contracts.js";
-import { validateBasicCollectionAuditArtifactValuesVersioned } from "../collection/basic-collection-versioned-loader.js";
-import type { BasicCollectionAuditArtifactName } from "../collection/basic-offline-audit-artifacts.js";
-import {
-  BASIC_COUNTRY_PUBLICATION_MANIFEST_SCHEMA_VERSION,
-  BASIC_COUNTRY_PUBLICATION_MANIFEST_V3_SCHEMA_VERSION,
-  BASIC_COUNTRY_PUBLICATION_JSON_MAX_BYTES,
-} from "../collection/basic-publication-contracts.js";
-import {
-  parseBasicCountryPublicationManifestV2,
-  parseBasicCountryPublicationManifestV3,
-} from "../collection/basic-publication-parser.js";
-import { validateApprovedBasicCountryPublicationV2 } from "../collection/basic-publication-validator.js";
-import { validateApprovedBasicCountryPublicationV3 } from "../collection/basic-publication-validator-v3.js";
-import { parseBasicStrictJsonText } from "../collection/basic-strict-json.js";
 import {
   closeBasicCandidateHeldDirectories,
   openBasicCandidateDirectoryChild,
-  readBasicCandidateBoundedRegularFileSnapshot,
-  requireBasicCandidateDirectoryEntries,
   requireBasicCandidateHeldChild,
-  verifyBasicCandidateRegularFile,
   type BasicCandidateHeldDirectory,
-  type BasicCandidateRegularFileIdentity,
 } from "./basic-candidate-constrained-fs.js";
-
-const CANONICAL_NAMES = Object.freeze([
-  "collection-manifest.json", "country.json", "market-overview.json",
-] as const);
-const CANDIDATE_NAMES = Object.freeze([
-  "source-register.json",
-  "extracted-facts.json",
-  "market-overview.draft.json",
-  "review-report.json",
-] as const satisfies readonly BasicCollectionAuditArtifactName[]);
-
-type FileSnapshot = Readonly<{
-  bytes: Uint8Array;
-  identity: BasicCandidateRegularFileIdentity;
-  value: unknown;
-}>;
+import {
+  getActiveBasicPublicationSnapshotState,
+  locateActiveBasicPublicationSnapshot,
+} from "./basic-active-publication-snapshot.js";
 
 export interface BasicReviewPreviousProfileSnapshot {
   readonly profile: BasicProfile | null;
@@ -65,127 +33,27 @@ export async function snapshotBasicReviewPreviousProfile(
       data = null;
       return absentSnapshot(root, heldData, countryDirectory);
     }
-    const snapshot = await presentSnapshot(root, data, country, countryDirectory);
-    data = null;
-    country = null;
-    return snapshot;
   } catch {
     invalid();
   } finally {
     await closeBasicCandidateHeldDirectories([country, data]);
   }
-}
 
-async function presentSnapshot(
-  root: BasicCandidateHeldDirectory,
-  data: BasicCandidateHeldDirectory,
-  country: BasicCandidateHeldDirectory,
-  countryDirectory: string,
-): Promise<BasicReviewPreviousProfileSnapshot> {
-  const owned: BasicCandidateHeldDirectory[] = [data, country];
   try {
-    await requireBasicCandidateDirectoryEntries(country, CANONICAL_NAMES);
-    const manifest = await readJson(country, "collection-manifest.json");
-    const manifestVersion = publicationManifestVersion(manifest.value);
-    const parsedManifest = manifestVersion === BASIC_COUNTRY_PUBLICATION_MANIFEST_SCHEMA_VERSION
-      ? parseBasicCountryPublicationManifestV2(manifest.value).data
-      : manifestVersion === BASIC_COUNTRY_PUBLICATION_MANIFEST_V3_SCHEMA_VERSION
-        ? parseBasicCountryPublicationManifestV3(manifest.value).data
-        : null;
-    if (parsedManifest === null) invalid();
-    const runId = parsedManifest.activeRunId;
-    if (
-      parsedManifest.auditBundlePath !== `data/staging/${countryDirectory}/${runId}` ||
-      parsedManifest.approvalReceiptPath !==
-        `data/approvals/${countryDirectory}/${runId}.json`
-    ) invalid();
-
-    const staging = await openOwned(data, "staging", owned);
-    const stagingCountry = await openOwned(staging, countryDirectory, owned);
-    const run = await openOwned(stagingCountry, runId, owned);
-    const approvals = await openOwned(data, "approvals", owned);
-    const approvalCountry = await openOwned(approvals, countryDirectory, owned);
-    await requireBasicCandidateDirectoryEntries(run, CANDIDATE_NAMES);
-
-    const canonicalCountry = await readJson(country, "country.json");
-    const canonicalMarket = await readJson(country, "market-overview.json");
-    const approval = await readJson(approvalCountry, `${runId}.json`);
-    const candidateFiles = Object.fromEntries(await Promise.all(
-      CANDIDATE_NAMES.map(async (name) => [name, await readJson(run, name)] as const),
-    )) as Readonly<Record<BasicCollectionAuditArtifactName, FileSnapshot>>;
-    const candidate = validateBasicCollectionAuditArtifactValuesVersioned(
-      countryDirectory,
-      runId,
-      Object.fromEntries(CANDIDATE_NAMES.map((name) => [name, candidateFiles[name].value])) as
-        Readonly<Record<BasicCollectionAuditArtifactName, unknown>>,
-    );
-    const validationInput = {
-      countryDirectory,
-      manifest: manifest.value,
-      approvalReceipt: approval.value,
-      approvalReceiptBytes: approval.bytes,
-      candidate,
-      candidateArtifactBytes: Object.fromEntries(
-        CANDIDATE_NAMES.map((name) => [name, candidateFiles[name].bytes]),
-      ),
-      canonical: {
-        country: canonicalCountry.value,
-        marketOverview: canonicalMarket.value,
-        policy: [], risk: [], opportunities: [], projects: [], partners: [],
-        chineseCompanies: [], entryStrategy: null, reports: [], knowledge: [],
-      },
-      canonicalArtifactNames: CANONICAL_NAMES,
-    };
-    const result = manifestVersion === BASIC_COUNTRY_PUBLICATION_MANIFEST_SCHEMA_VERSION &&
-      candidate.sourceRegister.schemaVersion === BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION
-      ? validateApprovedBasicCountryPublicationV2(validationInput)
-      : manifestVersion === BASIC_COUNTRY_PUBLICATION_MANIFEST_V3_SCHEMA_VERSION &&
-          candidate.sourceRegister.schemaVersion === BASIC_COLLECTION_AUDIT_V3_SCHEMA_VERSION
-        ? validateApprovedBasicCountryPublicationV3(validationInput)
-        : null;
-    if (result === null) invalid();
-    if (!result.valid) invalid();
-    const value = result.data.canonical.marketOverview.basicProfile;
-    const profile = value === undefined || value === null ? null : parseBasicProfile(value);
-    if (value !== undefined && value !== null && profile === null) invalid();
-
-    const files = Object.freeze([
-      [country, "collection-manifest.json", manifest],
-      [country, "country.json", canonicalCountry],
-      [country, "market-overview.json", canonicalMarket],
-      [approvalCountry, `${runId}.json`, approval],
-      ...CANDIDATE_NAMES.map((name) => [run, name, candidateFiles[name]] as const),
-    ] as const);
-    let closed = false;
-    const verify = async (): Promise<void> => {
-      try {
-        if (closed) invalid();
-        await requireBasicCandidateHeldChild(root, "data", data);
-        await requireBasicCandidateHeldChild(data, countryDirectory, country);
-        await requireBasicCandidateHeldChild(data, "staging", staging);
-        await requireBasicCandidateHeldChild(staging, countryDirectory, stagingCountry);
-        await requireBasicCandidateHeldChild(stagingCountry, runId, run);
-        await requireBasicCandidateHeldChild(data, "approvals", approvals);
-        await requireBasicCandidateHeldChild(approvals, countryDirectory, approvalCountry);
-        await requireBasicCandidateDirectoryEntries(country, CANONICAL_NAMES);
-        await requireBasicCandidateDirectoryEntries(run, CANDIDATE_NAMES);
-        for (const [directory, name, file] of files) {
-          await verifyBasicCandidateRegularFile(directory, name, file.identity, file.bytes);
+    const active = await locateActiveBasicPublicationSnapshot(root, countryDirectory);
+    const state = getActiveBasicPublicationSnapshotState(active);
+    return Object.freeze({
+      profile: state.profile,
+      async verify(): Promise<void> {
+        try {
+          await state.verify();
+        } catch {
+          invalid();
         }
-      } catch {
-        invalid();
-      }
-    };
-    const close = async (): Promise<void> => {
-      if (closed) return;
-      closed = true;
-      await closeBasicCandidateHeldDirectories([...owned].reverse());
-    };
-    const snapshot = Object.freeze({ profile, verify, close });
-    await snapshot.verify();
-    return snapshot;
+      },
+      close: active.close,
+    });
   } catch {
-    await closeBasicCandidateHeldDirectories([...owned].reverse());
     invalid();
   }
 }
@@ -224,44 +92,8 @@ function absentSnapshot(
   });
 }
 
-async function openOwned(
-  parent: BasicCandidateHeldDirectory,
-  name: string,
-  owned: BasicCandidateHeldDirectory[],
-): Promise<BasicCandidateHeldDirectory> {
-  const directory = await openBasicCandidateDirectoryChild(parent, name);
-  owned.push(directory);
-  return directory;
-}
-
-async function readJson(
-  directory: BasicCandidateHeldDirectory,
-  name: string,
-): Promise<FileSnapshot> {
-  const snapshot = await readBasicCandidateBoundedRegularFileSnapshot(
-    directory,
-    name,
-    BASIC_COUNTRY_PUBLICATION_JSON_MAX_BYTES,
-  );
-  const text = new TextDecoder("utf-8", { fatal: true }).decode(snapshot.bytes);
-  return Object.freeze({ ...snapshot, value: parseBasicStrictJsonText(text) });
-}
-
 function errorCode(error: unknown): string | undefined {
   return (error as NodeJS.ErrnoException | null)?.code;
-}
-
-function publicationManifestVersion(
-  value: unknown,
-): typeof BASIC_COUNTRY_PUBLICATION_MANIFEST_SCHEMA_VERSION |
-  typeof BASIC_COUNTRY_PUBLICATION_MANIFEST_V3_SCHEMA_VERSION | null {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
-  const descriptor = Object.getOwnPropertyDescriptor(value, "schemaVersion");
-  if (descriptor === undefined || !Object.hasOwn(descriptor, "value")) return null;
-  return descriptor.value === BASIC_COUNTRY_PUBLICATION_MANIFEST_SCHEMA_VERSION ||
-    descriptor.value === BASIC_COUNTRY_PUBLICATION_MANIFEST_V3_SCHEMA_VERSION
-    ? descriptor.value
-    : null;
 }
 
 function invalid(): never {
