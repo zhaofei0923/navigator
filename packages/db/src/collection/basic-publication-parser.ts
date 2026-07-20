@@ -9,10 +9,13 @@ import { snapshotBasicBoundedJsonValue } from "./basic-bounded-json.js";
 import { hasOnlyUnicodeScalarJsonStrings } from "./basic-strict-json.js";
 import {
   BASIC_COUNTRY_CANONICAL_MAPPING_VERSION,
+  BASIC_COUNTRY_CANONICAL_MAPPING_V3_VERSION,
   BASIC_COUNTRY_PUBLICATION_APPROVAL_SCHEMA_VERSION,
   BASIC_COUNTRY_PUBLICATION_MANIFEST_SCHEMA_VERSION,
+  BASIC_COUNTRY_PUBLICATION_MANIFEST_V3_SCHEMA_VERSION,
   type BasicCountryPublicationApprovalReceipt,
   type BasicCountryPublicationManifestV2,
+  type BasicCountryPublicationManifestV3,
 } from "./basic-publication-contracts.js";
 import { deepFreezeBasicOfflineValue } from "./basic-offline-value.js";
 
@@ -112,6 +115,40 @@ export function parseBasicCountryPublicationManifestV2(
     mappingVersion: exactLiteral(
       manifest.mappingVersion,
       BASIC_COUNTRY_CANONICAL_MAPPING_VERSION,
+      "mappingVersion",
+      errors,
+    ),
+    auditBundlePath: safeRelativePath(manifest.auditBundlePath, "auditBundlePath", errors),
+    approvalReceiptPath: safeRelativePath(
+      manifest.approvalReceiptPath,
+      "approvalReceiptPath",
+      errors,
+    ),
+    approvalReceiptSha256: sha256(manifest.approvalReceiptSha256, "approvalReceiptSha256", errors),
+  };
+  return frozenResult(errors.length === 0 ? data : null, errors);
+}
+
+export function parseBasicCountryPublicationManifestV3(
+  value: unknown,
+): ParseResult<BasicCountryPublicationManifestV3> {
+  const snapshot = snapshotPublicationParserValue(value);
+  if (!snapshot.valid) return frozenResult(null, ["manifest must be a bounded JSON value"]);
+  const errors: string[] = [];
+  const manifest = exactRecord(snapshot.data, MANIFEST_KEYS, "manifest", errors);
+  if (manifest === null) return frozenResult(null, errors);
+
+  const data: BasicCountryPublicationManifestV3 = {
+    schemaVersion: exactLiteral(
+      manifest.schemaVersion,
+      BASIC_COUNTRY_PUBLICATION_MANIFEST_V3_SCHEMA_VERSION,
+      "schemaVersion",
+      errors,
+    ),
+    activeRunId: runId(manifest.activeRunId, "activeRunId", errors),
+    mappingVersion: exactLiteral(
+      manifest.mappingVersion,
+      BASIC_COUNTRY_CANONICAL_MAPPING_V3_VERSION,
       "mappingVersion",
       errors,
     ),

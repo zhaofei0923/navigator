@@ -1,4 +1,4 @@
-# basic-country-publication.md - Basic v2 发布操作规范
+# basic-country-publication.md - Basic v2/v3 发布操作规范
 
 > 本文件是 `DATA-BASIC-PUBLISH-V2-1` 交付的规范性发布边界，也是后续 `DATA-BASIC-<ISO2>-PUBLISH` 单国任务的操作依据。字段与覆盖判定仍以 [data-schema.md](./data-schema.md) 和 [coverage-levels.md](./coverage-levels.md) 为唯一事实来源，采集与 candidate 规则见 [basic-country-collection.md](./basic-country-collection.md) 和 [basic-deterministic-candidate.md](./basic-deterministic-candidate.md)。
 
@@ -168,3 +168,49 @@ PUBLICATION_READ_FAILED
 6. 若任何事实、翻译、元字段或 artifact 需要修正，停止当前发布并创建新 run 与新回执。
 
 `DATA-BASIC-PUBLISH-V2-1` 只交付上述通用能力和规范，不创建真实回执、canonical country 或任何国家发布。
+
+## 10. Basic v3 单国快速发布 CLI
+
+`basic-country-audit/v3` candidate 增加经审核的八类 `basicProfile`，但仍沿用第 2 节的
+`basic-country-publication-approval/v1` 人工回执。v3 发布使用独立版本 literal：
+
+```text
+manifest schemaVersion: basic-country-publication-manifest/v3
+mappingVersion:         basic-country-canonical/v3
+```
+
+CLI 只接受一个国家、一个 run 和一个已存在的受控仓库内回执：
+
+```bash
+pnpm basic:publish \
+  --country=ID \
+  --run-id=<runId> \
+  --approval-file=data/approvals/<countryDirectory>/<runId>.json
+```
+
+`--approval-file` 不是任意 filesystem capability。它必须逐字等于由回执 identity 派生的
+`data/approvals/<countryDirectory>/<runId>.json`；绝对路径、alias、路径穿越、symlink、不同
+country/run 和批量 country 参数均拒绝。CLI 不创建、修改或补全批准回执，也不产生人工批准
+决定。
+
+发布前，CLI 以 descriptor-relative、`O_NOFOLLOW`、bounded read 读取并持有回执和四个
+candidate 文件的 identity 与精确 bytes，校验四个回执 hash、`draft -> pending -> published`、
+`BASIC`、`aiUsable=false`、其余九模块为空和 KnowledgeChunk 为空。原子写入前再次按持有的
+dev/ino、metadata 和 bytes 复核授权输入。
+
+通过 `validateApprovedBasicCountryPublicationV3()` 后，只在单个
+`data/<countryDirectory>/` 目录生成以下三个文件：
+
+```text
+collection-manifest.json
+country.json
+market-overview.json
+```
+
+writer 先在 `data/` 下创建私有 UUID 临时目录，以 exclusive regular files 写入、fsync 并复核
+exact-three 内容，再用 no-replace rename 发布。既有 canonical 目录绝不替换；发布前失败只按
+已登记的 dev/ino 清理本次拥有的部分文件和临时目录。该命令不写 candidate、approval、Prisma、
+AI index 或其他国家目录，也不提供批量发布模式。
+
+现有 v2 parser、materializer、validator、loader 和六国 canonical bytes 保持不变；v3 profile
+只由新的 v3 parser/materializer/validator/CLI 路径处理。

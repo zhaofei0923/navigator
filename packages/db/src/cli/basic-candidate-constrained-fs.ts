@@ -214,13 +214,31 @@ export async function readBasicCandidateBoundedRegularFile(
   name: unknown,
   maximumBytes: number,
 ): Promise<Uint8Array> {
+  return (await readBasicCandidateBoundedRegularFileSnapshot(
+    directory,
+    name,
+    maximumBytes,
+  )).bytes;
+}
+
+export async function readBasicCandidateBoundedRegularFileSnapshot(
+  directory: BasicCandidateHeldDirectory,
+  name: unknown,
+  maximumBytes: number,
+): Promise<Readonly<{
+  bytes: Uint8Array;
+  identity: BasicCandidateRegularFileIdentity;
+}>> {
   if (!Number.isSafeInteger(maximumBytes) || maximumBytes < 0) invalid();
   const handle = await open(basicCandidateChildPath(directory, name), basicCandidateReadFlags());
   try {
     const before = await handle.stat({ bigint: true });
     if (!isBoundedBasicCandidateRegularFile(before, maximumBytes)) invalid();
-    const content = new Uint8Array(await handle.readFile());
-    if (content.byteLength > maximumBytes) invalid();
+    const expectedBytes = Number(before.size);
+    const buffer = new Uint8Array(expectedBytes + 1);
+    const read = await handle.read(buffer, 0, buffer.byteLength, 0);
+    if (read.bytesRead !== expectedBytes) invalid();
+    const content = buffer.slice(0, expectedBytes);
     const after = await handle.stat({ bigint: true });
     if (
       !sameStableBasicCandidateRegularFile(before, after) ||
@@ -228,7 +246,10 @@ export async function readBasicCandidateBoundedRegularFile(
     ) {
       invalid();
     }
-    return content;
+    return Object.freeze({
+      bytes: content,
+      identity: basicCandidateRegularFileIdentity(after),
+    });
   } finally {
     await closeBasicCandidateHandle(handle);
   }

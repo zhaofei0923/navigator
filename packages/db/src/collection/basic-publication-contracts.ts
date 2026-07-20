@@ -1,5 +1,6 @@
 import type { BasicCollectionAuditArtifactName } from "./basic-offline-audit-artifacts.js";
 import type { BasicCollectionAuditBundleV2 } from "./basic-collection-v2-contracts.js";
+import type { BasicCollectionAuditBundleV3 } from "./basic-collection-v3-contracts.js";
 import type { BasicCanonicalData } from "../seed/basic-country-types.js";
 
 export const BASIC_COUNTRY_PUBLICATION_APPROVAL_SCHEMA_VERSION =
@@ -8,6 +9,10 @@ export const BASIC_COUNTRY_PUBLICATION_MANIFEST_SCHEMA_VERSION =
   "basic-country-publication-manifest/v2" as const;
 export const BASIC_COUNTRY_CANONICAL_MAPPING_VERSION =
   "basic-country-canonical/v2" as const;
+export const BASIC_COUNTRY_PUBLICATION_MANIFEST_V3_SCHEMA_VERSION =
+  "basic-country-publication-manifest/v3" as const;
+export const BASIC_COUNTRY_CANONICAL_MAPPING_V3_VERSION =
+  "basic-country-canonical/v3" as const;
 export const BASIC_COUNTRY_PUBLICATION_JSON_MAX_BYTES = 2 * 1024 * 1024;
 
 export const BASIC_COUNTRY_PUBLICATION_BLOCKER_CODES = Object.freeze([
@@ -58,6 +63,15 @@ export interface BasicCountryPublicationManifestV2 {
   readonly approvalReceiptSha256: string;
 }
 
+export interface BasicCountryPublicationManifestV3 {
+  readonly schemaVersion: typeof BASIC_COUNTRY_PUBLICATION_MANIFEST_V3_SCHEMA_VERSION;
+  readonly activeRunId: string;
+  readonly mappingVersion: typeof BASIC_COUNTRY_CANONICAL_MAPPING_V3_VERSION;
+  readonly auditBundlePath: string;
+  readonly approvalReceiptPath: string;
+  readonly approvalReceiptSha256: string;
+}
+
 export interface BasicCountryPublicationValidationInput {
   readonly countryDirectory: unknown;
   readonly manifest: unknown;
@@ -76,6 +90,31 @@ export interface BasicApprovedCountryPublicationV2 {
   readonly candidate: BasicCollectionAuditBundleV2;
   readonly canonical: BasicCanonicalData;
 }
+
+export interface BasicCountryPublicationValidationInputV3
+  extends Omit<BasicCountryPublicationValidationInput, "candidate"> {
+  readonly candidate: unknown;
+}
+
+export interface BasicApprovedCountryPublicationV3 {
+  readonly countryDirectory: string;
+  readonly manifest: BasicCountryPublicationManifestV3;
+  readonly approvalReceipt: BasicCountryPublicationApprovalReceipt;
+  readonly candidate: BasicCollectionAuditBundleV3;
+  readonly canonical: BasicCanonicalData;
+}
+
+export type BasicCountryPublicationValidationResultV3 =
+  | Readonly<{
+      valid: true;
+      blockerCode: null;
+      data: BasicApprovedCountryPublicationV3;
+    }>
+  | Readonly<{
+      valid: false;
+      blockerCode: BasicCountryPublicationBlockerCode;
+      data: null;
+    }>;
 
 export type BasicCountryPublicationValidationResult =
   | Readonly<{
