@@ -251,6 +251,12 @@ ID STANDARD 的批准边界仅允许按已批准设计和首批来源目录生�
 - 完成边界：本卡只扩展来源控制平面和文档，不创建或完成 `AE`、`BR`、`ZA` staging candidate、批准回执、manifest、canonical data、Prisma 记录、Web 展示、KnowledgeChunk、AI 索引或发布。
 - 人工确认：三国启动顺序和八条来源已由项目所有者批准；本卡不修改统一数据模型、AI Prompt/检索边界、权限、计费、依赖或技术栈。
 
+#### DATA-BASIC-V2-AUTOMATION-1 Strict fixture flow and first-batch preflight（自动化已完成；真实批次阻断）
+- 自动化边界：`basic:prepare-batch` 的严格 fixture flow 已覆盖批次隔离、四文件 draft candidate、受控全局证据绑定、测试提供的合成人工批准回执及零 Prisma/AI 副作用；IEA/RISE manual binding 继续由既有 focused 合同测试覆盖。任何真实输出仍只允许停在 `draft`，不创建 approval receipt、canonical、数据库记录或 AI 索引。
+- `basic-v2-202607` 真实批次 preflight：截至 `2026-07-20`，`.cache/basic-country/batches/basic-v2-202607/inputs/` 不存在。`ID.json`、`VN.json`、`SA.json` 与 Global Solar Atlas、Global Wind Atlas、IRENASTAT 的受审阅不可变快照均缺失；Ember 可按无凭证合同降级为有来源的 `NOT_AVAILABLE`，但不能补齐其余三个全局来源。三国的 IEA/RISE manual snapshot 也均不存在，故不得声明任何人工摘要或人工政策事实。
+- 逐国状态：`ID` **blocked**（无 batch input、candidate config 或人工证据）；`VN` **blocked**（无 batch input/global/manual evidence；本地 r1/r2/r3 配置绑定历史 catalog `2026-07-15.1`，不能冒充当前 catalog `2026-07-20.1` 的 batch 输入）；`SA` **blocked**（无 batch input、candidate config 或人工证据）。由于未满足完整输入合同，未运行会写 cache 的真实 `pnpm basic:prepare-batch --countries=ID,VN,SA --batch-id=basic-v2-202607`，也未生成任何 draft 四文件。
+- 完成边界：preflight 只写入已忽略的 `.cache` blocked 报告及本路线图；未创建或修改 approval、canonical、`data/staging`、Prisma、KnowledgeChunk 或 AI artifacts。后续每国必须提供当前 catalog 绑定的受审阅 global/manual evidence 和受控 country input 后，方可单独准备 draft candidate。
+
 #### DATA-BASIC-<ISO2> 单国 Basic 数据任务卡
 - 目标：每张任务卡只采集一个 ISO 3166-1 alpha-2 国家，使用固定 10 模块模型完成 Basic 国家骨架和市场基础画像。
 - 验收：一国一任务卡、一分支、一审核周期，且仅合并一次到 `main`；合并后的 `main` 验证通过后，仅推送一次到 `origin/main`。数据先为 `draft`，仅在人工审核后发布；首次真实交付恰好为 `BASIC`，`market-overview` 外九个模块均为 `BUILDING`；Basic 数据保持 `aiUsable = false` 且不产生知识片段；通过仓库校验和代表性 Web 检查，确认基础画像正常渲染、`BUILDING` 模块显示占位。

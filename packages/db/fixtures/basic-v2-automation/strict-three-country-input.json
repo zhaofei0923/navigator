@@ -1,0 +1,37 @@
+{
+  "batchId": "strict-synthetic-basic-v2",
+  "globalSnapshots": {
+    "ember-electricity": "countryCode,category,key,value,unit,year,locator\nID,electricityMarket,totalGeneration,312.4,TWh,2025,table:ID:generation\nID,electricityMarket,renewableGenerationShare,48,%,2025,table:ID:renewables\nVN,electricityMarket,totalGeneration,312.4,TWh,2025,table:VN:generation\nVN,electricityMarket,renewableGenerationShare,48,%,2025,table:VN:renewables\nSA,electricityMarket,totalGeneration,312.4,TWh,2025,table:SA:generation\nSA,electricityMarket,renewableGenerationShare,48,%,2025,table:SA:renewables",
+    "global-solar-atlas": "countryCode,category,key,value,unit,year,locator\nID,solarResource,ghi,5.1,kWh/m2/day,2024,grid:ID:ghi\nID,solarResource,pvout,4.3,kWh/kWp/day,2024,grid:ID:pvout\nVN,solarResource,ghi,5.1,kWh/m2/day,2024,grid:VN:ghi\nVN,solarResource,pvout,4.3,kWh/kWp/day,2024,grid:VN:pvout\nSA,solarResource,ghi,5.1,kWh/m2/day,2024,grid:SA:ghi\nSA,solarResource,pvout,4.3,kWh/kWp/day,2024,grid:SA:pvout",
+    "global-wind-atlas": "countryCode,category,key,value,unit,year,locator\nID,windResource,onshoreWindClass,good,,2024,grid:ID:onshore\nID,windResource,offshoreWindClass,very-good,,2024,grid:ID:offshore\nVN,windResource,onshoreWindClass,good,,2024,grid:VN:onshore\nVN,windResource,offshoreWindClass,very-good,,2024,grid:VN:offshore\nSA,windResource,onshoreWindClass,good,,2024,grid:SA:onshore\nSA,windResource,offshoreWindClass,very-good,,2024,grid:SA:offshore",
+    "irenastat-capacity": "countryCode,category,key,value,unit,year,locator\nID,renewableCapacity,solarCapacity,8.2,GW,2025,table:ID:solar\nID,renewableCapacity,windCapacity,0.2,GW,2025,table:ID:wind\nID,renewableCapacity,hydroCapacity,6.7,GW,2025,table:ID:hydro\nID,renewableCapacity,totalRenewableCapacity,15.1,GW,2025,table:ID:total\nVN,renewableCapacity,solarCapacity,8.2,GW,2025,table:VN:solar\nVN,renewableCapacity,windCapacity,0.2,GW,2025,table:VN:wind\nVN,renewableCapacity,hydroCapacity,6.7,GW,2025,table:VN:hydro\nVN,renewableCapacity,totalRenewableCapacity,15.1,GW,2025,table:VN:total\nSA,renewableCapacity,solarCapacity,8.2,GW,2025,table:SA:solar\nSA,renewableCapacity,windCapacity,0.2,GW,2025,table:SA:wind\nSA,renewableCapacity,hydroCapacity,6.7,GW,2025,table:SA:hydro\nSA,renewableCapacity,totalRenewableCapacity,15.1,GW,2025,table:SA:total"
+  },
+  "reviewedSnapshotSha256": {
+    "ember-electricity": "fb57f9bc226664b5f51fd5b6ccb4a15f2fda07f7f7a56fa4ef0e03711d7908cc",
+    "global-solar-atlas": "93206f9f4241aa2370d41508962ea4e614c2ce10abd8875fc172141b394dbf69",
+    "global-wind-atlas": "85f246a6419e02db69376fc78704d51a3992bf2ecc7afdf54f2ace4673633e5e",
+    "irenastat-capacity": "30b4c8390f82c68f794eaa027b9a5734f8aa678101f0b8e17b1798328c13267b"
+  },
+  "countries": [
+    {
+      "countryCode": "ID",
+      "countryDirectory": "synthetic-country-id",
+      "runId": "strict-synthetic-id-r1"
+    },
+    {
+      "countryCode": "VN",
+      "countryDirectory": "synthetic-country-vn",
+      "runId": "strict-synthetic-vn-r1"
+    },
+    {
+      "countryCode": "SA",
+      "countryDirectory": "synthetic-country-sa",
+      "runId": "strict-synthetic-sa-r1"
+    }
+  ],
+  "approval": {
+    "reviewerId": "synthetic-human-approved-receipt",
+    "submittedAt": "2026-07-21T00:00:00Z",
+    "decidedAt": "2026-07-22T00:00:00Z"
+  }
+}
