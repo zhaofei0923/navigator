@@ -4,6 +4,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   renameSync,
   rmSync,
   writeFileSync,
@@ -20,7 +21,10 @@ import {
   getBasicCandidateWorkspaceRootDirectory,
   openBasicCandidateWorkspace,
 } from "./basic-candidate-workspace.js";
-import { generateBasicReviewPackFiles } from "./basic-review-pack-filesystem.js";
+import {
+  generateBasicReviewPackFiles,
+  type BasicReviewPackFilesystemHooks,
+} from "./basic-review-pack-filesystem.js";
 import { BASIC_REVIEW_CANDIDATE_ARTIFACT_NAMES } from "./basic-review-candidate-snapshot.js";
 
 const roots = new Set<string>();
@@ -61,9 +65,11 @@ describe("BASIC review candidate binding", () => {
     const candidate = createBasicCollectionAuditV3Fixture() as BasicCollectionAuditBundleV3;
     const run = writeCandidate(root, candidate);
 
-    await expect(generate(root, candidate, async () => {
-      renameSync(run, `${run}.replaced`);
-      writeCandidate(root, candidate);
+    await expect(generate(root, candidate, {
+      beforeAtomicPublish: async () => {
+        renameSync(run, `${run}.replaced`);
+        writeCandidate(root, candidate);
+      },
     })).rejects.toThrow();
 
     expect(existsSync(join(
@@ -76,21 +82,72 @@ describe("BASIC review candidate binding", () => {
     const candidate = createBasicCollectionAuditV3Fixture() as BasicCollectionAuditBundleV3;
     const run = writeCandidate(root, candidate);
 
-    await expect(generate(root, candidate, async () => {
-      const artifact = join(run, "source-register.json");
-      writeFileSync(artifact, `${readFileSync(artifact, "utf8")} `);
+    await expect(generate(root, candidate, {
+      beforeAtomicPublish: async () => {
+        const artifact = join(run, "source-register.json");
+        writeFileSync(artifact, `${readFileSync(artifact, "utf8")} `);
+      },
     })).rejects.toThrow();
 
     expect(existsSync(join(
       root, ".cache", "basic-country", "XZ", candidate.runId, "review",
     ))).toBe(false);
   });
+
+  test.each([
+    ["index.html", "write"],
+    ["index.html", "sync"],
+    ["review.json", "write"],
+    ["review.json", "sync"],
+  ] as const)(
+    "cleans an owned temporary file after %s post-create %s failure",
+    async (artifactName, operation) => {
+      const root = createRepo();
+      const candidate = createBasicCollectionAuditV3Fixture() as BasicCollectionAuditBundleV3;
+      writeCandidate(root, candidate);
+      await generate(root, candidate);
+      const reviewParent = join(
+        root, ".cache", "basic-country", "XZ", candidate.runId,
+      );
+      const review = join(reviewParent, "review");
+      const reviewBefore = snapshotFiles(review, ["index.html", "review.json"]);
+      const candidateDirectory = join(
+        root, "data", "staging", candidate.countryDirectory, candidate.runId,
+      );
+      const candidateBefore = snapshotFiles(
+        candidateDirectory, BASIC_REVIEW_CANDIDATE_ARTIFACT_NAMES,
+      );
+      let injected = false;
+
+      await expect(generate(root, candidate, {
+        beforeReviewFileOperation(name, stage) {
+          if (name === artifactName && stage === operation) {
+            injected = true;
+            const temporaryName = readdirSync(reviewParent).find(
+              (entry) => entry.startsWith(".review-") && entry.endsWith(".tmp"),
+            );
+            expect(temporaryName).toBeDefined();
+            expect(readdirSync(join(reviewParent, temporaryName ?? "")))
+              .toContain(artifactName);
+            throw new Error("injected owned review file failure");
+          }
+        },
+      })).rejects.toThrow("injected owned review file failure");
+
+      expect(injected).toBe(true);
+      expect(readdirSync(reviewParent)).toEqual(["review"]);
+      expect(snapshotFiles(review, ["index.html", "review.json"]))
+        .toEqual(reviewBefore);
+      expect(snapshotFiles(candidateDirectory, BASIC_REVIEW_CANDIDATE_ARTIFACT_NAMES))
+        .toEqual(candidateBefore);
+    },
+  );
 });
 
 async function generate(
   root: string,
   candidate: BasicCollectionAuditBundleV3,
-  beforeAtomicPublish?: () => void | Promise<void>,
+  hooks: BasicReviewPackFilesystemHooks = {},
 ): Promise<void> {
   const workspace = await openBasicCandidateWorkspace(root);
   try {
@@ -98,11 +155,20 @@ async function generate(
       getBasicCandidateWorkspaceRootDirectory(workspace),
       root,
       { countryCode: "XZ", runId: candidate.runId },
-      beforeAtomicPublish === undefined ? {} : { beforeAtomicPublish },
+      hooks,
     );
   } finally {
     await closeBasicCandidateWorkspace(workspace);
   }
+}
+
+function snapshotFiles(
+  directory: string,
+  names: readonly string[],
+): Readonly<Record<string, string>> {
+  return Object.freeze(Object.fromEntries(names.map((name) => [
+    name, readFileSync(join(directory, name)).toString("hex"),
+  ])));
 }
 
 function createRepo(): string {

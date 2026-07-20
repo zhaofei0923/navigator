@@ -4,21 +4,19 @@ import {
   requireBasicCandidateDirectoryEntries,
   requireBasicCandidateHeldChild,
   syncBasicCandidateDirectory,
-  verifyBasicCandidateRegularFile,
   type BasicCandidateHeldDirectory,
-  type BasicCandidateRegularFileIdentity,
 } from "./basic-candidate-constrained-fs.js";
 import { basicCandidateDirectoryPath } from "./basic-candidate-fs-paths.js";
 import {
   removeBasicCandidateDirectoryNative,
   unlinkBasicCandidateRegularFileNative,
 } from "./basic-candidate-native-fs.js";
+import {
+  verifyBasicReviewPackTemporaryFile,
+  type BasicReviewPackTemporaryFile,
+} from "./basic-review-pack-owned-file.js";
 
-export type BasicReviewPackTemporaryFile = Readonly<{
-  name: "index.html" | "review.json";
-  identity: BasicCandidateRegularFileIdentity;
-  content: Uint8Array;
-}>;
+export type { BasicReviewPackTemporaryFile } from "./basic-review-pack-owned-file.js";
 
 const EXPECTED_NAMES = Object.freeze(["index.html", "review.json"] as const);
 const PRIVATE_TEMPORARY_NAME =
@@ -45,9 +43,7 @@ export async function cleanupBasicReviewPackTemporaryDirectory(
     temporary, files.map(({ name }) => name),
   );
   for (const file of files) {
-    await verifyBasicCandidateRegularFile(
-      temporary, file.name, file.identity, file.content,
-    );
+    await verifyBasicReviewPackTemporaryFile(temporary, file);
   }
   await requireBasicCandidateHeldChild(parent, temporaryName, temporary);
 

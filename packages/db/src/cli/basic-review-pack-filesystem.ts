@@ -13,7 +13,6 @@ import {
   syncBasicCandidateDirectory,
   syncBasicCandidateParentDirectory,
   verifyBasicCandidateRegularFile,
-  writeBasicCandidateExclusiveFile,
   type BasicCandidateHeldDirectory,
 } from "./basic-candidate-constrained-fs.js";
 import { renameBasicCandidateDirectoryChildNoReplaceNative } from "./basic-candidate-native-fs.js";
@@ -22,6 +21,11 @@ import {
   cleanupBasicReviewPackTemporaryDirectory,
   type BasicReviewPackTemporaryFile,
 } from "./basic-review-pack-temp-cleanup.js";
+import {
+  writeBasicReviewPackOwnedFile,
+  type BasicReviewPackFileName,
+  type BasicReviewPackFileOperation,
+} from "./basic-review-pack-owned-file.js";
 
 export interface BasicReviewPackIdentity {
   readonly countryCode: string;
@@ -32,6 +36,10 @@ const REVIEW_NAMES = Object.freeze(["index.html", "review.json"] as const);
 
 export interface BasicReviewPackFilesystemHooks {
   readonly beforeAtomicPublish?: () => void | Promise<void>;
+  readonly beforeReviewFileOperation?: (
+    name: BasicReviewPackFileName,
+    operation: BasicReviewPackFileOperation,
+  ) => void | Promise<void>;
 }
 
 export async function generateBasicReviewPackFiles(
@@ -116,14 +124,16 @@ async function writeReviewDirectory(
     await setBasicCandidateDirectoryMode(temporary, 0o700);
     const html = renderBasicReviewHtml(model);
     const json = new TextEncoder().encode(`${JSON.stringify(model)}\n`);
-    const htmlIdentity = await writeBasicCandidateExclusiveFile(temporary, "index.html", html);
-    temporaryFiles.push(Object.freeze({
-      name: "index.html", identity: htmlIdentity, content: html,
-    }));
-    const jsonIdentity = await writeBasicCandidateExclusiveFile(temporary, "review.json", json);
-    temporaryFiles.push(Object.freeze({
-      name: "review.json", identity: jsonIdentity, content: json,
-    }));
+    const htmlIdentity = await writeBasicReviewPackOwnedFile(
+      temporary, "index.html", html,
+      (owned) => temporaryFiles.push(owned),
+      hooks.beforeReviewFileOperation,
+    );
+    const jsonIdentity = await writeBasicReviewPackOwnedFile(
+      temporary, "review.json", json,
+      (owned) => temporaryFiles.push(owned),
+      hooks.beforeReviewFileOperation,
+    );
     await syncBasicCandidateDirectory(temporary);
     await verifyReviewFiles(temporary, htmlIdentity, html, jsonIdentity, json);
     await requireReviewHierarchy(hierarchy);
@@ -157,9 +167,9 @@ async function writeReviewDirectory(
 
 async function verifyReviewFiles(
   directory: BasicCandidateHeldDirectory,
-  htmlIdentity: Awaited<ReturnType<typeof writeBasicCandidateExclusiveFile>>,
+  htmlIdentity: Awaited<ReturnType<typeof writeBasicReviewPackOwnedFile>>,
   html: Uint8Array,
-  jsonIdentity: Awaited<ReturnType<typeof writeBasicCandidateExclusiveFile>>,
+  jsonIdentity: Awaited<ReturnType<typeof writeBasicReviewPackOwnedFile>>,
   json: Uint8Array,
 ): Promise<void> {
   await requireBasicCandidateDirectoryEntries(directory, REVIEW_NAMES);

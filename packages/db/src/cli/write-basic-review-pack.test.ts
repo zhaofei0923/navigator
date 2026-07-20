@@ -18,20 +18,20 @@ const injectedWriteFailure = vi.hoisted(() => ({
   failOnCall: null as number | null,
 }));
 
-vi.mock("./basic-candidate-constrained-fs.js", async (importOriginal) => {
+vi.mock("./basic-review-pack-owned-file.js", async (importOriginal) => {
   const actual = await importOriginal<
-    typeof import("./basic-candidate-constrained-fs.js")
+    typeof import("./basic-review-pack-owned-file.js")
   >();
   return {
     ...actual,
-    async writeBasicCandidateExclusiveFile(
-      ...arguments_: Parameters<typeof actual.writeBasicCandidateExclusiveFile>
-    ): ReturnType<typeof actual.writeBasicCandidateExclusiveFile> {
+    async writeBasicReviewPackOwnedFile(
+      ...arguments_: Parameters<typeof actual.writeBasicReviewPackOwnedFile>
+    ): ReturnType<typeof actual.writeBasicReviewPackOwnedFile> {
       injectedWriteFailure.callCount += 1;
       if (injectedWriteFailure.callCount === injectedWriteFailure.failOnCall) {
         throw new Error("injected review file write failure");
       }
-      return actual.writeBasicCandidateExclusiveFile(...arguments_);
+      return actual.writeBasicReviewPackOwnedFile(...arguments_);
     },
   };
 });
