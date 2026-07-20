@@ -16,10 +16,12 @@ import { afterEach, describe, expect, test } from "vitest";
 
 import { createBasicCollectionAuditV3Fixture } from "../basic-collection-v3-test-fixture.js";
 import { createBasicCountryPublicationFixture } from "../basic-publication-test-fixture.js";
+import { createBasicCountryPublicationV3Fixture } from "../basic-publication-v3-test-fixture.js";
 import {
   createBasicCollectionAuditArtifactsV2,
   serializeBasicCollectionAuditArtifactsV2,
 } from "../collection/basic-audit-v2-artifacts.js";
+import type { BasicCollectionJsonValue } from "../collection/basic-collection-contracts.js";
 import type { BasicCollectionAuditBundleV2 } from "../collection/basic-collection-v2-contracts.js";
 import type { BasicCollectionAuditBundleV3 } from "../collection/basic-collection-v3-contracts.js";
 import type {
@@ -38,6 +40,7 @@ import {
   type BasicReviewPackFilesystemHooks,
 } from "./basic-review-pack-filesystem.js";
 import { BASIC_REVIEW_CANDIDATE_ARTIFACT_NAMES } from "./basic-review-candidate-snapshot.js";
+import { publishBasicCountry } from "./publish-basic-country.js";
 
 const roots = new Set<string>();
 
@@ -47,6 +50,92 @@ afterEach(() => {
 });
 
 describe("BASIC review candidate binding", () => {
+  test("diffs a new v3 candidate against a v3 publication produced by the human-receipt CLI", async () => {
+    const root = createRepo();
+    const published = createBasicCountryPublicationV3Fixture();
+    writeCandidateBytes(root, published.candidate, published.candidateArtifactBytes);
+    writeApproval(root, published.candidate, published.approvalReceiptBytes);
+
+    await expect(publishBasicCountry({
+      repoRoot: root,
+      countryCode: published.candidate.sourceRegister.countryCode,
+      countryDirectory: published.candidate.countryDirectory,
+      runId: published.candidate.runId,
+      approvalFile:
+        `data/approvals/${published.candidate.countryDirectory}/${published.candidate.runId}.json`,
+    })).resolves.toMatchObject({ status: "published", postCommitVerified: true });
+
+    const current = withPopulation(
+      replaceV3FixtureRunId(published.candidate, "run-002"),
+      1_500_000,
+    );
+    writeCandidate(root, current);
+    await generate(root, current);
+
+    const review = readReviewJson(root, current);
+    expect(review.differences).toContainEqual(expect.objectContaining({
+      fieldPath: "marketOverview.basicProfile.categories.countryBasics.fields.population",
+      change: "changed",
+      previous: expect.objectContaining({ value: 1_000_000 }),
+      current: expect.objectContaining({ value: 1_500_000 }),
+    }));
+  });
+
+  test("continues to diff a v3 candidate against a historical v2 publication", async () => {
+    const root = createRepo();
+    const candidate = withPopulation(
+      replaceV3FixtureRunId(
+        createBasicCollectionAuditV3Fixture() as BasicCollectionAuditBundleV3,
+        "run-002",
+      ),
+      1_500_000,
+    );
+    writePreviousPublication(root, "previous-001");
+    writeCandidate(root, candidate);
+
+    await generate(root, candidate);
+
+    const review = readReviewJson(root, candidate);
+    expect(review.differences).toContainEqual(expect.objectContaining({
+      fieldPath: "marketOverview.basicProfile.categories.countryBasics.fields.population",
+      change: "added",
+      previous: null,
+      current: expect.objectContaining({ value: 1_500_000 }),
+    }));
+  });
+
+  test("fails closed when a held v3 previous-publication artifact changes before review publication", async () => {
+    const root = createRepo();
+    const published = createBasicCountryPublicationV3Fixture();
+    writeCandidateBytes(root, published.candidate, published.candidateArtifactBytes);
+    writeApproval(root, published.candidate, published.approvalReceiptBytes);
+    await publishBasicCountry({
+      repoRoot: root,
+      countryCode: published.candidate.sourceRegister.countryCode,
+      countryDirectory: published.candidate.countryDirectory,
+      runId: published.candidate.runId,
+      approvalFile:
+        `data/approvals/${published.candidate.countryDirectory}/${published.candidate.runId}.json`,
+    });
+    const current = replaceV3FixtureRunId(published.candidate, "run-002");
+    writeCandidate(root, current);
+
+    await expect(generate(root, current, {
+      beforeAtomicPublish() {
+        const previousArtifact = join(
+          root, "data", "staging", published.candidate.countryDirectory,
+          published.candidate.runId, "source-register.json",
+        );
+        writeFileSync(previousArtifact, `${readFileSync(previousArtifact, "utf8")} `);
+      },
+    })).rejects.toThrow("previous BASIC publication snapshot is invalid");
+
+    expect(existsSync(join(
+      root, ".cache", "basic-country", current.sourceRegister.countryCode,
+      current.runId, "review",
+    ))).toBe(false);
+  });
+
   test("publishes all four captured artifact SHA-256 values to JSON and HTML", async () => {
     const root = createRepo();
     const candidate = createBasicCollectionAuditV3Fixture() as BasicCollectionAuditBundleV3;
@@ -251,6 +340,92 @@ function writeCandidate(root: string, bundle: BasicCollectionAuditBundleV3): str
     writeFileSync(join(directory, name), `${JSON.stringify(value)}\n`);
   }
   return directory;
+}
+
+function writeCandidateBytes(
+  root: string,
+  bundle: BasicCollectionAuditBundleV3,
+  bytes: Readonly<Record<(typeof BASIC_REVIEW_CANDIDATE_ARTIFACT_NAMES)[number], Uint8Array>>,
+): string {
+  const directory = join(root, "data", "staging", bundle.countryDirectory, bundle.runId);
+  mkdirSync(directory, { recursive: true });
+  for (const [name, value] of Object.entries(bytes)) writeFileSync(join(directory, name), value);
+  return directory;
+}
+
+function writeApproval(
+  root: string,
+  bundle: BasicCollectionAuditBundleV3,
+  bytes: Uint8Array,
+): void {
+  const directory = join(root, "data", "approvals", bundle.countryDirectory);
+  mkdirSync(directory, { recursive: true });
+  writeFileSync(join(directory, `${bundle.runId}.json`), bytes);
+}
+
+function readReviewJson(root: string, bundle: BasicCollectionAuditBundleV3) {
+  return JSON.parse(readFileSync(join(
+    root, ".cache", "basic-country", bundle.sourceRegister.countryCode,
+    bundle.runId, "review", "review.json",
+  ), "utf8")) as {
+    differences: Array<{
+      fieldPath: string;
+      change: string;
+      previous: { value?: unknown } | null;
+      current: { value?: unknown } | null;
+    }>;
+  };
+}
+
+function replaceV3FixtureRunId(
+  candidate: BasicCollectionAuditBundleV3,
+  runId: string,
+): BasicCollectionAuditBundleV3 {
+  return JSON.parse(
+    JSON.stringify(candidate).replaceAll(candidate.runId, runId),
+  ) as BasicCollectionAuditBundleV3;
+}
+
+function withPopulation(
+  candidate: BasicCollectionAuditBundleV3,
+  population: number,
+): BasicCollectionAuditBundleV3 {
+  const fieldPath =
+    "marketOverview.basicProfile.categories.countryBasics.fields.population";
+  const countryBasics = candidate.marketOverviewDraft.basicProfile.categories.countryBasics;
+  const fields = countryBasics.fields.map((field) =>
+    field.key === "population" ? { ...field, value: population } : field);
+  const populationField = fields.find((field) => field.key === "population")!;
+  return {
+    ...candidate,
+    extractedFacts: {
+      ...candidate.extractedFacts,
+      facts: candidate.extractedFacts.facts.map((fact) => fact.fieldPath === fieldPath
+        ? {
+            ...fact,
+            evidence: fact.evidence.map((evidence) => ({
+              ...evidence,
+              rawValue: jsonSnapshot(populationField),
+              normalizedValue: jsonSnapshot(populationField),
+            })),
+          }
+        : fact),
+    },
+    marketOverviewDraft: {
+      ...candidate.marketOverviewDraft,
+      basicProfile: {
+        ...candidate.marketOverviewDraft.basicProfile,
+        categories: {
+          ...candidate.marketOverviewDraft.basicProfile.categories,
+          countryBasics: { fields },
+        },
+      },
+    },
+  };
+}
+
+function jsonSnapshot(value: unknown): BasicCollectionJsonValue {
+  return JSON.parse(JSON.stringify(value)) as BasicCollectionJsonValue;
 }
 
 function writePreviousPublication(root: string, runId: string): string {
