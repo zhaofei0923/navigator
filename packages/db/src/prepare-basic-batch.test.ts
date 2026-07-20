@@ -32,7 +32,6 @@ import {
   createEmberNoCredentialTabularSnapshot,
   captureWorldBankProfileSourceForBatch,
   prepareBasicBatch,
-  mergeReviewedManualProfile,
   readReviewedManualProfileCaptures,
   readReviewedEmberSnapshotOrUnavailable,
   runPrepareBasicBatchCli,
@@ -751,39 +750,6 @@ describe("reviewed global BASIC profile snapshots", () => {
     expect(() => bindReviewedGlobalProfileSnapshots("ID", futureCaptures, futureProfile))
       .toThrow("basic batch country input is invalid");
 
-    const manualProfile = {
-      updatedAt: reviewedProfile.updatedAt,
-      sources: [],
-      auditSources: [],
-      fields: [{
-        category: "marketSummary" as const,
-        field: {
-          key: "opportunitySummary",
-          label: { zh: "市场摘要", en: "Market summary" },
-          status: "AVAILABLE" as const,
-          value: { zh: "人工审核摘要", en: "Human-reviewed summary" },
-          unit: null,
-          year: null,
-          sourceIds: ["ember-electricity"],
-          checkedAt: "2026-07-20",
-          reason: null,
-          note: null,
-        },
-      }],
-    };
-    expect(mergeReviewedManualProfile(reviewedProfile, manualProfile).fields)
-      .toContainEqual(expect.objectContaining({
-        category: "marketSummary",
-        field: expect.objectContaining({ key: "opportunitySummary" }),
-      }));
-
-    const unknownSource = { ...structuredClone(reviewedProfile.sources[0]!), id: "unknown-source" };
-    const unknownAudit = {
-      ...structuredClone(reviewedProfile.auditSources[0]!), sourceId: "unknown-source",
-    };
-    expect(() => mergeReviewedManualProfile(reviewedProfile, {
-      ...manualProfile, sources: [unknownSource], auditSources: [unknownAudit],
-    })).toThrow("basic batch country input is invalid");
   });
 
   test("uses the production missing-snapshot path to create sourced NOT_AVAILABLE Ember rows", async () => {
@@ -857,6 +823,16 @@ describe("reviewed manual BASIC profile captures", () => {
       "https://www.iea.org/reports/not-a-policy",
       "https://www.iea.org/policies/example?redirect=unreviewed",
       "https://www.iea.org/policies/example#unreviewed",
+      "https://www.iea.org/policies/../reports/unreviewed",
+      "https://www.iea.org/policies/%2e%2e/reports/unreviewed",
+      "https://www.iea.org/policies/%252e%252e/reports/unreviewed",
+      "https://www.iea.org/policies/%2E%2E%2Freports/unreviewed",
+      "https://www.iea.org/policies/%2fnot-a-slug",
+      "https://www.iea.org/policies/%5cnot-a-slug",
+      "https://www.iea.org/policies/政策",
+      "https://www.iea.org/policies\\..\\reports\\unreviewed",
+      "https://reviewer@www.iea.org/policies/example",
+      "https://www.iea.org:444/policies/example",
     ]) {
       const driftedUrl = {
         ...structuredClone(manualProfile),
@@ -869,6 +845,40 @@ describe("reviewed manual BASIC profile captures", () => {
         "ID", new Map([["iea-policies", manualBytes]]), globalProfile, driftedUrl,
       )).toThrow("basic batch country input is invalid");
     }
+
+    const riseBytes = manualCapture("rise-policy-review", ["section:renewable-target"]);
+    const riseProfile = reviewedManualProfileFixture(
+      "rise-policy-review", riseBytes, "policyOverview", "summary", ["rise-policy-review"],
+    );
+    expect(bindReviewedManualProfileCaptures(
+      "ID", new Map([["rise-policy-review", riseBytes]]), globalProfile, riseProfile,
+    ).fields).toEqual(expect.arrayContaining(riseProfile.fields));
+    for (const unapprovedUrl of [
+      "https://rise.esmap.org/country/../about",
+      "https://rise.esmap.org/country/%2e%2e/about",
+      "https://rise.esmap.org/country/%252e%252e/about",
+      "https://rise.esmap.org/country/%2fnot-a-slug",
+      "https://rise.esmap.org/country/国家",
+      "https://rise.esmap.org/country\\..\\about",
+      "https://reviewer@rise.esmap.org/country/example",
+      "https://rise.esmap.org:444/country/example",
+    ]) {
+      const driftedUrl = {
+        ...structuredClone(riseProfile),
+        sources: riseProfile.sources.map((source) => ({ ...source, url: unapprovedUrl })),
+        auditSources: riseProfile.auditSources.map((source) => ({
+          ...source, sourceUrl: unapprovedUrl,
+        })),
+      };
+      expect(() => bindReviewedManualProfileCaptures(
+        "ID", new Map([["rise-policy-review", riseBytes]]), globalProfile, driftedUrl,
+      )).toThrow("basic batch country input is invalid");
+    }
+  });
+
+  test("exposes no unauthenticated manual profile merge entrypoint", async () => {
+    const batchModule = await import("./cli/prepare-basic-batch.js");
+    expect(batchModule).not.toHaveProperty("mergeReviewedManualProfile");
   });
 
   test("enforces category ownership and prevents manual overrides or unobserved global fields", () => {

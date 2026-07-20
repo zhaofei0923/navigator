@@ -620,7 +620,7 @@ function parseManualProfileCapture(
   return { retrievedAt: record.retrievedAt as string, evidenceLocators: locators };
 }
 
-export function mergeReviewedManualProfile(
+function mergeReviewedManualProfile(
   globalProfile: ReviewedGlobalProfileInput,
   manualProfile: ReviewedGlobalProfileInput,
 ): ReviewedGlobalProfileInput {
@@ -922,9 +922,19 @@ function sameJson(left: unknown, right: unknown): boolean {
 
 function approvedManualSourceUrl(value: string, approvedPrefix: string): boolean {
   try {
+    if (
+      /[\\\u0000-\u0020%]/.test(value)
+    ) return false;
+    const raw = /^https:\/\/[^/?#]+(\/[^?#]*)$/.exec(value);
+    if (raw === null) return false;
     const parsed = new URL(value);
+    const approved = new URL(approvedPrefix);
+    const suffix = parsed.pathname.slice(approved.pathname.length);
     return (
-      value.startsWith(approvedPrefix) && value.length > approvedPrefix.length &&
+      parsed.origin === approved.origin && parsed.pathname.startsWith(approved.pathname) &&
+      parsed.pathname.length > approved.pathname.length && raw[1] === parsed.pathname &&
+      /^[A-Za-z0-9][A-Za-z0-9_-]*(?:\/[A-Za-z0-9][A-Za-z0-9_-]*)*$/.test(suffix) &&
+      parsed.port === "" &&
       parsed.search === "" && parsed.hash === "" && parsed.username === "" &&
       parsed.password === ""
     );

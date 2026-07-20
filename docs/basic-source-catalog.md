@@ -173,7 +173,9 @@ excerpt、locator、国家、来源和采集时间须由审核人员确认，并
 证明 excerpt 与人工字段在语义上等价**；最终双语政策摘要、风资源摘要和市场摘要
 仍需人工审核。人工字段只允许 `policyOverview.summary`、
 `windResource.resourceSummary`、`marketSummary.opportunitySummary`，且不得覆盖或
-扩展全球快照拥有的数值/等级字段。
+扩展全球快照拥有的数值/等级字段。IEA/RISE 来源 URL 必须是批准 origin 下的
+canonical `/policies/<ascii-slug>` 或 `/country/<ascii-slug>` 路径；userinfo、非默认
+端口、query、fragment、反斜杠、百分号编码和任何发生静默规范化的 raw path 均拒绝。
 
 单国任务可在同一 exact contract 下增加 country-scoped HTML/PDF manual sources。当前已登记：
 
