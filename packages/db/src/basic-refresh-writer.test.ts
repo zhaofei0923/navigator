@@ -432,7 +432,9 @@ describe("atomic BASIC refresh writer", () => {
       });
 
       expect(readCanonical(setup.root)).toEqual(held.serialized);
-      expect(completeRecoveryArtifacts(setup.root, previous)).toHaveLength(1);
+      const recoveryTrees = completeRecoveryArtifacts(setup.root, previous);
+      expect(recoveryTrees).toHaveLength(1);
+      expect(statSync(recoveryTrees[0]!).mode & 0o777).toBe(0o700);
       expect(partialCanonicalArtifacts(setup.root)).toEqual([]);
       injected.mode = null;
       await closeSnapshots(held);
