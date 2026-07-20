@@ -160,7 +160,7 @@ Catalog 保留原四个覆盖所有国家的 `open` World Bank JSON deterministi
 
 原四条请求 URL、query 顺序和 adapter output 与既有 P1-6B fixtures 保持一致。BASIC profile 来源包严格解析人口、GDP、人均 GDP、GDP 增速和通电率的 JSON envelope；`null` 只能转为带双语原因、来源和核查日期的 `NOT_AVAILABLE`，不得伪造数值。Catalog 使用 World Bank Indicators API 和 World Development Indicators 的已审核归属信息；参考 [World Bank Indicators API documentation](https://datahelpdesk.worldbank.org/knowledgebase/articles/889392-about-the-indicators-api-documentation) 与 [World Bank public licenses](https://datacatalog.worldbank.org/public-licenses)。
 
-批处理另外登记四个全局内容快照 ID：`ember-electricity`、`global-solar-atlas`、`global-wind-atlas`、`irenastat-capacity`。每批只捕获一次并写入内容寻址 cache，各国绑定同一 hash；World Bank 仍按国家独立请求，不进入全局去重。IRENASTAT、Global Solar Atlas 与 Global Wind Atlas 在稳定 API 合同另行批准前只接受已审核不可变表格快照。Ember 只允许通过 `x-api-key` header 注入凭证，URL、cache、摘要和错误均不得包含 key；未配置已批准凭证时，对应字段必须作为已核查 `NOT_AVAILABLE` 进入人工审核输入。
+批处理另外登记四个全局内容快照 ID：`ember-electricity`、`global-solar-atlas`、`global-wind-atlas`、`irenastat-capacity`。每批只捕获一次并写入内容寻址 cache，各国绑定同一 hash；World Bank 仍按国家独立请求，不进入全局去重。IRENASTAT、Global Solar Atlas 与 Global Wind Atlas 在稳定 API 合同另行批准前只接受已审核不可变表格快照。Ember 官方 v1 合同要求把 `api_key` 放入 query，与本项目禁止凭证进入 URL/cache/日志的边界冲突，因此本阶段不执行 Ember 网络请求，也不读取 `EMBER_API_KEY`：存在已审核不可变标准化本地快照时按原始 bytes/hash 使用，否则 `totalGeneration` 与 `renewableGenerationShare` 均作为已核查 `NOT_AVAILABLE` 进入人工审核输入。安全代理或官方 header 合同需另行批准后才能启用。
 
 IEA Policies 与 RISE 固定为 `iea-policies`、`rise-policy-review` 人工政策复核来源。二者以及国家特有政策文件、风资源摘要和市场摘要不得由批处理自动生成事实。fixture-backed tabular adapter 只解析 exact header、ISO2、八类 category、lower-camel field key、有限数值/年份和证据 locator。
 

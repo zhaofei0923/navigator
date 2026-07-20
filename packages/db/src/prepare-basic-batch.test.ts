@@ -1,7 +1,18 @@
-import { mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  renameSync,
+  rmSync,
+  symlinkSync,
+  truncateSync,
+  writeFileSync,
+} from "node:fs";
+import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, test } from "vitest";
@@ -15,11 +26,22 @@ import {
   parseBasicBatchArguments,
 } from "./cli/basic-batch-config.js";
 import {
+  bindReviewedGlobalProfileSnapshots,
   createFilesystemBasicBatchCache,
+  createEmberNoCredentialTabularSnapshot,
   captureWorldBankProfileSourceForBatch,
   prepareBasicBatch,
+  mergeReviewedManualProfile,
+  readReviewedEmberSnapshotOrUnavailable,
   runPrepareBasicBatchCli,
 } from "./cli/prepare-basic-batch.js";
+import { parseBasicSourceCatalog } from "./collection/basic-source-catalog.js";
+import { createBasicSourceExecutionPlan } from "./collection/basic-source-request-materializer.js";
+import { parseBasicProfileTabularSnapshot } from "./collection/adapters/basic-profile-tabular.js";
+import {
+  readBasicBatchCountryInput,
+  readBasicBatchGlobalInput,
+} from "./cli/basic-batch-filesystem-cache.js";
 import {
   createBasicCollectionAuditArtifactsV3,
 } from "./collection/basic-audit-v3-artifacts.js";
@@ -115,6 +137,201 @@ describe("BASIC content-addressed batch cache and isolation", () => {
     expect(fetches).toBe(1);
   });
 
+  test("publishes one immutable winner across independent cache instances", async () => {
+    const root = createRoot();
+    const left = createFilesystemBasicBatchCache(root, "batch-race");
+    const right = createFilesystemBasicBatchCache(root, "batch-race");
+    let releaseCaptures: () => void = () => undefined;
+    const capturesReady = new Promise<void>((resolve) => { releaseCaptures = resolve; });
+    let started = 0;
+    const capture = (value: string) => async () => {
+      started += 1;
+      if (started === 2) releaseCaptures();
+      await capturesReady;
+      return new TextEncoder().encode(value);
+    };
+
+    const [leftBytes, rightBytes] = await Promise.all([
+      left.getOrCapture("global-wind-atlas", capture("left-snapshot")),
+      right.getOrCapture("global-wind-atlas", capture("right-snapshot")),
+    ]);
+
+    expect(leftBytes).toEqual(rightBytes);
+    expect(started).toBe(2);
+    expect(readdirSync(join(
+      root, ".cache", "basic-country", "batches", "batch-race", "refs",
+    )).filter((name) => name.endsWith(".tmp"))).toEqual([]);
+    const warm = await createFilesystemBasicBatchCache(root, "batch-race").getOrCapture(
+      "global-wind-atlas",
+      async () => { throw new Error("warm cache must not capture"); },
+    );
+    expect(warm).toEqual(leftBytes);
+  });
+
+  test("publishes one immutable winner across separate processes", async () => {
+    const root = createRoot();
+    const packageRoot = fileURLToPath(new URL("../", import.meta.url));
+    const runChild = (identity: string) => new Promise<string>((resolveChild, rejectChild) => {
+      const source = [
+        "import { existsSync, writeFileSync } from 'node:fs';",
+        "import { join } from 'node:path';",
+        "import { createFilesystemBasicBatchCache } from './src/cli/basic-batch-filesystem-cache.ts';",
+        "const [root, identity] = process.argv.slice(1);",
+        "const marker = join(root, `marker-${identity}`);",
+        "const peer = join(root, `marker-${identity === 'left' ? 'right' : 'left'}`);",
+        "const cache = createFilesystemBasicBatchCache(root, 'batch-process-race');",
+        "const bytes = await cache.getOrCapture('global-wind-atlas', async () => {",
+        "  writeFileSync(marker, identity);",
+        "  const deadline = Date.now() + 5000;",
+        "  while (!existsSync(peer) && Date.now() < deadline) await new Promise((done) => setTimeout(done, 10));",
+        "  if (!existsSync(peer)) throw new Error('peer did not capture');",
+        "  return new TextEncoder().encode(`${identity}-snapshot`);",
+        "});",
+        "process.stdout.write(new TextDecoder().decode(bytes));",
+      ].join("\n");
+      const child = spawn(process.execPath, [
+        "--conditions=development",
+        "--import", "../../scripts/node-ts-source-hook.mjs",
+        "--input-type=module",
+        "--eval", source,
+        root,
+        identity,
+      ], { cwd: packageRoot, stdio: ["ignore", "pipe", "pipe"] });
+      let stdout = "";
+      let stderr = "";
+      child.stdout.setEncoding("utf8").on("data", (chunk: string) => { stdout += chunk; });
+      child.stderr.setEncoding("utf8").on("data", (chunk: string) => { stderr += chunk; });
+      child.on("error", rejectChild);
+      child.on("close", (code) => {
+        if (code === 0) resolveChild(stdout);
+        else rejectChild(new Error(`child failed: ${stderr}`));
+      });
+    });
+
+    const [left, right] = await Promise.all([runChild("left"), runChild("right")]);
+    expect(left).toBe(right);
+    expect(["left-snapshot", "right-snapshot"]).toContain(left);
+  });
+
+  test("rejects a conflicting pre-existing content-addressed object", async () => {
+    const root = createRoot();
+    const batchRoot = join(root, ".cache", "basic-country", "batches", "batch-conflict");
+    const intended = new TextEncoder().encode("approved-snapshot");
+    const digest = createHash("sha256").update(intended).digest("hex");
+    mkdirSync(join(batchRoot, "objects"), { recursive: true, mode: 0o700 });
+    mkdirSync(join(batchRoot, "refs"), { recursive: true, mode: 0o700 });
+    writeFileSync(join(batchRoot, "objects", digest), "conflicting-object");
+
+    await expect(createFilesystemBasicBatchCache(root, "batch-conflict").getOrCapture(
+      "global-solar-atlas", async () => intended,
+    )).rejects.toThrow("basic batch cache is invalid");
+    expect(readdirSync(join(batchRoot, "refs"))).toEqual([]);
+  });
+
+  test("uses unique publication temps and ignores a stale temp from another process", async () => {
+    const root = createRoot();
+    const refs = join(root, ".cache", "basic-country", "batches", "batch-stale", "refs");
+    mkdirSync(join(root, ".cache", "basic-country", "batches", "batch-stale", "objects"), {
+      recursive: true, mode: 0o700,
+    });
+    mkdirSync(refs, { recursive: true, mode: 0o700 });
+    writeFileSync(join(refs, ".global-solar-atlas.123.tmp"), "stale");
+
+    const result = await createFilesystemBasicBatchCache(root, "batch-stale").getOrCapture(
+      "global-solar-atlas", async () => new TextEncoder().encode("fresh"),
+    );
+
+    expect(new TextDecoder().decode(result)).toBe("fresh");
+    expect(readdirSync(refs)).toContain(".global-solar-atlas.123.tmp");
+    expect(readdirSync(refs)).toContain("global-solar-atlas.json");
+  });
+
+  test.each(["refs", "objects"])("refuses a symlinked %s cache directory", async (leaf) => {
+    const root = createRoot();
+    const batchRoot = join(root, ".cache", "basic-country", "batches", "batch-symlink");
+    const outside = join(root, "outside");
+    mkdirSync(batchRoot, { recursive: true });
+    mkdirSync(outside);
+    mkdirSync(join(batchRoot, leaf === "refs" ? "objects" : "refs"), { mode: 0o700 });
+    symlinkSync(outside, join(batchRoot, leaf), "dir");
+
+    await expect(createFilesystemBasicBatchCache(root, "batch-symlink").getOrCapture(
+      "global-solar-atlas", async () => new TextEncoder().encode("snapshot"),
+    )).rejects.toThrow("basic batch cache is invalid");
+    expect(readdirSync(outside)).toEqual([]);
+  });
+
+  test("refuses non-private or non-directory cache hierarchy components", async () => {
+    const root = createRoot();
+    const publicBatch = join(root, ".cache", "basic-country", "batches", "batch-public");
+    mkdirSync(publicBatch, { recursive: true, mode: 0o700 });
+    mkdirSync(join(publicBatch, "objects"), { mode: 0o755 });
+    mkdirSync(join(publicBatch, "refs"), { mode: 0o700 });
+    await expect(createFilesystemBasicBatchCache(root, "batch-public").getOrCapture(
+      "global-solar-atlas", async () => new TextEncoder().encode("snapshot"),
+    )).rejects.toThrow("basic batch cache is invalid");
+
+    const blockedRoot = createRoot();
+    mkdirSync(join(blockedRoot, ".cache"), { mode: 0o700 });
+    writeFileSync(join(blockedRoot, ".cache", "basic-country"), "not a directory");
+    await expect(createFilesystemBasicBatchCache(blockedRoot, "batch-blocked").getOrCapture(
+      "global-solar-atlas", async () => new TextEncoder().encode("snapshot"),
+    )).rejects.toThrow("basic batch cache is invalid");
+  });
+
+  test("refuses a symlink above the cache leaf hierarchy", async () => {
+    const root = createRoot();
+    const outside = join(root, "outside-cache-parent");
+    mkdirSync(outside, { mode: 0o700 });
+    symlinkSync(outside, join(root, ".cache"), "dir");
+
+    await expect(createFilesystemBasicBatchCache(root, "batch-parent-link").getOrCapture(
+      "global-solar-atlas", async () => new TextEncoder().encode("snapshot"),
+    )).rejects.toThrow("basic batch cache is invalid");
+    expect(readdirSync(outside)).toEqual([]);
+  });
+
+  test("rejects symlink refs and oversized ref files", async () => {
+    const root = createRoot();
+    const batchRoot = join(root, ".cache", "basic-country", "batches", "batch-ref-input");
+    const refs = join(batchRoot, "refs");
+    mkdirSync(join(batchRoot, "objects"), { recursive: true, mode: 0o700 });
+    mkdirSync(refs, { recursive: true, mode: 0o700 });
+    const outside = join(root, "outside-ref.json");
+    writeFileSync(outside, "{}");
+    symlinkSync(outside, join(refs, "global-wind-atlas.json"));
+    const cache = createFilesystemBasicBatchCache(root, "batch-ref-input");
+    await expect(cache.getOrCapture(
+      "global-wind-atlas", async () => new TextEncoder().encode("snapshot"),
+    )).rejects.toThrow("basic batch cache is invalid");
+
+    rmSync(join(refs, "global-wind-atlas.json"));
+    writeFileSync(join(refs, "global-wind-atlas.json"), "x");
+    truncateSync(join(refs, "global-wind-atlas.json"), 65 * 1024);
+    await expect(cache.getOrCapture(
+      "global-wind-atlas", async () => new TextEncoder().encode("snapshot"),
+    )).rejects.toThrow("basic batch cache is invalid");
+  });
+
+  test("rejects oversized cached objects before reading their contents", async () => {
+    const root = createRoot();
+    const batchRoot = join(root, ".cache", "basic-country", "batches", "batch-object-input");
+    const objects = join(batchRoot, "objects");
+    const refs = join(batchRoot, "refs");
+    const digest = "a".repeat(64);
+    mkdirSync(objects, { recursive: true, mode: 0o700 });
+    mkdirSync(refs, { recursive: true, mode: 0o700 });
+    writeFileSync(join(objects, digest), "x");
+    truncateSync(join(objects, digest), 65 * 1024 * 1024);
+    writeFileSync(join(refs, "global-wind-atlas.json"), JSON.stringify({
+      sourceId: "global-wind-atlas", sha256: digest, byteLength: 64 * 1024 * 1024,
+    }));
+
+    await expect(createFilesystemBasicBatchCache(root, "batch-object-input").getOrCapture(
+      "global-wind-atlas", async () => new TextEncoder().encode("snapshot"),
+    )).rejects.toThrow("basic batch cache is invalid");
+  });
+
   test.each(["../escape", "source/child", "SOURCE", ""])(
     "rejects unsafe cache source id %j without filesystem work",
     async (sourceId) => {
@@ -124,6 +341,30 @@ describe("BASIC content-addressed batch cache and isolation", () => {
         .rejects.toThrow("basic batch cache is invalid");
     },
   );
+
+  test("keeps publication descriptor-relative when the cache path is replaced during capture", async () => {
+    const root = createRoot();
+    const batchRoot = join(root, ".cache", "basic-country", "batches", "batch-replaced");
+    const moved = join(root, "original-batch");
+    const outside = join(root, "replacement-target");
+    mkdirSync(outside, { mode: 0o700 });
+
+    const result = await createFilesystemBasicBatchCache(root, "batch-replaced").getOrCapture(
+      "global-solar-atlas",
+      async () => {
+        renameSync(batchRoot, moved);
+        symlinkSync(outside, batchRoot, "dir");
+        return new TextEncoder().encode("held-directory-snapshot");
+      },
+    );
+
+    expect(new TextDecoder().decode(result)).toBe("held-directory-snapshot");
+    expect(readdirSync(outside)).toEqual([]);
+    expect(readdirSync(join(moved, "refs"))).toContain("global-solar-atlas.json");
+    await expect(createFilesystemBasicBatchCache(root, "batch-replaced").getOrCapture(
+      "global-solar-atlas", async () => new TextEncoder().encode("must-not-write"),
+    )).rejects.toThrow("basic batch cache is invalid");
+  });
 
   test("limits concurrency to three and preserves unrelated successes", async () => {
     const root = createRoot();
@@ -151,6 +392,44 @@ describe("BASIC content-addressed batch cache and isolation", () => {
       { countryCode: "SA", status: "ready" },
     ]);
     expect(JSON.stringify(result)).not.toContain("secret");
+  });
+});
+
+describe("bounded BASIC batch input reads", () => {
+  test.each([
+    ["global", readBasicBatchGlobalInput, 65 * 1024 * 1024],
+    ["country", readBasicBatchCountryInput, 2 * 1024 * 1024],
+  ] as const)("rejects oversized %s input before allocation", async (_label, readInput, size) => {
+    const root = createRoot();
+    const input = join(root, "input");
+    writeFileSync(input, "x");
+    truncateSync(input, size);
+    await expect(readInput(root, input)).rejects.toThrow("basic batch input is invalid");
+  });
+
+  test.each([
+    ["global", readBasicBatchGlobalInput],
+    ["country", readBasicBatchCountryInput],
+  ] as const)("rejects symlinked %s input files and parent directories", async (_label, readInput) => {
+    const root = createRoot();
+    const outside = join(root, "outside");
+    const safe = join(root, "safe");
+    mkdirSync(outside);
+    writeFileSync(join(outside, "input"), "{}");
+    symlinkSync(outside, safe, "dir");
+    await expect(readInput(root, join(safe, "input")))
+      .rejects.toThrow("basic batch input is invalid");
+  });
+
+  test.each([
+    ["global", readBasicBatchGlobalInput],
+    ["country", readBasicBatchCountryInput],
+  ] as const)("rejects a non-directory %s input hierarchy", async (_label, readInput) => {
+    const root = createRoot();
+    const parent = join(root, "not-a-directory");
+    writeFileSync(parent, "regular file");
+    await expect(readInput(root, join(parent, "input")))
+      .rejects.toThrow("basic batch input is invalid");
   });
 });
 
@@ -208,7 +487,7 @@ describe("per-country World Bank profile capture", () => {
       [{ indicator: { id: "NY.GDP.PCAP.CD" }, country: { id: "ID" }, date: "2024", value: 4932.1 }],
     ]));
     const result = await captureWorldBankProfileSourceForBatch(
-      "world-bank-gdp-per-capita",
+      approvedWorldBankEntry("world-bank-gdp-per-capita", "ID"),
       "ID",
       {
         async execute(request) {
@@ -257,10 +536,249 @@ describe("per-country World Bank profile capture", () => {
       },
     };
     await expect(captureWorldBankProfileSourceForBatch(
-      "world-bank-electricity-access", "ID", transport as never,
+      approvedWorldBankEntry("world-bank-electricity-access", "ID"), "ID", transport as never,
       () => new Date("2026-07-20T00:01:00Z"),
     )).rejects.toThrow(/^world bank BASIC profile capture failed$/);
     expect(chunksRead).toBe(2);
+  });
+
+  test("uses a trusted committed execution-plan entry for the World Bank request", async () => {
+    const catalog = parseBasicSourceCatalog(JSON.parse(readFileSync(
+      new URL("../catalog/basic-source-catalog.json", import.meta.url),
+      "utf8",
+    )) as unknown);
+    const entry = createBasicSourceExecutionPlan({
+      catalog,
+      countryCode: "ID",
+      sourceIds: ["world-bank-gdp-per-capita"],
+    }).sources[0]!;
+    const body = new TextEncoder().encode(JSON.stringify([
+      { page: 1, pages: 1, per_page: 1, total: 1, sourceid: "2" },
+      [{ indicator: { id: "NY.GDP.PCAP.CD" }, country: { id: "ID" }, date: "2024", value: 4932.1 }],
+    ]));
+    const result = await captureWorldBankProfileSourceForBatch(entry, "ID", {
+      async execute(request) {
+        expect(request).toEqual(entry.request);
+        return {
+          status: 200,
+          finalUrl: request.url,
+          contentType: "application/json",
+          retrievedAt: "2026-07-20T00:00:00Z",
+          redirectChain: [],
+          body: (async function* () { yield body; })(),
+        };
+      },
+    }, () => new Date("2026-07-20T00:01:00Z"));
+    expect(result.field.field.key).toBe("gdpPerCapita");
+  });
+});
+
+describe("reviewed global BASIC profile snapshots", () => {
+  test("binds every captured byte hash and tabular row to its exact audit source and field", () => {
+    const encoder = new TextEncoder();
+    const ember = encoder.encode([
+      "countryCode,category,key,value,unit,year,locator",
+      "ID,electricityMarket,totalGeneration,312.4,TWh,2025,table:ID:2025",
+      "ID,electricityMarket,renewableGenerationShare,48,%,2025,table:ID:renewables:2025",
+    ].join("\n"));
+    const solar = encoder.encode([
+      "countryCode,category,key,value,unit,year,locator",
+      "ID,solarResource,ghi,5.1,kWh/m2/day,2024,grid:ID",
+      "ID,solarResource,pvout,4.3,kWh/kWp/day,2024,grid:ID:pvout",
+    ].join("\n"));
+    const wind = encoder.encode([
+      "countryCode,category,key,value,unit,year,locator",
+      "ID,windResource,onshoreWindClass,good,,2024,grid:ID:onshore",
+      "ID,windResource,offshoreWindClass,very-good,,2024,grid:ID:offshore",
+    ].join("\n"));
+    const capacity = encoder.encode([
+      "countryCode,category,key,value,unit,year,locator",
+      "ID,renewableCapacity,solarCapacity,8.2,GW,2025,table:ID:solar",
+      "ID,renewableCapacity,windCapacity,0.2,GW,2025,table:ID:wind",
+      "ID,renewableCapacity,hydroCapacity,6.7,GW,2025,table:ID:hydro",
+      "ID,renewableCapacity,totalRenewableCapacity,15.1,GW,2025,table:ID:total",
+    ].join("\n"));
+    const captures = new Map([
+      ["ember-electricity", ember],
+      ["global-solar-atlas", solar],
+      ["global-wind-atlas", wind],
+      ["irenastat-capacity", capacity],
+    ]);
+    const reviewedProfile = {
+      updatedAt: "2026-07-20T00:00:00Z",
+      sources: [
+        profileSource("ember-electricity"),
+        profileSource("global-solar-atlas"),
+        profileSource("global-wind-atlas"),
+        profileSource("irenastat-capacity"),
+      ],
+      auditSources: [
+        auditSource("ember-electricity", ember, ["table:ID:2025", "table:ID:renewables:2025"]),
+        auditSource("global-solar-atlas", solar, ["grid:ID", "grid:ID:pvout"]),
+        auditSource("global-wind-atlas", wind, ["grid:ID:onshore", "grid:ID:offshore"]),
+        auditSource("irenastat-capacity", capacity, [
+          "table:ID:solar", "table:ID:wind", "table:ID:hydro", "table:ID:total",
+        ]),
+      ],
+      fields: [
+        reviewedField("ember-electricity", "electricityMarket", "totalGeneration", 312.4, "TWh", 2025),
+        reviewedField("ember-electricity", "electricityMarket", "renewableGenerationShare", 48, "%", 2025),
+        reviewedField("irenastat-capacity", "renewableCapacity", "solarCapacity", 8.2, "GW", 2025),
+        reviewedField("irenastat-capacity", "renewableCapacity", "windCapacity", 0.2, "GW", 2025),
+        reviewedField("irenastat-capacity", "renewableCapacity", "hydroCapacity", 6.7, "GW", 2025),
+        reviewedField("irenastat-capacity", "renewableCapacity", "totalRenewableCapacity", 15.1, "GW", 2025),
+        reviewedField("global-solar-atlas", "solarResource", "ghi", 5.1, "kWh/m2/day", 2024),
+        reviewedField("global-solar-atlas", "solarResource", "pvout", 4.3, "kWh/kWp/day", 2024),
+        reviewedField("global-wind-atlas", "windResource", "onshoreWindClass", "good", null, 2024),
+        reviewedField("global-wind-atlas", "windResource", "offshoreWindClass", "very-good", null, 2024),
+      ],
+    } as const;
+
+    expect(bindReviewedGlobalProfileSnapshots("ID", captures, reviewedProfile))
+      .toEqual(reviewedProfile);
+
+    const forged = structuredClone(reviewedProfile);
+    forged.auditSources[0]!.contentSha256 = "0".repeat(64);
+    expect(() => bindReviewedGlobalProfileSnapshots("ID", captures, forged))
+      .toThrow("basic batch country input is invalid");
+
+    const forgedField = structuredClone(reviewedProfile);
+    forgedField.fields[0]!.field.value = 999;
+    expect(() => bindReviewedGlobalProfileSnapshots("ID", captures, forgedField))
+      .toThrow("basic batch country input is invalid");
+
+    for (const invalidCaptures of [
+      new Map([...captures].slice(1)),
+      new Map([...captures, ["unrelated-source", encoder.encode("unrelated")]]),
+      new Map([...captures].map(([sourceId, bytes], index) =>
+        [index === 0 ? "unrelated-source" : sourceId, bytes] as const)),
+    ]) {
+      expect(() => bindReviewedGlobalProfileSnapshots("ID", invalidCaptures, reviewedProfile))
+        .toThrow("basic batch country input is invalid");
+    }
+
+    const duplicateAudit = {
+      ...structuredClone(reviewedProfile),
+      auditSources: [
+        ...structuredClone(reviewedProfile.auditSources),
+        structuredClone(reviewedProfile.auditSources[0]!),
+      ],
+    };
+    expect(() => bindReviewedGlobalProfileSnapshots("ID", captures, duplicateAudit))
+      .toThrow("basic batch country input is invalid");
+
+    for (const mutate of [
+      (value: typeof forged) => { value.auditSources[0]!.sourceUrl = "https://example.com/drift"; },
+      (value: typeof forged) => { value.auditSources[0]!.retrievedAt = "2026-07-19T00:00:00Z"; },
+      (value: typeof forged) => { value.auditSources[0]!.evidenceLocators = ["table:wrong"]; },
+    ]) {
+      const drifted = structuredClone(reviewedProfile);
+      mutate(drifted);
+      expect(() => bindReviewedGlobalProfileSnapshots("ID", captures, drifted))
+        .toThrow("basic batch country input is invalid");
+    }
+
+    const colluding = structuredClone(reviewedProfile);
+    colluding.sources[0]!.publisher = "Forged Publisher";
+    colluding.sources[0]!.url = "https://forged.example/source";
+    colluding.auditSources[0]!.sourceName = "Forged Publisher";
+    colluding.auditSources[0]!.sourceUrl = "https://forged.example/source";
+    expect(() => bindReviewedGlobalProfileSnapshots("ID", captures, colluding))
+      .toThrow("basic batch country input is invalid");
+
+    const sameOriginDrift = structuredClone(reviewedProfile);
+    sameOriginDrift.sources[0]!.url = "https://ember-energy.org/unapproved-snapshot";
+    sameOriginDrift.auditSources[0]!.sourceUrl = "https://ember-energy.org/unapproved-snapshot";
+    expect(() => bindReviewedGlobalProfileSnapshots("ID", captures, sameOriginDrift))
+      .toThrow("basic batch country input is invalid");
+
+    const incompleteSolar = encoder.encode([
+      "countryCode,category,key,value,unit,year,locator",
+      "ID,solarResource,ghi,5.1,kWh/m2/day,2024,grid:ID",
+    ].join("\n"));
+    const incompleteCaptures = new Map(captures);
+    incompleteCaptures.set("global-solar-atlas", incompleteSolar);
+    const incompleteProfile = {
+      ...reviewedProfile,
+      auditSources: reviewedProfile.auditSources.map((source, index) => index === 1
+        ? auditSource("global-solar-atlas", incompleteSolar, ["grid:ID"])
+        : source),
+      fields: reviewedProfile.fields.filter(({ field }) => field.key !== "pvout"),
+    };
+    expect(() => bindReviewedGlobalProfileSnapshots("ID", incompleteCaptures, incompleteProfile))
+      .toThrow("basic batch country input is invalid");
+
+    const manualProfile = {
+      updatedAt: reviewedProfile.updatedAt,
+      sources: [],
+      auditSources: [],
+      fields: [{
+        category: "marketSummary" as const,
+        field: {
+          key: "opportunitySummary",
+          label: { zh: "市场摘要", en: "Market summary" },
+          status: "AVAILABLE" as const,
+          value: { zh: "人工审核摘要", en: "Human-reviewed summary" },
+          unit: null,
+          year: null,
+          sourceIds: ["ember-electricity"],
+          checkedAt: "2026-07-20",
+          reason: null,
+          note: null,
+        },
+      }],
+    };
+    expect(mergeReviewedManualProfile(reviewedProfile, manualProfile).fields)
+      .toContainEqual(expect.objectContaining({
+        category: "marketSummary",
+        field: expect.objectContaining({ key: "opportunitySummary" }),
+      }));
+
+    const unknownSource = { ...structuredClone(reviewedProfile.sources[0]!), id: "unknown-source" };
+    const unknownAudit = {
+      ...structuredClone(reviewedProfile.auditSources[0]!), sourceId: "unknown-source",
+    };
+    expect(() => mergeReviewedManualProfile(reviewedProfile, {
+      ...manualProfile, sources: [unknownSource], auditSources: [unknownAudit],
+    })).toThrow("basic batch country input is invalid");
+  });
+
+  test("uses the production missing-snapshot path to create sourced NOT_AVAILABLE Ember rows", async () => {
+    const root = createRoot();
+    const bytes = await readReviewedEmberSnapshotOrUnavailable(
+      root, join(root, "missing-ember.snapshot"), ["ID", "VN"],
+    );
+    expect(bytes).toEqual(createEmberNoCredentialTabularSnapshot(["ID", "VN"]));
+    expect(new TextDecoder().decode(bytes)).not.toContain("secret");
+    expect(bindSnapshotRows(bytes, "ID")).toEqual([expect.objectContaining({
+      category: "electricityMarket",
+      key: "totalGeneration",
+      status: "NOT_AVAILABLE",
+      reason: {
+        zh: "未提供已审核的Ember不可变标准化快照",
+        en: "A reviewed immutable normalized Ember snapshot was not provided",
+      },
+    }), expect.objectContaining({
+      category: "electricityMarket",
+      key: "renewableGenerationShare",
+      status: "NOT_AVAILABLE",
+    })]);
+    expect(bindSnapshotRows(bytes, "VN")).toHaveLength(2);
+  });
+
+  test("uses a present reviewed immutable normalized Ember snapshot byte-for-byte", async () => {
+    const root = createRoot();
+    const directory = join(root, "inputs", "global");
+    mkdirSync(directory, { recursive: true, mode: 0o700 });
+    const pathname = join(directory, "ember-electricity.snapshot");
+    const reviewed = new TextEncoder().encode([
+      "countryCode,category,key,value,unit,year,locator",
+      "ID,electricityMarket,totalGeneration,312.4,TWh,2025,table:ID:2025",
+      "ID,electricityMarket,renewableGenerationShare,48,%,2025,table:ID:renewables:2025",
+    ].join("\n"));
+    writeFileSync(pathname, reviewed, { mode: 0o600 });
+    await expect(readReviewedEmberSnapshotOrUnavailable(root, pathname, ["ID"]))
+      .resolves.toEqual(reviewed);
   });
 });
 
@@ -306,7 +824,95 @@ describe("BASIC v3 candidate composition", () => {
 });
 
 function createRoot(): string {
-  const root = mkdtempSync(join(tmpdir(), "navigator-basic-batch-"));
+  const root = mkdtempSync(join(process.platform === "linux" ? "/tmp" : tmpdir(), "navigator-basic-batch-"));
   roots.add(root);
   return root;
+}
+
+function bindSnapshotRows(bytes: Uint8Array, countryCode: string) {
+  return parseBasicProfileTabularSnapshot(bytes, countryCode);
+}
+
+function profileSource(sourceId: string) {
+  const policies: Record<string, { publisher: string; url: string }> = {
+    "ember-electricity": {
+      publisher: "Ember", url: "https://ember-energy.org/data/electricity-data-explorer/",
+    },
+    "global-solar-atlas": {
+      publisher: "World Bank ESMAP", url: "https://globalsolaratlas.info/",
+    },
+    "global-wind-atlas": {
+      publisher: "World Bank ESMAP", url: "https://globalwindatlas.info/",
+    },
+    "irenastat-capacity": {
+      publisher: "International Renewable Energy Agency (IRENA)",
+      url: "https://pxweb.irena.org/pxweb/en/IRENASTAT/",
+    },
+  };
+  const policy = policies[sourceId]!;
+  return {
+    id: sourceId,
+    publisher: policy.publisher,
+    title: { zh: sourceId, en: sourceId },
+    url: policy.url,
+    publishedAt: null,
+    retrievedAt: "2026-07-20T00:00:00Z",
+    credibility: "OFFICIAL" as const,
+  };
+}
+
+function auditSource(sourceId: string, bytes: Uint8Array, locators: string[]) {
+  const source = profileSource(sourceId);
+  return {
+    sourceId,
+    sourceName: source.publisher,
+    sourceUrl: source.url,
+    retrievedAt: "2026-07-20T00:00:00Z",
+    publishedAt: null,
+    contentSha256: createHash("sha256").update(bytes).digest("hex"),
+    evidenceLocators: locators,
+    sourceFamily: sourceId === "ember-electricity"
+      ? "verified-research" as const : "international-organization" as const,
+    accessStatus: "open" as const,
+    accessNotes: null,
+    credibility: "OFFICIAL" as const,
+    discoveryOnly: false,
+    promptInjectionRisk: "none" as const,
+  };
+}
+
+function reviewedField(
+  sourceId: string,
+  category: "electricityMarket" | "renewableCapacity" | "solarResource" | "windResource",
+  key: string,
+  value: number | string,
+  unit: string | null,
+  year: number,
+) {
+  return {
+    category,
+    field: {
+      key,
+      label: { zh: key, en: key },
+      status: "AVAILABLE" as const,
+      value,
+      unit,
+      year,
+      sourceIds: [sourceId],
+      checkedAt: "2026-07-20",
+      reason: null,
+      note: null,
+    },
+  };
+}
+
+function approvedWorldBankEntry(
+  sourceId: "world-bank-electricity-access" | "world-bank-gdp-per-capita",
+  countryCode: string,
+) {
+  const catalog = parseBasicSourceCatalog(JSON.parse(readFileSync(
+    new URL("../catalog/basic-source-catalog.json", import.meta.url),
+    "utf8",
+  )) as unknown);
+  return createBasicSourceExecutionPlan({ catalog, countryCode, sourceIds: [sourceId] }).sources[0]!;
 }

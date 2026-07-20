@@ -1,5 +1,4 @@
 import { createHash } from "node:crypto";
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -9,26 +8,40 @@ import {
   type BasicBatchConfig,
 } from "./basic-batch-config.js";
 import { BASIC_GLOBAL_SOURCE_IDS } from "../collection/adapters/basic-global-source-pack.js";
-import { WORLD_BANK_BASIC_PROFILE_ADAPTERS } from "../collection/adapters/world-bank-basic-profile.js";
+import { parseBasicProfileTabularSnapshot } from "../collection/adapters/basic-profile-tabular.js";
 import { materializeBasicProfile } from "../collection/basic-profile-fact-materializer.js";
 import { composeBasicCountryCandidate } from "./basic-candidate-composition.js";
 import { createBasicSourceTransportV2 } from "../collection/basic-source-transport-v2.js";
 import type { BasicCollectionAuditBundleV2 } from "../collection/basic-collection-v2-contracts.js";
 import type { BasicSourceRecord } from "../collection/basic-collection-contracts.js";
 import type { BasicSourceTransportV2 } from "../collection/basic-source-v2-contracts.js";
+import { parseBasicSourceCatalog } from "../collection/basic-source-catalog.js";
+import {
+  createBasicSourceExecutionPlan,
+  type BasicSourceExecutionPlanEntry,
+} from "../collection/basic-source-request-materializer.js";
+import { resolveBasicProfileWorldBankAdapter } from "../collection/basic-source-adapter-registry.js";
+import type {
+  BasicProfileCategoryKey,
+  BasicProfileField,
+  BasicProfileSource,
+} from "@navigator/shared-types/basic-profile";
 import { createBasicV3CandidateComposition } from "./basic-v3-candidate-composition.js";
 import { writeBasicCandidateArtifactsV3 } from "./basic-candidate-artifact-writer.js";
 import {
   closeBasicCandidateWorkspace,
   openBasicCandidateWorkspace,
 } from "./basic-candidate-workspace.js";
+import {
+  createFilesystemBasicBatchCache,
+  readBasicBatchCountryInput,
+  readBasicBatchGlobalInput,
+  readOptionalBasicBatchGlobalInput,
+  type BasicBatchCache,
+} from "./basic-batch-filesystem-cache.js";
 
-export interface BasicBatchCache {
-  getOrCapture(
-    sourceId: string,
-    capture: () => Promise<Uint8Array>,
-  ): Promise<Uint8Array>;
-}
+export { createFilesystemBasicBatchCache } from "./basic-batch-filesystem-cache.js";
+export type { BasicBatchCache } from "./basic-batch-filesystem-cache.js";
 
 export type BasicBatchCountryStatus = "ready" | "blocked" | "error";
 export interface BasicBatchCountryResult {
@@ -52,38 +65,41 @@ export interface PrepareBasicBatchInput {
 }
 
 const SAFE_SOURCE_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const MAX_CAPTURE_BYTES = 64 * 1024 * 1024;
-const CACHE_ERROR = "basic batch cache is invalid";
-const pendingByCache = new WeakMap<object, Map<string, Promise<Uint8Array>>>();
-
-export function createFilesystemBasicBatchCache(
-  repoRoot: string,
-  batchId: string,
-): BasicBatchCache {
-  const validated = validateBasicBatchConfig({ countries: ["XZ"], batchId });
-  const root = resolve(repoRoot, ".cache", "basic-country", "batches", validated.batchId);
-  const cache = Object.freeze({
-    getOrCapture(sourceId: string, capture: () => Promise<Uint8Array>): Promise<Uint8Array> {
-      if (!SAFE_SOURCE_ID.test(sourceId) || typeof capture !== "function") {
-        return Promise.reject(new Error(CACHE_ERROR));
-      }
-      let pending = pendingByCache.get(cache);
-      if (pending === undefined) {
-        pending = new Map();
-        pendingByCache.set(cache, pending);
-      }
-      const existing = pending.get(sourceId);
-      if (existing !== undefined) return existing;
-      const operation = loadOrCapture(root, sourceId, capture);
-      pending.set(sourceId, operation);
-      void operation.finally(() => {
-        if (pending?.get(sourceId) === operation) pending.delete(sourceId);
-      }).catch(() => undefined);
-      return operation;
-    },
-  });
-  return cache;
-}
+const COUNTRY_INPUT_ERROR = "basic batch country input is invalid";
+const GLOBAL_SOURCE_POLICIES = Object.freeze({
+  "ember-electricity": {
+    publisher: "Ember", url: "https://ember-energy.org/data/electricity-data-explorer/",
+    family: "verified-research", category: "electricityMarket",
+    fields: ["renewableGenerationShare", "totalGeneration"],
+  },
+  "global-solar-atlas": {
+    publisher: "World Bank ESMAP", url: "https://globalsolaratlas.info/",
+    family: "international-organization", category: "solarResource",
+    fields: ["ghi", "pvout"],
+  },
+  "global-wind-atlas": {
+    publisher: "World Bank ESMAP", url: "https://globalwindatlas.info/",
+    family: "international-organization", category: "windResource",
+    fields: ["offshoreWindClass", "onshoreWindClass"],
+  },
+  "irenastat-capacity": {
+    publisher: "International Renewable Energy Agency (IRENA)",
+    url: "https://pxweb.irena.org/pxweb/en/IRENASTAT/",
+    family: "international-organization",
+    category: "renewableCapacity",
+    fields: ["hydroCapacity", "solarCapacity", "totalRenewableCapacity", "windCapacity"],
+  },
+} as const);
+const MANUAL_SOURCE_POLICIES = Object.freeze({
+  "iea-policies": {
+    publisher: "International Energy Agency", origin: "https://www.iea.org",
+    family: "international-organization",
+  },
+  "rise-policy-review": {
+    publisher: "World Bank RISE", origin: "https://rise.esmap.org",
+    family: "international-organization",
+  },
+} as const);
 
 export async function prepareBasicBatch(
   input: PrepareBasicBatchInput,
@@ -169,20 +185,36 @@ export function createProductionBasicBatchCliDependencies(
     async run(config: BasicBatchConfig) {
       const workspace = await openBasicCandidateWorkspace(repoRoot);
       try {
+        const approvedCatalog = parseBasicSourceCatalog(JSON.parse(
+          new TextDecoder("utf-8", { fatal: true }).decode(
+            await readBasicBatchCountryInput(
+              repoRoot,
+              join(repoRoot, "packages", "db", "catalog", "basic-source-catalog.json"),
+            ),
+          ),
+        ) as unknown);
         const cache = createFilesystemBasicBatchCache(repoRoot, config.batchId);
         return await prepareBasicBatch({
           config,
           globalSourceIds: BASIC_GLOBAL_SOURCE_IDS,
           cache,
-          captureGlobalSource: (sourceId) => readBoundedFile(join(
-            repoRoot, ".cache", "basic-country", "batches", config.batchId,
-            "inputs", "global", `${sourceId}.snapshot`,
-          )),
+          captureGlobalSource: (sourceId) => sourceId === "ember-electricity"
+            ? readReviewedEmberSnapshotOrUnavailable(repoRoot, join(
+              repoRoot, ".cache", "basic-country", "batches", config.batchId,
+              "inputs", "global", `${sourceId}.snapshot`,
+            ), config.countries)
+            : readBasicBatchGlobalInput(repoRoot, join(
+              repoRoot, ".cache", "basic-country", "batches", config.batchId,
+              "inputs", "global", `${sourceId}.snapshot`,
+            )),
           async prepareCountry(countryCode, globalCaptures) {
-            const input = parseProductionCountryInput(JSON.parse(await readFile(join(
+            const countryBytes = await readBasicBatchCountryInput(repoRoot, join(
               repoRoot, ".cache", "basic-country", "batches", config.batchId,
               "inputs", `${countryCode}.json`,
-            ), "utf8")) as unknown, globalCaptures);
+            ));
+            const input = parseProductionCountryInput(countryCode, JSON.parse(
+              new TextDecoder("utf-8", { fatal: true }).decode(countryBytes),
+            ) as unknown, globalCaptures);
             const base = await composeBasicCountryCandidate({
               workspace,
               configPath: input.candidateConfigPath,
@@ -192,14 +224,14 @@ export function createProductionBasicBatchCliDependencies(
               throw new Error("basic batch base candidate is invalid");
             }
             const profileTransport = createProductionSourceTransport();
-            const additiveWorldBank = await Promise.all([
-              "world-bank-electricity-access",
-              "world-bank-gdp-per-capita",
-            ].map((sourceId) => captureWorldBankProfileSourceForBatch(
-              sourceId,
+            const profilePlan = createBasicSourceExecutionPlan({
+              catalog: approvedCatalog,
               countryCode,
-              profileTransport,
-            )));
+              sourceIds: ["world-bank-electricity-access", "world-bank-gdp-per-capita"],
+            });
+            const additiveWorldBank = await Promise.all(profilePlan.sources.map((entry) =>
+              captureWorldBankProfileSourceForBatch(entry, countryCode, profileTransport)
+            ));
             const baseBundle = base.candidate.validation.data;
             if (baseBundle.sourceRegister.countryCode !== countryCode) {
               throw new Error("basic batch country identity is invalid");
@@ -250,81 +282,29 @@ export function createProductionBasicBatchCliDependencies(
   });
 }
 
-async function loadOrCapture(
-  root: string,
-  sourceId: string,
-  capture: () => Promise<Uint8Array>,
-): Promise<Uint8Array> {
-  try {
-    const objects = join(root, "objects");
-    const refs = join(root, "refs");
-    await mkdir(objects, { recursive: true, mode: 0o700 });
-    await mkdir(refs, { recursive: true, mode: 0o700 });
-    const refPath = join(refs, `${sourceId}.json`);
-    try {
-      const rawRef = JSON.parse(await readFile(refPath, "utf8")) as unknown;
-      const reference = parseReference(rawRef, sourceId);
-      const bytes = new Uint8Array(await readFile(join(objects, reference.sha256)));
-      if (bytes.byteLength !== reference.byteLength || sha256(bytes) !== reference.sha256) invalidCache();
-      return bytes;
-    } catch (error) {
-      if (!isMissing(error)) throw error;
-    }
-    const captured = await capture();
-    if (!(captured instanceof Uint8Array) || captured.byteLength === 0 || captured.byteLength > MAX_CAPTURE_BYTES) invalidCache();
-    const bytes = new Uint8Array(captured);
-    const digest = sha256(bytes);
-    const objectPath = join(objects, digest);
-    try {
-      await writeFile(objectPath, bytes, { flag: "wx", mode: 0o600 });
-    } catch (error) {
-      if (!isExists(error)) throw error;
-    }
-    const temporary = join(refs, `.${sourceId}.${process.pid}.tmp`);
-    await writeFile(temporary, `${JSON.stringify({ sourceId, sha256: digest, byteLength: bytes.byteLength })}\n`, {
-      flag: "wx",
-      mode: 0o600,
-    });
-    await rename(temporary, refPath);
-    return bytes;
-  } catch {
-    throw new Error(CACHE_ERROR);
-  }
-}
-
-function parseReference(value: unknown, sourceId: string) {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) invalidCache();
-  const record = value as Record<string, unknown>;
-  if (
-    Object.keys(record).sort().join(",") !== "byteLength,sha256,sourceId" ||
-    record.sourceId !== sourceId || typeof record.sha256 !== "string" ||
-    !/^[0-9a-f]{64}$/.test(record.sha256) || typeof record.byteLength !== "number" ||
-    !Number.isSafeInteger(record.byteLength) || record.byteLength <= 0 ||
-    record.byteLength > MAX_CAPTURE_BYTES
-  ) invalidCache();
-  return { sha256: record.sha256, byteLength: record.byteLength };
+interface ReviewedGlobalProfileInput {
+  readonly updatedAt: string;
+  readonly sources: readonly BasicProfileSource[];
+  readonly auditSources: readonly BasicSourceRecord[];
+  readonly fields: readonly Readonly<{
+    category: BasicProfileCategoryKey;
+    field: BasicProfileField;
+  }>[];
 }
 
 function parseProductionCountryInput(
+  countryCode: string,
   value: unknown,
   globalCaptures: ReadonlyMap<string, Uint8Array>,
 ): Readonly<{
   candidateConfigPath: string;
-  reviewedProfile: Readonly<{
-    updatedAt: string;
-    sources: readonly import("@navigator/shared-types/basic-profile").BasicProfileSource[];
-    auditSources: readonly import("../collection/basic-collection-contracts.js").BasicSourceRecord[];
-    fields: readonly Readonly<{
-      category: import("@navigator/shared-types/basic-profile").BasicProfileCategoryKey;
-      field: import("@navigator/shared-types/basic-profile").BasicProfileField;
-    }>[];
-  }>;
+  reviewedProfile: ReviewedGlobalProfileInput;
 }> {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     throw new Error("basic batch country input is invalid");
   }
   const record = value as Record<string, unknown>;
-  if (Object.keys(record).sort().join(",") !== "candidateConfigPath,globalSourceSha256,reviewedProfile") {
+  if (Object.keys(record).sort().join(",") !== "candidateConfigPath,globalSourceSha256,manualProfile,reviewedGlobalProfile") {
     throw new Error("basic batch country input is invalid");
   }
   const hashes = record.globalSourceSha256;
@@ -345,25 +325,171 @@ function parseProductionCountryInput(
     !record.candidateConfigPath.startsWith(`.cache/basic-country/`) ||
     record.candidateConfigPath.includes("..")
   ) throw new Error("basic batch country input is invalid");
-  const reviewed = record.reviewedProfile;
-  if (typeof reviewed !== "object" || reviewed === null || Array.isArray(reviewed)) {
-    throw new Error("basic batch country input is invalid");
-  }
-  const reviewedRecord = reviewed as Record<string, unknown>;
-  if (
-    Object.keys(reviewedRecord).sort().join(",") !== "auditSources,fields,sources,updatedAt" ||
-    typeof reviewedRecord.updatedAt !== "string" || !Array.isArray(reviewedRecord.sources) ||
-    !Array.isArray(reviewedRecord.auditSources) || !Array.isArray(reviewedRecord.fields)
-  ) throw new Error("basic batch country input is invalid");
-  return Object.freeze({
-    candidateConfigPath: record.candidateConfigPath,
-    reviewedProfile: Object.freeze({
+  const reviewedRecord = parseProfileInputRecord(record.reviewedGlobalProfile);
+  const manualRecord = parseProfileInputRecord(record.manualProfile);
+  const reviewedProfile = bindReviewedGlobalProfileSnapshots(
+    countryCode,
+    globalCaptures,
+    {
       updatedAt: reviewedRecord.updatedAt,
       sources: reviewedRecord.sources as never,
       auditSources: reviewedRecord.auditSources as never,
       fields: reviewedRecord.fields as never,
-    }),
+    },
+  );
+  const mergedProfile = mergeReviewedManualProfile(reviewedProfile, {
+    updatedAt: manualRecord.updatedAt,
+    sources: manualRecord.sources as never,
+    auditSources: manualRecord.auditSources as never,
+    fields: manualRecord.fields as never,
   });
+  return Object.freeze({
+    candidateConfigPath: record.candidateConfigPath,
+    reviewedProfile: mergedProfile,
+  });
+}
+
+function parseProfileInputRecord(value: unknown): Readonly<{
+  updatedAt: string;
+  sources: readonly unknown[];
+  auditSources: readonly unknown[];
+  fields: readonly unknown[];
+}> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) countryInputInvalid();
+  const record = value as Record<string, unknown>;
+  if (
+    Object.keys(record).sort().join(",") !== "auditSources,fields,sources,updatedAt" ||
+    typeof record.updatedAt !== "string" || !Array.isArray(record.sources) ||
+    !Array.isArray(record.auditSources) || !Array.isArray(record.fields)
+  ) countryInputInvalid();
+  return {
+    updatedAt: record.updatedAt as string,
+    sources: record.sources as readonly unknown[],
+    auditSources: record.auditSources as readonly unknown[],
+    fields: record.fields as readonly unknown[],
+  };
+}
+
+export function bindReviewedGlobalProfileSnapshots(
+  countryCode: string,
+  globalCaptures: ReadonlyMap<string, Uint8Array>,
+  reviewedProfile: ReviewedGlobalProfileInput,
+): ReviewedGlobalProfileInput {
+  try {
+    if (!/^[A-Z]{2}$/.test(countryCode)) countryInputInvalid();
+    const capturedIds = [...globalCaptures.keys()].sort(compareText);
+    const requiredIds = [...BASIC_GLOBAL_SOURCE_IDS].sort(compareText);
+    if (!sameStrings(capturedIds, requiredIds)) countryInputInvalid();
+
+    const profile = materializeBasicProfile(reviewedProfile);
+    const fields = Object.entries(profile.categories).flatMap(([category, { fields }]) =>
+      fields.map((field) => ({ category: category as BasicProfileCategoryKey, field }))
+    );
+    const auditsById = uniqueById(reviewedProfile.auditSources, ({ sourceId }) => sourceId);
+    const sourcesById = uniqueById(profile.sources, ({ id }) => id);
+
+    for (const sourceId of requiredIds) {
+      const bytes = globalCaptures.get(sourceId);
+      const audit = auditsById.get(sourceId);
+      const source = sourcesById.get(sourceId);
+      if (bytes === undefined || audit === undefined || source === undefined) countryInputInvalid();
+      const rows = parseBasicProfileTabularSnapshot(bytes, countryCode);
+      const policy = GLOBAL_SOURCE_POLICIES[sourceId as keyof typeof GLOBAL_SOURCE_POLICIES];
+      const locators = rows.map(({ locator }) => locator).sort(compareText);
+      const sourceFields = fields.filter(({ field }) => field.sourceIds.includes(sourceId));
+      if (
+        rows.length === 0 || new Set(locators).size !== locators.length ||
+        audit.contentSha256 !== sha256(bytes) ||
+        policy === undefined || source.publisher !== policy.publisher ||
+        source.url !== policy.url ||
+        audit.sourceFamily !== policy.family || audit.credibility !== "OFFICIAL" ||
+        rows.some(({ category }) => category !== policy.category) ||
+        !sameStrings(
+          rows.map(({ key }) => key).sort(compareText),
+          [...policy.fields].sort(compareText),
+        ) ||
+        !sameStrings([...audit.evidenceLocators].sort(compareText), locators) ||
+        audit.sourceId !== source.id || audit.sourceName !== source.publisher ||
+        audit.sourceUrl !== source.url || audit.retrievedAt !== source.retrievedAt ||
+        audit.publishedAt !== source.publishedAt || audit.credibility !== source.credibility ||
+        audit.accessStatus !== "open" || audit.discoveryOnly ||
+        audit.promptInjectionRisk !== "none" || sourceFields.length !== rows.length ||
+        sourceFields.some(({ field }) => !sameStrings(field.sourceIds, [sourceId]))
+      ) countryInputInvalid();
+      const fieldsByPath = uniqueById(
+        sourceFields,
+        ({ category, field }) => `${category}.${field.key}`,
+      );
+      for (const row of rows) {
+        const entry = fieldsByPath.get(`${row.category}.${row.key}`);
+        if (
+          entry === undefined || entry.field.status !== row.status ||
+          !sameJson(entry.field.value, row.value) || entry.field.unit !== row.unit ||
+          entry.field.year !== row.year || !sameJson(entry.field.reason, row.reason) ||
+          entry.field.checkedAt !== audit.retrievedAt.slice(0, 10) ||
+          entry.field.note !== null
+        ) countryInputInvalid();
+      }
+    }
+
+    return Object.freeze({
+      updatedAt: profile.updatedAt,
+      sources: profile.sources,
+      auditSources: Object.freeze(reviewedProfile.auditSources.map((source) => Object.freeze(source))),
+      fields: Object.freeze(fields),
+    });
+  } catch {
+    throw new Error(COUNTRY_INPUT_ERROR);
+  }
+}
+
+export function mergeReviewedManualProfile(
+  globalProfile: ReviewedGlobalProfileInput,
+  manualProfile: ReviewedGlobalProfileInput,
+): ReviewedGlobalProfileInput {
+  try {
+    const globalSourceIds = new Set(globalProfile.sources.map(({ id }) => id));
+    const manualSources = uniqueById(manualProfile.sources, ({ id }) => id);
+    const manualAudits = uniqueById(manualProfile.auditSources, ({ sourceId }) => sourceId);
+    if (!sameStrings([...manualSources.keys()].sort(compareText), [...manualAudits.keys()].sort(compareText))) {
+      countryInputInvalid();
+    }
+    for (const [sourceId, source] of manualSources) {
+      const policy = MANUAL_SOURCE_POLICIES[sourceId as keyof typeof MANUAL_SOURCE_POLICIES];
+      const audit = manualAudits.get(sourceId);
+      if (
+        policy === undefined || audit === undefined || source.publisher !== policy.publisher ||
+        new URL(source.url).origin !== policy.origin || audit.sourceName !== source.publisher ||
+        audit.sourceUrl !== source.url || audit.retrievedAt !== source.retrievedAt ||
+        audit.publishedAt !== source.publishedAt || audit.credibility !== "OFFICIAL" ||
+        source.credibility !== "OFFICIAL" || audit.sourceFamily !== policy.family ||
+        audit.accessStatus !== "open" || audit.discoveryOnly ||
+        audit.promptInjectionRisk !== "none" || audit.evidenceLocators.length === 0
+      ) countryInputInvalid();
+    }
+    const allowedReferences = new Set([...globalSourceIds, ...manualSources.keys()]);
+    if (
+      manualProfile.fields.some(({ category, field }) =>
+        !["marketSummary", "policyOverview", "windResource"].includes(category) ||
+        field.sourceIds.some((sourceId) => !allowedReferences.has(sourceId)))
+    ) countryInputInvalid();
+    const merged = materializeBasicProfile({
+      updatedAt: globalProfile.updatedAt,
+      sources: [...globalProfile.sources, ...manualProfile.sources],
+      fields: [...globalProfile.fields, ...manualProfile.fields],
+    });
+    if (manualProfile.updatedAt !== globalProfile.updatedAt) countryInputInvalid();
+    return Object.freeze({
+      updatedAt: merged.updatedAt,
+      sources: merged.sources,
+      auditSources: Object.freeze([...globalProfile.auditSources, ...manualProfile.auditSources]),
+      fields: Object.freeze(Object.entries(merged.categories).flatMap(([category, { fields }]) =>
+        fields.map((field) => ({ category: category as BasicProfileCategoryKey, field }))
+      )),
+    });
+  } catch {
+    throw new Error(COUNTRY_INPUT_ERROR);
+  }
 }
 
 function createProductionSourceTransport() {
@@ -376,23 +502,67 @@ function createProductionSourceTransport() {
   });
 }
 
+export function createEmberNoCredentialTabularSnapshot(
+  countries: readonly string[],
+): Uint8Array {
+  try {
+    if (
+      countries.length < 1 || countries.length > 3 ||
+      new Set(countries).size !== countries.length ||
+      countries.some((countryCode) => !/^[A-Z]{2}$/.test(countryCode))
+    ) throw new Error("invalid countries");
+    return new TextEncoder().encode([
+      "countryCode,category,key,value,unit,year,locator,reasonZh,reasonEn",
+      ...countries.map((countryCode) => [
+        countryCode,
+        "electricityMarket",
+        "totalGeneration",
+        "",
+        "",
+        "",
+        "credential-check",
+        "未提供已审核的Ember不可变标准化快照",
+        "A reviewed immutable normalized Ember snapshot was not provided",
+      ].join(",")),
+      ...countries.map((countryCode) => [
+        countryCode,
+        "electricityMarket",
+        "renewableGenerationShare",
+        "",
+        "",
+        "",
+        "credential-check:renewable-generation-share",
+        "未提供已审核的Ember不可变标准化快照",
+        "A reviewed immutable normalized Ember snapshot was not provided",
+      ].join(",")),
+    ].join("\n"));
+  } catch {
+    throw new Error("ember BASIC profile snapshot is invalid");
+  }
+}
+
+export async function readReviewedEmberSnapshotOrUnavailable(
+  repoRoot: string,
+  pathname: string,
+  countries: readonly string[],
+): Promise<Uint8Array> {
+  try {
+    const reviewed = await readOptionalBasicBatchGlobalInput(repoRoot, pathname);
+    return reviewed ?? createEmberNoCredentialTabularSnapshot(countries);
+  } catch {
+    throw new Error("ember reviewed snapshot input is invalid");
+  }
+}
+
 export async function captureWorldBankProfileSourceForBatch(
-  sourceId: string,
+  planEntry: BasicSourceExecutionPlanEntry,
   countryCode: string,
   transport: BasicSourceTransportV2,
   now: () => Date = () => new Date(),
 ) {
   try {
-    const adapter = WORLD_BANK_BASIC_PROFILE_ADAPTERS.find((entry) => entry.sourceId === sourceId);
-    if (adapter === undefined) throw new Error("invalid source");
-    const request = adapter.request(countryCode);
-    const response = await transport.execute({
-      method: "GET",
-      url: request.url,
-      accept: "application/json",
-      allowedOrigins: ["https://api.worldbank.org"],
-      allowedQueryParameters: ["source", "format", "mrv", "per_page"],
-    });
+    const adapter = resolveBasicProfileWorldBankAdapter(planEntry, countryCode);
+    const response = await transport.execute(planEntry.request);
     const body = await readBoundedBody(response.body, 10 * 1024 * 1024);
     const retrievedAt = response.retrievedAt;
     const current = now();
@@ -403,18 +573,18 @@ export async function captureWorldBankProfileSourceForBatch(
   const label = worldBankLabel(observation.key);
     return Object.freeze({
     profileSource: {
-      id: sourceId,
+      id: adapter.sourceId,
       publisher: "World Bank",
       title: { zh: label.zh, en: label.en },
-      url: request.url,
+      url: planEntry.request.url,
       publishedAt: null,
       retrievedAt,
       credibility: "OFFICIAL" as const,
     },
     auditSource: {
-      sourceId,
+      sourceId: adapter.sourceId,
       sourceName: "World Bank",
-      sourceUrl: request.url,
+      sourceUrl: planEntry.request.url,
       retrievedAt,
       publishedAt: null,
       contentSha256: sha256(body),
@@ -435,7 +605,7 @@ export async function captureWorldBankProfileSourceForBatch(
         value: observation.value,
         unit: observation.unit,
         year: observation.year,
-        sourceIds: [sourceId],
+        sourceIds: [adapter.sourceId],
         checkedAt: observation.checkedAt,
         reason: observation.reason,
         note: null,
@@ -544,24 +714,8 @@ function worldBankLabel(key: string): Readonly<{ zh: string; en: string }> {
   return labels[key] ?? (() => { throw new Error("world bank BASIC field is invalid"); })();
 }
 
-async function readBoundedFile(pathname: string): Promise<Uint8Array> {
-  const bytes = new Uint8Array(await readFile(pathname));
-  if (bytes.byteLength === 0 || bytes.byteLength > MAX_CAPTURE_BYTES) {
-    throw new Error("basic batch global input is invalid");
-  }
-  return bytes;
-}
-
 function sha256(bytes: Uint8Array): string {
   return createHash("sha256").update(bytes).digest("hex");
-}
-
-function isMissing(error: unknown): boolean {
-  return typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
-}
-
-function isExists(error: unknown): boolean {
-  return typeof error === "object" && error !== null && "code" in error && error.code === "EEXIST";
 }
 
 function compareText(left: string, right: string): number {
@@ -572,8 +726,25 @@ function sameStrings(left: readonly string[], right: readonly string[]): boolean
   return left.length === right.length && left.every((value, index) => value === right[index]);
 }
 
-function invalidCache(): never {
-  throw new Error(CACHE_ERROR);
+function uniqueById<T>(
+  values: readonly T[],
+  id: (value: T) => string,
+): ReadonlyMap<string, T> {
+  const result = new Map<string, T>();
+  for (const value of values) {
+    const key = id(value);
+    if (result.has(key)) countryInputInvalid();
+    result.set(key, value);
+  }
+  return result;
+}
+
+function sameJson(left: unknown, right: unknown): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function countryInputInvalid(): never {
+  throw new Error(COUNTRY_INPUT_ERROR);
 }
 
 const entrypoint = process.argv[1] ? pathToFileURL(process.argv[1]).href : "";

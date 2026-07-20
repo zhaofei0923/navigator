@@ -7,6 +7,7 @@ export interface WorldBankBasicProfileAdapter {
   readonly sourceId: string;
   readonly indicator: string;
   readonly profileField: string;
+  readonly category: "countryBasics" | "energyAccess";
   request(countryCode: string): WorldBankBasicProfileRequest;
   extract(input: Readonly<{
     countryCode: string;
@@ -21,7 +22,7 @@ export interface WorldBankBasicProfileAdapter {
     unit: string | null;
     year: number | null;
     checkedAt: string;
-    locator: "json:/1/0/value";
+    locator: "json:/1/0/value" | "json:/1";
     reason: Readonly<{ zh: string; en: string }> | null;
   }>;
 }
@@ -39,6 +40,7 @@ export const WORLD_BANK_BASIC_PROFILE_ADAPTERS: readonly WorldBankBasicProfileAd
     sourceId,
     indicator,
     profileField,
+    category,
     request(countryCode: string): WorldBankBasicProfileRequest {
       if (!/^[A-Z]{2}$/.test(countryCode)) {
         throw new Error("world bank BASIC profile request is invalid");
@@ -53,8 +55,17 @@ export const WORLD_BANK_BASIC_PROFILE_ADAPTERS: readonly WorldBankBasicProfileAd
         if (!/^[A-Z]{2}$/.test(input.countryCode) || !/^\d{4}-\d{2}-\d{2}T/.test(input.retrievedAt)) invalid();
         const parsed: unknown = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(input.body));
         if (!Array.isArray(parsed) || parsed.length !== 2 || !isRecord(parsed[0]) ||
-          !Array.isArray(parsed[1]) || parsed[1].length !== 1 || !isRecord(parsed[1][0])) invalid();
+          !Array.isArray(parsed[1])) invalid();
         const metadata = parsed[0];
+        if (
+          parsed[1].length === 0 && metadata.page === 1 && metadata.pages === 0 &&
+          metadata.per_page === 1 && metadata.total === 0 && metadata.sourceid === "2"
+        ) {
+          return unavailableObservation(
+            sourceId, category, profileField, input.retrievedAt, "json:/1",
+          );
+        }
+        if (parsed[1].length !== 1 || !isRecord(parsed[1][0])) invalid();
         const record = parsed[1][0];
         if (
           metadata.page !== 1 || metadata.pages !== 1 || metadata.per_page !== 1 ||
@@ -65,20 +76,19 @@ export const WORLD_BANK_BASIC_PROFILE_ADAPTERS: readonly WorldBankBasicProfileAd
           !(record.value === null || (typeof record.value === "number" && Number.isFinite(record.value)))
         ) invalid();
         const unavailable = record.value === null;
-        return Object.freeze({
+        return unavailable ? unavailableObservation(
+          sourceId, category, profileField, input.retrievedAt, "json:/1/0/value",
+        ) : Object.freeze({
           sourceId,
           category,
           key: profileField,
-          status: unavailable ? "NOT_AVAILABLE" as const : "AVAILABLE" as const,
+          status: "AVAILABLE" as const,
           value: record.value as number | null,
-          unit: unavailable ? null : unit,
-          year: unavailable ? null : Number(record.date),
+          unit,
+          year: Number(record.date),
           checkedAt: input.retrievedAt.slice(0, 10),
           locator: "json:/1/0/value" as const,
-          reason: unavailable ? Object.freeze({
-            zh: "World Bank 已核查，但最近记录无可用数值",
-            en: "World Bank was checked, but the latest record has no available value",
-          }) : null,
+          reason: null,
         });
       } catch {
         throw new Error("world bank BASIC profile response is invalid");
@@ -88,6 +98,30 @@ export const WORLD_BANK_BASIC_PROFILE_ADAPTERS: readonly WorldBankBasicProfileAd
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function unavailableObservation(
+  sourceId: string,
+  category: "countryBasics" | "energyAccess",
+  key: string,
+  retrievedAt: string,
+  locator: "json:/1/0/value" | "json:/1",
+) {
+  return Object.freeze({
+    sourceId,
+    category,
+    key,
+    status: "NOT_AVAILABLE" as const,
+    value: null,
+    unit: null,
+    year: null,
+    checkedAt: retrievedAt.slice(0, 10),
+    locator,
+    reason: Object.freeze({
+      zh: "World Bank 已核查，但最近记录无可用数值",
+      en: "World Bank was checked, but the latest record has no available value",
+    }),
+  });
 }
 
 function invalid(): never {

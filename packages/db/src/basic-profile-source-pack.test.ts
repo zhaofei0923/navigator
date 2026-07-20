@@ -14,7 +14,7 @@ import {
 import {
   BASIC_GLOBAL_SOURCE_IDS,
   BASIC_MANUAL_POLICY_SOURCE_IDS,
-  createEmberElectricityRequest,
+  EMBER_DIRECT_API_EXECUTION_APPROVED,
 } from "./collection/adapters/basic-global-source-pack.js";
 import {
   assembleBasicCollectionAuditBundleV3,
@@ -58,6 +58,10 @@ describe("approved reusable BASIC source adapters", () => {
     expect(plan.sources.map((entry) =>
       resolveBasicProfileWorldBankAdapter(entry, "ID").sourceId
     )).toEqual(["world-bank-electricity-access", "world-bank-gdp-per-capita"]);
+
+    const untrustedClone = structuredClone(plan.sources[0]!);
+    expect(() => resolveBasicProfileWorldBankAdapter(untrustedClone, "ID"))
+      .toThrow("source catalog adapter binding is invalid");
   });
 
   test("strictly extracts a World Bank profile observation and preserves null as unavailable", () => {
@@ -91,6 +95,35 @@ describe("approved reusable BASIC source adapters", () => {
     });
   });
 
+  test("preserves a valid empty World Bank envelope as sourced unavailable", () => {
+    const adapter = WORLD_BANK_BASIC_PROFILE_ADAPTERS.find(({ sourceId }) =>
+      sourceId === "world-bank-electricity-access"
+    )!;
+    const observation = adapter.extract({
+      countryCode: "ID",
+      retrievedAt: "2026-07-20T00:00:00Z",
+      body: new TextEncoder().encode(JSON.stringify([
+        { page: 1, pages: 0, per_page: 1, total: 0, sourceid: "2" },
+        [],
+      ])),
+    });
+
+    expect(observation).toMatchObject({
+      sourceId: "world-bank-electricity-access",
+      key: "electricityAccess",
+      status: "NOT_AVAILABLE",
+      value: null,
+      unit: null,
+      year: null,
+      checkedAt: "2026-07-20",
+      locator: "json:/1",
+      reason: {
+        zh: "World Bank 已核查，但最近记录无可用数值",
+        en: "World Bank was checked, but the latest record has no available value",
+      },
+    });
+  });
+
   test("parses reviewed tabular electricity/capacity/resource rows deterministically", () => {
     const rows = parseBasicProfileTabularSnapshot(
       new TextEncoder().encode([
@@ -115,7 +148,7 @@ describe("approved reusable BASIC source adapters", () => {
     const row = parseBasicProfileTabularSnapshot(
       new TextEncoder().encode([
         "countryCode,category,key,value,unit,year,locator,reasonZh,reasonEn",
-        "ID,electricityMarket,totalGeneration,,,,credential-check,未配置经批准的Ember API密钥,Approved Ember API credential is not configured",
+        "ID,electricityMarket,totalGeneration,,,,snapshot-check,未提供已审核的Ember不可变标准化快照,A reviewed immutable normalized Ember snapshot was not provided",
       ].join("\n")),
       "ID",
     )[0];
@@ -124,17 +157,14 @@ describe("approved reusable BASIC source adapters", () => {
       status: "NOT_AVAILABLE",
       value: null,
       reason: {
-        zh: "未配置经批准的Ember API密钥",
-        en: "Approved Ember API credential is not configured",
+        zh: "未提供已审核的Ember不可变标准化快照",
+        en: "A reviewed immutable normalized Ember snapshot was not provided",
       },
     });
   });
 
-  test("keeps Ember credentials in headers and policy sources on manual review", () => {
-    const request = createEmberElectricityRequest("SECRET-EMBER-KEY");
-    expect(request?.url).not.toContain("SECRET-EMBER-KEY");
-    expect(request?.headers["x-api-key"]).toBe("SECRET-EMBER-KEY");
-    expect(createEmberElectricityRequest(undefined)).toBeNull();
+  test("keeps direct Ember API execution disabled and policy sources on manual review", () => {
+    expect(EMBER_DIRECT_API_EXECUTION_APPROVED).toBe(false);
     expect(BASIC_GLOBAL_SOURCE_IDS).toEqual([
       "ember-electricity", "global-solar-atlas", "global-wind-atlas", "irenastat-capacity",
     ]);
