@@ -15,6 +15,7 @@ export function normalizeCountryReadSnapshot(
 ): CountryDataSnapshot {
   return {
     ...snapshot,
+    marketOverview: normalizeMarketOverview(snapshot.marketOverview),
     policy: normalizeList(snapshot.policy),
     risk: normalizeList(snapshot.risk),
     opportunities: normalizeList(snapshot.opportunities),
@@ -24,6 +25,15 @@ export function normalizeCountryReadSnapshot(
     reports: normalizeList(snapshot.reports),
     knowledge: normalizeList(snapshot.knowledge),
   };
+}
+
+function normalizeMarketOverview(
+  marketOverview: JsonObject | null,
+): JsonObject | null {
+  if (marketOverview === null || Object.hasOwn(marketOverview, "basicProfile")) {
+    return marketOverview;
+  }
+  return { ...marketOverview, basicProfile: null };
 }
 
 function normalizeList(records: readonly JsonObject[]): readonly JsonObject[] {

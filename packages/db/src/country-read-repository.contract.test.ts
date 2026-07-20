@@ -101,6 +101,20 @@ function approvedSnapshots(): CountryDataSnapshot[] {
   return sortCountrySnapshots(snapshots);
 }
 
+function expectedBoundarySnapshot(
+  snapshot: CountryDataSnapshot,
+): CountryDataSnapshot {
+  return {
+    ...snapshot,
+    marketOverview: snapshot.marketOverview === null
+      ? null
+      : {
+          ...snapshot.marketOverview,
+          basicProfile: snapshot.marketOverview.basicProfile ?? null,
+        },
+  };
+}
+
 function asRecord(value: JsonObject): Readonly<Record<string, unknown>> {
   return value as Readonly<Record<string, unknown>>;
 }
@@ -186,7 +200,7 @@ interface RepositoryHarness {
   create(): CountryReadRepository;
 }
 
-const canonicalSnapshots = approvedSnapshots();
+const canonicalSnapshots = approvedSnapshots().map(expectedBoundarySnapshot);
 const harnesses: readonly RepositoryHarness[] = [
   {
     name: "approved publication adapter",
@@ -240,6 +254,7 @@ for (const harness of harnesses) {
           (coverage as readonly JsonObject[]).map((item) => item.moduleKey),
         ).toEqual(MODULE_KEYS);
         expect(snapshot.marketOverview).not.toBeNull();
+        expect(snapshot.marketOverview).toHaveProperty("basicProfile", null);
       }
     });
 
@@ -288,6 +303,21 @@ describe("approved publication adapter error boundary", () => {
 });
 
 describe("country read deep-record normalization", () => {
+  test("normalizes an omitted legacy BASIC profile to explicit null", async () => {
+    const { normalizeCountryReadSnapshot } = await import(
+      "./read/country-read-normalization.js"
+    );
+    const legacy = approvedSnapshots()[0];
+    if (legacy === undefined || legacy.marketOverview === null) {
+      throw new Error("Expected an approved legacy market overview");
+    }
+    expect(legacy.marketOverview).not.toHaveProperty("basicProfile");
+
+    const normalized = normalizeCountryReadSnapshot(legacy);
+
+    expect(normalized.marketOverview).toHaveProperty("basicProfile", null);
+  });
+
   test("normalizes STANDARD-like list slots by updatedAt descending then id ascending", async () => {
     const { normalizeCountryReadSnapshot } = await import(
       "./read/country-read-normalization.js"

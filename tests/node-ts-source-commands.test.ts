@@ -174,6 +174,9 @@ describe("tracked TypeScript command hook", () => {
     const childSource = `
       import { runApprovedBasicCountriesPrismaImportCli } from ${JSON.stringify(cliModule)};
       const emptyCount = () => ({ count: async () => 0 });
+      const isPrismaDbNull = (value) =>
+        value !== null && typeof value === "object" &&
+        value.constructor?.name === "DbNull";
       let clientCreations = 0;
       let disconnects = 0;
       const client = {
@@ -202,7 +205,15 @@ describe("tracked TypeScript command hook", () => {
             },
             marketOverview: {
               ...emptyCount(),
-              async upsert(args) { marketOverview = args.create; return marketOverview; },
+              async upsert(args) {
+                marketOverview = {
+                  ...args.create,
+                  basicProfile: isPrismaDbNull(args.create.basicProfile)
+                    ? null
+                    : args.create.basicProfile,
+                };
+                return marketOverview;
+              },
             },
             policy: emptyCount(), risk: emptyCount(), opportunity: emptyCount(),
             project: emptyCount(), partner: emptyCount(), chineseCompany: emptyCount(),
