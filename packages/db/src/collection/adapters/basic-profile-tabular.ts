@@ -26,6 +26,7 @@ const WIND_RESOURCE_CLASSES = new Set([
 ]);
 const NUMERIC_FIELD_UNITS = Object.freeze({
   "electricityMarket.totalGeneration": "TWh",
+  "electricityMarket.electricityConsumption": "TWh",
   "electricityMarket.renewableGenerationShare": "%",
   "renewableCapacity.totalRenewableCapacity": "GW",
   "renewableCapacity.solarCapacity": "GW",
@@ -34,6 +35,10 @@ const NUMERIC_FIELD_UNITS = Object.freeze({
   "solarResource.ghi": "kWh/m2/day",
   "solarResource.pvout": "kWh/kWp/day",
 } as const);
+const REVIEWED_TEXT_FIELDS = new Set([
+  "electricityMarket.electricityMix",
+  "solarResource.solarPotentialSummary",
+]);
 
 export function parseBasicProfileTabularSnapshot(
   body: Uint8Array,
@@ -99,8 +104,12 @@ function validateReviewedGlobalField(
   ];
   const windField = category === "windResource" &&
     (key === "onshoreWindClass" || key === "offshoreWindClass");
-  if (numericUnit === undefined && !windField) invalid();
+  const reviewedTextField = REVIEWED_TEXT_FIELDS.has(fieldPath);
+  if (numericUnit === undefined && !windField && !reviewedTextField) invalid();
   if (unavailable) return;
+  // This tabular contract has one scalar value column. Human-readable text must
+  // stay unavailable until a future format can bind both languages atomically.
+  if (reviewedTextField) invalid();
   if (year === null || year < 1900) invalid();
   if (numericUnit !== undefined) {
     if (typeof value !== "number" || !Number.isFinite(value) || rawUnit !== numericUnit) invalid();

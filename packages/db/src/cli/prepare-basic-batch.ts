@@ -26,6 +26,7 @@ import type {
   BasicProfileField,
   BasicProfileSource,
 } from "@navigator/shared-types/basic-profile";
+import { BASIC_PROFILE_REQUIRED_FIELD_KEYS } from "@navigator/shared-types/basic-profile";
 import { createBasicV3CandidateComposition } from "./basic-v3-candidate-composition.js";
 import { writeBasicCandidateArtifactsV3 } from "./basic-candidate-artifact-writer.js";
 import {
@@ -72,12 +73,15 @@ const GLOBAL_SOURCE_POLICIES = Object.freeze({
   "ember-electricity": {
     publisher: "Ember", url: "https://ember-energy.org/data/electricity-data-explorer/",
     family: "verified-research", category: "electricityMarket",
-    fields: ["renewableGenerationShare", "totalGeneration"],
+    fields: [
+      "electricityConsumption", "electricityMix", "renewableGenerationShare",
+      "totalGeneration",
+    ],
   },
   "global-solar-atlas": {
     publisher: "World Bank ESMAP", url: "https://globalsolaratlas.info/",
     family: "international-organization", category: "solarResource",
-    fields: ["ghi", "pvout"],
+    fields: ["ghi", "pvout", "solarPotentialSummary"],
   },
   "global-wind-atlas": {
     publisher: "World Bank ESMAP", url: "https://globalwindatlas.info/",
@@ -256,18 +260,10 @@ export function createProductionBasicBatchCliDependencies(
             if (baseBundle.sourceRegister.countryCode !== countryCode) {
               throw new Error("basic batch country identity is invalid");
             }
-            const profile = materializeBasicProfile({
-              sources: [
-                ...profileSourcesFromBase(baseBundle),
-                ...additiveWorldBank.map(({ profileSource }) => profileSource),
-                ...input.reviewedProfile.sources,
-              ].sort((left, right) => compareText(left.id, right.id)),
-              updatedAt: input.reviewedProfile.updatedAt,
-              fields: [
-                ...profileFieldsFromBase(baseBundle),
-                ...additiveWorldBank.map(({ field }) => field),
-                ...input.reviewedProfile.fields,
-              ],
+            const profile = assembleProductionBasicProfile({
+              baseBundle,
+              additiveWorldBank,
+              reviewedProfile: input.reviewedProfile,
             });
             const candidate = createBasicV3CandidateComposition({
               baseBundle,
@@ -310,6 +306,40 @@ interface ReviewedGlobalProfileInput {
     category: BasicProfileCategoryKey;
     field: BasicProfileField;
   }>[];
+}
+
+export function assembleProductionBasicProfile(input: Readonly<{
+  baseBundle: BasicCollectionAuditBundleV2;
+  additiveWorldBank: readonly Readonly<{
+    profileSource: BasicProfileSource;
+    field: Readonly<{ category: BasicProfileCategoryKey; field: BasicProfileField }>;
+  }>[];
+  reviewedProfile: ReviewedGlobalProfileInput;
+}>) {
+  const baseProfile = profileProjectionFromBase(input.baseBundle);
+  return materializeBasicProfile({
+    sources: [
+      ...baseProfile.sources,
+      ...input.additiveWorldBank.map(({ profileSource }) => profileSource),
+      ...input.reviewedProfile.sources,
+    ].sort((left, right) => compareText(left.id, right.id)),
+    updatedAt: input.reviewedProfile.updatedAt,
+    fields: sortProfileFields([
+      ...baseProfile.fields,
+      ...input.additiveWorldBank.map(({ field }) => field),
+      ...input.reviewedProfile.fields,
+    ]),
+  });
+}
+
+function sortProfileFields(
+  fields: readonly Readonly<{ category: BasicProfileCategoryKey; field: BasicProfileField }>[],
+) {
+  return [...fields].sort((left, right) => {
+    if (left.category !== right.category) return compareText(left.category, right.category);
+    const keys = BASIC_PROFILE_REQUIRED_FIELD_KEYS[left.category];
+    return keys.indexOf(left.field.key as never) - keys.indexOf(right.field.key as never);
+  });
 }
 
 function parseProductionCountryInput(
@@ -407,12 +437,11 @@ export function bindReviewedGlobalProfileSnapshots(
     const requiredIds = [...BASIC_GLOBAL_SOURCE_IDS].sort(compareText);
     if (!sameStrings(capturedIds, requiredIds)) countryInputInvalid();
 
-    const profile = materializeBasicProfile(reviewedProfile);
-    const fields = Object.entries(profile.categories).flatMap(([category, { fields }]) =>
-      fields.map((field) => ({ category: category as BasicProfileCategoryKey, field }))
-    );
+    if (!isRfc3339(reviewedProfile.updatedAt)) countryInputInvalid();
+    const fields = [...reviewedProfile.fields];
+    uniqueById(fields, ({ category, field }) => `${category}.${field.key}`);
     const auditsById = uniqueById(reviewedProfile.auditSources, ({ sourceId }) => sourceId);
-    const sourcesById = uniqueById(profile.sources, ({ id }) => id);
+    const sourcesById = uniqueById(reviewedProfile.sources, ({ id }) => id);
     if (
       !sameStrings([...auditsById.keys()].sort(compareText), requiredIds) ||
       !sameStrings([...sourcesById.keys()].sort(compareText), requiredIds)
@@ -431,6 +460,7 @@ export function bindReviewedGlobalProfileSnapshots(
         rows.length === 0 || new Set(locators).size !== locators.length ||
         audit.contentSha256 !== sha256(bytes) ||
         policy === undefined || source.publisher !== policy.publisher ||
+        !nonEmptyLocalizedText(source.title) || !isRfc3339(source.retrievedAt) ||
         source.url !== policy.url ||
         audit.sourceFamily !== policy.family || audit.credibility !== "OFFICIAL" ||
         rows.some(({ category }) => category !== policy.category) ||
@@ -444,7 +474,10 @@ export function bindReviewedGlobalProfileSnapshots(
         audit.publishedAt !== source.publishedAt || audit.credibility !== source.credibility ||
         audit.accessStatus !== "open" || audit.discoveryOnly ||
         audit.promptInjectionRisk !== "none" || sourceFields.length !== rows.length ||
-        sourceFields.some(({ field }) => !sameStrings(field.sourceIds, [sourceId])) ||
+        sourceFields.some(({ field }) =>
+          !sameStrings(field.sourceIds, [sourceId]) ||
+          !nonEmptyLocalizedText(field.label)
+        ) ||
         rows.some(({ status, year }) => status === "AVAILABLE" && (
           year === null || year > Number(audit.retrievedAt.slice(0, 4))
         ))
@@ -466,8 +499,8 @@ export function bindReviewedGlobalProfileSnapshots(
     }
 
     return Object.freeze({
-      updatedAt: profile.updatedAt,
-      sources: profile.sources,
+      updatedAt: reviewedProfile.updatedAt,
+      sources: Object.freeze(reviewedProfile.sources.map((source) => Object.freeze(source))),
       auditSources: Object.freeze(reviewedProfile.auditSources.map((source) => Object.freeze(source))),
       fields: Object.freeze(fields),
     });
@@ -552,13 +585,25 @@ export function bindReviewedManualProfileCaptures(
     ));
     const approvedSourceIds = new Set([...globalSources.keys(), ...manualSources.keys()]);
     const approvedAudits = new Map([...globalAudits, ...manualAudits]);
+    const requiredManualPaths = [
+      "marketSummary.opportunitySummary",
+      "policyOverview.summary",
+      "windResource.resourceSummary",
+    ];
+    const manualPaths = manualProfile.fields.map(
+      ({ category, field }) => `${category}.${field.key}`,
+    ).sort(compareText);
+    if (!sameStrings(manualPaths, requiredManualPaths)) countryInputInvalid();
     for (const { category, field } of manualProfile.fields) {
       if (
         globalFieldPaths.has(`${category}.${field.key}`) ||
         field.sourceIds.some((sourceId) => !approvedSourceIds.has(sourceId)) ||
-        field.status !== "AVAILABLE" || !nonEmptyLocalizedText(field.value) ||
-        field.unit !== null || field.year !== null || field.reason !== null ||
-        field.note !== null
+        field.sourceIds.length === 0 || !nonEmptyLocalizedText(field.label) ||
+        field.unit !== null || field.year !== null || field.note !== null ||
+        !(field.status === "AVAILABLE"
+          ? nonEmptyLocalizedText(field.value) && field.reason === null
+          : field.status === "NOT_AVAILABLE" && field.value === null &&
+            nonEmptyLocalizedText(field.reason))
       ) countryInputInvalid();
       if (
         category === "policyOverview" && (
@@ -666,19 +711,16 @@ function mergeReviewedManualProfile(
         !["marketSummary", "policyOverview", "windResource"].includes(category) ||
         field.sourceIds.some((sourceId) => !allowedReferences.has(sourceId)))
     ) countryInputInvalid();
-    const merged = materializeBasicProfile({
-      updatedAt: globalProfile.updatedAt,
-      sources: [...globalProfile.sources, ...manualProfile.sources],
-      fields: [...globalProfile.fields, ...manualProfile.fields],
-    });
     if (manualProfile.updatedAt !== globalProfile.updatedAt) countryInputInvalid();
+    const sources = [...globalProfile.sources, ...manualProfile.sources];
+    const fields = [...globalProfile.fields, ...manualProfile.fields];
+    uniqueById(sources, ({ id }) => id);
+    uniqueById(fields, ({ category, field }) => `${category}.${field.key}`);
     return Object.freeze({
-      updatedAt: merged.updatedAt,
-      sources: merged.sources,
+      updatedAt: globalProfile.updatedAt,
+      sources: Object.freeze(sources),
       auditSources: Object.freeze([...globalProfile.auditSources, ...manualProfile.auditSources]),
-      fields: Object.freeze(Object.entries(merged.categories).flatMap(([category, { fields }]) =>
-        fields.map((field) => ({ category: category as BasicProfileCategoryKey, field }))
-      )),
+      fields: Object.freeze(fields),
     });
   } catch {
     throw new Error(COUNTRY_INPUT_ERROR);
@@ -706,28 +748,19 @@ export function createEmberNoCredentialTabularSnapshot(
     ) throw new Error("invalid countries");
     return new TextEncoder().encode([
       "countryCode,category,key,value,unit,year,locator,reasonZh,reasonEn",
-      ...countries.map((countryCode) => [
-        countryCode,
-        "electricityMarket",
-        "totalGeneration",
-        "",
-        "",
-        "",
-        "credential-check",
+      ...countries.flatMap((countryCode) => [
+        [countryCode, "electricityMarket", "totalGeneration", "", "", "",
+          "credential-check:total-generation"],
+        [countryCode, "electricityMarket", "electricityConsumption", "", "", "",
+          "credential-check:electricity-consumption"],
+        [countryCode, "electricityMarket", "electricityMix", "", "", "",
+          "credential-check:electricity-mix"],
+        [countryCode, "electricityMarket", "renewableGenerationShare", "", "", "",
+          "credential-check:renewable-generation-share"],
+      ].map((row) => [...row,
         "未提供已审核的Ember不可变标准化快照",
         "A reviewed immutable normalized Ember snapshot was not provided",
-      ].join(",")),
-      ...countries.map((countryCode) => [
-        countryCode,
-        "electricityMarket",
-        "renewableGenerationShare",
-        "",
-        "",
-        "",
-        "credential-check:renewable-generation-share",
-        "未提供已审核的Ember不可变标准化快照",
-        "A reviewed immutable normalized Ember snapshot was not provided",
-      ].join(",")),
+      ].join(","))),
     ].join("\n"));
   } catch {
     throw new Error("ember BASIC profile snapshot is invalid");
@@ -810,61 +843,93 @@ export async function captureWorldBankProfileSourceForBatch(
   }
 }
 
-function profileSourcesFromBase(
-  bundle: BasicCollectionAuditBundleV2,
-) {
-  const selected = new Set(["world-bank-population", "world-bank-gdp", "world-bank-gdp-growth"]);
-  return bundle.sourceRegister.sources.filter((source: { sourceId: string }) => selected.has(source.sourceId))
-    .map((source: BasicSourceRecord) => ({
+function profileProjectionFromBase(bundle: BasicCollectionAuditBundleV2): Readonly<{
+  sources: readonly BasicProfileSource[];
+  fields: readonly Readonly<{ category: "countryBasics"; field: BasicProfileField }>[];
+}> {
+  const definitions = [
+    ["country.code", "countryCode", bundle.sourceRegister.countryCode],
+    ["country.name", "countryName", undefined],
+    ["country.region", "region", undefined],
+    ["marketOverview.population", "population", bundle.marketOverviewDraft.population],
+    ["marketOverview.gdp", "gdp", bundle.marketOverviewDraft.gdp],
+    ["marketOverview.gdpGrowth", "gdpGrowth", bundle.marketOverviewDraft.gdpGrowth],
+  ] as const;
+  const auditById = new Map(bundle.sourceRegister.sources.map((source) => [source.sourceId, source]));
+  const referencedSourceIds = new Set<string>();
+  const fields = definitions.map(([fieldPath, key, projectedValue]) => {
+    const fact = bundle.extractedFacts.facts.find((entry) => entry.fieldPath === fieldPath);
+    if (fact?.status !== "candidate" || fact.evidence.length === 0) {
+      throw new Error("basic batch base profile fact is invalid");
+    }
+    const observedValue = projectedValue === undefined
+      ? fact.evidence[0]!.normalizedValue
+      : projectedValue;
+    const value = baseProfileValue(key, observedValue, bundle.sourceRegister.countryCode);
+    const sourceIds = [...new Set(fact.evidence.map(({ sourceId }) => sourceId))].sort(compareText);
+    const sources = sourceIds.map((sourceId) => {
+      const source = auditById.get(sourceId);
+      if (source === undefined) throw new Error("basic batch base profile source is invalid");
+      referencedSourceIds.add(sourceId);
+      return source;
+    });
+    const unavailable = value === null;
+    const firstEvidence = fact.evidence[0]!;
+    return Object.freeze({
+      category: "countryBasics" as const,
+      field: Object.freeze({
+        key,
+        label: basicProfileLabel(key),
+        status: unavailable ? "NOT_AVAILABLE" as const : "AVAILABLE" as const,
+        value,
+        unit: unavailable ? null : firstEvidence.unit,
+        year: unavailable ? null : firstEvidence.year,
+        sourceIds: Object.freeze(sourceIds),
+        checkedAt: sources.map(({ retrievedAt }) => retrievedAt.slice(0, 10)).sort(compareText).at(-1)!,
+        reason: unavailable ? Object.freeze({
+          zh: "World Bank 已核查，但最近记录无可用数值",
+          en: "World Bank was checked, but the latest record has no available value",
+        }) : null,
+        note: null,
+      }),
+    });
+  });
+  const sources = [...referencedSourceIds].sort(compareText).map((sourceId) => {
+    const source = auditById.get(sourceId)!;
+    return Object.freeze({
       id: source.sourceId,
       publisher: source.sourceName,
-      title: { zh: worldBankLabel(baseProfileKey(source.sourceId)).zh, en: worldBankLabel(baseProfileKey(source.sourceId)).en },
+      title: Object.freeze({ zh: source.sourceName, en: source.sourceName }),
       url: source.sourceUrl,
       publishedAt: source.publishedAt,
       retrievedAt: source.retrievedAt,
       credibility: source.credibility,
-    }));
+    });
+  });
+  return Object.freeze({ sources: Object.freeze(sources), fields: Object.freeze(fields) });
 }
 
-function profileFieldsFromBase(bundle: BasicCollectionAuditBundleV2) {
-  const definitions = [
-    ["world-bank-population", "population", "population"],
-    ["world-bank-gdp", "gdp", "gdp"],
-    ["world-bank-gdp-growth", "gdpGrowth", "gdpGrowth"],
-  ] as const;
-  return definitions.map(([sourceId, key, draftKey]) => {
-    const fact = bundle.extractedFacts.facts.find((entry) =>
-      entry.fieldPath === `marketOverview.${draftKey}`
-    );
-    const evidence = fact?.evidence.find((entry) => entry.sourceId === sourceId);
-    const source = bundle.sourceRegister.sources.find((entry) => entry.sourceId === sourceId);
-    const value = bundle.marketOverviewDraft[draftKey];
-    if (
-      evidence === undefined || source === undefined ||
-      !(value === null || (typeof value === "number" && Number.isFinite(value)))
-    ) {
-      throw new Error("basic batch World Bank base fact is invalid");
+function baseProfileValue(
+  key: string,
+  value: unknown,
+  countryCode: string,
+): BasicProfileField["value"] {
+  if (key === "countryCode") {
+    if (value !== countryCode) throw new Error("basic batch base profile value is invalid");
+    return countryCode;
+  }
+  if (key === "countryName") {
+    if (!nonEmptyLocalizedText(value)) throw new Error("basic batch base profile value is invalid");
+    return value;
+  }
+  if (key === "region") {
+    if (typeof value !== "string" || value.trim() === "") {
+      throw new Error("basic batch base profile value is invalid");
     }
-    const unavailable = value === null;
-    return {
-      category: "countryBasics" as const,
-      field: {
-        key,
-        label: worldBankLabel(key),
-        status: unavailable ? "NOT_AVAILABLE" as const : "AVAILABLE" as const,
-        value,
-        unit: unavailable ? null : evidence.unit,
-        year: unavailable ? null : evidence.year,
-        sourceIds: [sourceId],
-        checkedAt: source.retrievedAt.slice(0, 10),
-        reason: unavailable ? {
-          zh: "World Bank 已核查，但最近记录无可用数值",
-          en: "World Bank was checked, but the latest record has no available value",
-        } : null,
-        note: null,
-      },
-    };
-  });
+    return value;
+  }
+  if (value === null || (typeof value === "number" && Number.isFinite(value))) return value;
+  throw new Error("basic batch base profile value is invalid");
 }
 
 async function readBoundedBody(
@@ -891,11 +956,6 @@ async function readBoundedBody(
   return result;
 }
 
-function baseProfileKey(sourceId: string): string {
-  return sourceId === "world-bank-population" ? "population" :
-    sourceId === "world-bank-gdp" ? "gdp" : "gdpGrowth";
-}
-
 function worldBankLabel(key: string): Readonly<{ zh: string; en: string }> {
   const labels: Record<string, Readonly<{ zh: string; en: string }>> = {
     population: { zh: "人口", en: "Population" },
@@ -905,6 +965,15 @@ function worldBankLabel(key: string): Readonly<{ zh: string; en: string }> {
     electricityAccess: { zh: "通电率", en: "Access to electricity" },
   };
   return labels[key] ?? (() => { throw new Error("world bank BASIC field is invalid"); })();
+}
+
+function basicProfileLabel(key: string): Readonly<{ zh: string; en: string }> {
+  const labels: Record<string, Readonly<{ zh: string; en: string }>> = {
+    countryCode: { zh: "国家代码", en: "Country code" },
+    countryName: { zh: "国家名称", en: "Country name" },
+    region: { zh: "区域", en: "Region" },
+  };
+  return labels[key] ?? worldBankLabel(key);
 }
 
 function sha256(bytes: Uint8Array): string {
@@ -969,6 +1038,11 @@ function nonEmptyLocalizedText(
     typeof record.zh === "string" && record.zh.trim().length > 0 &&
     typeof record.en === "string" && record.en.trim().length > 0
   );
+}
+
+function isRfc3339(value: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/.test(value) &&
+    Number.isFinite(Date.parse(value));
 }
 
 function countryInputInvalid(): never {

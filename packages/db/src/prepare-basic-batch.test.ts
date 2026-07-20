@@ -28,6 +28,7 @@ import {
 import {
   bindReviewedGlobalProfileSnapshots,
   bindReviewedManualProfileCaptures,
+  assembleProductionBasicProfile,
   createFilesystemBasicBatchCache,
   createEmberNoCredentialTabularSnapshot,
   captureWorldBankProfileSourceForBatch,
@@ -614,14 +615,17 @@ describe("reviewed global BASIC profile snapshots", () => {
   test("binds every captured byte hash and tabular row to its exact audit source and field", () => {
     const encoder = new TextEncoder();
     const ember = encoder.encode([
-      "countryCode,category,key,value,unit,year,locator",
-      "ID,electricityMarket,totalGeneration,312.4,TWh,2025,table:ID:2025",
-      "ID,electricityMarket,renewableGenerationShare,48,%,2025,table:ID:renewables:2025",
+      "countryCode,category,key,value,unit,year,locator,reasonZh,reasonEn",
+      "ID,electricityMarket,totalGeneration,312.4,TWh,2025,table:ID:2025,,",
+      "ID,electricityMarket,electricityConsumption,287.1,TWh,2025,table:ID:consumption:2025,,",
+      "ID,electricityMarket,electricityMix,,,,table:ID:mix:2025,已核查但未提供双语电力结构,Checked but no bilingual electricity mix was provided",
+      "ID,electricityMarket,renewableGenerationShare,48,%,2025,table:ID:renewables:2025,,",
     ].join("\n"));
     const solar = encoder.encode([
-      "countryCode,category,key,value,unit,year,locator",
-      "ID,solarResource,ghi,5.1,kWh/m2/day,2024,grid:ID",
-      "ID,solarResource,pvout,4.3,kWh/kWp/day,2024,grid:ID:pvout",
+      "countryCode,category,key,value,unit,year,locator,reasonZh,reasonEn",
+      "ID,solarResource,ghi,5.1,kWh/m2/day,2024,grid:ID,,",
+      "ID,solarResource,pvout,4.3,kWh/kWp/day,2024,grid:ID:pvout,,",
+      "ID,solarResource,solarPotentialSummary,,,,grid:ID:summary,已核查但未提供双语太阳能潜力摘要,Checked but no bilingual solar potential summary was provided",
     ].join("\n"));
     const wind = encoder.encode([
       "countryCode,category,key,value,unit,year,locator",
@@ -650,8 +654,11 @@ describe("reviewed global BASIC profile snapshots", () => {
         profileSource("irenastat-capacity"),
       ],
       auditSources: [
-        auditSource("ember-electricity", ember, ["table:ID:2025", "table:ID:renewables:2025"]),
-        auditSource("global-solar-atlas", solar, ["grid:ID", "grid:ID:pvout"]),
+        auditSource("ember-electricity", ember, [
+          "table:ID:2025", "table:ID:consumption:2025", "table:ID:mix:2025",
+          "table:ID:renewables:2025",
+        ]),
+        auditSource("global-solar-atlas", solar, ["grid:ID", "grid:ID:pvout", "grid:ID:summary"]),
         auditSource("global-wind-atlas", wind, ["grid:ID:onshore", "grid:ID:offshore"]),
         auditSource("irenastat-capacity", capacity, [
           "table:ID:solar", "table:ID:wind", "table:ID:hydro", "table:ID:total",
@@ -659,6 +666,8 @@ describe("reviewed global BASIC profile snapshots", () => {
       ],
       fields: [
         reviewedField("ember-electricity", "electricityMarket", "totalGeneration", 312.4, "TWh", 2025),
+        reviewedField("ember-electricity", "electricityMarket", "electricityConsumption", 287.1, "TWh", 2025),
+        reviewedUnavailableField("ember-electricity", "electricityMarket", "electricityMix"),
         reviewedField("ember-electricity", "electricityMarket", "renewableGenerationShare", 48, "%", 2025),
         reviewedField("irenastat-capacity", "renewableCapacity", "solarCapacity", 8.2, "GW", 2025),
         reviewedField("irenastat-capacity", "renewableCapacity", "windCapacity", 0.2, "GW", 2025),
@@ -666,6 +675,7 @@ describe("reviewed global BASIC profile snapshots", () => {
         reviewedField("irenastat-capacity", "renewableCapacity", "totalRenewableCapacity", 15.1, "GW", 2025),
         reviewedField("global-solar-atlas", "solarResource", "ghi", 5.1, "kWh/m2/day", 2024),
         reviewedField("global-solar-atlas", "solarResource", "pvout", 4.3, "kWh/kWp/day", 2024),
+        reviewedUnavailableField("global-solar-atlas", "solarResource", "solarPotentialSummary"),
         reviewedField("global-wind-atlas", "windResource", "onshoreWindClass", "good", null, 2024),
         reviewedField("global-wind-atlas", "windResource", "offshoreWindClass", "very-good", null, 2024),
       ],
@@ -795,20 +805,19 @@ describe("reviewed global BASIC profile snapshots", () => {
     );
     expect(bytes).toEqual(createEmberNoCredentialTabularSnapshot(["ID", "VN"]));
     expect(new TextDecoder().decode(bytes)).not.toContain("secret");
-    expect(bindSnapshotRows(bytes, "ID")).toEqual([expect.objectContaining({
+    expect(bindSnapshotRows(bytes, "ID")).toEqual([
+      "totalGeneration", "electricityConsumption", "electricityMix",
+      "renewableGenerationShare",
+    ].map((key) => expect.objectContaining({
       category: "electricityMarket",
-      key: "totalGeneration",
+      key,
       status: "NOT_AVAILABLE",
       reason: {
         zh: "未提供已审核的Ember不可变标准化快照",
         en: "A reviewed immutable normalized Ember snapshot was not provided",
       },
-    }), expect.objectContaining({
-      category: "electricityMarket",
-      key: "renewableGenerationShare",
-      status: "NOT_AVAILABLE",
-    })]);
-    expect(bindSnapshotRows(bytes, "VN")).toHaveLength(2);
+    })));
+    expect(bindSnapshotRows(bytes, "VN")).toHaveLength(4);
   });
 
   test("uses a present reviewed immutable normalized Ember snapshot byte-for-byte", async () => {
@@ -817,9 +826,11 @@ describe("reviewed global BASIC profile snapshots", () => {
     mkdirSync(directory, { recursive: true, mode: 0o700 });
     const pathname = join(directory, "ember-electricity.snapshot");
     const reviewed = new TextEncoder().encode([
-      "countryCode,category,key,value,unit,year,locator",
-      "ID,electricityMarket,totalGeneration,312.4,TWh,2025,table:ID:2025",
-      "ID,electricityMarket,renewableGenerationShare,48,%,2025,table:ID:renewables:2025",
+      "countryCode,category,key,value,unit,year,locator,reasonZh,reasonEn",
+      "ID,electricityMarket,totalGeneration,312.4,TWh,2025,table:ID:2025,,",
+      "ID,electricityMarket,electricityConsumption,287.1,TWh,2025,table:ID:consumption:2025,,",
+      "ID,electricityMarket,electricityMix,,,,table:ID:mix:2025,已核查但未提供双语电力结构,Checked but no bilingual electricity mix was provided",
+      "ID,electricityMarket,renewableGenerationShare,48,%,2025,table:ID:renewables:2025,,",
     ].join("\n"));
     writeFileSync(pathname, reviewed, { mode: 0o600 });
     await expect(readReviewedEmberSnapshotOrUnavailable(root, pathname, ["ID"]))
@@ -828,6 +839,59 @@ describe("reviewed global BASIC profile snapshots", () => {
 });
 
 describe("reviewed manual BASIC profile captures", () => {
+  test("assembles the production base, World Bank, global, and manual layers into exactly 24 fields", () => {
+    const v3 = createBasicCollectionAuditV3Fixture();
+    const baseBundle = {
+      ...structuredClone(v3),
+      sourceRegister: { ...v3.sourceRegister, schemaVersion: "basic-country-audit/v2" },
+      extractedFacts: {
+        ...v3.extractedFacts,
+        schemaVersion: "basic-country-audit/v2",
+        facts: v3.extractedFacts.facts.filter(({ fieldPath }) =>
+          !fieldPath.startsWith("marketOverview.basicProfile.")),
+      },
+      marketOverviewDraft: Object.fromEntries(
+        Object.entries(v3.marketOverviewDraft).filter(([key]) => key !== "basicProfile"),
+      ),
+      reviewReport: { ...v3.reviewReport, schemaVersion: "basic-country-audit/v2" },
+    };
+    const globalProfile = reviewedGlobalProfileFixture();
+    const manualBytes = manualCapture("iea-policies", ["section:renewable-target"]);
+    const reviewedProfile = bindReviewedManualProfileCaptures(
+      "ID",
+      new Map([["iea-policies", manualBytes]]),
+      globalProfile,
+      reviewedManualProfileFixture(
+        "iea-policies", manualBytes, "policyOverview", "summary", ["iea-policies"],
+      ),
+    );
+    const additiveWorldBank = [
+      additiveWorldBankProfile("world-bank-gdp-per-capita", "gdpPerCapita", "countryBasics", 5_000, "current US$"),
+      additiveWorldBankProfile("world-bank-electricity-access", "electricityAccess", "energyAccess", 99.2, "%"),
+    ];
+
+    const profile = assembleProductionBasicProfile({
+      baseBundle: baseBundle as never,
+      additiveWorldBank,
+      reviewedProfile,
+    });
+    const fields = Object.values(profile.categories).flatMap(({ fields }) => fields);
+
+    expect(fields).toHaveLength(24);
+    expect(new Set(fields.map(({ key }) => key)).size).toBe(24);
+    expect(profile.categories.countryBasics.fields.map(({ key }) => key)).toEqual([
+      "countryCode", "countryName", "region", "population", "gdp", "gdpPerCapita",
+      "gdpGrowth",
+    ]);
+    expect(profile.categories.electricityMarket.fields.map(({ key }) => key)).toEqual([
+      "totalGeneration", "electricityConsumption", "electricityMix",
+      "renewableGenerationShare",
+    ]);
+    expect(profile.categories.solarResource.fields.map(({ key }) => key)).toEqual([
+      "ghi", "pvout", "solarPotentialSummary",
+    ]);
+  });
+
   test("binds IEA policy evidence to captured bytes and rejects zero hashes and fake locators", () => {
     const globalProfile = reviewedGlobalProfileFixture();
     const manualBytes = manualCapture("iea-policies", ["section:renewable-target"]);
@@ -959,12 +1023,9 @@ describe("reviewed manual BASIC profile captures", () => {
       sources: [],
       auditSources: [],
     };
-    expect(bindReviewedManualProfileCaptures(
+    expect(() => bindReviewedManualProfileCaptures(
       "ID", new Map(), globalProfile, windSummary,
-    ).fields).toContainEqual(expect.objectContaining({
-      category: "windResource",
-      field: expect.objectContaining({ key: "resourceSummary" }),
-    }));
+    )).toThrow("basic batch country input is invalid");
 
     const marketSummary = {
       ...windSummary,
@@ -978,14 +1039,9 @@ describe("reviewed manual BASIC profile captures", () => {
         },
       }],
     };
-    expect(bindReviewedManualProfileCaptures(
+    expect(() => bindReviewedManualProfileCaptures(
       "ID", new Map(), globalProfile, marketSummary,
-    ).fields).toContainEqual(expect.objectContaining({
-      category: "marketSummary",
-      field: expect.objectContaining({
-        sourceIds: ["global-wind-atlas", "global-solar-atlas"],
-      }),
-    }));
+    )).toThrow("basic batch country input is invalid");
 
     const arbitraryKey = reviewedManualProfileFixture(
       "iea-policies", ieaBytes, "policyOverview", "renewableTarget", ["iea-policies"],
@@ -1146,6 +1202,70 @@ function reviewedField(
   };
 }
 
+function reviewedUnavailableField(
+  sourceId: string,
+  category: "electricityMarket" | "solarResource",
+  key: "electricityMix" | "solarPotentialSummary",
+) {
+  const reason = key === "electricityMix" ? {
+    zh: "已核查但未提供双语电力结构",
+    en: "Checked but no bilingual electricity mix was provided",
+  } : {
+    zh: "已核查但未提供双语太阳能潜力摘要",
+    en: "Checked but no bilingual solar potential summary was provided",
+  };
+  return {
+    category,
+    field: {
+      key,
+      label: { zh: key, en: key },
+      status: "NOT_AVAILABLE" as const,
+      value: null,
+      unit: null,
+      year: null,
+      sourceIds: [sourceId],
+      checkedAt: "2026-07-20",
+      reason,
+      note: null,
+    },
+  };
+}
+
+function additiveWorldBankProfile(
+  sourceId: string,
+  key: string,
+  category: "countryBasics" | "energyAccess",
+  value: number,
+  unit: string,
+) {
+  return {
+    profileSource: {
+      id: sourceId,
+      publisher: "World Bank",
+      title: { zh: key, en: key },
+      url: `https://api.worldbank.org/v2/${sourceId}`,
+      publishedAt: null,
+      retrievedAt: "2026-07-20T00:00:00Z",
+      credibility: "OFFICIAL" as const,
+    },
+    field: {
+      category,
+      field: {
+        key,
+        label: { zh: key, en: key },
+        status: "AVAILABLE" as const,
+        value,
+        unit,
+        year: 2025,
+        sourceIds: [sourceId],
+        checkedAt: "2026-07-20",
+        reason: null,
+        note: null,
+      },
+    },
+  };
+}
+
 function approvedWorldBankEntry(
   sourceId: "world-bank-electricity-access" | "world-bank-gdp-per-capita",
   countryCode: string,
@@ -1161,14 +1281,17 @@ function reviewedGlobalProfileFixture() {
   const encoder = new TextEncoder();
   const captures = {
     ember: encoder.encode([
-      "countryCode,category,key,value,unit,year,locator",
-      "ID,electricityMarket,totalGeneration,312.4,TWh,2025,table:ID:2025",
-      "ID,electricityMarket,renewableGenerationShare,48,%,2025,table:ID:renewables:2025",
+      "countryCode,category,key,value,unit,year,locator,reasonZh,reasonEn",
+      "ID,electricityMarket,totalGeneration,312.4,TWh,2025,table:ID:2025,,",
+      "ID,electricityMarket,electricityConsumption,287.1,TWh,2025,table:ID:consumption:2025,,",
+      "ID,electricityMarket,electricityMix,,,,table:ID:mix:2025,已核查但未提供双语电力结构,Checked but no bilingual electricity mix was provided",
+      "ID,electricityMarket,renewableGenerationShare,48,%,2025,table:ID:renewables:2025,,",
     ].join("\n")),
     solar: encoder.encode([
-      "countryCode,category,key,value,unit,year,locator",
-      "ID,solarResource,ghi,5.1,kWh/m2/day,2024,grid:ID",
-      "ID,solarResource,pvout,4.3,kWh/kWp/day,2024,grid:ID:pvout",
+      "countryCode,category,key,value,unit,year,locator,reasonZh,reasonEn",
+      "ID,solarResource,ghi,5.1,kWh/m2/day,2024,grid:ID,,",
+      "ID,solarResource,pvout,4.3,kWh/kWp/day,2024,grid:ID:pvout,,",
+      "ID,solarResource,solarPotentialSummary,,,,grid:ID:summary,已核查但未提供双语太阳能潜力摘要,Checked but no bilingual solar potential summary was provided",
     ].join("\n")),
     wind: encoder.encode([
       "countryCode,category,key,value,unit,year,locator",
@@ -1192,8 +1315,11 @@ function reviewedGlobalProfileFixture() {
       profileSource("irenastat-capacity"),
     ],
     auditSources: [
-      auditSource("ember-electricity", captures.ember, ["table:ID:2025", "table:ID:renewables:2025"]),
-      auditSource("global-solar-atlas", captures.solar, ["grid:ID", "grid:ID:pvout"]),
+      auditSource("ember-electricity", captures.ember, [
+        "table:ID:2025", "table:ID:consumption:2025", "table:ID:mix:2025",
+        "table:ID:renewables:2025",
+      ]),
+      auditSource("global-solar-atlas", captures.solar, ["grid:ID", "grid:ID:pvout", "grid:ID:summary"]),
       auditSource("global-wind-atlas", captures.wind, ["grid:ID:onshore", "grid:ID:offshore"]),
       auditSource("irenastat-capacity", captures.capacity, [
         "table:ID:solar", "table:ID:wind", "table:ID:hydro", "table:ID:total",
@@ -1201,6 +1327,8 @@ function reviewedGlobalProfileFixture() {
     ],
     fields: [
       reviewedField("ember-electricity", "electricityMarket", "totalGeneration", 312.4, "TWh", 2025),
+      reviewedField("ember-electricity", "electricityMarket", "electricityConsumption", 287.1, "TWh", 2025),
+      reviewedUnavailableField("ember-electricity", "electricityMarket", "electricityMix"),
       reviewedField("ember-electricity", "electricityMarket", "renewableGenerationShare", 48, "%", 2025),
       reviewedField("irenastat-capacity", "renewableCapacity", "solarCapacity", 8.2, "GW", 2025),
       reviewedField("irenastat-capacity", "renewableCapacity", "windCapacity", 0.2, "GW", 2025),
@@ -1208,6 +1336,7 @@ function reviewedGlobalProfileFixture() {
       reviewedField("irenastat-capacity", "renewableCapacity", "totalRenewableCapacity", 15.1, "GW", 2025),
       reviewedField("global-solar-atlas", "solarResource", "ghi", 5.1, "kWh/m2/day", 2024),
       reviewedField("global-solar-atlas", "solarResource", "pvout", 4.3, "kWh/kWp/day", 2024),
+      reviewedUnavailableField("global-solar-atlas", "solarResource", "solarPotentialSummary"),
       reviewedField("global-wind-atlas", "windResource", "onshoreWindClass", "good", null, 2024),
       reviewedField("global-wind-atlas", "windResource", "offshoreWindClass", "very-good", null, 2024),
     ],
@@ -1245,6 +1374,42 @@ function reviewedManualProfileFixture(
     },
   } as const;
   const policy = policies[sourceId];
+  const requestedField = {
+    category,
+    field: {
+      key,
+      label: { zh: key, en: key },
+      status: "AVAILABLE" as const,
+      value: { zh: "已审核内容", en: "Reviewed content" },
+      unit: null,
+      year: null,
+      sourceIds,
+      checkedAt: "2026-07-20",
+      reason: null,
+      note: null,
+    },
+  };
+  const fields = category === "policyOverview" && key === "summary" ? [
+    requestedField,
+    {
+      category: "windResource" as const,
+      field: {
+        ...requestedField.field,
+        key: "resourceSummary",
+        label: { zh: "风能资源摘要", en: "Wind resource summary" },
+        sourceIds: ["global-wind-atlas"],
+      },
+    },
+    {
+      category: "marketSummary" as const,
+      field: {
+        ...requestedField.field,
+        key: "opportunitySummary",
+        label: { zh: "市场机会摘要", en: "Market opportunity summary" },
+        sourceIds: ["global-solar-atlas", "global-wind-atlas"],
+      },
+    },
+  ] : [requestedField];
   return {
     updatedAt: "2026-07-20T00:00:00Z",
     sources: [{
@@ -1271,20 +1436,6 @@ function reviewedManualProfileFixture(
       discoveryOnly: false,
       promptInjectionRisk: "none" as const,
     }],
-    fields: [{
-      category,
-      field: {
-        key,
-        label: { zh: key, en: key },
-        status: "AVAILABLE" as const,
-        value: { zh: "已审核内容", en: "Reviewed content" },
-        unit: null,
-        year: null,
-        sourceIds,
-        checkedAt: "2026-07-20",
-        reason: null,
-        note: null,
-      },
-    }],
+    fields,
   };
 }
