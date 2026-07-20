@@ -1,4 +1,10 @@
+import type { BasicProfile } from "@navigator/shared-types/basic-profile";
+
 export type JsonRecord = Record<string, unknown>;
+
+export interface BasicMarketOverviewCanonical extends JsonRecord {
+  basicProfile?: BasicProfile | null;
+}
 
 export interface BasicCollectionManifest {
   activeRunId: string;
@@ -16,7 +22,7 @@ export interface BasicAuditRun {
 
 export interface BasicCanonicalData {
   country: JsonRecord;
-  marketOverview: JsonRecord;
+  marketOverview: BasicMarketOverviewCanonical;
   policy: JsonRecord[];
   risk: JsonRecord[];
   opportunities: JsonRecord[];
@@ -40,7 +46,7 @@ export interface BasicCountryBundle {
 export interface BasicCountryTemplateInput {
   countryDirectory: string;
   country: Omit<JsonRecord, "coverageLevel" | "moduleCoverage">;
-  marketOverview: JsonRecord;
+  marketOverview: BasicMarketOverviewCanonical;
   manifest: BasicCollectionManifest;
   auditRun: BasicAuditRun;
 }

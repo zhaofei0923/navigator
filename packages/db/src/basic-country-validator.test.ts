@@ -8,6 +8,7 @@ import { loadBasicCountryBundle } from "./seed/basic-country-loader.js";
 import { validateBasicCountryBundle } from "./seed/basic-country-validator.js";
 import {
   createValidBundle,
+  createValidBasicProfile,
   getCoverageByModule,
   getModuleCoverage,
   getRecord,
@@ -20,6 +21,26 @@ import {
 } from "./basic-country-test-fixture.js";
 
 describe("Basic country validation", () => {
+  test("accepts legacy omission and a valid BASIC v2 profile but rejects malformed profiles", () => {
+    const legacy = createValidBundle();
+    expect(legacy.canonical.marketOverview).not.toHaveProperty("basicProfile");
+    expect(validateBasicCountryBundle(legacy).valid).toBe(true);
+
+    const current = createValidBundle();
+    getRecord(current.canonical.marketOverview, "market overview").basicProfile =
+      createValidBasicProfile();
+    expect(validateBasicCountryBundle(current).valid).toBe(true);
+
+    const malformed = createValidBundle();
+    getRecord(malformed.canonical.marketOverview, "market overview").basicProfile = {
+      ...createValidBasicProfile(),
+      schemaVersion: "basic-market-profile/v1",
+    };
+    expect(validateBasicCountryBundle(malformed).errors).toContain(
+      "market-overview.basicProfile must be a valid basic-market-profile/v2 profile or null",
+    );
+  });
+
   test("validates a Basic bundle with one-language localized fallbacks", () => {
     const bundle = createValidBundle();
     setLocalizedValue(bundle.canonical.country, "name", "en", "");

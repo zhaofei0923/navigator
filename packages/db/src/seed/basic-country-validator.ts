@@ -1,3 +1,4 @@
+import { parseBasicProfile } from "@navigator/shared-types/basic-profile";
 import {
   CREDIBILITIES,
   INDUSTRY_TAGS,
@@ -107,6 +108,15 @@ function validateMarketOverview(
   validateLocalized(marketOverview.energyDemand, "market-overview.energyDemand", errors);
   validateLocalized(marketOverview.renewableTarget, "market-overview.renewableTarget", errors);
   validateKeyIndicators(marketOverview.keyIndicators, errors);
+  if (
+    Object.hasOwn(marketOverview, "basicProfile") &&
+    marketOverview.basicProfile !== null &&
+    parseBasicProfile(marketOverview.basicProfile) === null
+  ) {
+    errors.push(
+      "market-overview.basicProfile must be a valid basic-market-profile/v2 profile or null",
+    );
+  }
 
   expectNonBlank(marketOverview.source, "market-overview.source", errors);
   validateSourceUrl(marketOverview.sourceUrl, marketOverview.source, errors);

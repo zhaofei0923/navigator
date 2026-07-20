@@ -1,3 +1,4 @@
+import { parseBasicProfile } from "@navigator/shared-types/basic-profile";
 import type {
   IndustryTag,
   ModuleKey,
@@ -173,6 +174,7 @@ function transformMarketOverview(
       "marketOverview.renewableTarget",
     ),
     keyIndicators: transformKeyIndicators(marketOverview.keyIndicators),
+    basicProfile: parseBasicProfile(marketOverview.basicProfile),
     source: readString(marketOverview.source, "marketOverview.source"),
     sourceUrl: readStringOrNull(marketOverview.sourceUrl, "marketOverview.sourceUrl"),
     collectedAt: readString(marketOverview.collectedAt, "marketOverview.collectedAt"),

@@ -1,3 +1,5 @@
+import type { BasicProfile } from "@navigator/shared-types/basic-profile";
+
 import type { BasicCountryValidationResult } from "./basic-country-types.js";
 
 export interface BasicLocalizedTextImportData {
@@ -38,6 +40,7 @@ export interface BasicMarketOverviewImportData {
   energyDemand: BasicLocalizedTextImportData;
   renewableTarget: BasicLocalizedTextImportData;
   keyIndicators: BasicKeyIndicatorImportData[];
+  basicProfile: BasicProfile | null;
   source: string;
   sourceUrl: string | null;
   collectedAt: string;

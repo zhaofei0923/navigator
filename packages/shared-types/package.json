@@ -20,6 +20,11 @@
       "default": "./dist/coverage.js"
     },
     "./i18n": "./src/i18n.ts",
+    "./basic-profile": {
+      "types": "./src/basic-profile.ts",
+      "development": "./src/basic-profile.ts",
+      "default": "./dist/basic-profile.js"
+    },
     "./schema": {
       "types": "./src/schema.ts",
       "development": "./src/schema.ts",

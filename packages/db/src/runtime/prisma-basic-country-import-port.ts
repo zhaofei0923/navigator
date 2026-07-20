@@ -1,3 +1,5 @@
+import { parseBasicProfile } from "@navigator/shared-types/basic-profile";
+
 import type {
   BasicCountryImportTransaction,
   BasicCountryImportTransactionPort,
@@ -287,7 +289,7 @@ function parseMarketUpsert(operation: BasicSeedImportOperation): Record<string, 
 function parseMarketData(value: unknown): Record<string, unknown> {
   const data = exactRecord(value, [
     "overview", "population", "gdp", "gdpGrowth", "energyDemand", "renewableTarget",
-    "keyIndicators", "source", "sourceUrl", "collectedAt", "updatedAt", "credibility",
+    "keyIndicators", "basicProfile", "source", "sourceUrl", "collectedAt", "updatedAt", "credibility",
     "reviewStatus", "aiUsable", "countryCode", "industryTags", "techTags",
   ]);
   const source = requireNonBlankString(data.source);
@@ -299,6 +301,7 @@ function parseMarketData(value: unknown): Record<string, unknown> {
     energyDemand: parseLocalizedText(data.energyDemand),
     renewableTarget: parseLocalizedText(data.renewableTarget),
     keyIndicators: parseKeyIndicators(data.keyIndicators),
+    basicProfile: parseRequiredBasicProfile(data.basicProfile),
     source,
     sourceUrl: parseSourceUrl(data.sourceUrl, source),
     collectedAt: parseRfc3339(data.collectedAt),
@@ -310,6 +313,12 @@ function parseMarketData(value: unknown): Record<string, unknown> {
     industryTags: parseMappedArray(data.industryTags, PRISMA_INDUSTRY_TAGS),
     techTags: parseMappedArray(data.techTags, PRISMA_TECH_TAGS),
   };
+}
+
+function parseRequiredBasicProfile(value: unknown) {
+  const profile = parseBasicProfile(value);
+  if (value !== null && profile === null) throw invalidOperation();
+  return profile;
 }
 
 function parseLocalizedText(value: unknown): Record<string, string> {

@@ -15,6 +15,7 @@ import {
   DatabaseUnavailableError,
   DataIntegrityError,
 } from "./read/country-read-runtime.js";
+import { createValidBasicProfile } from "./basic-country-test-fixture.js";
 
 const PRISMA_CLIENT_VERSION = "6.19.3";
 const PRIVATE_FAILURE =
@@ -85,6 +86,7 @@ function validRow(): Record<string, unknown> {
       energyDemand: localized("Demand"),
       renewableTarget: localized("Target"),
       keyIndicators: [{ label: localized("Indicator"), value: "1", unit: "%", year: 2026 }],
+      basicProfile: null,
       ...meta,
     },
     policies: [{
@@ -225,6 +227,7 @@ describe("Prisma CountryReadRepository boundary", () => {
     });
     expect(select.knowledgeChunks?.select).not.toHaveProperty("embeddingZh");
     expect(select.knowledgeChunks?.select).not.toHaveProperty("embeddingEn");
+    expect(select.marketOverview?.select).toHaveProperty("basicProfile", true);
   });
 
   test("maps Prisma dates, enums and JSON into a storage-neutral snapshot", async () => {
@@ -244,7 +247,18 @@ describe("Prisma CountryReadRepository boundary", () => {
       effectiveDate: "2026-01-03T00:00:00.000Z",
     });
     expect(snapshot?.knowledge[0]).not.toHaveProperty("embeddingZh");
+    expect(snapshot?.marketOverview).toHaveProperty("basicProfile", null);
     expect(snapshot).not.toHaveProperty("country.findMany");
+  });
+
+  test("round-trips a validated BASIC v2 profile from Prisma JSON", async () => {
+    const client = new RecordingClient();
+    const profile = createValidBasicProfile();
+    marketOverview(client.row ?? {}).basicProfile = profile;
+
+    const snapshot = await createPrismaCountryReadRepository(client).findByCode("ID");
+
+    expect(snapshot?.marketOverview?.basicProfile).toEqual(profile);
   });
 
   test("normalizes multiple policy, report, and knowledge records without dropping them", async () => {
@@ -307,6 +321,9 @@ describe("Prisma CountryReadRepository boundary", () => {
     ["unpublished relation crossing the boundary", (row: Record<string, unknown>) => {
       const policies = row.policies as Array<Record<string, unknown>>;
       if (policies[0] !== undefined) policies[0].reviewStatus = "draft";
+    }],
+    ["malformed BASIC v2 profile", (row: Record<string, unknown>) => {
+      marketOverview(row).basicProfile = { schemaVersion: "basic-market-profile/v1" };
     }],
   ])("fails closed with a stable redacted error for %s", async (_label, mutate) => {
     const client = new RecordingClient();

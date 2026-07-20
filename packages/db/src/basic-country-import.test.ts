@@ -17,6 +17,7 @@ import { isPlainRecord } from "./seed/basic-country-validation-utils.js";
 import { validateBasicCountryBundle } from "./seed/basic-country-validator.js";
 import {
   createValidBundle,
+  createValidBasicProfile,
   getRecord,
   getRecordArray,
   getRequiredArrayItem,
@@ -75,7 +76,23 @@ describe("Basic country import plan", () => {
     const marketCreate = getRecord(getRecord(plan.operations[11]?.args, "market operation").create, "market create");
     expect(marketCreate.industryTags).toEqual(["SOLAR"]);
     expect(marketCreate.techTags).toEqual(["PV_MODULE"]);
+    expect(marketCreate.basicProfile).toBeNull();
     expect(marketCreate).not.toHaveProperty("id");
+  });
+
+  test("preserves a validated BASIC v2 profile in the Prisma import plan", () => {
+    const bundle = createValidBundle();
+    const profile = createValidBasicProfile();
+    getRecord(bundle.canonical.marketOverview, "market overview").basicProfile = profile;
+
+    const plan = buildBasicCountryImportPlan(bundle);
+    const marketCreate = getRecord(
+      getRecord(plan.operations.at(-1)?.args, "market operation").create,
+      "market create",
+    );
+
+    expect(marketCreate.basicProfile).toEqual(profile);
+    expect(marketCreate.basicProfile).not.toBe(profile);
   });
 
   test("throws joined validation errors before transforming invalid data", () => {

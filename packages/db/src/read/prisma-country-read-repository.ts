@@ -1,4 +1,5 @@
 import { Prisma, type PrismaClient } from "@prisma/client";
+import { parseBasicProfile } from "@navigator/shared-types/basic-profile";
 import {
   RISK_CATEGORIES,
   sortCountrySnapshots,
@@ -158,6 +159,7 @@ const COUNTRY_SELECT = {
       energyDemand: true,
       renewableTarget: true,
       keyIndicators: true,
+      basicProfile: true,
       ...METADATA_SELECT,
     },
   },
@@ -418,8 +420,15 @@ function parseMarketOverview(value: unknown, countryCode: string): JsonObject {
     energyDemand: parseLocalizedText(row.energyDemand),
     renewableTarget: parseLocalizedText(row.renewableTarget),
     keyIndicators: parseKeyIndicators(row.keyIndicators),
+    basicProfile: parseRequiredBasicProfile(row.basicProfile),
     ...parseMetadata(row, countryCode),
   };
+}
+
+function parseRequiredBasicProfile(value: unknown): JsonObject | null {
+  const profile = parseBasicProfile(value);
+  if (value !== null && value !== undefined && profile === null) throw invalidData();
+  return profile as unknown as JsonObject | null;
 }
 
 type RecordParser = (

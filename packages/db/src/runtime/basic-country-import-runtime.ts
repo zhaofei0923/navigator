@@ -1,5 +1,6 @@
 import { isDeepStrictEqual } from "node:util";
 
+import { parseBasicProfile } from "@navigator/shared-types/basic-profile";
 import { MODULE_KEYS } from "@navigator/shared-types/schema";
 
 import {
@@ -51,6 +52,7 @@ const MARKET_OVERVIEW_DATA_KEYS = [
   "energyDemand",
   "renewableTarget",
   "keyIndicators",
+  "basicProfile",
   "source",
   "sourceUrl",
   "collectedAt",
@@ -126,7 +128,13 @@ export async function importPreparedApprovedBasicCountry(
       }
 
       const readback = await transaction.readCanonical(prepared.countryCode);
-      if (readback === null || !isDeepStrictEqual(readback, prepared.canonical)) {
+      if (
+        readback === null ||
+        !isDeepStrictEqual(
+          normalizeCanonicalAtDatabaseBoundary(readback),
+          normalizeCanonicalAtDatabaseBoundary(prepared.canonical),
+        )
+      ) {
         throw new BasicCountryImportError("BASIC_IMPORT_READBACK_MISMATCH");
       }
       return {
@@ -140,6 +148,18 @@ export async function importPreparedApprovedBasicCountry(
       cause: error,
     });
   }
+}
+
+function normalizeCanonicalAtDatabaseBoundary(
+  canonical: BasicCanonicalData,
+): BasicCanonicalData {
+  return {
+    ...canonical,
+    marketOverview: {
+      ...canonical.marketOverview,
+      basicProfile: parseBasicProfile(canonical.marketOverview.basicProfile),
+    },
+  };
 }
 
 function hasExactBasicPlan(prepared: PreparedApprovedBasicCountryImport): boolean {

@@ -6,6 +6,12 @@ import type { PrismaClient } from "@prisma/client";
 import { describe, expect, test, vi } from "vitest";
 
 import {
+  createValidBasicProfile,
+  createValidBundle,
+  getRecord,
+} from "./basic-country-test-fixture.js";
+import { buildBasicCountryImportPlan } from "./seed/basic-country-import.js";
+import {
   createPrismaBasicCountryImportPort,
   type PrismaBasicCountryClient,
   type PrismaBasicCountryTransaction,
@@ -125,10 +131,28 @@ describe("createPrismaBasicCountryImportPort", () => {
     const marketArgs = firstCallArg(vi.mocked(transaction.marketOverview.upsert));
     expect(record(marketArgs.create).collectedAt).toBeInstanceOf(Date);
     expect(record(marketArgs.create).updatedAt).toBeInstanceOf(Date);
+    expect(record(marketArgs.create).basicProfile).toBeNull();
     const marketOperation = prepared.plan.operations.at(-1);
     if (marketOperation?.model !== "marketOverview") throw new TypeError("missing market operation");
     expect(record(marketArgs.create).keyIndicators).toEqual(marketOperation.args.create.keyIndicators);
     expect(marketArgs).not.toHaveProperty("args");
+  });
+
+  test("round-trips a BASIC v2 profile through Prisma upsert and canonical read", async () => {
+    const bundle = createValidBundle();
+    const profile = createValidBasicProfile();
+    getRecord(bundle.canonical.marketOverview, "market overview").basicProfile = profile;
+    const plan = buildBasicCountryImportPlan(bundle);
+    const state = createStatefulTransaction();
+    const port = createPrismaBasicCountryImportPort(clientFor(state.transaction));
+
+    const readback = await port.transaction(async (tx) => {
+      for (const operation of plan.operations) await tx.execute(operation);
+      return tx.readCanonical("VN");
+    });
+
+    expect(getRecord(readback?.marketOverview, "market overview").basicProfile)
+      .toEqual(profile);
   });
 
   test.each([
@@ -143,6 +167,7 @@ describe("createPrismaBasicCountryImportPort", () => {
     ["review status", 11, "reviewStatus", "approved"],
     ["industry tag", 11, "industryTags", ["COAL"]],
     ["technology tag", 11, "techTags", ["FUSION"]],
+    ["BASIC v2 profile", 11, "basicProfile", { schemaVersion: "basic-market-profile/v1" }],
     ["key indicator JSON", 11, "keyIndicators", [{ label: { zh: "x", en: "x" }, value: "1", unit: "x", year: 2026, extra: true }]],
   ] as const)("rejects invalid %s before calling a delegate", async (_label, index, field, value) => {
     const prepared = approved("indonesia");
@@ -183,7 +208,13 @@ describe("createPrismaBasicCountryImportPort", () => {
         return tx.readCanonical(prepared.countryCode);
       });
 
-      expect(readback).toEqual(prepared.canonical);
+      expect(readback).toEqual({
+        ...prepared.canonical,
+        marketOverview: {
+          ...prepared.canonical.marketOverview,
+          basicProfile: null,
+        },
+      });
     },
   );
 });

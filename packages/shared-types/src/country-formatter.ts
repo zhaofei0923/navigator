@@ -85,6 +85,7 @@ const MODULE_PUBLIC_RESPONSE_KEYS = {
   ]),
   "entry-strategy": new Set(["overview", "recommendedMode", "steps"]),
   "market-overview": new Set([
+    "basicProfile",
     "energyDemand",
     "gdp",
     "gdpGrowth",

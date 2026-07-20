@@ -118,6 +118,40 @@ function richSnapshot(): CountryDataSnapshot {
     ],
     marketOverview: {
       ...publicMeta,
+      basicProfile: {
+        schemaVersion: "basic-market-profile/v2",
+        categories: {
+          countryBasics: { fields: [] },
+          electricityMarket: { fields: [] },
+          energyAccess: { fields: [{
+            key: "electricityAccess",
+            label: { en: "Electricity access", zh: "电力可及率" },
+            status: "NOT_AVAILABLE",
+            value: null,
+            unit: null,
+            year: null,
+            sourceIds: ["source-1"],
+            checkedAt: "2026-01-15",
+            reason: { en: "", zh: "官方来源未提供" },
+            note: null,
+          }] },
+          renewableCapacity: { fields: [] },
+          solarResource: { fields: [] },
+          windResource: { fields: [] },
+          policyOverview: { fields: [] },
+          marketSummary: { fields: [] },
+        },
+        sources: [{
+          id: "source-1",
+          publisher: "Example authority",
+          title: { en: "Official data", zh: "官方数据" },
+          url: "https://example.test/basic-profile",
+          publishedAt: null,
+          retrievedAt: "2026-01-15T00:00:00.000Z",
+          credibility: "OFFICIAL",
+        }],
+        updatedAt: "2026-01-15T00:00:00.000Z",
+      },
       energyDemand: { en: "Demand", zh: "需求" },
       id: "market-1",
       keyIndicators: [
@@ -283,6 +317,7 @@ describe("country response formatter", () => {
       _i18nFallback: ["summary"],
     });
     expect(market?.data._i18nFallback).toEqual([
+      "item.basicProfile.categories.energyAccess.fields[0].reason",
       "item.keyIndicators[0].label",
     ]);
     expect(policy?.data._i18nFallback).toEqual(["items[0].title"]);
@@ -315,9 +350,17 @@ describe("country response formatter", () => {
     expect(rawPolicy?.meta.total).toBe(1);
     expect(rawPolicy?.data.items?.map(({ id }) => id)).toEqual(["policy-public"]);
     expect(rawMarket?.data.item).toMatchObject({
+      basicProfile: { schemaVersion: "basic-market-profile/v2" },
       keyIndicators: [{ safeIndicatorNote: "visible" }],
     });
     expect(localizedMarket?.data.item).toMatchObject({
+      basicProfile: {
+        categories: {
+          energyAccess: {
+            fields: [{ reason: "官方来源未提供" }],
+          },
+        },
+      },
       keyIndicators: [{ safeIndicatorNote: "visible" }],
     });
     for (const forbidden of [

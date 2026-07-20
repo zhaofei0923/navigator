@@ -11,6 +11,7 @@ import {
 import {
   prepareApprovedBasicCountryImport,
 } from "./seed/approved-basic-country-import.js";
+import { createValidBasicProfile } from "./basic-country-test-fixture.js";
 import type { BasicCanonicalData } from "./seed/basic-country-types.js";
 
 const REPO_ROOT = fileURLToPath(new URL("../../../", import.meta.url)).replace(/\/$/u, "");
@@ -46,6 +47,7 @@ describe("readPrismaBasicCanonicalCountry", () => {
             energyDemand: true,
             renewableTarget: true,
             keyIndicators: true,
+            basicProfile: true,
             source: true,
             sourceUrl: true,
             collectedAt: true,
@@ -72,6 +74,22 @@ describe("readPrismaBasicCanonicalCountry", () => {
     expect(JSON.stringify(query)).not.toMatch(/embedding|fileUrl/u);
   });
 
+  test("returns null for a legacy omission and round-trips a valid BASIC v2 profile", async () => {
+    const legacy = record(validRow());
+    expect(record(
+      (await readPrismaBasicCanonicalCountry(transactionReturning(legacy), "ID"))
+        ?.marketOverview,
+    ).basicProfile).toBeNull();
+
+    const current = record(validRow());
+    const profile = createValidBasicProfile();
+    record(current.marketOverview).basicProfile = profile;
+    expect(record(
+      (await readPrismaBasicCanonicalCountry(transactionReturning(current), "ID"))
+        ?.marketOverview,
+    ).basicProfile).toEqual(profile);
+  });
+
   test("reconstructs, orders, and recursively freezes a valid BASIC canonical row", async () => {
     const prepared = prepareApprovedBasicCountryImport(REPO_ROOT, "indonesia");
     const row = canonicalToRow(prepared.canonical);
@@ -79,7 +97,13 @@ describe("readPrismaBasicCanonicalCountry", () => {
 
     const result = await readPrismaBasicCanonicalCountry(transactionReturning(row), "ID");
 
-    expect(result).toEqual(prepared.canonical);
+    expect(result).toEqual({
+      ...prepared.canonical,
+      marketOverview: {
+        ...prepared.canonical.marketOverview,
+        basicProfile: null,
+      },
+    });
     expect(array(record(result?.country).moduleCoverage).map((item) => record(item).moduleKey))
       .toEqual(MODULE_KEYS);
     expectRecursivelyFrozen(result);
@@ -148,6 +172,9 @@ describe("readPrismaBasicCanonicalCountry", () => {
     }, "BASIC_READ_INVALID_MARKET_OVERVIEW"],
     ["invalid population value", (row: Record<string, unknown>) => {
       record(row.marketOverview).population = -1;
+    }, "BASIC_READ_INVALID_MARKET_OVERVIEW"],
+    ["invalid BASIC v2 profile", (row: Record<string, unknown>) => {
+      record(row.marketOverview).basicProfile = { schemaVersion: "basic-market-profile/v1" };
     }, "BASIC_READ_INVALID_MARKET_OVERVIEW"],
     ["missing MarketOverview", (row: Record<string, unknown>) => {
       row.marketOverview = null;

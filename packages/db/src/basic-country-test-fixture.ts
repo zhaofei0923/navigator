@@ -1,6 +1,10 @@
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type {
+  BasicProfile,
+  BasicProfileCategory,
+} from "@navigator/shared-types/basic-profile";
 
 import { createBasicCountryBundle } from "./seed/basic-country-template.js";
 import type {
@@ -11,6 +15,59 @@ import type {
 
 export function createValidBundle(): BasicCountryBundle {
   return createBasicCountryBundle(createReviewedInput());
+}
+
+export function createValidBasicProfile(): BasicProfile {
+  const emptyCategory = (): BasicProfileCategory => ({ fields: [] });
+  return {
+    schemaVersion: "basic-market-profile/v2",
+    categories: {
+      countryBasics: {
+        fields: [{
+          key: "officialName",
+          label: { zh: "官方名称", en: "Official name" },
+          status: "AVAILABLE",
+          value: { zh: "越南社会主义共和国", en: "Socialist Republic of Viet Nam" },
+          unit: null,
+          year: null,
+          sourceIds: ["source-1"],
+          checkedAt: "2026-07-20",
+          reason: null,
+          note: null,
+        }],
+      },
+      electricityMarket: emptyCategory(),
+      energyAccess: {
+        fields: [{
+          key: "electricityAccess",
+          label: { zh: "电力可及率", en: "Electricity access" },
+          status: "NOT_AVAILABLE",
+          value: null,
+          unit: null,
+          year: null,
+          sourceIds: ["source-1"],
+          checkedAt: "2026-07-20",
+          reason: { zh: "官方来源未提供", en: "Not reported by the official source" },
+          note: null,
+        }],
+      },
+      renewableCapacity: emptyCategory(),
+      solarResource: emptyCategory(),
+      windResource: emptyCategory(),
+      policyOverview: emptyCategory(),
+      marketSummary: emptyCategory(),
+    },
+    sources: [{
+      id: "source-1",
+      publisher: "Example authority",
+      title: { zh: "官方数据", en: "Official data" },
+      url: "https://example.com/basic-profile",
+      publishedAt: "2026-07-01T00:00:00.000Z",
+      retrievedAt: "2026-07-20T00:00:00.000Z",
+      credibility: "OFFICIAL",
+    }],
+    updatedAt: "2026-07-20T00:00:00.000Z",
+  };
 }
 
 export function createReviewedInput(): BasicCountryTemplateInput {

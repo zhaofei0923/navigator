@@ -1,3 +1,4 @@
+import { parseBasicProfile } from "@navigator/shared-types/basic-profile";
 import {
   MODULE_KEYS,
   type Credibility,
@@ -100,6 +101,7 @@ const BASIC_COUNTRY_SELECT = {
       energyDemand: true,
       renewableTarget: true,
       keyIndicators: true,
+      basicProfile: true,
       source: true,
       sourceUrl: true,
       collectedAt: true,
@@ -283,6 +285,7 @@ function parseMarketOverview(value: unknown, countryCode: string): JsonRecord {
       "BASIC_READ_INVALID_MARKET_OVERVIEW",
     ),
     keyIndicators: parseKeyIndicators(row.keyIndicators),
+    basicProfile: parseRequiredBasicProfile(row.basicProfile),
     source,
     sourceUrl,
     collectedAt: dateToIso(row.collectedAt, "BASIC_READ_INVALID_MARKET_OVERVIEW"),
@@ -302,6 +305,14 @@ function parseMarketOverview(value: unknown, countryCode: string): JsonRecord {
       "BASIC_READ_INVALID_MARKET_OVERVIEW",
     ),
   };
+}
+
+function parseRequiredBasicProfile(value: unknown) {
+  const profile = parseBasicProfile(value);
+  if (value !== null && value !== undefined && profile === null) {
+    throw readError("BASIC_READ_INVALID_MARKET_OVERVIEW");
+  }
+  return profile;
 }
 
 function parseLocalizedText(
