@@ -102,7 +102,7 @@ function requireCreatedIdentity(
   const actual = basicCandidateRegularFileIdentity(details);
   if (
     actual.dev !== expected.dev || actual.ino !== expected.ino ||
-    actual.type !== expected.type
+    actual.nlink !== 1n || expected.nlink !== 1n || actual.type !== expected.type
   ) invalid();
 }
 

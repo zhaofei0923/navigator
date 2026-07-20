@@ -13,6 +13,7 @@ export type BasicCandidateDirectoryIdentity = Readonly<{
 export type BasicCandidateRegularFileIdentity = Readonly<{
   dev: bigint;
   ino: bigint;
+  nlink: bigint;
   type: bigint;
   mode: bigint;
   size: bigint;
@@ -43,6 +44,7 @@ export function basicCandidateRegularFileIdentity(
   return Object.freeze({
     dev: details.dev,
     ino: details.ino,
+    nlink: details.nlink,
     type: details.mode & FILE_TYPE_MASK,
     mode: details.mode & 0o777n,
     size: details.size,
@@ -63,6 +65,7 @@ export function sameBasicCandidateRegularFileIdentity(
   expected: BasicCandidateRegularFileIdentity,
 ): boolean {
   return details.isFile() && details.dev === expected.dev && details.ino === expected.ino &&
+    details.nlink === 1n && expected.nlink === 1n &&
     (details.mode & FILE_TYPE_MASK) === REGULAR_FILE_TYPE &&
     (details.mode & 0o777n) === expected.mode && details.size === expected.size &&
     details.mtimeNs === expected.mtimeNs && details.ctimeNs === expected.ctimeNs;
@@ -73,7 +76,8 @@ export function sameStableBasicCandidateRegularFile(
   right: BigIntStats,
 ): boolean {
   return left.isFile() && right.isFile() && left.dev === right.dev &&
-    left.ino === right.ino && (left.mode & FILE_TYPE_MASK) === REGULAR_FILE_TYPE &&
+    left.ino === right.ino && left.nlink === 1n && right.nlink === 1n &&
+    (left.mode & FILE_TYPE_MASK) === REGULAR_FILE_TYPE &&
     (right.mode & FILE_TYPE_MASK) === REGULAR_FILE_TYPE && left.size === right.size &&
     left.mtimeNs === right.mtimeNs && left.ctimeNs === right.ctimeNs;
 }
@@ -82,7 +86,8 @@ export function isBoundedBasicCandidateRegularFile(
   details: BigIntStats,
   maximumBytes: number,
 ): boolean {
-  return details.isFile() && details.size >= 0n && details.size <= BigInt(maximumBytes);
+  return details.isFile() && details.nlink === 1n &&
+    details.size >= 0n && details.size <= BigInt(maximumBytes);
 }
 
 function invalid(): never {

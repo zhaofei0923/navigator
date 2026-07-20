@@ -31,12 +31,14 @@ const NAMES = Object.freeze([
 
 export async function writeApprovedBasicPublication(
   input: ApprovedBasicPublicationSnapshot,
-): Promise<void> {
+): Promise<Readonly<{ committed: true; postCommitVerified: boolean }>> {
   let data: BasicCandidateHeldDirectory | null = null;
   let temporary: BasicCandidateHeldDirectory | null = null;
   let temporaryName: string | null = null;
   const files: BasicPublicationTemporaryFile[] = [];
-  let published = false;
+  let committed = false;
+  let preCommitFailed = false;
+  let postCommitVerified = true;
   try {
     if (!isApprovedBasicPublicationSnapshot(input)) throw new Error("invalid");
     const authenticated = getApprovedBasicPublicationSnapshotState(input);
@@ -68,31 +70,45 @@ export async function writeApprovedBasicPublication(
       temporary.identity.dev,
       temporary.identity.ino,
     );
-    published = true;
+    committed = true;
     await requireBasicCandidateHeldChild(data, input.countryDirectory, temporary);
     await syncBasicCandidateParentDirectory(data);
     await requireBasicCandidateHeldChild(authenticated.root, "data", data);
     await requireBasicCandidateHeldChild(data, input.countryDirectory, temporary);
     await verifyFiles(temporary, identities, authenticated.serialized);
   } catch {
-    throw new Error("basic publication write failed");
+    if (committed) postCommitVerified = false;
+    else preCommitFailed = true;
   } finally {
     try {
       if (
-        !published && data !== null && temporary !== null &&
+        !committed && data !== null && temporary !== null &&
         temporaryName !== null
       ) {
-        await cleanupBasicPublicationTemporaryDirectory(
-          data,
-          temporaryName,
-          temporary,
-          files,
-        );
+        try {
+          await cleanupBasicPublicationTemporaryDirectory(
+            data,
+            temporaryName,
+            temporary,
+            files,
+          );
+        } catch {
+          preCommitFailed = true;
+        }
       }
     } finally {
-      await closeBasicCandidateHeldDirectories([temporary, data]);
+      try {
+        await closeBasicCandidateHeldDirectories([temporary, data]);
+      } catch {
+        if (committed) postCommitVerified = false;
+        else preCommitFailed = true;
+      }
     }
   }
+  if (!committed || preCommitFailed) {
+    throw new Error("basic publication write failed");
+  }
+  return Object.freeze({ committed: true, postCommitVerified });
 }
 
 async function verifyFiles(

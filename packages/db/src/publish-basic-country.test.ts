@@ -1,6 +1,7 @@
 import {
   chmodSync,
   existsSync,
+  linkSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -16,6 +17,59 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 
 const injectedFailure = vi.hoisted(() => ({ call: 0, failOn: null as number | null }));
 const injectedCloseFailure = vi.hoisted(() => ({ enabled: false }));
+const injectedPostCommitFailure = vi.hoisted(() => ({
+  committed: false,
+  mode: null as "sync" | "verify" | "snapshot-close" | null,
+}));
+
+vi.mock("./cli/basic-candidate-native-fs.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./cli/basic-candidate-native-fs.js")>();
+  return {
+    ...actual,
+    renameBasicCandidateDirectoryChildNoReplaceNative(
+      ...args: Parameters<typeof actual.renameBasicCandidateDirectoryChildNoReplaceNative>
+    ): ReturnType<typeof actual.renameBasicCandidateDirectoryChildNoReplaceNative> {
+      const result = actual.renameBasicCandidateDirectoryChildNoReplaceNative(...args);
+      injectedPostCommitFailure.committed = true;
+      return result;
+    },
+  };
+});
+
+vi.mock("./cli/basic-candidate-constrained-fs.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./cli/basic-candidate-constrained-fs.js")>();
+  return {
+    ...actual,
+    async syncBasicCandidateParentDirectory(
+      ...args: Parameters<typeof actual.syncBasicCandidateParentDirectory>
+    ): ReturnType<typeof actual.syncBasicCandidateParentDirectory> {
+      if (
+        injectedPostCommitFailure.committed &&
+        injectedPostCommitFailure.mode === "sync"
+      ) throw new Error("injected post-commit sync failure");
+      return actual.syncBasicCandidateParentDirectory(...args);
+    },
+    async verifyBasicCandidateRegularFile(
+      ...args: Parameters<typeof actual.verifyBasicCandidateRegularFile>
+    ): ReturnType<typeof actual.verifyBasicCandidateRegularFile> {
+      if (
+        injectedPostCommitFailure.committed &&
+        injectedPostCommitFailure.mode === "verify"
+      ) throw new Error("injected post-commit verify failure");
+      return actual.verifyBasicCandidateRegularFile(...args);
+    },
+    async closeBasicCandidateHeldDirectories(
+      ...args: Parameters<typeof actual.closeBasicCandidateHeldDirectories>
+    ): ReturnType<typeof actual.closeBasicCandidateHeldDirectories> {
+      await actual.closeBasicCandidateHeldDirectories(...args);
+      if (
+        injectedPostCommitFailure.committed &&
+        injectedPostCommitFailure.mode === "snapshot-close" &&
+        args[0].length === 6
+      ) throw new Error("injected snapshot close failure");
+    },
+  };
+});
 
 vi.mock("./cli/basic-candidate-workspace.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./cli/basic-candidate-workspace.js")>();
@@ -58,6 +112,12 @@ import {
   runBasicPublicationCli,
 } from "./cli/publish-basic-country.js";
 import { writeApprovedBasicPublication } from "./cli/basic-publication-writer.js";
+import {
+  closeBasicCandidateWorkspace,
+  getBasicCandidateWorkspaceRootDirectory,
+  openBasicCandidateWorkspace,
+} from "./cli/basic-candidate-workspace.js";
+import { locateApprovedBasicPublicationSnapshot } from "./cli/basic-publication-snapshot.js";
 
 const roots = new Set<string>();
 
@@ -67,6 +127,8 @@ afterEach(() => {
   injectedFailure.call = 0;
   injectedFailure.failOn = null;
   injectedCloseFailure.enabled = false;
+  injectedPostCommitFailure.committed = false;
+  injectedPostCommitFailure.mode = null;
 });
 
 describe("approved BASIC publication CLI", () => {
@@ -129,6 +191,7 @@ describe("approved BASIC publication CLI", () => {
       countryCode: "XZ",
       runId: "run-001",
       relativeDirectory: "data/example-land",
+      postCommitVerified: true,
     });
     const target = join(setup.root, "data", "example-land");
     expect(readdirSync(target).sort()).toEqual([
@@ -145,6 +208,25 @@ describe("approved BASIC publication CLI", () => {
       name,
       readFileSync(join(candidateDirectory, name)),
     ]))).toEqual(candidateBefore);
+  });
+
+  test("returns the explicit writer commit state", async () => {
+    const setup = createSyntheticRepo();
+    const workspace = await openBasicCandidateWorkspace(setup.root);
+    const snapshot = await locateApprovedBasicPublicationSnapshot(
+      getBasicCandidateWorkspaceRootDirectory(workspace),
+      setup.input,
+    );
+    try {
+      await expect(writeApprovedBasicPublication(snapshot)).resolves.toEqual({
+        committed: true,
+        postCommitVerified: true,
+      });
+    } finally {
+      await snapshot.close();
+      await closeBasicCandidateWorkspace(workspace);
+    }
+    expectCanonicalExactThree(setup.root);
   });
 
   test("refuses pre-existing canonical and never replaces it", async () => {
@@ -231,11 +313,57 @@ describe("approved BASIC publication CLI", () => {
       status: "published",
       countryCode: "XZ",
       runId: "run-001",
+      postCommitVerified: false,
     });
     expect(readdirSync(join(setup.root, "data", "example-land")).sort()).toEqual([
       "collection-manifest.json", "country.json", "market-overview.json",
     ]);
   });
+
+  test("reports a snapshot close warning after durable publication", async () => {
+    const setup = createSyntheticRepo();
+    injectedPostCommitFailure.mode = "snapshot-close";
+
+    await expect(publishBasicCountry(setup.input)).resolves.toMatchObject({
+      status: "published",
+      postCommitVerified: false,
+    });
+    expectCanonicalExactThree(setup.root);
+  });
+
+  test.each(["sync", "verify"] as const)(
+    "reports post-commit %s failure without making retry semantics ambiguous",
+    async (mode) => {
+      const setup = createSyntheticRepo();
+      injectedPostCommitFailure.mode = mode;
+
+      await expect(publishBasicCountry(setup.input)).resolves.toMatchObject({
+        status: "published",
+        postCommitVerified: false,
+      });
+      expectCanonicalExactThree(setup.root);
+      await expect(publishBasicCountry(setup.input)).rejects.toThrow(
+        /^basic publication failed$/,
+      );
+      expectCanonicalExactThree(setup.root);
+    },
+  );
+
+  test.each(["receipt", "candidate"] as const)(
+    "rejects a %s file with a second hard link",
+    async (kind) => {
+      const setup = createSyntheticRepo();
+      const source = kind === "receipt"
+        ? join(setup.root, setup.input.approvalFile)
+        : join(setup.root, "data", "staging", "example-land", "run-001", "source-register.json");
+      linkSync(source, join(setup.root, `${kind}-hardlink.json`));
+
+      await expect(publishBasicCountry(setup.input)).rejects.toThrow(
+        /^basic publication failed$/,
+      );
+      expect(existsSync(join(setup.root, "data", "example-land"))).toBe(false);
+    },
+  );
 
   test("refuses a structurally forged writer authorization", async () => {
     await expect(writeApprovedBasicPublication({
@@ -285,4 +413,10 @@ function createSyntheticRepo() {
       approvalFile: "data/approvals/example-land/run-001.json",
     },
   };
+}
+
+function expectCanonicalExactThree(root: string): void {
+  expect(readdirSync(join(root, "data", "example-land")).sort()).toEqual([
+    "collection-manifest.json", "country.json", "market-overview.json",
+  ]);
 }

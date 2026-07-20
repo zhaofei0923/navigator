@@ -35,6 +35,7 @@ export interface PublishBasicCountryResult {
   readonly countryCode: string;
   readonly runId: string;
   readonly relativeDirectory: string;
+  readonly postCommitVerified: boolean;
 }
 
 export function parseBasicPublicationArguments(
@@ -81,12 +82,13 @@ export async function publishBasicCountry(
     workspace = await openBasicCandidateWorkspace(resolve(input.repoRoot));
     const root = getBasicCandidateWorkspaceRootDirectory(workspace);
     snapshot = await locateApprovedBasicPublicationSnapshot(root, parsed);
-    await writeApprovedBasicPublication(snapshot);
+    const writeResult = await writeApprovedBasicPublication(snapshot);
     result = Object.freeze({
       status: "published",
       countryCode: parsed.countryCode,
       runId: parsed.runId,
       relativeDirectory: `data/${parsed.countryDirectory}`,
+      postCommitVerified: writeResult.postCommitVerified,
     });
   } catch {
     failed = true;
@@ -95,18 +97,26 @@ export async function publishBasicCountry(
       await snapshot?.close();
     } catch {
       if (result === null) failed = true;
+      else result = postCommitWarning(result);
     } finally {
       if (workspace !== null) {
         try {
           await closeBasicCandidateWorkspace(workspace);
         } catch {
           if (result === null) failed = true;
+          else result = postCommitWarning(result);
         }
       }
     }
   }
   if (failed || result === null) throw new Error(PUBLISH_ERROR);
   return result;
+}
+
+function postCommitWarning(
+  result: PublishBasicCountryResult,
+): PublishBasicCountryResult {
+  return Object.freeze({ ...result, postCommitVerified: false });
 }
 
 function uniqueArgument(args: readonly string[], prefix: string): string {

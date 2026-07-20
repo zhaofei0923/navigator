@@ -190,7 +190,8 @@ pnpm basic:publish \
 
 `--approval-file` 不是任意 filesystem capability。它必须逐字等于由回执 identity 派生的
 `data/approvals/<countryDirectory>/<runId>.json`；绝对路径、alias、路径穿越、symlink、不同
-country/run 和批量 country 参数均拒绝。CLI 不创建、修改或补全批准回执，也不产生人工批准
+country/run、硬链接和批量 country 参数均拒绝。四个 candidate 文件同样必须各自只有一个
+硬链接。CLI 不创建、修改或补全批准回执，也不产生人工批准
 决定。
 
 发布前，CLI 以 descriptor-relative、`O_NOFOLLOW`、bounded read 读取并持有回执和四个
@@ -211,6 +212,13 @@ writer 先在 `data/` 下创建私有 UUID 临时目录，以 exclusive regular 
 exact-three 内容，再用 no-replace rename 发布。既有 canonical 目录绝不替换；发布前失败只按
 已登记的 dev/ino 清理本次拥有的部分文件和临时目录。该命令不写 candidate、approval、Prisma、
 AI index 或其他国家目录，也不提供批量发布模式。
+
+no-replace rename 成功是不可逆的 commit point。命令结果固定包含
+`postCommitVerified`：正常的 rename 后 held-child、parent fsync、hierarchy、exact-three file
+复核和资源关闭全部成功时为 `true`；其中任一后置检查或关闭失败时仍返回
+`status: "published"`，但将该字段设为 `false`，提示操作者进行只读复核。此时 canonical 已经
+durable published，命令不得返回“未发布”，再次执行也会因 no-replace 明确拒绝，而不是产生
+含糊的二次发布。
 
 现有 v2 parser、materializer、validator、loader 和六国 canonical bytes 保持不变；v3 profile
 只由新的 v3 parser/materializer/validator/CLI 路径处理。
