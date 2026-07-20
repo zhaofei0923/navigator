@@ -1,10 +1,14 @@
 import { randomUUID } from "node:crypto";
 
+import { BASIC_COUNTRY_PUBLICATION_JSON_MAX_BYTES } from "../collection/basic-publication-contracts.js";
+import { parseBasicStrictJsonText } from "../collection/basic-strict-json.js";
+
 import {
   closeBasicCandidateHeldDirectories,
   createBasicCandidateExclusiveDirectory,
   ensureBasicCandidateDirectoryChild,
   openBasicCandidateDirectoryChild,
+  readBasicCandidateBoundedRegularFileSnapshot,
   requireBasicCandidateDirectoryEntries,
   requireBasicCandidateHeldChild,
   setBasicCandidateDirectoryMode,
@@ -12,6 +16,7 @@ import {
   syncBasicCandidateParentDirectory,
   verifyBasicCandidateRegularFile,
   type BasicCandidateHeldDirectory,
+  type BasicCandidateRegularFileIdentity,
 } from "./basic-candidate-constrained-fs.js";
 import { renameBasicCandidateDirectoryChildrenExchangeNative } from "./basic-candidate-native-fs.js";
 import {
@@ -29,7 +34,10 @@ import {
   type BasicPublicationFileName,
   type BasicPublicationTemporaryFile,
 } from "./basic-publication-owned-file.js";
-import { cleanupBasicRefreshTransaction } from "./basic-refresh-cache-cleanup.js";
+import {
+  cleanupBasicRefreshUncommittedTargetTransaction,
+  retainBasicRefreshPreviousCanonical,
+} from "./basic-refresh-cache-cleanup.js";
 
 const NAMES = Object.freeze([
   "collection-manifest.json", "country.json", "market-overview.json",
@@ -44,7 +52,9 @@ export async function writeRefreshedBasicPublication(
   let refreshCache: BasicCandidateHeldDirectory | null = null;
   let transaction: BasicCandidateHeldDirectory | null = null;
   let canonical: BasicCandidateHeldDirectory | null = null;
+  let recovery: BasicCandidateHeldDirectory | null = null;
   let transactionName: string | null = null;
+  let recoveryName: string | null = null;
   const targetFiles: BasicPublicationTemporaryFile[] = [];
   let committed = false;
   let preCommitFailed = false;
@@ -109,6 +119,13 @@ export async function writeRefreshedBasicPublication(
     await requireBasicCandidateHeldChild(activeState.root, "data", data);
     await requireBasicCandidateHeldChild(data, active.countryDirectory, activeState.canonical);
     await requireBasicCandidateHeldChild(transaction, "canonical", canonical);
+    await verifyTargetFiles(canonical, identities, targetState.serialized);
+    await validateMaterializedTarget(
+      canonical,
+      identities,
+      targetState.serialized,
+      targetState.validateMaterialized,
+    );
 
     const exchange = renameBasicCandidateDirectoryChildrenExchangeNative(
       transaction.handle.fd,
@@ -130,22 +147,27 @@ export async function writeRefreshedBasicPublication(
     await requireBasicCandidateHeldChild(cache, "basic-country-refresh", refreshCache);
     await requireBasicCandidateHeldChild(refreshCache, transactionName, transaction);
     await verifyTargetFiles(canonical, identities, targetState.serialized);
-    await verifyActiveFiles(activeState.canonical, activeState.canonicalFiles);
+    await activeState.verifyCanonicalAt(transaction, "canonical");
     await syncBasicCandidateParentDirectory(data);
     await syncBasicCandidateParentDirectory(transaction);
 
-    await cleanupBasicRefreshTransaction(
+    recoveryName = `recovery-${transactionName}`;
+    recovery = await createBasicCandidateExclusiveDirectory(
+      refreshCache,
+      recoveryName,
+      0o700,
+    );
+    await setBasicCandidateDirectoryMode(recovery, 0o700);
+    const retention = await retainBasicRefreshPreviousCanonical(
       refreshCache,
       transactionName,
       transaction,
       activeState.canonical,
-      NAMES.map((name) => Object.freeze({
-        name,
-        identity: activeState.canonicalFiles[name].identity,
-        content: activeState.canonicalFiles[name].bytes,
-      })),
+      recoveryName,
+      recovery,
+      activeState.verifyCanonicalAt,
     );
-    await syncBasicCandidateParentDirectory(refreshCache);
+    if (!retention.verified) postCommitVerified = false;
   } catch {
     if (committed) postCommitVerified = false;
     else preCommitFailed = true;
@@ -155,7 +177,7 @@ export async function writeRefreshedBasicPublication(
       transaction !== null
     ) {
       try {
-        await cleanupBasicRefreshTransaction(
+        await cleanupBasicRefreshUncommittedTargetTransaction(
           refreshCache, transactionName, transaction, canonical, targetFiles,
         );
       } catch {
@@ -164,7 +186,7 @@ export async function writeRefreshedBasicPublication(
     }
     try {
       await closeBasicCandidateHeldDirectories([
-        canonical, transaction, refreshCache, cache, data,
+        recovery, canonical, transaction, refreshCache, cache, data,
       ]);
     } catch {
       if (committed) postCommitVerified = false;
@@ -190,15 +212,45 @@ async function verifyTargetFiles(
   }
 }
 
-async function verifyActiveFiles(
+async function validateMaterializedTarget(
   directory: BasicCandidateHeldDirectory,
-  files: ReturnType<typeof getActiveBasicPublicationSnapshotState>["canonicalFiles"],
+  identities: ReadonlyMap<BasicPublicationFileName, BasicCandidateRegularFileIdentity>,
+  serialized: Readonly<Record<BasicPublicationFileName, Uint8Array>>,
+  validate: (input: Readonly<{
+    manifest: unknown;
+    country: unknown;
+    marketOverview: unknown;
+  }>) => void,
 ): Promise<void> {
   await requireBasicCandidateDirectoryEntries(directory, NAMES);
+  const values = {} as Record<BasicPublicationFileName, unknown>;
   for (const name of NAMES) {
-    const file = files[name];
-    await verifyBasicCandidateRegularFile(directory, name, file.identity, file.bytes);
+    const expected = identities.get(name);
+    if (expected === undefined) invalid();
+    const snapshot = await readBasicCandidateBoundedRegularFileSnapshot(
+      directory,
+      name,
+      BASIC_COUNTRY_PUBLICATION_JSON_MAX_BYTES,
+    );
+    if (!sameRegularFileIdentity(snapshot.identity, expected)) invalid();
+    const text = new TextDecoder("utf-8", { fatal: true }).decode(snapshot.bytes);
+    values[name] = parseBasicStrictJsonText(text);
   }
+  validate({
+    manifest: values["collection-manifest.json"],
+    country: values["country.json"],
+    marketOverview: values["market-overview.json"],
+  });
+  await verifyTargetFiles(directory, identities, serialized);
+}
+
+function sameRegularFileIdentity(
+  left: BasicCandidateRegularFileIdentity,
+  right: BasicCandidateRegularFileIdentity,
+): boolean {
+  return left.dev === right.dev && left.ino === right.ino && left.nlink === right.nlink &&
+    left.type === right.type && left.mode === right.mode && left.size === right.size &&
+    left.mtimeNs === right.mtimeNs && left.ctimeNs === right.ctimeNs;
 }
 
 function requireSameRoot(

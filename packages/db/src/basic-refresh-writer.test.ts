@@ -3,10 +3,13 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readlinkSync,
   readdirSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
+import type { Dirent } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -14,13 +17,27 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 
 const injected = vi.hoisted(() => ({
   exchangeCommitted: false,
+  exchangeCalls: 0,
+  retentionCommitted: false,
+  retentionSyncCalls: 0,
+  removeCalls: 0,
   mode: null as
     | "pre-commit"
     | "native-unverified"
     | "post-sync"
     | "post-verify"
     | "post-close"
-    | "cleanup"
+    | "materialized-read-drift"
+    | "retention-before-exchange"
+    | "retention-native-unverified"
+    | "retention-post-exchange-verify"
+    | "retention-fsync-exchange-source"
+    | "retention-fsync-exchange-target"
+    | "retention-fsync-placeholder-removal"
+    | "retention-fsync-wrapper-removal"
+    | "retention-remove-placeholder"
+    | "retention-remove-transaction"
+    | "retention-final-verify"
     | null,
 }));
 
@@ -35,12 +52,33 @@ vi.mock("./cli/basic-candidate-native-fs.js", async (importOriginal) => {
         typeof actual.renameBasicCandidateDirectoryChildrenExchangeNative
       >
     ): ReturnType<typeof actual.renameBasicCandidateDirectoryChildrenExchangeNative> {
-      if (injected.mode === "pre-commit") throw new Error("injected pre-commit failure");
+      injected.exchangeCalls += 1;
+      if (injected.exchangeCalls === 1 && injected.mode === "pre-commit") {
+        throw new Error("injected pre-commit failure");
+      }
+      if (injected.exchangeCalls === 2 && injected.mode === "retention-before-exchange") {
+        throw new Error("injected retention exchange failure");
+      }
       const result = actual.renameBasicCandidateDirectoryChildrenExchangeNative(...arguments_);
-      injected.exchangeCommitted = true;
-      return injected.mode === "native-unverified"
-        ? { committed: true, verified: false }
-        : result;
+      if (injected.exchangeCalls === 1) injected.exchangeCommitted = true;
+      if (injected.exchangeCalls === 2) injected.retentionCommitted = true;
+      if (
+        (injected.exchangeCalls === 1 && injected.mode === "native-unverified") ||
+        (injected.exchangeCalls === 2 && injected.mode === "retention-native-unverified")
+      ) return { committed: true, verified: false };
+      return result;
+    },
+    removeBasicCandidateDirectoryNative(
+      ...arguments_: Parameters<typeof actual.removeBasicCandidateDirectoryNative>
+    ): ReturnType<typeof actual.removeBasicCandidateDirectoryNative> {
+      if (injected.retentionCommitted) {
+        injected.removeCalls += 1;
+        if (
+          (injected.removeCalls === 1 && injected.mode === "retention-remove-placeholder") ||
+          (injected.removeCalls === 2 && injected.mode === "retention-remove-transaction")
+        ) throw new Error("injected empty wrapper removal failure");
+      }
+      return actual.removeBasicCandidateDirectoryNative(...arguments_);
     },
   };
 });
@@ -54,10 +92,41 @@ vi.mock("./cli/basic-candidate-constrained-fs.js", async (importOriginal) => {
     async syncBasicCandidateParentDirectory(
       ...arguments_: Parameters<typeof actual.syncBasicCandidateParentDirectory>
     ): ReturnType<typeof actual.syncBasicCandidateParentDirectory> {
-      if (injected.exchangeCommitted && injected.mode === "post-sync") {
+      if (injected.retentionCommitted) {
+        injected.retentionSyncCalls += 1;
+        if (
+          (injected.retentionSyncCalls === 1 &&
+            injected.mode === "retention-fsync-exchange-source") ||
+          (injected.retentionSyncCalls === 2 &&
+            injected.mode === "retention-fsync-exchange-target") ||
+          (injected.retentionSyncCalls === 3 &&
+            injected.mode === "retention-fsync-placeholder-removal") ||
+          (injected.retentionSyncCalls === 4 &&
+            injected.mode === "retention-fsync-wrapper-removal")
+        ) throw new Error("injected retention parent sync failure");
+      } else if (injected.exchangeCommitted && injected.mode === "post-sync") {
         throw new Error("injected post-commit sync failure");
       }
       return actual.syncBasicCandidateParentDirectory(...arguments_);
+    },
+    async requireBasicCandidateHeldChild(
+      ...arguments_: Parameters<typeof actual.requireBasicCandidateHeldChild>
+    ): ReturnType<typeof actual.requireBasicCandidateHeldChild> {
+      if (
+        injected.retentionCommitted &&
+        (injected.mode === "retention-post-exchange-verify" ||
+          (injected.removeCalls >= 2 && injected.mode === "retention-final-verify"))
+      ) throw new Error("injected retention post-exchange verification failure");
+      return actual.requireBasicCandidateHeldChild(...arguments_);
+    },
+    async requireBasicCandidateDirectoryEntries(
+      ...arguments_: Parameters<typeof actual.requireBasicCandidateDirectoryEntries>
+    ): ReturnType<typeof actual.requireBasicCandidateDirectoryEntries> {
+      if (
+        injected.retentionCommitted && injected.removeCalls >= 2 &&
+        injected.mode === "retention-final-verify"
+      ) throw new Error("injected retention final verification failure");
+      return actual.requireBasicCandidateDirectoryEntries(...arguments_);
     },
     async verifyBasicCandidateRegularFile(
       ...arguments_: Parameters<typeof actual.verifyBasicCandidateRegularFile>
@@ -75,22 +144,16 @@ vi.mock("./cli/basic-candidate-constrained-fs.js", async (importOriginal) => {
         throw new Error("injected post-commit close failure");
       }
     },
-  };
-});
-
-vi.mock("./cli/basic-refresh-cache-cleanup.js", async (importOriginal) => {
-  const actual = await importOriginal<
-    typeof import("./cli/basic-refresh-cache-cleanup.js")
-  >();
-  return {
-    ...actual,
-    async cleanupBasicRefreshTransaction(
-      ...arguments_: Parameters<typeof actual.cleanupBasicRefreshTransaction>
-    ): ReturnType<typeof actual.cleanupBasicRefreshTransaction> {
-      if (injected.exchangeCommitted && injected.mode === "cleanup") {
-        throw new Error("injected cleanup failure");
-      }
-      return actual.cleanupBasicRefreshTransaction(...arguments_);
+    async readBasicCandidateBoundedRegularFileSnapshot(
+      ...arguments_: Parameters<typeof actual.readBasicCandidateBoundedRegularFileSnapshot>
+    ): ReturnType<typeof actual.readBasicCandidateBoundedRegularFileSnapshot> {
+      const snapshot = await actual.readBasicCandidateBoundedRegularFileSnapshot(...arguments_);
+      if (injected.mode !== "materialized-read-drift") return snapshot;
+      injected.mode = null;
+      return Object.freeze({
+        ...snapshot,
+        bytes: new TextEncoder().encode("{}\n"),
+      });
     },
   };
 });
@@ -134,6 +197,10 @@ afterEach(() => {
   for (const root of roots) rmSync(root, { recursive: true, force: true });
   roots.clear();
   injected.exchangeCommitted = false;
+  injected.exchangeCalls = 0;
+  injected.retentionCommitted = false;
+  injected.retentionSyncCalls = 0;
+  injected.removeCalls = 0;
   injected.mode = null;
 });
 
@@ -162,6 +229,23 @@ describe("authenticated BASIC refresh snapshots", () => {
       expect(active.runId).toBe("run-active");
     },
   );
+
+  test("holds every active regular-file descriptor until idempotent close", async () => {
+    const setup = createRepo();
+    writeActiveV2(setup.root);
+    const expected = activeRegularFilePaths(setup.root);
+    const workspace = await openBasicCandidateWorkspace(setup.root);
+    const snapshot = await locateActiveBasicPublicationSnapshot(
+      getBasicCandidateWorkspaceRootDirectory(workspace),
+      "example-land",
+    );
+
+    expect(heldRegularFilePaths(expected)).toEqual(expected);
+    await snapshot.close();
+    await snapshot.close();
+    expect(heldRegularFilePaths(expected)).toEqual(new Set());
+    await closeBasicCandidateWorkspace(workspace);
+  });
 
   test("fails closed for absent, non-exact, or byte-replaced active publications", async () => {
     const absent = createRepo();
@@ -228,6 +312,7 @@ describe("authenticated BASIC refresh snapshots", () => {
 describe("atomic BASIC refresh writer", () => {
   test("exchanges an active v2 publication for approved v3 exact bytes", async () => {
     const setup = createRefreshSetup();
+    const previous = readCanonical(setup.root);
     const before = snapshotAuthorization(setup);
     const held = await openSnapshots(setup);
 
@@ -239,7 +324,14 @@ describe("atomic BASIC refresh writer", () => {
     expect(readCanonical(setup.root)).toEqual(held.serialized);
     expect(snapshotAuthorization(setup)).toEqual(before);
     expect(readdirSync(join(setup.root, "data", "other-country"))).toEqual(["keep.txt"]);
-    expect(cacheTransactions(setup.root)).toEqual([]);
+    expect(completeRecoveryArtifacts(setup.root, previous)).toHaveLength(1);
+    expect(partialCanonicalArtifacts(setup.root)).toEqual([]);
+    const recoveryEntries = cacheTransactions(setup.root);
+    expect(recoveryEntries).toHaveLength(1);
+    expect(recoveryEntries[0]).toMatch(/^recovery-[0-9a-f-]{36}$/);
+    expect(statSync(join(
+      setup.root, ".cache", "basic-country-refresh", recoveryEntries[0]!,
+    )).mode & 0o777).toBe(0o700);
     await closeSnapshots(held);
   });
 
@@ -298,9 +390,10 @@ describe("atomic BASIC refresh writer", () => {
   });
 
   test.each([
-    "native-unverified", "post-sync", "post-verify", "post-close", "cleanup",
+    "native-unverified", "post-sync", "post-verify", "post-close",
   ] as const)("never rolls back after committed %s failure", async (mode) => {
     const setup = createRefreshSetup();
+    const previous = readCanonical(setup.root);
     const held = await openSnapshots(setup);
     injected.mode = mode;
     await expect(writeRefreshedBasicPublication(held.active, held.target)).resolves.toEqual({
@@ -308,10 +401,43 @@ describe("atomic BASIC refresh writer", () => {
       postCommitVerified: false,
     });
     expect(readCanonical(setup.root)).toEqual(held.serialized);
-    if (mode === "cleanup") expect(cacheTransactions(setup.root)).toHaveLength(1);
+    expect(completeRecoveryArtifacts(setup.root, previous)).toHaveLength(1);
+    expect(partialCanonicalArtifacts(setup.root)).toEqual([]);
     injected.mode = null;
     await closeSnapshots(held);
   });
+
+  test.each([
+    "retention-before-exchange",
+    "retention-native-unverified",
+    "retention-post-exchange-verify",
+    "retention-fsync-exchange-source",
+    "retention-fsync-exchange-target",
+    "retention-fsync-placeholder-removal",
+    "retention-fsync-wrapper-removal",
+    "retention-remove-placeholder",
+    "retention-remove-transaction",
+    "retention-final-verify",
+  ] as const)(
+    "preserves one complete old canonical tree after %s",
+    async (mode) => {
+      const setup = createRefreshSetup();
+      const previous = readCanonical(setup.root);
+      const held = await openSnapshots(setup);
+      injected.mode = mode;
+
+      await expect(writeRefreshedBasicPublication(held.active, held.target)).resolves.toEqual({
+        committed: true,
+        postCommitVerified: false,
+      });
+
+      expect(readCanonical(setup.root)).toEqual(held.serialized);
+      expect(completeRecoveryArtifacts(setup.root, previous)).toHaveLength(1);
+      expect(partialCanonicalArtifacts(setup.root)).toEqual([]);
+      injected.mode = null;
+      await closeSnapshots(held);
+    },
+  );
 
   test("requires private cache modes", async () => {
     const setup = createRefreshSetup();
@@ -322,6 +448,18 @@ describe("atomic BASIC refresh writer", () => {
     await expect(writeRefreshedBasicPublication(held.active, held.target))
       .rejects.toThrow(/^basic refresh write failed$/);
     expect(readCanonical(setup.root)).toEqual(before);
+    await closeSnapshots(held);
+  });
+
+  test("rejects invalid bytes read back from the materialized target", async () => {
+    const setup = createRefreshSetup();
+    const before = readCanonical(setup.root);
+    const held = await openSnapshots(setup);
+    injected.mode = "materialized-read-drift";
+    await expect(writeRefreshedBasicPublication(held.active, held.target))
+      .rejects.toThrow(/^basic refresh write failed$/);
+    expect(readCanonical(setup.root)).toEqual(before);
+    expect(cacheTransactions(setup.root)).toEqual([]);
     await closeSnapshots(held);
   });
 });
@@ -494,6 +632,80 @@ function cacheTransactions(root: string): string[] {
   } catch {
     return [];
   }
+}
+
+function completeRecoveryArtifacts(
+  root: string,
+  expected: Readonly<Record<string, Uint8Array>>,
+): string[] {
+  return cacheDirectories(root).filter((directory) => {
+    try {
+      const names = readdirSync(directory).sort();
+      return names.join("\0") === Object.keys(expected).sort().join("\0") &&
+        names.every((name) => readFileSync(join(directory, name)).equals(expected[name]!));
+    } catch {
+      return false;
+    }
+  });
+}
+
+function partialCanonicalArtifacts(root: string): string[] {
+  const names = new Set([
+    "collection-manifest.json", "country.json", "market-overview.json",
+  ]);
+  return cacheDirectories(root).filter((directory) => {
+    try {
+      const count = readdirSync(directory).filter((name) => names.has(name)).length;
+      return count > 0 && count < names.size;
+    } catch {
+      return false;
+    }
+  });
+}
+
+function cacheDirectories(root: string): string[] {
+  const base = join(root, ".cache", "basic-country-refresh");
+  const directories: string[] = [];
+  const visit = (directory: string): void => {
+    let entries: Dirent<string>[];
+    try {
+      entries = readdirSync(directory, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    directories.push(directory);
+    for (const entry of entries) {
+      if (entry.isDirectory()) visit(join(directory, entry.name));
+    }
+  };
+  visit(base);
+  return directories;
+}
+
+function activeRegularFilePaths(root: string): Set<string> {
+  const canonical = join(root, "data", "example-land");
+  const candidate = join(root, "data", "staging", "example-land", "run-active");
+  const approval = join(root, "data", "approvals", "example-land", "run-active.json");
+  return new Set([
+    ...["collection-manifest.json", "country.json", "market-overview.json"]
+      .map((name) => join(canonical, name)),
+    approval,
+    ...["source-register.json", "extracted-facts.json", "market-overview.draft.json", "review-report.json"]
+      .map((name) => join(candidate, name)),
+  ]);
+}
+
+function heldRegularFilePaths(expected: ReadonlySet<string>): Set<string> {
+  const held = new Set<string>();
+  for (const name of readdirSync("/proc/self/fd")) {
+    try {
+      const target = readlinkSync(join("/proc/self/fd", name)).replace(/ \(deleted\)$/, "");
+      if (expected.has(target)) held.add(target);
+    } catch {
+      // Descriptors may close between directory enumeration and readlink.
+    }
+  }
+  return held;
 }
 
 function hashes(bytes: Readonly<Record<string, Uint8Array>>) {

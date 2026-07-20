@@ -1,4 +1,5 @@
 import { parseBasicProfile, type BasicProfile } from "@navigator/shared-types/basic-profile";
+import { open, type FileHandle } from "node:fs/promises";
 
 import { BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION } from "../collection/basic-collection-v2-contracts.js";
 import { BASIC_COLLECTION_AUDIT_V3_SCHEMA_VERSION } from "../collection/basic-collection-v3-contracts.js";
@@ -19,13 +20,24 @@ import { parseBasicStrictJsonText } from "../collection/basic-strict-json.js";
 import {
   closeBasicCandidateHeldDirectories,
   openBasicCandidateDirectoryChild,
-  readBasicCandidateBoundedRegularFileSnapshot,
   requireBasicCandidateDirectoryEntries,
   requireBasicCandidateHeldChild,
   verifyBasicCandidateRegularFile,
   type BasicCandidateHeldDirectory,
   type BasicCandidateRegularFileIdentity,
 } from "./basic-candidate-constrained-fs.js";
+import {
+  basicCandidateRegularFileIdentity,
+  isBoundedBasicCandidateRegularFile,
+  sameBasicCandidateRegularFileIdentity,
+  sameStableBasicCandidateRegularFile,
+} from "./basic-candidate-fs-identity.js";
+import { closeBasicCandidateHandle } from "./basic-candidate-fs-handles.js";
+import {
+  basicCandidateChildPath,
+  basicCandidateReadFlags,
+} from "./basic-candidate-fs-paths.js";
+import { sameBasicCandidateBytes } from "./basic-candidate-values.js";
 import type { BasicPublicationFileName } from "./basic-publication-owned-file.js";
 
 const CANONICAL_NAMES = Object.freeze([
@@ -37,6 +49,7 @@ const CANDIDATE_NAMES = Object.freeze([
 ] as const satisfies readonly BasicCollectionAuditArtifactName[]);
 
 type FileSnapshot = Readonly<{
+  handle: FileHandle;
   bytes: Uint8Array;
   identity: BasicCandidateRegularFileIdentity;
   value: unknown;
@@ -56,6 +69,10 @@ export type ActiveBasicPublicationSnapshotState = Readonly<{
   canonical: BasicCandidateHeldDirectory;
   canonicalFiles: Readonly<Record<BasicPublicationFileName, FileSnapshot>>;
   profile: BasicProfile | null;
+  verifyCanonicalAt: (
+    parent: BasicCandidateHeldDirectory,
+    name: string,
+  ) => Promise<void>;
   verify: () => Promise<void>;
 }>;
 
@@ -87,11 +104,12 @@ export async function locateActiveBasicPublicationSnapshot(
   countryDirectory: string,
 ): Promise<ActiveBasicPublicationSnapshot> {
   const held: BasicCandidateHeldDirectory[] = [];
+  const heldFiles: FileHandle[] = [];
   try {
     const data = await openOwned(root, "data", held);
     const canonical = await openOwned(data, countryDirectory, held);
     await requireBasicCandidateDirectoryEntries(canonical, CANONICAL_NAMES);
-    const canonicalFiles = await readFiles(canonical, CANONICAL_NAMES);
+    const canonicalFiles = await readFiles(canonical, CANONICAL_NAMES, heldFiles);
     const manifestValue = canonicalFiles["collection-manifest.json"].value;
     const version = manifestVersion(manifestValue);
     const manifest = version === BASIC_COUNTRY_PUBLICATION_MANIFEST_SCHEMA_VERSION
@@ -112,8 +130,8 @@ export async function locateActiveBasicPublicationSnapshot(
     const approvals = await openOwned(data, "approvals", held);
     const approvalCountry = await openOwned(approvals, countryDirectory, held);
     await requireBasicCandidateDirectoryEntries(run, CANDIDATE_NAMES);
-    const approval = await readFile(approvalCountry, `${runId}.json`);
-    const candidateFiles = await readFiles(run, CANDIDATE_NAMES);
+    const approval = await readFile(approvalCountry, `${runId}.json`, heldFiles);
+    const candidateFiles = await readFiles(run, CANDIDATE_NAMES, heldFiles);
     const candidate = validateBasicCollectionAuditArtifactValuesVersioned(
       countryDirectory,
       runId,
@@ -171,10 +189,21 @@ export async function locateActiveBasicPublicationSnapshot(
         await requireBasicCandidateDirectoryEntries(canonical, CANONICAL_NAMES);
         await requireBasicCandidateDirectoryEntries(run, CANDIDATE_NAMES);
         await verifyFiles(canonical, canonicalFiles, CANONICAL_NAMES);
-        await verifyBasicCandidateRegularFile(
-          approvalCountry, `${runId}.json`, approval.identity, approval.bytes,
-        );
+        await verifyFile(approvalCountry, `${runId}.json`, approval);
         await verifyFiles(run, candidateFiles, CANDIDATE_NAMES);
+      } catch {
+        invalid();
+      }
+    };
+    const verifyCanonicalAt = async (
+      parent: BasicCandidateHeldDirectory,
+      name: string,
+    ): Promise<void> => {
+      try {
+        if (closed) invalid();
+        await requireBasicCandidateHeldChild(parent, name, canonical);
+        await requireBasicCandidateDirectoryEntries(canonical, CANONICAL_NAMES);
+        await verifyFiles(canonical, canonicalFiles, CANONICAL_NAMES);
       } catch {
         invalid();
       }
@@ -187,17 +216,25 @@ export async function locateActiveBasicPublicationSnapshot(
       async close(): Promise<void> {
         if (closed) return;
         closed = true;
-        await closeBasicCandidateHeldDirectories([...held].reverse());
+        await closeResources(heldFiles, held);
       },
     });
-    const state = Object.freeze({ root, data, canonical, canonicalFiles, profile, verify });
+    const state = Object.freeze({
+      root,
+      data,
+      canonical,
+      canonicalFiles,
+      profile,
+      verifyCanonicalAt,
+      verify,
+    });
     AUTHENTICATED.add(result);
     STATES.set(result, state);
     await verify();
     return result;
   } catch {
     try {
-      await closeBasicCandidateHeldDirectories([...held].reverse());
+      await closeResources(heldFiles, held);
     } catch {
       // Every descriptor close was attempted; expose only the fixed snapshot boundary.
     }
@@ -219,21 +256,48 @@ async function openOwned(
 async function readFiles<Name extends string>(
   directory: BasicCandidateHeldDirectory,
   names: readonly Name[],
+  heldFiles: FileHandle[],
 ): Promise<Readonly<Record<Name, FileSnapshot>>> {
-  return Object.freeze(Object.fromEntries(await Promise.all(names.map(async (name) => [
-    name, await readFile(directory, name),
-  ]))) as Record<Name, FileSnapshot>);
+  const snapshots = {} as Record<Name, FileSnapshot>;
+  for (const name of names) snapshots[name] = await readFile(directory, name, heldFiles);
+  return Object.freeze(snapshots);
 }
 
 async function readFile(
   directory: BasicCandidateHeldDirectory,
   name: string,
+  heldFiles: FileHandle[],
 ): Promise<FileSnapshot> {
-  const snapshot = await readBasicCandidateBoundedRegularFileSnapshot(
-    directory, name, BASIC_COUNTRY_PUBLICATION_JSON_MAX_BYTES,
-  );
-  const text = new TextDecoder("utf-8", { fatal: true }).decode(snapshot.bytes);
-  return Object.freeze({ ...snapshot, value: parseBasicStrictJsonText(text) });
+  let handle: FileHandle | null = null;
+  try {
+    handle = await open(basicCandidateChildPath(directory, name), basicCandidateReadFlags());
+    const before = await handle.stat({ bigint: true });
+    if (!isBoundedBasicCandidateRegularFile(before, BASIC_COUNTRY_PUBLICATION_JSON_MAX_BYTES)) {
+      invalid();
+    }
+    const expectedBytes = Number(before.size);
+    const buffer = new Uint8Array(expectedBytes + 1);
+    const read = await handle.read(buffer, 0, buffer.byteLength, 0);
+    if (read.bytesRead !== expectedBytes) invalid();
+    const bytes = buffer.slice(0, expectedBytes);
+    const after = await handle.stat({ bigint: true });
+    if (
+      !sameStableBasicCandidateRegularFile(before, after) ||
+      !isBoundedBasicCandidateRegularFile(after, BASIC_COUNTRY_PUBLICATION_JSON_MAX_BYTES)
+    ) invalid();
+    const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    const snapshot = Object.freeze({
+      handle,
+      bytes,
+      identity: basicCandidateRegularFileIdentity(after),
+      value: parseBasicStrictJsonText(text),
+    });
+    heldFiles.push(handle);
+    handle = null;
+    return snapshot;
+  } finally {
+    await closeBasicCandidateHandle(handle);
+  }
 }
 
 async function verifyFiles<Name extends string>(
@@ -242,9 +306,46 @@ async function verifyFiles<Name extends string>(
   names: readonly Name[],
 ): Promise<void> {
   for (const name of names) {
-    const file = files[name];
-    await verifyBasicCandidateRegularFile(directory, name, file.identity, file.bytes);
+    await verifyFile(directory, name, files[name]);
   }
+}
+
+async function verifyFile(
+  directory: BasicCandidateHeldDirectory,
+  name: string,
+  file: FileSnapshot,
+): Promise<void> {
+  const before = await file.handle.stat({ bigint: true });
+  if (!sameBasicCandidateRegularFileIdentity(before, file.identity)) invalid();
+  const buffer = new Uint8Array(file.bytes.byteLength + 1);
+  const read = await file.handle.read(buffer, 0, buffer.byteLength, 0);
+  if (
+    read.bytesRead !== file.bytes.byteLength ||
+    !sameBasicCandidateBytes(buffer.slice(0, read.bytesRead), file.bytes)
+  ) invalid();
+  const after = await file.handle.stat({ bigint: true });
+  if (!sameBasicCandidateRegularFileIdentity(after, file.identity)) invalid();
+  await verifyBasicCandidateRegularFile(directory, name, file.identity, file.bytes);
+}
+
+async function closeResources(
+  files: readonly FileHandle[],
+  directories: readonly BasicCandidateHeldDirectory[],
+): Promise<void> {
+  let failed = false;
+  for (const handle of [...files].reverse()) {
+    try {
+      await closeBasicCandidateHandle(handle);
+    } catch {
+      failed = true;
+    }
+  }
+  try {
+    await closeBasicCandidateHeldDirectories([...directories].reverse());
+  } catch {
+    failed = true;
+  }
+  if (failed) invalid();
 }
 
 function manifestVersion(value: unknown): unknown {

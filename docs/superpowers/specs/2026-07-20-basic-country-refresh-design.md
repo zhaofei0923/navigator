@@ -104,7 +104,7 @@ On successful commit the command returns one JSON object:
 ```
 
 If the atomic exchange committed but a post-commit verification, close, fsync,
-or owned-cache cleanup step fails, `status` remains `refreshed` and
+safe-retention, or empty-wrapper cleanup step fails, `status` remains `refreshed` and
 `postCommitVerified` is `false`. The command must never report a committed
 exchange as an uncommitted failure.
 
@@ -189,11 +189,27 @@ The native result distinguishes:
 
 After a verified exchange, JavaScript performs held-child, hierarchy,
 exact-three, byte, parser, validator, resource-close, and parent-fsync checks.
-It then removes only the old canonical cache child whose device/inode identities
-were registered by this transaction. A cleanup failure preserves the private
-mode-`0700` cache artifact for inspection and returns
-`postCommitVerified=false`; it never rolls the active directory back
-automatically and never deletes an unowned path.
+
+**2026-07-20 human-approved safe-retention amendment:** destructive cleanup of the
+previous canonical tree is forbidden because unlinking an exact-three tree is not an
+atomic operation and a later failure could leave only a partial inspection artifact.
+The writer instead creates an exclusive empty mode-`0700`
+`recovery-<transactionUuid>` child directly under `.cache/basic-country-refresh/`,
+then uses the same authenticated native `RENAME_EXCHANGE` primitive to exchange the
+complete held previous canonical tree with that empty recovery placeholder. It verifies
+the previous tree through its held directory and regular-file descriptors at the stable
+recovery name, verifies the empty placeholder at the transaction path, and fsyncs both
+parents. Only the empty placeholder directory and then-empty transaction wrapper may be
+removed, with their registered device/inode identities, followed by parent fsync and
+name verification.
+
+Any failure before or during the retention exchange leaves one complete exact-three
+previous tree either at `<transactionUuid>/canonical` or at
+`recovery-<transactionUuid>`. Any failure after that exchange must not mutate the
+recovery tree. The recovery tree remains private mode-`0700` audit evidence even after a
+fully verified refresh; garbage collection is a separate future, explicitly reviewed
+operation and is not implemented by this design. No failure triggers automatic rollback
+or deletion of an unowned path.
 
 Filesystems without `RENAME_EXCHANGE`, cross-device layouts, DrvFS behavior that
 rejects the operation, and any unsupported native ABI fail closed before the
@@ -236,7 +252,8 @@ Implementation follows TDD and adds focused tests for:
 - complete target construction before the commit point;
 - native pre-commit failure leaving the current active directory byte-identical;
 - atomic exchange success, `COMMITTED_UNVERIFIED`, post-commit verification
-  failure, and owned-cache cleanup failure semantics;
+  failure, safe-retention exchange/verification/fsync failure, and empty-wrapper
+  removal/verification failure semantics, always preserving one complete old tree;
 - exact-three active canonical output and isolation from every other country,
   candidate, approval receipt, Prisma, KnowledgeChunk, and AI index;
 - deterministic canonical byte output and strict JSON duplicate-member

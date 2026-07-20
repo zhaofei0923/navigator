@@ -52,6 +52,11 @@ const AUTHENTICATED_SNAPSHOTS = new WeakSet<object>();
 const SNAPSHOT_STATES = new WeakMap<object, Readonly<{
   root: BasicCandidateHeldDirectory;
   serialized: Readonly<Record<BasicPublicationFileName, Uint8Array>>;
+  validateMaterialized: (input: Readonly<{
+    manifest: unknown;
+    country: unknown;
+    marketOverview: unknown;
+  }>) => void;
   verify: () => Promise<void>;
 }>>();
 
@@ -67,6 +72,11 @@ export function getApprovedBasicPublicationSnapshotState(
 ): Readonly<{
   root: BasicCandidateHeldDirectory;
   serialized: Readonly<Record<BasicPublicationFileName, Uint8Array>>;
+  validateMaterialized: (input: Readonly<{
+    manifest: unknown;
+    country: unknown;
+    marketOverview: unknown;
+  }>) => void;
   verify: () => Promise<void>;
 }> {
   const state = SNAPSHOT_STATES.get(value);
@@ -77,6 +87,7 @@ export function getApprovedBasicPublicationSnapshotState(
       name,
       state.serialized[name].slice(),
     ])) as Record<BasicPublicationFileName, Uint8Array>),
+    validateMaterialized: state.validateMaterialized,
     verify: state.verify,
   });
 }
@@ -160,6 +171,28 @@ export async function locateApprovedBasicPublicationSnapshot(
       "country.json": encode(canonical.country),
       "market-overview.json": encode(canonical.marketOverview),
     });
+    const validateMaterialized = (materialized: Readonly<{
+      manifest: unknown;
+      country: unknown;
+      marketOverview: unknown;
+    }>): void => {
+      const materializedValidation = validateApprovedBasicCountryPublicationV3({
+        countryDirectory: input.countryDirectory,
+        manifest: materialized.manifest,
+        approvalReceipt: approval,
+        approvalReceiptBytes: receipt.bytes,
+        candidate: v3Candidate,
+        candidateArtifactBytes,
+        canonical: {
+          country: materialized.country,
+          marketOverview: materialized.marketOverview,
+          policy: [], risk: [], opportunities: [], projects: [], partners: [],
+          chineseCompanies: [], entryStrategy: null, reports: [], knowledge: [],
+        },
+        canonicalArtifactNames: CANONICAL_NAMES,
+      });
+      if (!materializedValidation.valid) invalid();
+    };
     let closed = false;
     const verify = async () => {
       if (closed) invalid();
@@ -193,7 +226,12 @@ export async function locateApprovedBasicPublicationSnapshot(
       },
     });
     AUTHENTICATED_SNAPSHOTS.add(result);
-    SNAPSHOT_STATES.set(result, Object.freeze({ root, serialized, verify }));
+    SNAPSHOT_STATES.set(result, Object.freeze({
+      root,
+      serialized,
+      validateMaterialized,
+      verify,
+    }));
     return result;
   } catch {
     await closeBasicCandidateHeldDirectories(held);

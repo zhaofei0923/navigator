@@ -247,6 +247,12 @@ git commit -m "feat(db): load approved BASIC publications by version"
 
 ### Task 3: Authenticated refresh snapshot and atomic writer
 
+> **2026-07-20 human-approved amendment:** post-commit handling uses safe retention.
+> The complete previous canonical tree is atomically exchanged into a stable private
+> `recovery-<transactionUuid>` child and is never unlinked by the refresh writer. Only
+> empty placeholder/wrapper directories may be removed. Recovery garbage collection is
+> a separate future reviewed task and is not part of this plan.
+
 **Files:**
 - Create: `packages/db/src/cli/basic-active-publication-snapshot.ts`
 - Create: `packages/db/src/cli/basic-refresh-writer.ts`
@@ -298,7 +304,7 @@ await expect(writeRefreshedBasicPublication(active, target)).resolves.toEqual({
 });
 ```
 
-Then assert active exact-three bytes equal target canonical, target candidate/receipt bytes are unchanged, and no other country or product directory changed. Add injections for native pre-commit failure, native `COMMITTED_UNVERIFIED`, post-exchange verify/fsync/close failure, and old-cache cleanup failure.
+Then assert active exact-three bytes equal target canonical, target candidate/receipt bytes are unchanged, and no other country or product directory changed. Add injections for native pre-commit failure, native `COMMITTED_UNVERIFIED`, post-exchange verify/fsync/close failure, retention exchange and post-exchange identity failure, each retention parent fsync, empty-placeholder removal, empty transaction-wrapper removal, and final recovery verification. Every post-commit case must preserve exactly one complete previous canonical tree and no partial tree.
 
 - [ ] **Step 3: Run focused tests and observe RED**
 
@@ -324,7 +330,7 @@ Under held root, require `.cache` mode `0700`, ensure `basic-country-refresh` mo
 
 Immediately before commit call both authenticated `verify()` functions and require same country, different run, and strictly newer target decision time. Call Task 1 exchange between transaction `canonical` and `data/{countryDirectory}`. After commit, verify new active bytes through the held target inode and old bytes through the held active inode now at the cache path.
 
-Cleanup only registered old files/directories by device/inode. Before commit, any failure removes the owned target transaction and leaves active bytes unchanged. After commit, any failure returns `{ committed: true, postCommitVerified: false }` and never attempts automatic rollback.
+Before commit, any failure removes only the owned target transaction and leaves active bytes unchanged. After commit, create an exclusive empty mode-`0700` recovery placeholder under the refresh cache and atomically exchange the complete held previous canonical tree into `recovery-<transactionUuid>`. Verify the held old tree at recovery, fsync both exchange parents, and remove only the registered empty placeholder and empty transaction wrapper. Never unlink previous canonical files. Any post-commit failure returns `{ committed: true, postCommitVerified: false }`, preserves one complete previous tree at the transaction or recovery name, and never attempts automatic rollback. The stable recovery tree is retained after success; garbage collection requires a separate future reviewed task.
 
 - [ ] **Step 6: Run focused tests and observe GREEN**
 

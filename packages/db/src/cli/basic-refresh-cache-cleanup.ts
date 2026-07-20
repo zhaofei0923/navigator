@@ -3,12 +3,15 @@ import { readdir } from "node:fs/promises";
 import {
   requireBasicCandidateDirectoryEntries,
   requireBasicCandidateHeldChild,
+  setBasicCandidateDirectoryMode,
   syncBasicCandidateDirectory,
+  syncBasicCandidateParentDirectory,
   type BasicCandidateHeldDirectory,
 } from "./basic-candidate-constrained-fs.js";
 import { basicCandidateDirectoryPath } from "./basic-candidate-fs-paths.js";
 import {
   removeBasicCandidateDirectoryNative,
+  renameBasicCandidateDirectoryChildrenExchangeNative,
   unlinkBasicCandidateRegularFileNative,
 } from "./basic-candidate-native-fs.js";
 import {
@@ -21,8 +24,75 @@ const NAMES = Object.freeze([
 ] as const);
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+const RECOVERY =
+  /^recovery-([0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/;
 
-export async function cleanupBasicRefreshTransaction(
+export async function retainBasicRefreshPreviousCanonical(
+  refreshCache: BasicCandidateHeldDirectory,
+  transactionName: string,
+  transaction: BasicCandidateHeldDirectory,
+  previousCanonical: BasicCandidateHeldDirectory,
+  recoveryName: string,
+  recoveryPlaceholder: BasicCandidateHeldDirectory,
+  verifyPreviousAt: (
+    parent: BasicCandidateHeldDirectory,
+    name: string,
+  ) => Promise<void>,
+): Promise<Readonly<{ verified: boolean }>> {
+  const recoveryMatch = RECOVERY.exec(recoveryName);
+  if (
+    !UUID.test(transactionName) || recoveryMatch === null ||
+    recoveryMatch[1] !== transactionName
+  ) invalid();
+  await requireBasicCandidateHeldChild(refreshCache, transactionName, transaction);
+  await requireBasicCandidateHeldChild(transaction, "canonical", previousCanonical);
+  await requireBasicCandidateHeldChild(refreshCache, recoveryName, recoveryPlaceholder);
+  await requireBasicCandidateDirectoryEntries(transaction, ["canonical"]);
+  await requireBasicCandidateDirectoryEntries(recoveryPlaceholder, []);
+  await verifyPreviousAt(transaction, "canonical");
+
+  const exchange = renameBasicCandidateDirectoryChildrenExchangeNative(
+    transaction.handle.fd,
+    "canonical",
+    refreshCache.handle.fd,
+    recoveryName,
+    previousCanonical.identity.dev,
+    previousCanonical.identity.ino,
+    recoveryPlaceholder.identity.dev,
+    recoveryPlaceholder.identity.ino,
+  );
+  await requireBasicCandidateHeldChild(refreshCache, recoveryName, previousCanonical);
+  await requireBasicCandidateHeldChild(transaction, "canonical", recoveryPlaceholder);
+  await setBasicCandidateDirectoryMode(previousCanonical, 0o700);
+  await verifyPreviousAt(refreshCache, recoveryName);
+  await requireBasicCandidateDirectoryEntries(recoveryPlaceholder, []);
+  await requireBasicCandidateDirectoryEntries(transaction, ["canonical"]);
+  await syncBasicCandidateParentDirectory(transaction);
+  await syncBasicCandidateParentDirectory(refreshCache);
+
+  removeBasicCandidateDirectoryNative(
+    transaction.handle.fd,
+    "canonical",
+    recoveryPlaceholder.identity.dev,
+    recoveryPlaceholder.identity.ino,
+  );
+  await requireBasicCandidateDirectoryEntries(transaction, []);
+  await syncBasicCandidateParentDirectory(transaction);
+  await requireBasicCandidateHeldChild(refreshCache, transactionName, transaction);
+  removeBasicCandidateDirectoryNative(
+    refreshCache.handle.fd,
+    transactionName,
+    transaction.identity.dev,
+    transaction.identity.ino,
+  );
+  await syncBasicCandidateParentDirectory(refreshCache);
+  const entries = await readdir(basicCandidateDirectoryPath(refreshCache));
+  if (entries.includes(transactionName) || !entries.includes(recoveryName)) invalid();
+  await verifyPreviousAt(refreshCache, recoveryName);
+  return Object.freeze({ verified: exchange.verified });
+}
+
+export async function cleanupBasicRefreshUncommittedTargetTransaction(
   refreshCache: BasicCandidateHeldDirectory,
   transactionName: string,
   transaction: BasicCandidateHeldDirectory,
