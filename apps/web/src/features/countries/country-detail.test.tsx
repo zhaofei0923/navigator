@@ -67,7 +67,9 @@ describe("CountryDetail visible i18n", () => {
     expect(html).toContain(
       "The module is active, but no published records are available for this view.",
     );
-    expect(html).not.toContain("Installed renewable capacity reached 15,630 MW");
+    expect(html).not.toContain(
+      "Energy and mineral investment reached USD 31.7 billion in 2025, including USD 4.6 billion in electricity and USD 2.4 billion in renewables and conservation.",
+    );
   });
 
   test("renders the published Chinese market overview and nine placeholders", () => {
@@ -76,8 +78,12 @@ describe("CountryDetail visible i18n", () => {
     expect(html).toContain("印度尼西亚");
     expect(html).toContain("基础覆盖");
     expect(html).toContain("1/10 个模块");
-    expect(html).toContain("可再生能源装机达到15,630兆瓦");
+    expect(html).toContain(
+      "2025年能源与矿产领域投资为317亿美元，其中电力46亿美元、可再生能源与节能24亿美元。",
+    );
     expect(html).toContain("可再生能源占比");
+    expect(html).toContain("<strong>15.75</strong>");
+    expect(html).toContain("<strong>1584</strong>");
     expect(html.match(/数据建设中/g)).toHaveLength(9);
     expect(html).toContain("外部公开来源");
     expect(html).not.toContain("P1-2 manually curated");
@@ -93,8 +99,12 @@ describe("CountryDetail visible i18n", () => {
     expect(html).toContain("Indonesia");
     expect(html).toContain("Basic");
     expect(html).toContain("1/10 modules");
-    expect(html).toContain("Installed renewable capacity reached 15,630 MW");
+    expect(html).toContain(
+      "Energy and mineral investment reached USD 31.7 billion in 2025, including USD 4.6 billion in electricity and USD 2.4 billion in renewables and conservation.",
+    );
     expect(html).toContain("Renewable energy mix share");
+    expect(html).toContain("<strong>15.75</strong>");
+    expect(html).toContain("<strong>1584</strong>");
     expect(html.match(/Data Building/g)).toHaveLength(9);
     expect(html).toContain("External public source");
     expect(html).not.toContain("P1-2 manually curated");

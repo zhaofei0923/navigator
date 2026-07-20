@@ -702,9 +702,23 @@ describe("country explorer service", () => {
 
     expect(response?.data.item).toMatchObject({
       overview: {
-        zh: expect.stringContaining("可再生能源装机达到15,630兆瓦"),
-        en: expect.stringContaining("Installed renewable capacity reached 15,630 MW"),
+        zh: "2025年能源与矿产领域投资为317亿美元，其中电力46亿美元、可再生能源与节能24亿美元。",
+        en: "Energy and mineral investment reached USD 31.7 billion in 2025, including USD 4.6 billion in electricity and USD 2.4 billion in renewables and conservation.",
       },
+      keyIndicators: [
+        {
+          label: { zh: "可再生能源占比", en: "Renewable energy mix share" },
+          value: "15.75",
+          unit: "%",
+          year: 2025,
+        },
+        {
+          label: { zh: "人均用电量", en: "Electricity consumption per capita" },
+          value: "1584",
+          unit: "kWh/person",
+          year: 2025,
+        },
+      ],
     });
     expect(response?.meta.textMode).toBe("raw");
     expect(response?.data._i18nFallback).toBeUndefined();
