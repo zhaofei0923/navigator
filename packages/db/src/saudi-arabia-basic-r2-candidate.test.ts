@@ -16,9 +16,9 @@ const COUNTRY_DIRECTORY = "saudi-arabia";
 const COUNTRY_CODE = "SA";
 const R1_RUN_ID = "data-basic-sa-20260717-r1";
 const R2_RUN_ID = "data-basic-sa-20260717-r2";
-const CURRENT_CATALOG_VERSION = "2026-07-17.2";
+const CURRENT_CATALOG_VERSION = "2026-07-20.1";
 const CURRENT_CATALOG_SHA256 =
-  "6d4c6a27367eb36e4fe20df8fe78a9c9a9e865f84af563a22e31069c176d6f0a";
+  "6afa620bfef537573e7a52522fa0ef10e4d23bb1a1b291e28401628370f2c249";
 const CANDIDATE_CATALOG_VERSION = "2026-07-17.1";
 const CANDIDATE_CATALOG_SHA256 =
   "3c174b76efe8c637436c52f473911d6409d79ac2e057eb251bb860dba4c417e7";
@@ -45,7 +45,12 @@ const CURRENT_CATALOG_SOURCE_IDS = [
   "uae-government-energy-strategy-2050",
   "vietnam-chinhphu-adjusted-pdp8-2025",
   "vietnam-evn-annual-report-2024-2025",
-  ...SOURCE_IDS.slice(3),
+  "world-bank-country",
+  "world-bank-electricity-access",
+  "world-bank-gdp",
+  "world-bank-gdp-growth",
+  "world-bank-gdp-per-capita",
+  "world-bank-population",
 ] as const;
 const R1_ARTIFACT_HASHES = {
   "extracted-facts.json": "7a423661d5b7bd2d43c7f81b39131eeea47fb82cf62624343d976128eb4d36d1",

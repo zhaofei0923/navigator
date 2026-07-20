@@ -15,9 +15,9 @@ const REPO_ROOT = fileURLToPath(new URL("../../../", import.meta.url));
 const COUNTRY_DIRECTORY = "vietnam";
 const COUNTRY_CODE = "VN";
 const RUN_ID = "data-basic-vn-20260715-r3";
-const CURRENT_CATALOG_VERSION = "2026-07-17.2";
+const CURRENT_CATALOG_VERSION = "2026-07-20.1";
 const CURRENT_CATALOG_SHA256 =
-  "6d4c6a27367eb36e4fe20df8fe78a9c9a9e865f84af563a22e31069c176d6f0a";
+  "6afa620bfef537573e7a52522fa0ef10e4d23bb1a1b291e28401628370f2c249";
 const CANDIDATE_CATALOG_VERSION = "2026-07-15.1";
 const CANDIDATE_CATALOG_SHA256 =
   "ddb53c6b6fb82bc7dd050475a04b147f3ffa43b76886974591e950f829872f92";
@@ -46,8 +46,10 @@ const CURRENT_CATALOG_SOURCE_IDS = [
   "vietnam-chinhphu-adjusted-pdp8-2025",
   "vietnam-evn-annual-report-2024-2025",
   "world-bank-country",
+  "world-bank-electricity-access",
   "world-bank-gdp",
   "world-bank-gdp-growth",
+  "world-bank-gdp-per-capita",
   "world-bank-population",
 ] as const;
 const SOURCE_BINDINGS = [

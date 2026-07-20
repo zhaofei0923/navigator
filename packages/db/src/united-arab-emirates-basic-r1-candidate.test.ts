@@ -15,9 +15,35 @@ const REPO_ROOT = fileURLToPath(new URL("../../../", import.meta.url));
 const COUNTRY_DIRECTORY = "united-arab-emirates";
 const COUNTRY_CODE = "AE";
 const RUN_ID = "data-basic-ae-20260717-r1";
-const CATALOG_VERSION = "2026-07-17.2";
-const CATALOG_SHA256 =
+const CURRENT_CATALOG_VERSION = "2026-07-20.1";
+const CURRENT_CATALOG_SHA256 =
+  "6afa620bfef537573e7a52522fa0ef10e4d23bb1a1b291e28401628370f2c249";
+const CANDIDATE_CATALOG_VERSION = "2026-07-17.2";
+const CANDIDATE_CATALOG_SHA256 =
   "6d4c6a27367eb36e4fe20df8fe78a9c9a9e865f84af563a22e31069c176d6f0a";
+const CURRENT_CATALOG_SOURCE_IDS = [
+  "brazil-epe-ben-2026-summary",
+  "brazil-ipea-ods7-renewable-target",
+  "indonesia-esdm-2025-performance",
+  "indonesia-esdm-national-energy-policy-2025",
+  "saudi-gastat-electrical-energy-statistics-2024",
+  "saudi-gastat-renewable-energy-statistics-2024",
+  "saudi-spa-energy-storage-2025",
+  "south-africa-eskom-results-presentation-2025",
+  "south-africa-government-irp-2025",
+  "south-africa-government-rmippp-hybrid-projects-2023",
+  "uae-admo-barakah-unit-4-2024",
+  "uae-admo-wind-program-2023",
+  "uae-government-energy-strategy-2050",
+  "vietnam-chinhphu-adjusted-pdp8-2025",
+  "vietnam-evn-annual-report-2024-2025",
+  "world-bank-country",
+  "world-bank-electricity-access",
+  "world-bank-gdp",
+  "world-bank-gdp-growth",
+  "world-bank-gdp-per-capita",
+  "world-bank-population",
+] as const;
 const STRATEGY_URL =
   "https://u.ae/en/about-the-uae/strategies-initiatives-and-awards/strategies-plans-and-visions/environment-and-energy/uae-energy-strategy-2050";
 const SOURCE_IDS = [
@@ -290,9 +316,12 @@ describe("United Arab Emirates Basic r1 candidate", () => {
       "utf8",
     )) as unknown);
     expect(catalog).toMatchObject({
-      catalog: { catalogVersion: CATALOG_VERSION, countryMappings: [] },
-      catalogSha256: CATALOG_SHA256,
+      catalog: { catalogVersion: CURRENT_CATALOG_VERSION, countryMappings: [] },
+      catalogSha256: CURRENT_CATALOG_SHA256,
     });
+    expect(catalog.catalog.sources.map(({ sourceId }) => sourceId)).toEqual(
+      CURRENT_CATALOG_SOURCE_IDS,
+    );
 
     const bundle = loadBasicCollectionAuditBundleVersioned(
       REPO_ROOT,
@@ -323,8 +352,8 @@ describe("United Arab Emirates Basic r1 candidate", () => {
       sourceRegister: {
         runId: RUN_ID,
         countryCode: COUNTRY_CODE,
-        catalogVersion: CATALOG_VERSION,
-        catalogSha256: CATALOG_SHA256,
+        catalogVersion: CANDIDATE_CATALOG_VERSION,
+        catalogSha256: CANDIDATE_CATALOG_SHA256,
       },
       extractedFacts: { runId: RUN_ID, countryCode: COUNTRY_CODE },
       reviewReport: {
