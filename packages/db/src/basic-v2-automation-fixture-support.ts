@@ -4,7 +4,12 @@ import { join } from "node:path";
 
 import { expect } from "vitest";
 
-import type { BasicProfileCategoryKey } from "@navigator/shared-types/basic-profile";
+import {
+  BASIC_PROFILE_REQUIRED_FIELD_KEYS,
+  type BasicProfile,
+  type BasicProfileCategoryKey,
+  type BasicProfileField,
+} from "@navigator/shared-types/basic-profile";
 
 import { createBasicCollectionAuditV2Fixture } from "./basic-collection-test-fixture.js";
 import { createBasicV3CandidateComposition } from "./cli/basic-v3-candidate-composition.js";
@@ -105,7 +110,7 @@ export function createSyntheticCandidate(
   const profile = materializeBasicProfile({
     updatedAt: bound.updatedAt,
     sources: [...bound.sources, { id: "source-1", publisher: source.sourceName, title: { zh: "合成基础来源", en: "Synthetic base source" }, url: source.sourceUrl, publishedAt: source.publishedAt, retrievedAt: source.retrievedAt, credibility: source.credibility }],
-    fields: [...bound.fields, ...retainedFields()],
+    fields: [...bound.fields, ...retainedFields(countryCode)],
   });
   return createBasicV3CandidateComposition({
     baseBundle: v2,
@@ -118,12 +123,21 @@ export function createSyntheticCandidate(
 export function assertCapturedProvenance(fixture: StrictFixture, bytes: Record<(typeof CANDIDATE_FILES)[number], Uint8Array>): void {
   const register = JSON.parse(decode(bytes["source-register.json"])) as { sources: readonly { sourceId: string; contentSha256: string }[] };
   const facts = JSON.parse(decode(bytes["extracted-facts.json"])) as { facts: readonly { fieldPath: string; evidence: readonly { sourceId: string }[] }[] };
-  const profile = JSON.parse(decode(bytes["market-overview.draft.json"])) as { basicProfile: { sources: readonly { id: string }[] } };
+  const profile = JSON.parse(decode(bytes["market-overview.draft.json"])) as {
+    basicProfile: BasicProfile;
+  };
   for (const sourceId of BASIC_GLOBAL_SOURCE_IDS) {
     expect(register.sources).toContainEqual(expect.objectContaining({ sourceId, contentSha256: fixture.reviewedSnapshotSha256[sourceId] }));
     expect(profile.basicProfile.sources).toContainEqual(expect.objectContaining({ id: sourceId }));
   }
   const profileFacts = facts.facts.filter(({ fieldPath }) => fieldPath.startsWith("marketOverview.basicProfile."));
+  for (const [category, requiredKeys] of Object.entries(BASIC_PROFILE_REQUIRED_FIELD_KEYS)) {
+    const actualKeys = profile.basicProfile.categories[
+      category as BasicProfileCategoryKey
+    ].fields.map(({ key }) => key);
+    expect([...actualKeys].sort()).toEqual([...requiredKeys].sort());
+  }
+  expect(profileFacts).toHaveLength(24);
   expect(new Set(profileFacts.flatMap(({ evidence }) => evidence.map(({ sourceId }) => sourceId))))
     .toEqual(new Set([...BASIC_GLOBAL_SOURCE_IDS, "source-1"]));
 }
@@ -159,11 +173,44 @@ function reviewedGlobalProfile(fixture: StrictFixture, countryCode: string, capt
   };
 }
 
-function retainedFields() {
-  return ([
-    ["countryBasics", "countryClassification"], ["energyAccess", "electricityAccess"],
-    ["policyOverview", "renewablePolicySummary"], ["marketSummary", "marketReadiness"],
-  ] as const).map(([category, key]) => ({ category: category as BasicProfileCategoryKey, field: { key, label: { zh: `${key} 中文`, en: `${key} synthetic` }, status: "AVAILABLE" as const, value: `${key}-value`, unit: null, year: null, sourceIds: ["source-1"] as const, checkedAt: "2026-07-10", reason: null, note: null } }));
+function retainedFields(countryCode: string): readonly Readonly<{
+  category: BasicProfileCategoryKey;
+  field: BasicProfileField;
+}>[] {
+  const entries: readonly Readonly<{
+    category: BasicProfileCategoryKey;
+    key: string;
+    value: BasicProfileField["value"];
+    unit: string | null;
+    year: number | null;
+  }>[] = [
+    { category: "countryBasics", key: "countryCode", value: countryCode, unit: null, year: null },
+    { category: "countryBasics", key: "countryName", value: { zh: `合成国家 ${countryCode}`, en: `Synthetic ${countryCode}` }, unit: null, year: null },
+    { category: "countryBasics", key: "region", value: "synthetic-region", unit: null, year: null },
+    { category: "countryBasics", key: "population", value: 1_000_000, unit: "people", year: 2025 },
+    { category: "countryBasics", key: "gdp", value: 25_000_000_000, unit: "current US$", year: 2025 },
+    { category: "countryBasics", key: "gdpPerCapita", value: 25_000, unit: "current US$ per person", year: 2025 },
+    { category: "countryBasics", key: "gdpGrowth", value: 5.2, unit: "%", year: 2025 },
+    { category: "energyAccess", key: "electricityAccess", value: 98.5, unit: "%", year: 2025 },
+    { category: "windResource", key: "resourceSummary", value: { zh: "合成风资源摘要", en: "Synthetic wind resource summary" }, unit: null, year: null },
+    { category: "policyOverview", key: "summary", value: { zh: "合成政策摘要", en: "Synthetic policy summary" }, unit: null, year: null },
+    { category: "marketSummary", key: "opportunitySummary", value: { zh: "合成市场摘要", en: "Synthetic market summary" }, unit: null, year: null },
+  ];
+  return entries.map(({ category, key, value, unit, year }) => ({
+    category,
+    field: {
+      key,
+      label: { zh: `${key} 中文`, en: `${key} synthetic` },
+      status: "AVAILABLE",
+      value,
+      unit,
+      year,
+      sourceIds: ["source-1"],
+      checkedAt: "2026-07-10",
+      reason: null,
+      note: null,
+    },
+  }));
 }
 
 function isStrictFixture(value: unknown): value is StrictFixture {
