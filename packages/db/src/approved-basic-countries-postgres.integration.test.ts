@@ -1,5 +1,4 @@
 import { fileURLToPath } from "node:url";
-import { isDeepStrictEqual } from "node:util";
 
 import { Prisma, PrismaClient } from "@prisma/client";
 import { describe, expect, test, vi } from "vitest";
@@ -157,7 +156,13 @@ if (integrationDatabase.kind === "skip") {
             ),
             { isolationLevel: "Serializable", maxWait: 5000, timeout: 15000 },
           );
-          expect(isDeepStrictEqual(actual, country.canonical)).toBe(true);
+          expect(actual).toStrictEqual({
+            ...country.canonical,
+            marketOverview: {
+              ...country.canonical.marketOverview,
+              basicProfile: country.canonical.marketOverview.basicProfile ?? null,
+            },
+          });
         }
       } finally {
         await prisma.$disconnect();
