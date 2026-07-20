@@ -14,11 +14,18 @@ import { describe, expect, test } from "vitest";
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const sharedTypesRoot = resolve(repositoryRoot, "packages/shared-types");
 const sharedTypesDist = resolve(sharedTypesRoot, "dist");
+const basicNativeArtifact = resolve(
+  repositoryRoot,
+  "packages/db/.cache/native/basic-candidate-fs.node",
+);
 
 describe("tracked TypeScript command hook", () => {
   test("wires DB source commands through the tracked node --import hook", () => {
     const dbPackageJson = JSON.parse(
       readFileSync(resolve(repositoryRoot, "packages/db/package.json"), "utf8"),
+    ) as { readonly scripts?: Readonly<Record<string, string>> };
+    const rootPackageJson = JSON.parse(
+      readFileSync(resolve(repositoryRoot, "package.json"), "utf8"),
     ) as { readonly scripts?: Readonly<Record<string, string>> };
     const webPackageJson = JSON.parse(
       readFileSync(resolve(repositoryRoot, "apps/web/package.json"), "utf8"),
@@ -27,6 +34,18 @@ describe("tracked TypeScript command hook", () => {
     expect(dbPackageJson.scripts?.["candidate:basic-country"]).toBe(
       "node --conditions=development --import ../../scripts/node-ts-source-hook.mjs src/cli/candidate-basic-country.ts",
     );
+    for (const command of [
+      "basic:prepare-batch",
+      "basic:review-pack",
+      "basic:publish",
+    ]) {
+      expect(dbPackageJson.scripts?.[`pre${command}`]).toBe(
+        "pnpm run build:basic-candidate-native",
+      );
+      expect(rootPackageJson.scripts?.[command]).toBe(
+        `pnpm --filter @navigator/db ${command}`,
+      );
+    }
     expect(dbPackageJson.scripts?.["preflight:basic-activation"]).toBe(
       "node --conditions=development --import ../../scripts/node-ts-source-hook.mjs src/seed/basic-country-activation-preflight-cli.ts",
     );
@@ -56,6 +75,32 @@ describe("tracked TypeScript command hook", () => {
       "Usage: pnpm candidate:basic-country -- .cache/basic-country/<ISO2>/<runId>/candidate-config.json",
     );
   }, 30_000);
+
+  test.each([
+    [
+      "basic:prepare-batch",
+      "Usage: pnpm basic:prepare-batch --countries=ID,VN,SA --batch-id=basic-v2-202607",
+    ],
+    [
+      "basic:review-pack",
+      "Usage: pnpm basic:review-pack --country=<ISO2> --run-id=<runId>",
+    ],
+    [
+      "basic:publish",
+      "Usage: pnpm basic:publish --country=ID --run-id=<runId> --approval-file=<path>",
+    ],
+  ] as const)(
+    "builds the native filesystem helper before root %s help",
+    (command, usage) => {
+      const result = withoutBasicNativeArtifact(() => (
+        runPnpm([command, "--help"])
+      ));
+
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.stdout).toContain(usage);
+    },
+    30_000,
+  );
 
   test("runs preflight help without a datastore command", () => {
     const result = runPnpm([
@@ -296,6 +341,27 @@ function withoutSharedTypesDist<T>(operation: () => T): T {
       rmSync(sharedTypesDist, { recursive: true, force: true });
     }
     if (hadDist) renameSync(backupDist, sharedTypesDist);
+    rmSync(backupRoot, { recursive: true, force: true });
+  }
+}
+
+function withoutBasicNativeArtifact<T>(operation: () => T): T {
+  const backupRoot = mkdtempSync(resolve(
+    repositoryRoot,
+    ".native-command-test-",
+  ));
+  const backupArtifact = resolve(backupRoot, "basic-candidate-fs.node");
+  const hadArtifact = existsSync(basicNativeArtifact);
+
+  if (hadArtifact) renameSync(basicNativeArtifact, backupArtifact);
+  try {
+    expect(existsSync(basicNativeArtifact)).toBe(false);
+    const result = operation();
+    expect(existsSync(basicNativeArtifact)).toBe(true);
+    return result;
+  } finally {
+    if (existsSync(basicNativeArtifact)) rmSync(basicNativeArtifact);
+    if (hadArtifact) renameSync(backupArtifact, basicNativeArtifact);
     rmSync(backupRoot, { recursive: true, force: true });
   }
 }
