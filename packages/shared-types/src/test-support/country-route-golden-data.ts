@@ -11,6 +11,185 @@ export const GOLDEN_MODULE_KEYS = [
   "reports",
 ] as const;
 
+interface GoldenProfileFieldOptions {
+  readonly key: string;
+  readonly label: { readonly zh: string; readonly en: string };
+  readonly status: "AVAILABLE" | "NOT_AVAILABLE";
+  readonly value: unknown;
+  readonly sourceIds: readonly string[];
+  readonly unit?: string | null;
+  readonly year?: number | null;
+  readonly reason?: { readonly zh: string; readonly en: string } | null;
+}
+
+function profileField({
+  key,
+  label,
+  status,
+  value,
+  sourceIds,
+  unit = null,
+  year = null,
+  reason = null,
+}: GoldenProfileFieldOptions) {
+  return {
+    key,
+    label,
+    status,
+    value,
+    unit,
+    year,
+    sourceIds,
+    checkedAt: "2026-07-20",
+    reason,
+    note: null,
+  };
+}
+
+function profileSource(
+  id: string,
+  publisher: string,
+  title: { readonly zh: string; readonly en: string },
+  url: string,
+  retrievedAt: string,
+  publishedAt: string | null = null,
+) {
+  return {
+    id,
+    publisher,
+    title,
+    url,
+    publishedAt,
+    retrievedAt,
+    credibility: "OFFICIAL",
+  };
+}
+
+const EMBER_UNAVAILABLE_REASON = {
+  zh: "未提供已审核的Ember不可变标准化快照",
+  en: "A reviewed immutable normalized Ember snapshot was not provided",
+} as const;
+
+const IRENA_UNAVAILABLE_REASONS = {
+  total: {
+    zh: "尚未取得IRENA对商业产品自动获取和使用IRENASTAT数据的书面许可，因此本批不写入可再生能源总装机数值",
+    en: "Written IRENA permission for automated retrieval and commercial-product use of IRENASTAT data has not been obtained so total renewable capacity is not included in this batch",
+  },
+  solar: {
+    zh: "尚未取得IRENA对商业产品自动获取和使用IRENASTAT数据的书面许可，因此本批不写入太阳能装机数值",
+    en: "Written IRENA permission for automated retrieval and commercial-product use of IRENASTAT data has not been obtained so solar capacity is not included in this batch",
+  },
+  wind: {
+    zh: "尚未取得IRENA对商业产品自动获取和使用IRENASTAT数据的书面许可，因此本批不写入风电装机数值",
+    en: "Written IRENA permission for automated retrieval and commercial-product use of IRENASTAT data has not been obtained so wind capacity is not included in this batch",
+  },
+  hydro: {
+    zh: "尚未取得IRENA对商业产品自动获取和使用IRENASTAT数据的书面许可，因此本批不写入水电装机数值",
+    en: "Written IRENA permission for automated retrieval and commercial-product use of IRENASTAT data has not been obtained so hydropower capacity is not included in this batch",
+  },
+} as const;
+
+const GOLDEN_ID_BASIC_PROFILE = {
+  schemaVersion: "basic-market-profile/v2",
+  categories: {
+    countryBasics: {
+      fields: [
+        profileField({ key: "countryCode", label: { zh: "国家代码", en: "Country code" }, status: "AVAILABLE", value: "ID", sourceIds: ["world-bank-country"] }),
+        profileField({ key: "countryName", label: { zh: "国家名称", en: "Country name" }, status: "AVAILABLE", value: { zh: "印度尼西亚", en: "Indonesia" }, sourceIds: ["world-bank-country"] }),
+        profileField({ key: "region", label: { zh: "区域", en: "Region" }, status: "AVAILABLE", value: "southeast-asia", sourceIds: ["indonesia-esdm-2025-performance"] }),
+        profileField({ key: "population", label: { zh: "人口", en: "Population" }, status: "AVAILABLE", value: 285721236, unit: "people", year: 2025, sourceIds: ["world-bank-population"] }),
+        profileField({ key: "gdp", label: { zh: "国内生产总值", en: "GDP" }, status: "AVAILABLE", value: 1445642584163.81, unit: "current US$", year: 2025, sourceIds: ["world-bank-gdp"] }),
+        profileField({ key: "gdpPerCapita", label: { zh: "人均国内生产总值", en: "GDP per capita" }, status: "AVAILABLE", value: 5059.62596411213, unit: "current US$ per person", year: 2025, sourceIds: ["world-bank-gdp-per-capita"] }),
+        profileField({ key: "gdpGrowth", label: { zh: "国内生产总值增长率", en: "GDP growth" }, status: "AVAILABLE", value: 5.10808904438025, unit: "%", year: 2025, sourceIds: ["world-bank-gdp-growth"] }),
+      ],
+    },
+    electricityMarket: {
+      fields: [
+        profileField({ key: "totalGeneration", label: { zh: "总发电量", en: "Total generation" }, status: "NOT_AVAILABLE", value: null, sourceIds: ["ember-electricity"], reason: EMBER_UNAVAILABLE_REASON }),
+        profileField({ key: "electricityConsumption", label: { zh: "用电量", en: "Electricity consumption" }, status: "NOT_AVAILABLE", value: null, sourceIds: ["ember-electricity"], reason: EMBER_UNAVAILABLE_REASON }),
+        profileField({ key: "electricityMix", label: { zh: "电力结构", en: "Electricity mix" }, status: "NOT_AVAILABLE", value: null, sourceIds: ["ember-electricity"], reason: EMBER_UNAVAILABLE_REASON }),
+        profileField({ key: "renewableGenerationShare", label: { zh: "可再生发电占比", en: "Renewable generation share" }, status: "NOT_AVAILABLE", value: null, sourceIds: ["ember-electricity"], reason: EMBER_UNAVAILABLE_REASON }),
+      ],
+    },
+    energyAccess: {
+      fields: [
+        profileField({ key: "electricityAccess", label: { zh: "通电率", en: "Access to electricity" }, status: "AVAILABLE", value: 99.9, unit: "%", year: 2024, sourceIds: ["world-bank-electricity-access"] }),
+      ],
+    },
+    renewableCapacity: {
+      fields: [
+        profileField({ key: "totalRenewableCapacity", label: { zh: "可再生能源总装机", en: "Total renewable capacity" }, status: "NOT_AVAILABLE", value: null, sourceIds: ["irenastat-capacity"], reason: IRENA_UNAVAILABLE_REASONS.total }),
+        profileField({ key: "solarCapacity", label: { zh: "太阳能装机", en: "Solar capacity" }, status: "NOT_AVAILABLE", value: null, sourceIds: ["irenastat-capacity"], reason: IRENA_UNAVAILABLE_REASONS.solar }),
+        profileField({ key: "windCapacity", label: { zh: "风电装机", en: "Wind capacity" }, status: "NOT_AVAILABLE", value: null, sourceIds: ["irenastat-capacity"], reason: IRENA_UNAVAILABLE_REASONS.wind }),
+        profileField({ key: "hydroCapacity", label: { zh: "水电装机", en: "Hydropower capacity" }, status: "NOT_AVAILABLE", value: null, sourceIds: ["irenastat-capacity"], reason: IRENA_UNAVAILABLE_REASONS.hydro }),
+      ],
+    },
+    solarResource: {
+      fields: [
+        profileField({
+          key: "ghi", label: { zh: "全球水平辐照度", en: "GHI" }, status: "NOT_AVAILABLE", value: null, sourceIds: ["global-solar-atlas"],
+          reason: { zh: "Global Solar Atlas国家GIS下载页未提供经批准的自动化接口且条款禁止自动设备访问；本批未人工下载并审核栅格，因此不提供GHI数值", en: "The Global Solar Atlas country GIS page provides no approved automation interface and its terms prohibit automated access; no raster was manually downloaded and reviewed for this batch so GHI is not available" },
+        }),
+        profileField({
+          key: "pvout", label: { zh: "光伏输出", en: "PVOUT" }, status: "NOT_AVAILABLE", value: null, sourceIds: ["global-solar-atlas"],
+          reason: { zh: "Global Solar Atlas国家GIS下载页未提供经批准的自动化接口且条款禁止自动设备访问；本批未人工下载并审核栅格，因此不提供PVOUT数值", en: "The Global Solar Atlas country GIS page provides no approved automation interface and its terms prohibit automated access; no raster was manually downloaded and reviewed for this batch so PVOUT is not available" },
+        }),
+        profileField({
+          key: "solarPotentialSummary", label: { zh: "太阳能潜力摘要", en: "Solar potential summary" }, status: "NOT_AVAILABLE", value: null, sourceIds: ["global-solar-atlas"],
+          reason: { zh: "本批未取得经人工审核的Global Solar Atlas国家栅格及聚合方法，无法生成双语太阳能潜力摘要", en: "No manually reviewed Global Solar Atlas country raster and aggregation method were obtained for this batch so a bilingual solar potential summary cannot be produced" },
+        }),
+      ],
+    },
+    windResource: {
+      fields: [
+        profileField({
+          key: "onshoreWindClass", label: { zh: "陆上风资源等级", en: "Onshore wind class" }, status: "NOT_AVAILABLE", value: null, sourceIds: ["global-wind-atlas"],
+          reason: { zh: "Global Wind Atlas提供栅格下载但未提供经审核的国家陆上风资源等级；本批尚未固定陆地边界掩膜和分级方法", en: "Global Wind Atlas provides raster downloads but no reviewed national onshore wind class; a land-boundary mask and classification method have not yet been fixed for this batch" },
+        }),
+        profileField({
+          key: "offshoreWindClass", label: { zh: "近海风资源等级", en: "Offshore wind class" }, status: "NOT_AVAILABLE", value: null, sourceIds: ["global-wind-atlas"],
+          reason: { zh: "Global Wind Atlas提供含专属经济区的栅格但未提供经审核的国家近海风资源等级；本批尚未固定海域边界掩膜和分级方法", en: "Global Wind Atlas provides rasters covering exclusive economic zones but no reviewed national offshore wind class; a marine-boundary mask and classification method have not yet been fixed for this batch" },
+        }),
+        profileField({
+          key: "resourceSummary", label: { zh: "风资源摘要", en: "Wind resource summary" }, status: "NOT_AVAILABLE", value: null, sourceIds: ["global-wind-atlas"],
+          reason: { zh: "未取得经审核的国家风资源等级及聚合方法，无法生成风资源摘要", en: "No reviewed national wind class and aggregation method were obtained, so a wind-resource summary is not available" },
+        }),
+      ],
+    },
+    policyOverview: {
+      fields: [
+        profileField({
+          key: "summary", label: { zh: "政策摘要", en: "Policy summary" }, status: "AVAILABLE", sourceIds: ["iea-policies"],
+          value: { zh: "IEA政策页将印尼国家电力总规划列为2025年生效的国家政策，并记录到2060年新能源和可再生能源约占能源结构73.6%的目标。", en: "The IEA policy page lists Indonesia's National Electricity General Plan as a national policy in force from 2025 and records a target for new and renewable energy to reach about 73.6% of the energy mix by 2060." },
+        }),
+      ],
+    },
+    marketSummary: {
+      fields: [
+        profileField({
+          key: "opportunitySummary", label: { zh: "市场机会摘要", en: "Market opportunity summary" }, status: "AVAILABLE", sourceIds: ["iea-policies"],
+          value: { zh: "对中国新能源企业而言，IEA记录的印尼国家电力总规划可作为跟踪当地电力转型政策的线索。该政策在2025年生效，并记录了到2060年新能源和可再生能源约占能源结构73.6%的目标。进入、融资、项目储备及并网条件仍需以进一步尽调核实。", en: "For Chinese new-energy companies, the IEA-recorded National Electricity General Plan is a lead for tracking Indonesia's power-transition policy. It took effect in 2025 and records a target for new and renewable energy to reach about 73.6% of the energy mix by 2060. Market entry, financing, project pipeline, and grid conditions still require further due diligence." },
+        }),
+      ],
+    },
+  },
+  sources: [
+    profileSource("ember-electricity", "Ember", { zh: "Ember 电力数据", en: "Ember electricity data" }, "https://ember-energy.org/data/electricity-data-explorer/", "2026-07-20T10:44:13Z"),
+    profileSource("global-solar-atlas", "World Bank ESMAP", { zh: "全球太阳能地图集", en: "Global Solar Atlas" }, "https://globalsolaratlas.info/", "2026-07-20T10:44:13Z"),
+    profileSource("global-wind-atlas", "World Bank ESMAP", { zh: "全球风能地图集", en: "Global Wind Atlas" }, "https://globalwindatlas.info/", "2026-07-20T10:44:13Z"),
+    profileSource("iea-policies", "International Energy Agency", { zh: "印尼国家电力总规划", en: "Indonesia National Electricity General Plan" }, "https://www.iea.org/policies/30494-national-electricity-general-plan", "2026-07-20T10:44:13Z"),
+    profileSource("indonesia-esdm-2025-performance", "Indonesia Ministry of Energy and Mineral Resources", { zh: "Indonesia Ministry of Energy and Mineral Resources", en: "Indonesia Ministry of Energy and Mineral Resources" }, "https://www.esdm.go.id/en/media-center/news-archives/capaian-positif-tahun-2025-negara-hadir-penuhi-kebutuhan-energi-masyarakat", "2026-07-20T12:14:11.627Z", "2026-01-09T00:00:00.000Z"),
+    profileSource("irenastat-capacity", "International Renewable Energy Agency (IRENA)", { zh: "IRENASTAT 装机容量", en: "IRENASTAT capacity" }, "https://pxweb.irena.org/pxweb/en/IRENASTAT/", "2026-07-20T10:44:13Z"),
+    profileSource("world-bank-country", "World Bank", { zh: "World Bank", en: "World Bank" }, "https://api.worldbank.org/v2/country/ID?format=json", "2026-07-20T12:21:28.851Z"),
+    profileSource("world-bank-electricity-access", "World Bank", { zh: "通电率", en: "Access to electricity" }, "https://api.worldbank.org/v2/country/ID/indicator/EG.ELC.ACCS.ZS?source=2&format=json&mrv=1&per_page=1", "2026-07-20T12:38:45.306Z"),
+    profileSource("world-bank-gdp", "World Bank", { zh: "World Bank", en: "World Bank" }, "https://api.worldbank.org/v2/country/ID/indicator/NY.GDP.MKTP.CD?source=2&format=json&mrv=1&per_page=1", "2026-07-20T12:21:30.499Z"),
+    profileSource("world-bank-gdp-growth", "World Bank", { zh: "World Bank", en: "World Bank" }, "https://api.worldbank.org/v2/country/ID/indicator/NY.GDP.MKTP.KD.ZG?source=2&format=json&mrv=1&per_page=1", "2026-07-20T12:21:35.716Z"),
+    profileSource("world-bank-gdp-per-capita", "World Bank", { zh: "人均国内生产总值", en: "GDP per capita" }, "https://api.worldbank.org/v2/country/ID/indicator/NY.GDP.PCAP.CD?source=2&format=json&mrv=1&per_page=1", "2026-07-20T12:38:45.357Z"),
+    profileSource("world-bank-population", "World Bank", { zh: "World Bank", en: "World Bank" }, "https://api.worldbank.org/v2/country/ID/indicator/SP.POP.TOTL?source=2&format=json&mrv=1&per_page=1", "2026-07-20T12:21:36.482Z"),
+  ],
+  updatedAt: "2026-07-20T12:30:00Z",
+} as const;
+
 export const GOLDEN_COUNTRY_INPUTS = [
   {
     code: "ID",
@@ -19,8 +198,8 @@ export const GOLDEN_COUNTRY_INPUTS = [
     name: { en: "Indonesia", zh: "印度尼西亚" },
     region: "southeast-asia",
     summary: {
-      en: "In 2025, renewables accounted for 15.75% of Indonesia's energy mix, installed renewable capacity reached 15,630 MW, and electricity consumption was 1,584 kWh per capita; generation capacity also continued to expand.",
-      zh: "印度尼西亚2025年可再生能源占能源结构15.75%，可再生能源装机15,630兆瓦，人均用电量1,584千瓦时；同期电源装机容量继续扩大。",
+      en: "In 2025, renewables accounted for 15.75% of Indonesia's energy mix and electricity consumption was 1,584 kWh per capita; generation capacity also continued to expand.",
+      zh: "印度尼西亚2025年可再生能源占能源结构15.75%，人均用电量1,584千瓦时；同期电源装机容量继续扩大。",
     },
     updatedAt: "2026-01-09T00:00:00.000Z",
   },
@@ -88,8 +267,8 @@ export const GOLDEN_COUNTRY_INPUTS = [
 
 export const GOLDEN_ID_MARKET_OVERVIEW = {
   overview: {
-    zh: "2025年能源与矿产领域投资为317亿美元，其中电力46亿美元、可再生能源与节能24亿美元。可再生能源装机达到15,630兆瓦，其中太阳能1,494兆瓦、风电152兆瓦。",
-    en: "Energy and mineral investment reached USD 31.7 billion in 2025, including USD 4.6 billion in electricity and USD 2.4 billion in renewables and conservation. Installed renewable capacity reached 15,630 MW, including 1,494 MW of solar and 152 MW of wind.",
+    zh: "2025年能源与矿产领域投资为317亿美元，其中电力46亿美元、可再生能源与节能24亿美元。",
+    en: "Energy and mineral investment reached USD 31.7 billion in 2025, including USD 4.6 billion in electricity and USD 2.4 billion in renewables and conservation.",
   },
   population: 285721236,
   gdp: 1445642584163.81,
@@ -99,18 +278,17 @@ export const GOLDEN_ID_MARKET_OVERVIEW = {
     en: "Electricity consumption per capita was 1,584 kWh in 2025, up from 1,411 kWh in 2024; installed generation capacity increased by 7 GW to 107.51 GW.",
   },
   renewableTarget: {
-    zh: "2025年《国家能源政策》将新能源和可再生能源占比目标设为2030年19%至23%、2040年36%至40%、2050年53%至55%、2060年70%至72%。能源矿产资源部报告2025年实际占比为15.75%。",
-    en: "The 2025 National Energy Policy sets new and renewable energy share targets of 19%-23% in 2030, 36%-40% in 2040, 53%-55% in 2050, and 70%-72% in 2060. The Ministry reported a 15.75% share in 2025.",
+    zh: "经核验的能源矿产资源部2025年实际数据表明，可再生能源占能源结构15.75%；该来源未在本草案中验证任何中长期目标。",
+    en: "The verified 2025 Ministry data reports renewables at 15.75% of the energy mix; this draft does not verify any medium- or long-term target from this source.",
   },
   keyIndicators: [
     { label: { zh: "可再生能源占比", en: "Renewable energy mix share" }, value: "15.75", unit: "%", year: 2025 },
-    { label: { zh: "可再生能源装机容量", en: "Installed renewable capacity" }, value: "15630", unit: "MW", year: 2025 },
     { label: { zh: "人均用电量", en: "Electricity consumption per capita" }, value: "1584", unit: "kWh/person", year: 2025 },
   ],
-  basicProfile: null,
+  basicProfile: GOLDEN_ID_BASIC_PROFILE,
   source: "Indonesia Ministry of Energy and Mineral Resources",
   sourceUrl: "https://www.esdm.go.id/en/media-center/news-archives/capaian-positif-tahun-2025-negara-hadir-penuhi-kebutuhan-energi-masyarakat",
-  collectedAt: "2026-07-13T14:09:07.223Z",
+  collectedAt: "2026-07-20T12:21:36.482Z",
   updatedAt: "2026-01-09T00:00:00.000Z",
   credibility: "OFFICIAL",
   reviewStatus: "published",
