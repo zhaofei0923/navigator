@@ -326,6 +326,99 @@ static napi_value rename_no_replace(napi_env env, napi_callback_info info) {
 #endif
 }
 
+static napi_value rename_exchange(napi_env env, napi_callback_info info) {
+  size_t argument_count = 8U;
+  napi_value arguments[8] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+  int source_parent_fd = -1;
+  int target_parent_fd = -1;
+  uint64_t expected_source_dev = 0U;
+  uint64_t expected_source_ino = 0U;
+  uint64_t expected_target_dev = 0U;
+  uint64_t expected_target_ino = 0U;
+  basic_component source_name = {{0}};
+  basic_component target_name = {{0}};
+  struct stat source_parent_details;
+  struct stat target_parent_details;
+  struct stat source_details;
+  struct stat target_details;
+
+  if (napi_get_cb_info(env, info, &argument_count, arguments, NULL, NULL) != napi_ok ||
+      argument_count != 8U ||
+      !read_directory_fd(env, arguments[0], &source_parent_fd) ||
+      !read_component(env, arguments[1], &source_name) ||
+      !read_directory_fd(env, arguments[2], &target_parent_fd) ||
+      !read_component(env, arguments[3], &target_name) ||
+      !read_identity(env, arguments[4], &expected_source_dev) ||
+      !read_identity(env, arguments[5], &expected_source_ino) ||
+      !read_identity(env, arguments[6], &expected_target_dev) ||
+      !read_identity(env, arguments[7], &expected_target_ino)) {
+    return make_status(env, "ERR_INVALID");
+  }
+  if (fstat(source_parent_fd, &source_parent_details) != 0 ||
+      fstat(target_parent_fd, &target_parent_details) != 0) {
+    return make_status(env, failure_status(errno));
+  }
+  if (!S_ISDIR(source_parent_details.st_mode) || !S_ISDIR(target_parent_details.st_mode)) {
+    return make_status(env, "ERR_INVALID");
+  }
+  if (fstatat(
+        source_parent_fd,
+        source_name.bytes,
+        &source_details,
+        AT_SYMLINK_NOFOLLOW
+      ) != 0 ||
+      !S_ISDIR(source_details.st_mode) ||
+      (uint64_t)source_details.st_dev != expected_source_dev ||
+      (uint64_t)source_details.st_ino != expected_source_ino ||
+      fstatat(
+        target_parent_fd,
+        target_name.bytes,
+        &target_details,
+        AT_SYMLINK_NOFOLLOW
+      ) != 0 ||
+      !S_ISDIR(target_details.st_mode) ||
+      (uint64_t)target_details.st_dev != expected_target_dev ||
+      (uint64_t)target_details.st_ino != expected_target_ino) {
+    return make_status(env, "ERR_FAILED");
+  }
+
+#if defined(SYS_renameat2) && defined(RENAME_EXCHANGE)
+  if (syscall(
+        SYS_renameat2,
+        source_parent_fd,
+        source_name.bytes,
+        target_parent_fd,
+        target_name.bytes,
+        RENAME_EXCHANGE
+      ) == 0) {
+    if (fstatat(
+          source_parent_fd,
+          source_name.bytes,
+          &source_details,
+          AT_SYMLINK_NOFOLLOW
+        ) != 0 ||
+        !S_ISDIR(source_details.st_mode) ||
+        (uint64_t)source_details.st_dev != expected_target_dev ||
+        (uint64_t)source_details.st_ino != expected_target_ino ||
+        fstatat(
+          target_parent_fd,
+          target_name.bytes,
+          &target_details,
+          AT_SYMLINK_NOFOLLOW
+        ) != 0 ||
+        !S_ISDIR(target_details.st_mode) ||
+        (uint64_t)target_details.st_dev != expected_source_dev ||
+        (uint64_t)target_details.st_ino != expected_source_ino) {
+      return make_status(env, "COMMITTED_UNVERIFIED");
+    }
+    return make_status(env, "OK");
+  }
+  return make_status(env, failure_status(errno));
+#else
+  return make_status(env, "ERR_UNSUPPORTED");
+#endif
+}
+
 static napi_value unlink_regular_file(napi_env env, napi_callback_info info) {
   size_t argument_count = 4U;
   napi_value arguments[4] = {NULL, NULL, NULL, NULL};
@@ -404,7 +497,8 @@ NAPI_MODULE_INIT() {
   napi_value create_operation = NULL;
   napi_value ensure_operation = NULL;
   napi_value close_operation = NULL;
-  napi_value operation = NULL;
+  napi_value rename_operation = NULL;
+  napi_value exchange_operation = NULL;
   napi_value unlink_operation = NULL;
   napi_value remove_operation = NULL;
   if (napi_create_function(
@@ -445,9 +539,18 @@ NAPI_MODULE_INIT() {
         NAPI_AUTO_LENGTH,
         rename_no_replace,
         NULL,
-        &operation
+        &rename_operation
       ) != napi_ok ||
-      napi_set_named_property(env, exports, "renameNoReplace", operation) != napi_ok) {
+      napi_set_named_property(env, exports, "renameNoReplace", rename_operation) != napi_ok ||
+      napi_create_function(
+        env,
+        "renameExchange",
+        NAPI_AUTO_LENGTH,
+        rename_exchange,
+        NULL,
+        &exchange_operation
+      ) != napi_ok ||
+      napi_set_named_property(env, exports, "renameExchange", exchange_operation) != napi_ok) {
     return NULL;
   }
   if (napi_create_function(

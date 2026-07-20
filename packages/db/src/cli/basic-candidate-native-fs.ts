@@ -21,6 +21,16 @@ type NativeOperations = Readonly<{
     expectedDev: bigint,
     expectedIno: bigint,
   ): unknown;
+  renameExchange(
+    sourceParentDirFd: number,
+    sourceName: string,
+    targetParentDirFd: number,
+    targetName: string,
+    expectedSourceDev: bigint,
+    expectedSourceIno: bigint,
+    expectedTargetDev: bigint,
+    expectedTargetIno: bigint,
+  ): unknown;
   unlinkRegularFile(
     parentDirFd: number,
     name: string,
@@ -138,6 +148,33 @@ export function renameBasicCandidateDirectoryChildNoReplaceNative(
   }
 }
 
+export function renameBasicCandidateDirectoryChildrenExchangeNative(
+  sourceParentDirFd: unknown,
+  sourceName: unknown,
+  targetParentDirFd: unknown,
+  targetName: unknown,
+  expectedSourceDev: unknown,
+  expectedSourceIno: unknown,
+  expectedTargetDev: unknown,
+  expectedTargetIno: unknown,
+): BasicCandidateRenameNativeResult {
+  try {
+    if (nativeOperations === null) invalid();
+    return parseBasicCandidateRenameNativeStatus(nativeOperations.renameExchange(
+      parseDirectoryFd(sourceParentDirFd),
+      parseComponent(sourceName),
+      parseDirectoryFd(targetParentDirFd),
+      parseComponent(targetName),
+      parseIdentity(expectedSourceDev),
+      parseIdentity(expectedSourceIno),
+      parseIdentity(expectedTargetDev),
+      parseIdentity(expectedTargetIno),
+    ));
+  } catch {
+    invalid();
+  }
+}
+
 export function parseBasicCandidateRenameNativeStatus(
   value: unknown,
 ): BasicCandidateRenameNativeResult {
@@ -218,26 +255,28 @@ function parseNativeOperations(binding: unknown): NativeOperations | null {
   ) return null;
   const ownKeys = Reflect.ownKeys(binding);
   if (
-    ownKeys.length !== 6 || ownKeys[0] !== "createExclusiveDirectory" ||
+    ownKeys.length !== 7 || ownKeys[0] !== "createExclusiveDirectory" ||
     ownKeys[1] !== "ensureDirectory" || ownKeys[2] !== "closeDirectory" ||
-    ownKeys[3] !== "renameNoReplace" || ownKeys[4] !== "unlinkRegularFile" ||
-    ownKeys[5] !== "removeDirectory"
+    ownKeys[3] !== "renameNoReplace" || ownKeys[4] !== "renameExchange" ||
+    ownKeys[5] !== "unlinkRegularFile" || ownKeys[6] !== "removeDirectory"
   ) return null;
   const create = readFunction(binding, "createExclusiveDirectory");
   const ensure = readFunction(binding, "ensureDirectory");
   const close = readFunction(binding, "closeDirectory");
   const rename = readFunction(binding, "renameNoReplace");
+  const exchange = readFunction(binding, "renameExchange");
   const unlink = readFunction(binding, "unlinkRegularFile");
   const remove = readFunction(binding, "removeDirectory");
   if (
     create === null || ensure === null || close === null || rename === null ||
-    unlink === null || remove === null
+    exchange === null || unlink === null || remove === null
   ) return null;
   return Object.freeze({
     createExclusiveDirectory: create as NativeOperations["createExclusiveDirectory"],
     ensureDirectory: ensure as NativeOperations["ensureDirectory"],
     closeDirectory: close as NativeOperations["closeDirectory"],
     renameNoReplace: rename as NativeOperations["renameNoReplace"],
+    renameExchange: exchange as NativeOperations["renameExchange"],
     unlinkRegularFile: unlink as NativeOperations["unlinkRegularFile"],
     removeDirectory: remove as NativeOperations["removeDirectory"],
   });

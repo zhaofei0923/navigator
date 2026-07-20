@@ -24,6 +24,7 @@ import {
   ensureBasicCandidateDirectoryNative,
   parseBasicCandidateRenameNativeStatus,
   removeBasicCandidateDirectoryNative,
+  renameBasicCandidateDirectoryChildrenExchangeNative,
   renameBasicCandidateDirectoryChildNoReplaceNative,
   unlinkBasicCandidateRegularFileNative,
 } from "./cli/basic-candidate-native-fs.js";
@@ -60,10 +61,152 @@ describe("Basic candidate native no-replace publisher", () => {
       committed: true,
       verified: false,
     });
-    for (const status of ["ERR_FAILED", "ERR_EXISTS", "", null]) {
+    for (const status of [
+      "ERR_FAILED",
+      "ERR_EXISTS",
+      "ERR_INVALID",
+      "ERR_UNSUPPORTED",
+      "ERR_DENIED",
+      "OK ",
+      "",
+      null,
+      1,
+    ]) {
       expect(() => parseBasicCandidateRenameNativeStatus(status)).toThrow(
         FIXED_ERROR,
       );
+    }
+  });
+
+  test("exports the exact seven-operation native ABI including renameExchange", () => {
+    expect(nativeExportNames()).toEqual([
+      "createExclusiveDirectory",
+      "ensureDirectory",
+      "closeDirectory",
+      "renameNoReplace",
+      "renameExchange",
+      "unlinkRegularFile",
+      "removeDirectory",
+    ]);
+  });
+
+  test("exchanges held directory children across distinct held parents", async () => {
+    const root = await createTemporaryRoot();
+    const sourceRoot = join(root, "source-parent");
+    const targetRoot = join(root, "target-parent");
+    await mkdir(sourceRoot, { mode: 0o700 });
+    await mkdir(targetRoot, { mode: 0o700 });
+    await createPayload(sourceRoot, "canonical", "canonical-payload");
+    await createPayload(targetRoot, "example-land", "candidate-payload");
+    const sourceParent = await openDirectory(sourceRoot);
+    const targetParent = await openDirectory(targetRoot);
+    const sourceIdentity = await directoryIdentity(sourceRoot, "canonical");
+    const targetIdentity = await directoryIdentity(targetRoot, "example-land");
+    try {
+      expect(renameBasicCandidateDirectoryChildrenExchangeNative(
+        sourceParent.fd,
+        "canonical",
+        targetParent.fd,
+        "example-land",
+        sourceIdentity.dev,
+        sourceIdentity.ino,
+        targetIdentity.dev,
+        targetIdentity.ino,
+      )).toEqual({ committed: true, verified: true });
+    } finally {
+      await targetParent.close();
+      await sourceParent.close();
+    }
+
+    expect(await readPayload(sourceRoot, "canonical")).toEqual([
+      "candidate-payload",
+      "candidate-payload",
+    ]);
+    expect(await readPayload(targetRoot, "example-land")).toEqual([
+      "canonical-payload",
+      "canonical-payload",
+    ]);
+    await expect(directoryIdentity(sourceRoot, "canonical")).resolves.toEqual(targetIdentity);
+    await expect(directoryIdentity(targetRoot, "example-land")).resolves.toEqual(sourceIdentity);
+  });
+
+  test.each([
+    ["source", 1n, 0n],
+    ["target", 0n, 1n],
+  ] as const)(
+    "rejects a wrong %s identity before exchange without changing either directory",
+    async (wrongSide, sourceOffset, targetOffset) => {
+      const root = await createTemporaryRoot();
+      const sourceRoot = join(root, "source-parent");
+      const targetRoot = join(root, "target-parent");
+      await mkdir(sourceRoot, { mode: 0o700 });
+      await mkdir(targetRoot, { mode: 0o700 });
+      await createPayload(sourceRoot, "canonical", "canonical-payload");
+      await createPayload(targetRoot, "example-land", "candidate-payload");
+      const sourceParent = await openDirectory(sourceRoot);
+      const targetParent = await openDirectory(targetRoot);
+      const sourceIdentity = await directoryIdentity(sourceRoot, "canonical");
+      const targetIdentity = await directoryIdentity(targetRoot, "example-land");
+      try {
+        expect(() => renameBasicCandidateDirectoryChildrenExchangeNative(
+          sourceParent.fd,
+          "canonical",
+          targetParent.fd,
+          "example-land",
+          sourceIdentity.dev + sourceOffset,
+          sourceIdentity.ino,
+          targetIdentity.dev + targetOffset,
+          targetIdentity.ino,
+        )).toThrow(FIXED_ERROR);
+      } finally {
+        await targetParent.close();
+        await sourceParent.close();
+      }
+
+      expect(await readPayload(sourceRoot, "canonical")).toEqual([
+        "canonical-payload",
+        "canonical-payload",
+      ]);
+      expect(await readPayload(targetRoot, "example-land")).toEqual([
+        "candidate-payload",
+        "candidate-payload",
+      ]);
+      await expect(directoryIdentity(sourceRoot, "canonical")).resolves.toEqual(sourceIdentity);
+      await expect(directoryIdentity(targetRoot, "example-land")).resolves.toEqual(targetIdentity);
+      expect(wrongSide).toMatch(/source|target/);
+    },
+  );
+
+  test("redacts malformed exchange arguments with the fixed error", async () => {
+    const root = await createTemporaryRoot();
+    const sourceRoot = join(root, "source-parent");
+    const targetRoot = join(root, "target-parent");
+    await mkdir(sourceRoot, { mode: 0o700 });
+    await mkdir(targetRoot, { mode: 0o700 });
+    await mkdir(join(sourceRoot, "canonical"), { mode: 0o700 });
+    await mkdir(join(targetRoot, "example-land"), { mode: 0o700 });
+    const sourceParent = await openDirectory(sourceRoot);
+    const targetParent = await openDirectory(targetRoot);
+    const sourceIdentity = await directoryIdentity(sourceRoot, "canonical");
+    const targetIdentity = await directoryIdentity(targetRoot, "example-land");
+    try {
+      const invalidArguments: readonly unknown[][] = [
+        [-1, "canonical", targetParent.fd, "example-land", sourceIdentity.dev, sourceIdentity.ino, targetIdentity.dev, targetIdentity.ino],
+        [sourceParent.fd, "nested/name", targetParent.fd, "example-land", sourceIdentity.dev, sourceIdentity.ino, targetIdentity.dev, targetIdentity.ino],
+        [sourceParent.fd, "canonical", -1, "example-land", sourceIdentity.dev, sourceIdentity.ino, targetIdentity.dev, targetIdentity.ino],
+        [sourceParent.fd, "canonical", targetParent.fd, "nested/name", sourceIdentity.dev, sourceIdentity.ino, targetIdentity.dev, targetIdentity.ino],
+        [sourceParent.fd, "canonical", targetParent.fd, "example-land", -1n, sourceIdentity.ino, targetIdentity.dev, targetIdentity.ino],
+        [sourceParent.fd, "canonical", targetParent.fd, "example-land", sourceIdentity.dev, -1n, targetIdentity.dev, targetIdentity.ino],
+        [sourceParent.fd, "canonical", targetParent.fd, "example-land", sourceIdentity.dev, sourceIdentity.ino, -1n, targetIdentity.ino],
+        [sourceParent.fd, "canonical", targetParent.fd, "example-land", sourceIdentity.dev, sourceIdentity.ino, targetIdentity.dev, -1n],
+      ];
+      for (const arguments_ of invalidArguments) {
+        expect(() => renameBasicCandidateDirectoryChildrenExchangeNative(...arguments_))
+          .toThrow(FIXED_ERROR);
+      }
+    } finally {
+      await targetParent.close();
+      await sourceParent.close();
     }
   });
 
@@ -487,6 +630,12 @@ function runIsolatedNativeLoad(
     `,
   ], { encoding: "utf8" });
   return JSON.parse(output) as Readonly<{ status: "failed"; message: string }>;
+}
+
+function nativeExportNames(): readonly PropertyKey[] {
+  const holder = { exports: {} } as unknown as NodeModule;
+  process.dlopen(holder, NATIVE_BINARY);
+  return Reflect.ownKeys(holder.exports);
 }
 
 function runIsolatedDlopenReplacement(): Readonly<{ status: string }> {
