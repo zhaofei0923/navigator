@@ -51,6 +51,7 @@ export async function retainBasicRefreshPreviousCanonical(
   await requireBasicCandidateDirectoryEntries(recoveryPlaceholder, []);
   await verifyPreviousAt(transaction, "canonical");
   await setBasicCandidateDirectoryMode(previousCanonical, 0o700);
+  await syncBasicCandidateDirectory(previousCanonical);
 
   const exchange = renameBasicCandidateDirectoryChildrenExchangeNative(
     transaction.handle.fd,

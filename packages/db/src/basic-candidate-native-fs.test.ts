@@ -90,6 +90,42 @@ describe("Basic candidate native no-replace publisher", () => {
     ]);
   });
 
+  test("preallocates committed statuses so N-API allocation faults abort before rename", async () => {
+    const source = await readFile(join(
+      PACKAGE_DIRECTORY,
+      "native",
+      "basic-candidate-fs.c",
+    ), "utf8");
+    for (const [functionName, nextFunctionName] of [
+      ["rename_no_replace", "rename_exchange"],
+      ["rename_exchange", "unlink_regular_file"],
+    ] as const) {
+      const start = source.indexOf(`static napi_value ${functionName}(`);
+      const end = source.indexOf(`static napi_value ${nextFunctionName}(`, start);
+      const body = source.slice(start, end);
+      const syscall = body.indexOf("syscall(");
+      expect(start).toBeGreaterThanOrEqual(0);
+      expect(end).toBeGreaterThan(start);
+      expect(syscall).toBeGreaterThanOrEqual(0);
+      const okAllocation = body.indexOf('"OK",');
+      const unverifiedAllocation = body.indexOf('"COMMITTED_UNVERIFIED",');
+      const allocationFailure = body.indexOf("return NULL;", unverifiedAllocation);
+      expect(okAllocation).toBeGreaterThanOrEqual(0);
+      expect(unverifiedAllocation).toBeGreaterThan(okAllocation);
+      expect(allocationFailure).toBeGreaterThan(unverifiedAllocation);
+      expect(allocationFailure).toBeLessThan(syscall);
+      const committedBranchStart = body.indexOf(") == 0) {", syscall);
+      const committedBranchEnd = body.indexOf(
+        "\n  }\n  return make_status(env, failure_status(errno));",
+        committedBranchStart,
+      );
+      const committedBranch = body.slice(committedBranchStart, committedBranchEnd);
+      expect(committedBranch).toContain("return committed_unverified_status;");
+      expect(committedBranch).toContain("return committed_ok_status;");
+      expect(committedBranch).not.toMatch(/make_status|napi_create_/);
+    }
+  });
+
   test("exchanges held directory children across distinct held parents", async () => {
     const root = await createTemporaryRoot();
     const sourceRoot = join(root, "source-parent");
@@ -596,7 +632,7 @@ describe("Basic candidate native no-replace publisher", () => {
     expect(wrapperSource).not.toContain("require(NATIVE_PATH)");
     expect(nativeSource).toContain("SYS_renameat2");
     expect(nativeSource).toContain("RENAME_NOREPLACE");
-    expect(nativeSource).toContain('make_status(env, "COMMITTED_UNVERIFIED")');
+    expect(nativeSource).toContain('"COMMITTED_UNVERIFIED",');
     expect(nativeSource).toContain("fstat");
     expect(nativeSource).toContain("fstatat");
     expect(nativeSource).toContain("S_ISDIR");

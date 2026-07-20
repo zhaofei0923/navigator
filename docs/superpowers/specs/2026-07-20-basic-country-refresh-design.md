@@ -1,6 +1,6 @@
 # BASIC Country Refresh Design
 
-**Date:** 2026-07-20  
+**Date:** 2026-07-20
 **Status:** Approved
 **Scope:** One-country canonical BASIC refresh; first application is Indonesia `ID`, from `data-basic-id-20260711-r2` to `data-basic-id-20260720-r3`
 

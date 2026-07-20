@@ -104,12 +104,6 @@ export async function writeRefreshedBasicPublication(
       ));
     }
     await syncBasicCandidateDirectory(canonical);
-    await verifyTargetFiles(canonical, identities, targetState.serialized);
-    await requireBasicCandidateHeldChild(transaction, "canonical", canonical);
-    await requireBasicCandidateHeldChild(refreshCache, transactionName, transaction);
-
-    await activeState.verify();
-    await targetState.verify();
     if (
       active.countryDirectory !== target.countryDirectory ||
       active.countryCode !== target.countryCode ||
@@ -117,15 +111,19 @@ export async function writeRefreshedBasicPublication(
       !isStrictlyNewer(target.decidedAt, active.decidedAt)
     ) invalid();
     await requireBasicCandidateHeldChild(activeState.root, "data", data);
+    await requireBasicCandidateHeldChild(activeState.root, ".cache", cache);
+    await requireBasicCandidateHeldChild(cache, "basic-country-refresh", refreshCache);
+    await requireBasicCandidateHeldChild(refreshCache, transactionName, transaction);
     await requireBasicCandidateHeldChild(data, active.countryDirectory, activeState.canonical);
     await requireBasicCandidateHeldChild(transaction, "canonical", canonical);
-    await verifyTargetFiles(canonical, identities, targetState.serialized);
     await validateMaterializedTarget(
       canonical,
       identities,
       targetState.serialized,
       targetState.validateMaterialized,
     );
+    await activeState.verify();
+    await targetState.verify();
 
     const exchange = renameBasicCandidateDirectoryChildrenExchangeNative(
       transaction.handle.fd,
@@ -138,6 +136,8 @@ export async function writeRefreshedBasicPublication(
       activeState.canonical.identity.ino,
     );
     committed = exchange.committed;
+    await setBasicCandidateDirectoryMode(activeState.canonical, 0o700);
+    await syncBasicCandidateDirectory(activeState.canonical);
     if (!exchange.verified) postCommitVerified = false;
 
     await requireBasicCandidateHeldChild(data, active.countryDirectory, canonical);

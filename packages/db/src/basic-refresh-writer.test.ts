@@ -16,14 +16,21 @@ import { join } from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 const injected = vi.hoisted(() => ({
+  events: [] as string[],
   exchangeCommitted: false,
   exchangeCalls: 0,
+  postCommitDirectoryModeCalls: 0,
+  postCommitDirectorySyncCalls: 0,
+  postCommitHeldChildCalls: 0,
   retentionCommitted: false,
   retentionSyncCalls: 0,
   removeCalls: 0,
+  mutateOnLastMaterializedRead: null as (() => void) | null,
   mode: null as
     | "pre-commit"
     | "native-unverified"
+    | "old-directory-fsync"
+    | "post-held-child"
     | "post-sync"
     | "post-verify"
     | "post-close"
@@ -59,8 +66,12 @@ vi.mock("./cli/basic-candidate-native-fs.js", async (importOriginal) => {
       if (injected.exchangeCalls === 2 && injected.mode === "retention-before-exchange") {
         throw new Error("injected retention exchange failure");
       }
+      if (injected.exchangeCalls === 2) injected.events.push("retention-exchange");
       const result = actual.renameBasicCandidateDirectoryChildrenExchangeNative(...arguments_);
-      if (injected.exchangeCalls === 1) injected.exchangeCommitted = true;
+      if (injected.exchangeCalls === 1) {
+        injected.exchangeCommitted = true;
+        injected.events.push("publication-exchange-returned");
+      }
       if (injected.exchangeCalls === 2) injected.retentionCommitted = true;
       if (
         (injected.exchangeCalls === 1 && injected.mode === "native-unverified") ||
@@ -89,6 +100,32 @@ vi.mock("./cli/basic-candidate-constrained-fs.js", async (importOriginal) => {
   >();
   return {
     ...actual,
+    async setBasicCandidateDirectoryMode(
+      ...arguments_: Parameters<typeof actual.setBasicCandidateDirectoryMode>
+    ): ReturnType<typeof actual.setBasicCandidateDirectoryMode> {
+      if (injected.exchangeCommitted && !injected.retentionCommitted) {
+        injected.postCommitDirectoryModeCalls += 1;
+        injected.events.push(
+          `postcommit-directory-mode-${injected.postCommitDirectoryModeCalls}`,
+        );
+      }
+      return actual.setBasicCandidateDirectoryMode(...arguments_);
+    },
+    async syncBasicCandidateDirectory(
+      ...arguments_: Parameters<typeof actual.syncBasicCandidateDirectory>
+    ): ReturnType<typeof actual.syncBasicCandidateDirectory> {
+      if (injected.exchangeCommitted && !injected.retentionCommitted) {
+        injected.postCommitDirectorySyncCalls += 1;
+        injected.events.push(
+          `postcommit-directory-sync-${injected.postCommitDirectorySyncCalls}`,
+        );
+        if (
+          injected.postCommitDirectorySyncCalls === 1 &&
+          injected.mode === "old-directory-fsync"
+        ) throw new Error("injected old directory sync failure");
+      }
+      return actual.syncBasicCandidateDirectory(...arguments_);
+    },
     async syncBasicCandidateParentDirectory(
       ...arguments_: Parameters<typeof actual.syncBasicCandidateParentDirectory>
     ): ReturnType<typeof actual.syncBasicCandidateParentDirectory> {
@@ -112,6 +149,13 @@ vi.mock("./cli/basic-candidate-constrained-fs.js", async (importOriginal) => {
     async requireBasicCandidateHeldChild(
       ...arguments_: Parameters<typeof actual.requireBasicCandidateHeldChild>
     ): ReturnType<typeof actual.requireBasicCandidateHeldChild> {
+      if (injected.exchangeCommitted && !injected.retentionCommitted) {
+        injected.postCommitHeldChildCalls += 1;
+        injected.events.push(`postcommit-held-child-${injected.postCommitHeldChildCalls}`);
+        if (
+          injected.postCommitHeldChildCalls === 1 && injected.mode === "post-held-child"
+        ) throw new Error("injected first post-commit held-child failure");
+      }
       if (
         injected.retentionCommitted &&
         (injected.mode === "retention-post-exchange-verify" ||
@@ -148,6 +192,14 @@ vi.mock("./cli/basic-candidate-constrained-fs.js", async (importOriginal) => {
       ...arguments_: Parameters<typeof actual.readBasicCandidateBoundedRegularFileSnapshot>
     ): ReturnType<typeof actual.readBasicCandidateBoundedRegularFileSnapshot> {
       const snapshot = await actual.readBasicCandidateBoundedRegularFileSnapshot(...arguments_);
+      if (
+        arguments_[1] === "market-overview.json" &&
+        injected.mutateOnLastMaterializedRead !== null
+      ) {
+        const mutate = injected.mutateOnLastMaterializedRead;
+        injected.mutateOnLastMaterializedRead = null;
+        mutate();
+      }
       if (injected.mode !== "materialized-read-drift") return snapshot;
       injected.mode = null;
       return Object.freeze({
@@ -196,11 +248,16 @@ const roots = new Set<string>();
 afterEach(() => {
   for (const root of roots) rmSync(root, { recursive: true, force: true });
   roots.clear();
+  injected.events = [];
   injected.exchangeCommitted = false;
   injected.exchangeCalls = 0;
+  injected.postCommitDirectoryModeCalls = 0;
+  injected.postCommitDirectorySyncCalls = 0;
+  injected.postCommitHeldChildCalls = 0;
   injected.retentionCommitted = false;
   injected.retentionSyncCalls = 0;
   injected.removeCalls = 0;
+  injected.mutateOnLastMaterializedRead = null;
   injected.mode = null;
 });
 
@@ -332,6 +389,14 @@ describe("atomic BASIC refresh writer", () => {
     expect(statSync(join(
       setup.root, ".cache", "basic-country-refresh", recoveryEntries[0]!,
     )).mode & 0o777).toBe(0o700);
+    expect(injected.events.slice(0, 4)).toEqual([
+      "publication-exchange-returned",
+      "postcommit-directory-mode-1",
+      "postcommit-directory-sync-1",
+      "postcommit-held-child-1",
+    ]);
+    expect(injected.events.indexOf("postcommit-directory-sync-2"))
+      .toBeLessThan(injected.events.indexOf("retention-exchange"));
     await closeSnapshots(held);
   });
 
@@ -408,6 +473,31 @@ describe("atomic BASIC refresh writer", () => {
   });
 
   test.each([
+    "old-directory-fsync", "post-held-child", "post-verify",
+  ] as const)(
+    "privatizes and preserves the complete old tree after first post-commit %s failure",
+    async (mode) => {
+      const setup = createRefreshSetup();
+      const previous = readCanonical(setup.root);
+      const held = await openSnapshots(setup);
+      injected.mode = mode;
+
+      await expect(writeRefreshedBasicPublication(held.active, held.target)).resolves.toEqual({
+        committed: true,
+        postCommitVerified: false,
+      });
+
+      expect(readCanonical(setup.root)).toEqual(held.serialized);
+      const recoveryTrees = completeRecoveryArtifacts(setup.root, previous);
+      expect(recoveryTrees).toHaveLength(1);
+      expect(statSync(recoveryTrees[0]!).mode & 0o777).toBe(0o700);
+      expect(partialCanonicalArtifacts(setup.root)).toEqual([]);
+      injected.mode = null;
+      await closeSnapshots(held);
+    },
+  );
+
+  test.each([
     "retention-before-exchange",
     "retention-native-unverified",
     "retention-post-exchange-verify",
@@ -464,6 +554,49 @@ describe("atomic BASIC refresh writer", () => {
     expect(cacheTransactions(setup.root)).toEqual([]);
     await closeSnapshots(held);
   });
+
+  test.each([
+    ["target receipt", (setup: ReturnType<typeof createRefreshSetup>) => join(
+      setup.root,
+      "data",
+      "approvals",
+      "example-land",
+      `${setup.target.candidate.runId}.json`,
+    )],
+    ["target candidate", (setup: ReturnType<typeof createRefreshSetup>) => join(
+      setup.root,
+      "data",
+      "staging",
+      "example-land",
+      setup.target.candidate.runId,
+      "review-report.json",
+    )],
+    ["active canonical", (setup: ReturnType<typeof createRefreshSetup>) => join(
+      setup.root,
+      "data",
+      "example-land",
+      "country.json",
+    )],
+  ] as const)(
+    "rejects %s drift during the last materialized validation phase before commit",
+    async (_label, changedPath) => {
+      const setup = createRefreshSetup();
+      const before = readCanonical(setup.root);
+      const held = await openSnapshots(setup);
+      injected.mutateOnLastMaterializedRead = () => {
+        const path = changedPath(setup);
+        writeFileSync(path, readFileSync(path));
+      };
+
+      await expect(writeRefreshedBasicPublication(held.active, held.target))
+        .rejects.toThrow(/^basic refresh write failed$/);
+
+      expect(injected.exchangeCalls).toBe(0);
+      expect(readCanonical(setup.root)).toEqual(before);
+      expect(cacheTransactions(setup.root)).toEqual([]);
+      await closeSnapshots(held);
+    },
+  );
 });
 
 type TargetPublication = ReturnType<typeof createTarget>;

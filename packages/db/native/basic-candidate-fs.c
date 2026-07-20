@@ -304,6 +304,22 @@ static napi_value rename_no_replace(napi_env env, napi_callback_info info) {
   }
 
 #ifdef SYS_renameat2
+  napi_value committed_ok_status = NULL;
+  napi_value committed_unverified_status = NULL;
+  if (napi_create_string_utf8(
+        env,
+        "OK",
+        NAPI_AUTO_LENGTH,
+        &committed_ok_status
+      ) != napi_ok ||
+      napi_create_string_utf8(
+        env,
+        "COMMITTED_UNVERIFIED",
+        NAPI_AUTO_LENGTH,
+        &committed_unverified_status
+      ) != napi_ok) {
+    return NULL;
+  }
   if (syscall(
         SYS_renameat2,
         parent_fd,
@@ -316,9 +332,9 @@ static napi_value rename_no_replace(napi_env env, napi_callback_info info) {
         !S_ISDIR(target_details.st_mode) ||
         (uint64_t)target_details.st_dev != expected_dev ||
         (uint64_t)target_details.st_ino != expected_ino) {
-      return make_status(env, "COMMITTED_UNVERIFIED");
+      return committed_unverified_status;
     }
-    return make_status(env, "OK");
+    return committed_ok_status;
   }
   return make_status(env, failure_status(errno));
 #else
@@ -383,6 +399,22 @@ static napi_value rename_exchange(napi_env env, napi_callback_info info) {
   }
 
 #if defined(SYS_renameat2) && defined(RENAME_EXCHANGE)
+  napi_value committed_ok_status = NULL;
+  napi_value committed_unverified_status = NULL;
+  if (napi_create_string_utf8(
+        env,
+        "OK",
+        NAPI_AUTO_LENGTH,
+        &committed_ok_status
+      ) != napi_ok ||
+      napi_create_string_utf8(
+        env,
+        "COMMITTED_UNVERIFIED",
+        NAPI_AUTO_LENGTH,
+        &committed_unverified_status
+      ) != napi_ok) {
+    return NULL;
+  }
   if (syscall(
         SYS_renameat2,
         source_parent_fd,
@@ -409,9 +441,9 @@ static napi_value rename_exchange(napi_env env, napi_callback_info info) {
         !S_ISDIR(target_details.st_mode) ||
         (uint64_t)target_details.st_dev != expected_source_dev ||
         (uint64_t)target_details.st_ino != expected_source_ino) {
-      return make_status(env, "COMMITTED_UNVERIFIED");
+      return committed_unverified_status;
     }
-    return make_status(env, "OK");
+    return committed_ok_status;
   }
   return make_status(env, failure_status(errno));
 #else
