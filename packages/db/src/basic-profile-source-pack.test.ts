@@ -163,6 +163,41 @@ describe("approved reusable BASIC source adapters", () => {
     });
   });
 
+  test.each([
+    ["string electricity number", "electricityMarket,totalGeneration,312TWh,TWh,2025"],
+    ["wrong electricity unit", "electricityMarket,totalGeneration,312.4,GWh,2025"],
+    ["wrong share unit", "electricityMarket,renewableGenerationShare,48,ratio,2025"],
+    ["string solar number", "solarResource,ghi,5.1-average,kWh/m2/day,2024"],
+    ["wrong GHI unit", "solarResource,ghi,5.1,kWh/m2/year,2024"],
+    ["wrong PVOUT unit", "solarResource,pvout,4.3,kWh/kWp/year,2024"],
+    ["wrong capacity unit", "renewableCapacity,solarCapacity,8.2,MW,2025"],
+    ["missing available year", "renewableCapacity,windCapacity,0.2,GW,"],
+    ["out-of-contract year", "renewableCapacity,hydroCapacity,6.7,GW,1899"],
+    ["uncontrolled wind class", "windResource,onshoreWindClass,promising,,2024"],
+    ["wind class with unit", "windResource,offshoreWindClass,good,m/s,2024"],
+  ])("rejects %s in a reviewed global snapshot", (_label, columns) => {
+    const bytes = new TextEncoder().encode([
+      "countryCode,category,key,value,unit,year,locator",
+      `ID,${columns},table:ID:field`,
+    ].join("\n"));
+
+    expect(() => parseBasicProfileTabularSnapshot(bytes, "ID"))
+      .toThrow("basic profile tabular snapshot is invalid");
+  });
+
+  test("keeps checked unavailable global fields valid under the strict field contracts", () => {
+    const rows = parseBasicProfileTabularSnapshot(new TextEncoder().encode([
+      "countryCode,category,key,value,unit,year,locator,reasonZh,reasonEn",
+      "ID,solarResource,ghi,,,,grid:ID:ghi,已核查但无可用数值,Checked but no value was available",
+      "ID,windResource,onshoreWindClass,,,,grid:ID:onshore,已核查但无可用分类,Checked but no class was available",
+    ].join("\n")), "ID");
+
+    expect(rows).toEqual([
+      expect.objectContaining({ key: "ghi", status: "NOT_AVAILABLE", value: null, unit: null, year: null }),
+      expect.objectContaining({ key: "onshoreWindClass", status: "NOT_AVAILABLE", value: null, unit: null, year: null }),
+    ]);
+  });
+
   test("keeps direct Ember API execution disabled and policy sources on manual review", () => {
     expect(EMBER_DIRECT_API_EXECUTION_APPROVED).toBe(false);
     expect(BASIC_GLOBAL_SOURCE_IDS).toEqual([

@@ -37,6 +37,7 @@ import {
   readBasicBatchCountryInput,
   readBasicBatchGlobalInput,
   readOptionalBasicBatchGlobalInput,
+  readOptionalBasicBatchManualInput,
   type BasicBatchCache,
 } from "./basic-batch-filesystem-cache.js";
 
@@ -92,11 +93,11 @@ const GLOBAL_SOURCE_POLICIES = Object.freeze({
 } as const);
 const MANUAL_SOURCE_POLICIES = Object.freeze({
   "iea-policies": {
-    publisher: "International Energy Agency", origin: "https://www.iea.org",
+    publisher: "International Energy Agency", urlPrefix: "https://www.iea.org/policies/",
     family: "international-organization",
   },
   "rise-policy-review": {
-    publisher: "World Bank RISE", origin: "https://rise.esmap.org",
+    publisher: "World Bank RISE", urlPrefix: "https://rise.esmap.org/country/",
     family: "international-organization",
   },
 } as const);
@@ -212,9 +213,12 @@ export function createProductionBasicBatchCliDependencies(
               repoRoot, ".cache", "basic-country", "batches", config.batchId,
               "inputs", `${countryCode}.json`,
             ));
+            const manualCaptures = await readReviewedManualProfileCaptures(
+              repoRoot, config.batchId, countryCode,
+            );
             const input = parseProductionCountryInput(countryCode, JSON.parse(
               new TextDecoder("utf-8", { fatal: true }).decode(countryBytes),
-            ) as unknown, globalCaptures);
+            ) as unknown, globalCaptures, manualCaptures);
             const base = await composeBasicCountryCandidate({
               workspace,
               configPath: input.candidateConfigPath,
@@ -296,6 +300,7 @@ function parseProductionCountryInput(
   countryCode: string,
   value: unknown,
   globalCaptures: ReadonlyMap<string, Uint8Array>,
+  manualCaptures: ReadonlyMap<string, Uint8Array>,
 ): Readonly<{
   candidateConfigPath: string;
   reviewedProfile: ReviewedGlobalProfileInput;
@@ -337,12 +342,17 @@ function parseProductionCountryInput(
       fields: reviewedRecord.fields as never,
     },
   );
-  const mergedProfile = mergeReviewedManualProfile(reviewedProfile, {
-    updatedAt: manualRecord.updatedAt,
-    sources: manualRecord.sources as never,
-    auditSources: manualRecord.auditSources as never,
-    fields: manualRecord.fields as never,
-  });
+  const mergedProfile = bindReviewedManualProfileCaptures(
+    countryCode,
+    manualCaptures,
+    reviewedProfile,
+    {
+      updatedAt: manualRecord.updatedAt,
+      sources: manualRecord.sources as never,
+      auditSources: manualRecord.auditSources as never,
+      fields: manualRecord.fields as never,
+    },
+  );
   return Object.freeze({
     candidateConfigPath: record.candidateConfigPath,
     reviewedProfile: mergedProfile,
@@ -387,6 +397,10 @@ export function bindReviewedGlobalProfileSnapshots(
     );
     const auditsById = uniqueById(reviewedProfile.auditSources, ({ sourceId }) => sourceId);
     const sourcesById = uniqueById(profile.sources, ({ id }) => id);
+    if (
+      !sameStrings([...auditsById.keys()].sort(compareText), requiredIds) ||
+      !sameStrings([...sourcesById.keys()].sort(compareText), requiredIds)
+    ) countryInputInvalid();
 
     for (const sourceId of requiredIds) {
       const bytes = globalCaptures.get(sourceId);
@@ -414,7 +428,10 @@ export function bindReviewedGlobalProfileSnapshots(
         audit.publishedAt !== source.publishedAt || audit.credibility !== source.credibility ||
         audit.accessStatus !== "open" || audit.discoveryOnly ||
         audit.promptInjectionRisk !== "none" || sourceFields.length !== rows.length ||
-        sourceFields.some(({ field }) => !sameStrings(field.sourceIds, [sourceId]))
+        sourceFields.some(({ field }) => !sameStrings(field.sourceIds, [sourceId])) ||
+        rows.some(({ status, year }) => status === "AVAILABLE" && (
+          year === null || year > Number(audit.retrievedAt.slice(0, 4))
+        ))
       ) countryInputInvalid();
       const fieldsByPath = uniqueById(
         sourceFields,
@@ -443,6 +460,166 @@ export function bindReviewedGlobalProfileSnapshots(
   }
 }
 
+export async function readReviewedManualProfileCaptures(
+  repoRoot: string,
+  batchId: string,
+  countryCode: string,
+): Promise<ReadonlyMap<string, Uint8Array>> {
+  try {
+    const validated = validateBasicBatchConfig({ countries: [countryCode], batchId });
+    const captures = new Map<string, Uint8Array>();
+    for (const sourceId of Object.keys(MANUAL_SOURCE_POLICIES).sort(compareText)) {
+      const bytes = await readOptionalBasicBatchManualInput(repoRoot, join(
+        repoRoot,
+        ".cache",
+        "basic-country",
+        "batches",
+        validated.batchId,
+        "inputs",
+        "manual",
+        countryCode,
+        `${sourceId}.snapshot`,
+      ));
+      if (bytes !== null) captures.set(sourceId, bytes);
+    }
+    return captures;
+  } catch {
+    throw new Error("manual BASIC profile capture input is invalid");
+  }
+}
+
+export function bindReviewedManualProfileCaptures(
+  countryCode: string,
+  captures: ReadonlyMap<string, Uint8Array>,
+  globalProfile: ReviewedGlobalProfileInput,
+  manualProfile: ReviewedGlobalProfileInput,
+): ReviewedGlobalProfileInput {
+  try {
+    if (!/^[A-Z]{2}$/.test(countryCode)) countryInputInvalid();
+    const globalSources = uniqueById(globalProfile.sources, ({ id }) => id);
+    const globalAudits = uniqueById(globalProfile.auditSources, ({ sourceId }) => sourceId);
+    const manualSources = uniqueById(manualProfile.sources, ({ id }) => id);
+    const manualAudits = uniqueById(manualProfile.auditSources, ({ sourceId }) => sourceId);
+    if (
+      manualProfile.updatedAt !== globalProfile.updatedAt ||
+      !sameStrings([...manualSources.keys()].sort(compareText), [...manualAudits.keys()].sort(compareText)) ||
+      !sameStrings([...manualSources.keys()].sort(compareText), [...captures.keys()].sort(compareText))
+    ) countryInputInvalid();
+
+    for (const [sourceId, bytes] of captures) {
+      const source = manualSources.get(sourceId);
+      const audit = manualAudits.get(sourceId);
+      const policy = MANUAL_SOURCE_POLICIES[sourceId as keyof typeof MANUAL_SOURCE_POLICIES];
+      if (
+        source === undefined || audit === undefined || policy === undefined ||
+        !(bytes instanceof Uint8Array) || bytes.byteLength === 0 ||
+        audit.contentSha256 !== sha256(bytes) ||
+        source.publisher !== policy.publisher || !approvedManualSourceUrl(source.url, policy.urlPrefix) ||
+        audit.sourceName !== source.publisher || audit.sourceUrl !== source.url ||
+        audit.retrievedAt !== source.retrievedAt || audit.publishedAt !== source.publishedAt ||
+        audit.credibility !== "OFFICIAL" || source.credibility !== "OFFICIAL" ||
+        audit.sourceFamily !== policy.family || audit.accessStatus !== "open" ||
+        audit.discoveryOnly || audit.promptInjectionRisk !== "none"
+      ) countryInputInvalid();
+      const capture = parseManualProfileCapture(bytes, countryCode, sourceId);
+      if (
+        capture.retrievedAt !== audit.retrievedAt ||
+        !sameStrings(
+          [...capture.evidenceLocators].sort(compareText),
+          [...audit.evidenceLocators].sort(compareText),
+        )
+      ) countryInputInvalid();
+    }
+
+    const globalFieldPaths = new Set(globalProfile.fields.map(
+      ({ category, field }) => `${category}.${field.key}`,
+    ));
+    const approvedSourceIds = new Set([...globalSources.keys(), ...manualSources.keys()]);
+    const approvedAudits = new Map([...globalAudits, ...manualAudits]);
+    for (const { category, field } of manualProfile.fields) {
+      if (
+        globalFieldPaths.has(`${category}.${field.key}`) ||
+        field.sourceIds.some((sourceId) => !approvedSourceIds.has(sourceId)) ||
+        field.status !== "AVAILABLE" || !nonEmptyLocalizedText(field.value) ||
+        field.unit !== null || field.year !== null || field.reason !== null ||
+        field.note !== null
+      ) countryInputInvalid();
+      if (
+        category === "policyOverview" && (
+          field.key !== "summary" ||
+          field.sourceIds.some((sourceId) => !manualSources.has(sourceId))
+        )
+      ) countryInputInvalid();
+      if (
+        category === "windResource" && (
+          field.key !== "resourceSummary" ||
+          !sameStrings([...field.sourceIds].sort(compareText), ["global-wind-atlas"])
+        )
+      ) countryInputInvalid();
+      if (category === "marketSummary" && field.key !== "opportunitySummary") {
+        countryInputInvalid();
+      }
+      if (![
+        "policyOverview", "windResource", "marketSummary",
+      ].includes(category)) countryInputInvalid();
+      for (const sourceId of field.sourceIds) {
+        const audit = approvedAudits.get(sourceId);
+        if (
+          audit === undefined || audit.evidenceLocators.length === 0 ||
+          !/^[a-f0-9]{64}$/.test(audit.contentSha256) || /^0+$/.test(audit.contentSha256)
+        ) countryInputInvalid();
+      }
+    }
+    for (const sourceId of manualSources.keys()) {
+      if (!manualProfile.fields.some(({ field }) => field.sourceIds.includes(sourceId))) {
+        countryInputInvalid();
+      }
+    }
+    return mergeReviewedManualProfile(globalProfile, manualProfile);
+  } catch {
+    throw new Error(COUNTRY_INPUT_ERROR);
+  }
+}
+
+function parseManualProfileCapture(
+  bytes: Uint8Array,
+  countryCode: string,
+  sourceId: string,
+): Readonly<{ retrievedAt: string; evidenceLocators: readonly string[] }> {
+  const value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)) as unknown;
+  if (typeof value !== "object" || value === null || Array.isArray(value)) countryInputInvalid();
+  const record = value as Record<string, unknown>;
+  if (
+    Object.keys(record).sort().join(",") !==
+      "countryCode,evidence,retrievedAt,schemaVersion,sourceId" ||
+    record.schemaVersion !== "basic-manual-source-capture/v1" ||
+    record.countryCode !== countryCode || record.sourceId !== sourceId ||
+    typeof record.retrievedAt !== "string" || !Number.isFinite(Date.parse(record.retrievedAt)) ||
+    !Array.isArray(record.evidence) || record.evidence.length === 0 || record.evidence.length > 128
+  ) countryInputInvalid();
+  const locators = record.evidence.map((entry) => {
+    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) countryInputInvalid();
+    const evidence = entry as Record<string, unknown>;
+    if (Object.keys(evidence).sort().join(",") !== "excerpt,locator") countryInputInvalid();
+    if (
+      typeof evidence.locator !== "string" || evidence.locator.length === 0 ||
+      evidence.locator.length > 500 || /[\r\n\0]/.test(evidence.locator)
+    ) countryInputInvalid();
+    if (typeof evidence.excerpt !== "object" || evidence.excerpt === null || Array.isArray(evidence.excerpt)) {
+      countryInputInvalid();
+    }
+    const excerpt = evidence.excerpt as Record<string, unknown>;
+    if (
+      Object.keys(excerpt).sort().join(",") !== "en,zh" ||
+      typeof excerpt.zh !== "string" || excerpt.zh.trim().length === 0 ||
+      typeof excerpt.en !== "string" || excerpt.en.trim().length === 0
+    ) countryInputInvalid();
+    return evidence.locator;
+  });
+  if (new Set(locators).size !== locators.length) countryInputInvalid();
+  return { retrievedAt: record.retrievedAt as string, evidenceLocators: locators };
+}
+
 export function mergeReviewedManualProfile(
   globalProfile: ReviewedGlobalProfileInput,
   manualProfile: ReviewedGlobalProfileInput,
@@ -459,7 +636,7 @@ export function mergeReviewedManualProfile(
       const audit = manualAudits.get(sourceId);
       if (
         policy === undefined || audit === undefined || source.publisher !== policy.publisher ||
-        new URL(source.url).origin !== policy.origin || audit.sourceName !== source.publisher ||
+        !approvedManualSourceUrl(source.url, policy.urlPrefix) || audit.sourceName !== source.publisher ||
         audit.sourceUrl !== source.url || audit.retrievedAt !== source.retrievedAt ||
         audit.publishedAt !== source.publishedAt || audit.credibility !== "OFFICIAL" ||
         source.credibility !== "OFFICIAL" || audit.sourceFamily !== policy.family ||
@@ -741,6 +918,31 @@ function uniqueById<T>(
 
 function sameJson(left: unknown, right: unknown): boolean {
   return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function approvedManualSourceUrl(value: string, approvedPrefix: string): boolean {
+  try {
+    const parsed = new URL(value);
+    return (
+      value.startsWith(approvedPrefix) && value.length > approvedPrefix.length &&
+      parsed.search === "" && parsed.hash === "" && parsed.username === "" &&
+      parsed.password === ""
+    );
+  } catch {
+    return false;
+  }
+}
+
+function nonEmptyLocalizedText(
+  value: unknown,
+): value is Readonly<{ zh: string; en: string }> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+  const record = value as Record<string, unknown>;
+  return (
+    Object.keys(record).sort().join(",") === "en,zh" &&
+    typeof record.zh === "string" && record.zh.trim().length > 0 &&
+    typeof record.en === "string" && record.en.trim().length > 0
+  );
 }
 
 function countryInputInvalid(): never {

@@ -164,6 +164,17 @@ Catalog 保留原四个覆盖所有国家的 `open` World Bank JSON deterministi
 
 IEA Policies 与 RISE 固定为 `iea-policies`、`rise-policy-review` 人工政策复核来源。二者以及国家特有政策文件、风资源摘要和市场摘要不得由批处理自动生成事实。fixture-backed tabular adapter 只解析 exact header、ISO2、八类 category、lower-camel field key、有限数值/年份和证据 locator。
 
+批处理中的 IEA/RISE 人工来源只能从受控路径
+`.cache/basic-country/batches/<batch-id>/inputs/manual/<ISO2>/<source-id>.snapshot`
+读取，使用 descriptor-relative、拒绝符号链接的 4 MiB 有界 regular-file
+边界。该 snapshot 是 `basic-manual-source-capture/v1` 人工审核证据记录：其双语
+excerpt、locator、国家、来源和采集时间须由审核人员确认，并与 audit source 的
+原始 bytes SHA-256 和 locator 集精确绑定。此绑定证明可追溯性，**不代表系统自动
+证明 excerpt 与人工字段在语义上等价**；最终双语政策摘要、风资源摘要和市场摘要
+仍需人工审核。人工字段只允许 `policyOverview.summary`、
+`windResource.resourceSummary`、`marketSummary.opportunitySummary`，且不得覆盖或
+扩展全球快照拥有的数值/等级字段。
+
 单国任务可在同一 exact contract 下增加 country-scoped HTML/PDF manual sources。当前已登记：
 
 | sourceId | 国家 | 格式 | 官方发布方 | 字段归属 |

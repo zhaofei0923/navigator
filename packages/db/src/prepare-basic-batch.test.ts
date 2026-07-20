@@ -27,11 +27,13 @@ import {
 } from "./cli/basic-batch-config.js";
 import {
   bindReviewedGlobalProfileSnapshots,
+  bindReviewedManualProfileCaptures,
   createFilesystemBasicBatchCache,
   createEmberNoCredentialTabularSnapshot,
   captureWorldBankProfileSourceForBatch,
   prepareBasicBatch,
   mergeReviewedManualProfile,
+  readReviewedManualProfileCaptures,
   readReviewedEmberSnapshotOrUnavailable,
   runPrepareBasicBatchCli,
 } from "./cli/prepare-basic-batch.js";
@@ -667,6 +669,26 @@ describe("reviewed global BASIC profile snapshots", () => {
     expect(() => bindReviewedGlobalProfileSnapshots("ID", captures, duplicateAudit))
       .toThrow("basic batch country input is invalid");
 
+    const extraProfileSource = {
+      ...reviewedProfile,
+      sources: [...reviewedProfile.sources, {
+        ...profileSource("ember-electricity"),
+        id: "unrelated-source",
+      }],
+    };
+    expect(() => bindReviewedGlobalProfileSnapshots("ID", captures, extraProfileSource))
+      .toThrow("basic batch country input is invalid");
+
+    const extraAuditSource = {
+      ...reviewedProfile,
+      auditSources: [...reviewedProfile.auditSources, {
+        ...auditSource("ember-electricity", ember, ["table:ID:2025"]),
+        sourceId: "unrelated-source",
+      }],
+    };
+    expect(() => bindReviewedGlobalProfileSnapshots("ID", captures, extraAuditSource))
+      .toThrow("basic batch country input is invalid");
+
     for (const mutate of [
       (value: typeof forged) => { value.auditSources[0]!.sourceUrl = "https://example.com/drift"; },
       (value: typeof forged) => { value.auditSources[0]!.retrievedAt = "2026-07-19T00:00:00Z"; },
@@ -706,6 +728,27 @@ describe("reviewed global BASIC profile snapshots", () => {
       fields: reviewedProfile.fields.filter(({ field }) => field.key !== "pvout"),
     };
     expect(() => bindReviewedGlobalProfileSnapshots("ID", incompleteCaptures, incompleteProfile))
+      .toThrow("basic batch country input is invalid");
+
+    const futureSolar = encoder.encode([
+      "countryCode,category,key,value,unit,year,locator",
+      "ID,solarResource,ghi,5.1,kWh/m2/day,2027,grid:ID",
+      "ID,solarResource,pvout,4.3,kWh/kWp/day,2027,grid:ID:pvout",
+    ].join("\n"));
+    const futureCaptures = new Map(captures);
+    futureCaptures.set("global-solar-atlas", futureSolar);
+    const futureProfile = {
+      ...reviewedProfile,
+      auditSources: reviewedProfile.auditSources.map((source) =>
+        source.sourceId === "global-solar-atlas"
+          ? auditSource("global-solar-atlas", futureSolar, ["grid:ID", "grid:ID:pvout"])
+          : source),
+      fields: reviewedProfile.fields.map((entry) => entry.category === "solarResource" ? {
+        ...entry,
+        field: { ...entry.field, year: 2027 },
+      } : entry),
+    };
+    expect(() => bindReviewedGlobalProfileSnapshots("ID", futureCaptures, futureProfile))
       .toThrow("basic batch country input is invalid");
 
     const manualProfile = {
@@ -779,6 +822,157 @@ describe("reviewed global BASIC profile snapshots", () => {
     writeFileSync(pathname, reviewed, { mode: 0o600 });
     await expect(readReviewedEmberSnapshotOrUnavailable(root, pathname, ["ID"]))
       .resolves.toEqual(reviewed);
+  });
+});
+
+describe("reviewed manual BASIC profile captures", () => {
+  test("binds IEA policy evidence to captured bytes and rejects zero hashes and fake locators", () => {
+    const globalProfile = reviewedGlobalProfileFixture();
+    const manualBytes = manualCapture("iea-policies", ["section:renewable-target"]);
+    const manualProfile = reviewedManualProfileFixture(
+      "iea-policies",
+      manualBytes,
+      "policyOverview",
+      "summary",
+      ["iea-policies"],
+    );
+
+    expect(bindReviewedManualProfileCaptures(
+      "ID", new Map([["iea-policies", manualBytes]]), globalProfile, manualProfile,
+    ).fields).toEqual(expect.arrayContaining(manualProfile.fields));
+
+    const zeroHash = structuredClone(manualProfile);
+    zeroHash.auditSources[0]!.contentSha256 = "0".repeat(64);
+    expect(() => bindReviewedManualProfileCaptures(
+      "ID", new Map([["iea-policies", manualBytes]]), globalProfile, zeroHash,
+    )).toThrow("basic batch country input is invalid");
+
+    const fakeLocator = structuredClone(manualProfile);
+    fakeLocator.auditSources[0]!.evidenceLocators = ["section:not-in-capture"];
+    expect(() => bindReviewedManualProfileCaptures(
+      "ID", new Map([["iea-policies", manualBytes]]), globalProfile, fakeLocator,
+    )).toThrow("basic batch country input is invalid");
+
+    for (const unapprovedUrl of [
+      "https://www.iea.org/reports/not-a-policy",
+      "https://www.iea.org/policies/example?redirect=unreviewed",
+      "https://www.iea.org/policies/example#unreviewed",
+    ]) {
+      const driftedUrl = {
+        ...structuredClone(manualProfile),
+        sources: manualProfile.sources.map((source) => ({ ...source, url: unapprovedUrl })),
+        auditSources: manualProfile.auditSources.map((source) => ({
+          ...source, sourceUrl: unapprovedUrl,
+        })),
+      };
+      expect(() => bindReviewedManualProfileCaptures(
+        "ID", new Map([["iea-policies", manualBytes]]), globalProfile, driftedUrl,
+      )).toThrow("basic batch country input is invalid");
+    }
+  });
+
+  test("enforces category ownership and prevents manual overrides or unobserved global fields", () => {
+    const globalProfile = reviewedGlobalProfileFixture();
+    const ieaBytes = manualCapture("iea-policies", ["section:renewable-target"]);
+    const solarAsPolicy = reviewedManualProfileFixture(
+      "iea-policies",
+      ieaBytes,
+      "policyOverview",
+      "summary",
+      ["global-solar-atlas"],
+    );
+    expect(() => bindReviewedManualProfileCaptures(
+      "ID", new Map([["iea-policies", ieaBytes]]), globalProfile, solarAsPolicy,
+    )).toThrow("basic batch country input is invalid");
+
+    const windOwnedByPolicy = reviewedManualProfileFixture(
+      "iea-policies", ieaBytes, "windResource", "resourceSummary", ["iea-policies"],
+    );
+    expect(() => bindReviewedManualProfileCaptures(
+      "ID", new Map([["iea-policies", ieaBytes]]), globalProfile, windOwnedByPolicy,
+    )).toThrow("basic batch country input is invalid");
+
+    const overrideObservedWind = reviewedManualProfileFixture(
+      "iea-policies", ieaBytes, "windResource", "onshoreWindClass", ["global-wind-atlas"],
+    );
+    expect(() => bindReviewedManualProfileCaptures(
+      "ID", new Map([["iea-policies", ieaBytes]]), globalProfile, overrideObservedWind,
+    )).toThrow("basic batch country input is invalid");
+
+    const unownedSolar = reviewedManualProfileFixture(
+      "iea-policies", ieaBytes, "solarResource", "resourceSummary", ["global-solar-atlas"],
+    );
+    expect(() => bindReviewedManualProfileCaptures(
+      "ID", new Map([["iea-policies", ieaBytes]]), globalProfile, unownedSolar,
+    )).toThrow("basic batch country input is invalid");
+
+    const windSummary = {
+      ...reviewedManualProfileFixture(
+        "iea-policies", ieaBytes, "windResource", "resourceSummary", ["global-wind-atlas"],
+      ),
+      sources: [],
+      auditSources: [],
+    };
+    expect(bindReviewedManualProfileCaptures(
+      "ID", new Map(), globalProfile, windSummary,
+    ).fields).toContainEqual(expect.objectContaining({
+      category: "windResource",
+      field: expect.objectContaining({ key: "resourceSummary" }),
+    }));
+
+    const marketSummary = {
+      ...windSummary,
+      fields: [{
+        ...windSummary.fields[0]!,
+        category: "marketSummary" as const,
+        field: {
+          ...windSummary.fields[0]!.field,
+          key: "opportunitySummary",
+          sourceIds: ["global-wind-atlas", "global-solar-atlas"],
+        },
+      }],
+    };
+    expect(bindReviewedManualProfileCaptures(
+      "ID", new Map(), globalProfile, marketSummary,
+    ).fields).toContainEqual(expect.objectContaining({
+      category: "marketSummary",
+      field: expect.objectContaining({
+        sourceIds: ["global-wind-atlas", "global-solar-atlas"],
+      }),
+    }));
+
+    const arbitraryKey = reviewedManualProfileFixture(
+      "iea-policies", ieaBytes, "policyOverview", "renewableTarget", ["iea-policies"],
+    );
+    expect(() => bindReviewedManualProfileCaptures(
+      "ID", new Map([["iea-policies", ieaBytes]]), globalProfile, arbitraryKey,
+    )).toThrow("basic batch country input is invalid");
+
+    const scalarValue = structuredClone(arbitraryKey);
+    scalarValue.fields[0]!.field.key = "summary";
+    scalarValue.fields[0]!.field.value = { zh: "", en: "Reviewed content" };
+    expect(() => bindReviewedManualProfileCaptures(
+      "ID", new Map([["iea-policies", ieaBytes]]), globalProfile, scalarValue,
+    )).toThrow("basic batch country input is invalid");
+  });
+
+  test("loads only descriptor-controlled bounded regular manual capture files", async () => {
+    const root = createRoot();
+    const directory = join(
+      root, ".cache", "basic-country", "batches", "batch-1", "inputs", "manual", "ID",
+    );
+    mkdirSync(directory, { recursive: true, mode: 0o700 });
+    const bytes = manualCapture("iea-policies", ["section:renewable-target"]);
+    writeFileSync(join(directory, "iea-policies.snapshot"), bytes, { mode: 0o600 });
+
+    await expect(readReviewedManualProfileCaptures(root, "batch-1", "ID"))
+      .resolves.toEqual(new Map([["iea-policies", bytes]]));
+
+    const outside = join(root, "outside.snapshot");
+    writeFileSync(outside, bytes, { mode: 0o600 });
+    symlinkSync(outside, join(directory, "rise-policy-review.snapshot"));
+    await expect(readReviewedManualProfileCaptures(root, "batch-1", "ID"))
+      .rejects.toThrow("manual BASIC profile capture input is invalid");
   });
 });
 
@@ -915,4 +1109,136 @@ function approvedWorldBankEntry(
     "utf8",
   )) as unknown);
   return createBasicSourceExecutionPlan({ catalog, countryCode, sourceIds: [sourceId] }).sources[0]!;
+}
+
+function reviewedGlobalProfileFixture() {
+  const encoder = new TextEncoder();
+  const captures = {
+    ember: encoder.encode([
+      "countryCode,category,key,value,unit,year,locator",
+      "ID,electricityMarket,totalGeneration,312.4,TWh,2025,table:ID:2025",
+      "ID,electricityMarket,renewableGenerationShare,48,%,2025,table:ID:renewables:2025",
+    ].join("\n")),
+    solar: encoder.encode([
+      "countryCode,category,key,value,unit,year,locator",
+      "ID,solarResource,ghi,5.1,kWh/m2/day,2024,grid:ID",
+      "ID,solarResource,pvout,4.3,kWh/kWp/day,2024,grid:ID:pvout",
+    ].join("\n")),
+    wind: encoder.encode([
+      "countryCode,category,key,value,unit,year,locator",
+      "ID,windResource,onshoreWindClass,good,,2024,grid:ID:onshore",
+      "ID,windResource,offshoreWindClass,very-good,,2024,grid:ID:offshore",
+    ].join("\n")),
+    capacity: encoder.encode([
+      "countryCode,category,key,value,unit,year,locator",
+      "ID,renewableCapacity,solarCapacity,8.2,GW,2025,table:ID:solar",
+      "ID,renewableCapacity,windCapacity,0.2,GW,2025,table:ID:wind",
+      "ID,renewableCapacity,hydroCapacity,6.7,GW,2025,table:ID:hydro",
+      "ID,renewableCapacity,totalRenewableCapacity,15.1,GW,2025,table:ID:total",
+    ].join("\n")),
+  };
+  return {
+    updatedAt: "2026-07-20T00:00:00Z",
+    sources: [
+      profileSource("ember-electricity"),
+      profileSource("global-solar-atlas"),
+      profileSource("global-wind-atlas"),
+      profileSource("irenastat-capacity"),
+    ],
+    auditSources: [
+      auditSource("ember-electricity", captures.ember, ["table:ID:2025", "table:ID:renewables:2025"]),
+      auditSource("global-solar-atlas", captures.solar, ["grid:ID", "grid:ID:pvout"]),
+      auditSource("global-wind-atlas", captures.wind, ["grid:ID:onshore", "grid:ID:offshore"]),
+      auditSource("irenastat-capacity", captures.capacity, [
+        "table:ID:solar", "table:ID:wind", "table:ID:hydro", "table:ID:total",
+      ]),
+    ],
+    fields: [
+      reviewedField("ember-electricity", "electricityMarket", "totalGeneration", 312.4, "TWh", 2025),
+      reviewedField("ember-electricity", "electricityMarket", "renewableGenerationShare", 48, "%", 2025),
+      reviewedField("irenastat-capacity", "renewableCapacity", "solarCapacity", 8.2, "GW", 2025),
+      reviewedField("irenastat-capacity", "renewableCapacity", "windCapacity", 0.2, "GW", 2025),
+      reviewedField("irenastat-capacity", "renewableCapacity", "hydroCapacity", 6.7, "GW", 2025),
+      reviewedField("irenastat-capacity", "renewableCapacity", "totalRenewableCapacity", 15.1, "GW", 2025),
+      reviewedField("global-solar-atlas", "solarResource", "ghi", 5.1, "kWh/m2/day", 2024),
+      reviewedField("global-solar-atlas", "solarResource", "pvout", 4.3, "kWh/kWp/day", 2024),
+      reviewedField("global-wind-atlas", "windResource", "onshoreWindClass", "good", null, 2024),
+      reviewedField("global-wind-atlas", "windResource", "offshoreWindClass", "very-good", null, 2024),
+    ],
+  };
+}
+
+function manualCapture(sourceId: string, evidenceLocators: readonly string[]): Uint8Array {
+  return new TextEncoder().encode(JSON.stringify({
+    schemaVersion: "basic-manual-source-capture/v1",
+    countryCode: "ID",
+    sourceId,
+    retrievedAt: "2026-07-20T00:00:00Z",
+    evidence: evidenceLocators.map((locator) => ({
+      locator,
+      excerpt: { zh: "已审核证据摘录", en: "Reviewed evidence excerpt" },
+    })),
+  }));
+}
+
+function reviewedManualProfileFixture(
+  sourceId: "iea-policies" | "rise-policy-review",
+  bytes: Uint8Array,
+  category: "policyOverview" | "windResource" | "marketSummary" | "solarResource",
+  key: string,
+  sourceIds: string[],
+) {
+  const policies = {
+    "iea-policies": {
+      publisher: "International Energy Agency",
+      url: "https://www.iea.org/policies/example",
+    },
+    "rise-policy-review": {
+      publisher: "World Bank RISE",
+      url: "https://rise.esmap.org/country/example",
+    },
+  } as const;
+  const policy = policies[sourceId];
+  return {
+    updatedAt: "2026-07-20T00:00:00Z",
+    sources: [{
+      id: sourceId,
+      publisher: policy.publisher,
+      title: { zh: sourceId, en: sourceId },
+      url: policy.url,
+      publishedAt: null,
+      retrievedAt: "2026-07-20T00:00:00Z",
+      credibility: "OFFICIAL" as const,
+    }],
+    auditSources: [{
+      sourceId,
+      sourceName: policy.publisher,
+      sourceUrl: policy.url,
+      retrievedAt: "2026-07-20T00:00:00Z",
+      publishedAt: null,
+      contentSha256: createHash("sha256").update(bytes).digest("hex"),
+      evidenceLocators: ["section:renewable-target"],
+      sourceFamily: "international-organization" as const,
+      accessStatus: "open" as const,
+      accessNotes: null,
+      credibility: "OFFICIAL" as const,
+      discoveryOnly: false,
+      promptInjectionRisk: "none" as const,
+    }],
+    fields: [{
+      category,
+      field: {
+        key,
+        label: { zh: key, en: key },
+        status: "AVAILABLE" as const,
+        value: { zh: "已审核内容", en: "Reviewed content" },
+        unit: null,
+        year: null,
+        sourceIds,
+        checkedAt: "2026-07-20",
+        reason: null,
+        note: null,
+      },
+    }],
+  };
 }

@@ -21,6 +21,19 @@ const CATEGORIES = new Set<string>([
   "solarResource", "windResource", "policyOverview", "marketSummary",
 ]);
 const REQUIRED = ["countryCode", "category", "key", "value", "unit", "year", "locator"];
+const WIND_RESOURCE_CLASSES = new Set([
+  "poor", "fair", "good", "very-good", "excellent",
+]);
+const NUMERIC_FIELD_UNITS = Object.freeze({
+  "electricityMarket.totalGeneration": "TWh",
+  "electricityMarket.renewableGenerationShare": "%",
+  "renewableCapacity.totalRenewableCapacity": "GW",
+  "renewableCapacity.solarCapacity": "GW",
+  "renewableCapacity.windCapacity": "GW",
+  "renewableCapacity.hydroCapacity": "GW",
+  "solarResource.ghi": "kWh/m2/day",
+  "solarResource.pvout": "kWh/kWp/day",
+} as const);
 
 export function parseBasicProfileTabularSnapshot(
   body: Uint8Array,
@@ -54,6 +67,7 @@ export function parseBasicProfileTabularSnapshot(
         const numeric = rawValue === "" ? null : strictNumber(rawValue);
         const value = rawValue === "" ? null : numeric ?? rawValue;
         const year = rawYear === "" ? null : strictInteger(rawYear);
+        validateReviewedGlobalField(category, key, unavailable, value, rawUnit, year);
         return Object.freeze({
           category: category as BasicProfileCategoryKey,
           key,
@@ -69,6 +83,32 @@ export function parseBasicProfileTabularSnapshot(
   } catch {
     throw new Error("basic profile tabular snapshot is invalid");
   }
+}
+
+function validateReviewedGlobalField(
+  category: string,
+  key: string,
+  unavailable: boolean,
+  value: number | string | null,
+  rawUnit: string,
+  year: number | null,
+): void {
+  const fieldPath = `${category}.${key}`;
+  const numericUnit = NUMERIC_FIELD_UNITS[
+    fieldPath as keyof typeof NUMERIC_FIELD_UNITS
+  ];
+  const windField = category === "windResource" &&
+    (key === "onshoreWindClass" || key === "offshoreWindClass");
+  if (numericUnit === undefined && !windField) invalid();
+  if (unavailable) return;
+  if (year === null || year < 1900) invalid();
+  if (numericUnit !== undefined) {
+    if (typeof value !== "number" || !Number.isFinite(value) || rawUnit !== numericUnit) invalid();
+    return;
+  }
+  if (
+    typeof value !== "string" || !WIND_RESOURCE_CLASSES.has(value) || rawUnit !== ""
+  ) invalid();
 }
 
 function strictNumber(value: string): number | null {

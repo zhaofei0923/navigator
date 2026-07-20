@@ -22,6 +22,7 @@ const SAFE_SOURCE_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const MAX_CAPTURE_BYTES = 64 * 1024 * 1024;
 const MAX_REFERENCE_BYTES = 64 * 1024;
 const MAX_COUNTRY_INPUT_BYTES = 1024 * 1024;
+const MAX_MANUAL_CAPTURE_BYTES = 4 * 1024 * 1024;
 const CACHE_ERROR = "basic batch cache is invalid";
 const INPUT_ERROR = "basic batch input is invalid";
 const pendingByCache = new WeakMap<object, Map<string, Promise<Uint8Array>>>();
@@ -93,6 +94,30 @@ export async function readBasicBatchCountryInput(
   pathname: string,
 ): Promise<Uint8Array> {
   return readInput(repoRoot, pathname, MAX_COUNTRY_INPUT_BYTES);
+}
+
+export async function readOptionalBasicBatchManualInput(
+  repoRoot: string,
+  pathname: string,
+): Promise<Uint8Array | null> {
+  try {
+    const root = resolve(repoRoot);
+    const target = resolve(pathname);
+    assertContained(root, target);
+    const parent = await openSafeDirectoryHierarchy(root, dirname(target), false);
+    try {
+      return await readRegularFileBounded(
+        childPath(parent, basename(target)),
+        MAX_MANUAL_CAPTURE_BYTES,
+        true,
+      );
+    } finally {
+      await parent.close();
+    }
+  } catch (error) {
+    if (error instanceof MissingRegularFileError) return null;
+    throw new Error(INPUT_ERROR);
+  }
 }
 
 async function readInput(
