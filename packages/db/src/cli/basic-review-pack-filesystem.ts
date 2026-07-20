@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { renderBasicReviewHtml } from "../review/basic-review-html.js";
 import { createBasicReviewModel } from "../review/basic-review-model.js";
-import { loadApprovedPreviousBasicProfileVersioned } from "../review/basic-approved-publication-profile.js";
 import {
   closeBasicCandidateHeldDirectories,
   createBasicCandidateExclusiveDirectory,
@@ -26,6 +25,7 @@ import {
   type BasicReviewPackFileName,
   type BasicReviewPackFileOperation,
 } from "./basic-review-pack-owned-file.js";
+import { snapshotBasicReviewPreviousProfile } from "./basic-review-previous-profile-snapshot.js";
 
 export interface BasicReviewPackIdentity {
   readonly countryCode: string;
@@ -44,45 +44,30 @@ export interface BasicReviewPackFilesystemHooks {
 
 export async function generateBasicReviewPackFiles(
   root: BasicCandidateHeldDirectory,
-  repoRoot: string,
   identity: BasicReviewPackIdentity,
   hooks: BasicReviewPackFilesystemHooks = {},
 ): Promise<void> {
   const located = await locateBasicReviewCandidateSnapshot(root, identity);
+  let previous: Awaited<ReturnType<typeof snapshotBasicReviewPreviousProfile>> | null = null;
   try {
-    const previousProfile = await readPreviousProfile(
-      root, repoRoot, located.countryDirectory,
-    );
+    previous = await snapshotBasicReviewPreviousProfile(root, located.countryDirectory);
+    const heldPrevious = previous;
     const model = createBasicReviewModel({
       candidate: located.candidate,
-      previousProfile,
+      previousProfile: previous.profile,
       candidateArtifactSha256: located.artifactSha256,
     });
     await located.verify();
-    await writeReviewDirectory(root, identity, model, located.verify, hooks);
+    await previous.verify();
+    await writeReviewDirectory(root, identity, model, async () => {
+      await located.verify();
+      await heldPrevious.verify();
+    }, hooks);
   } finally {
-    await located.close();
-  }
-}
-
-async function readPreviousProfile(
-  root: BasicCandidateHeldDirectory,
-  repoRoot: string,
-  countryDirectory: string,
-): Promise<ReturnType<typeof loadApprovedPreviousBasicProfileVersioned>> {
-  let data: BasicCandidateHeldDirectory | null = null;
-  let country: BasicCandidateHeldDirectory | null = null;
-  try {
-    data = await openBasicCandidateDirectoryChild(root, "data");
-    try {
-      country = await openBasicCandidateDirectoryChild(data, countryDirectory);
-    } catch (error) {
-      if (errorCode(error) === "ENOENT") return null;
-      throw error;
+    const closed = await Promise.allSettled([located.close(), previous?.close()]);
+    if (closed.some(({ status }) => status === "rejected")) {
+      throw new Error("BASIC review snapshot close failed");
     }
-    return loadApprovedPreviousBasicProfileVersioned(repoRoot, countryDirectory);
-  } finally {
-    await closeBasicCandidateHeldDirectories([country, data]);
   }
 }
 
@@ -187,8 +172,4 @@ async function requireReviewHierarchy(
   for (const entry of hierarchy) {
     await requireBasicCandidateHeldChild(entry.parent, entry.name, entry.child);
   }
-}
-
-function errorCode(error: unknown): string | undefined {
-  return (error as NodeJS.ErrnoException | null)?.code;
 }

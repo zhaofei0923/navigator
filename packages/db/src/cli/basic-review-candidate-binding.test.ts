@@ -15,7 +15,19 @@ import { join } from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
 
 import { createBasicCollectionAuditV3Fixture } from "../basic-collection-v3-test-fixture.js";
+import { createBasicCountryPublicationFixture } from "../basic-publication-test-fixture.js";
+import {
+  createBasicCollectionAuditArtifactsV2,
+  serializeBasicCollectionAuditArtifactsV2,
+} from "../collection/basic-audit-v2-artifacts.js";
+import type { BasicCollectionAuditBundleV2 } from "../collection/basic-collection-v2-contracts.js";
 import type { BasicCollectionAuditBundleV3 } from "../collection/basic-collection-v3-contracts.js";
+import type {
+  BasicCountryPublicationApprovalReceipt,
+  BasicCountryPublicationManifestV2,
+} from "../collection/basic-publication-contracts.js";
+import { sha256Hex } from "../collection/basic-publication-digests.js";
+import { materializeBasicCanonicalFromApprovedCandidateV2 } from "../collection/basic-publication-materializer.js";
 import {
   closeBasicCandidateWorkspace,
   getBasicCandidateWorkspaceRootDirectory,
@@ -94,6 +106,47 @@ describe("BASIC review candidate binding", () => {
     ))).toBe(false);
   });
 
+  test("fails closed when the canonical country path is atomically replaced after snapshot", async () => {
+    const root = createRepo();
+    const candidate = createBasicCollectionAuditV3Fixture() as BasicCollectionAuditBundleV3;
+    writeCandidate(root, candidate);
+    const canonical = writePreviousPublication(root, "previous-001");
+    const replacement = join(root, "data", ".replacement-country");
+    mkdirSync(replacement);
+    for (const name of [
+      "collection-manifest.json", "country.json", "market-overview.json",
+    ]) {
+      writeFileSync(join(replacement, name), readFileSync(join(canonical, name)));
+    }
+
+    await expect(generate(root, candidate, {
+      beforeAtomicPublish: async () => {
+        renameSync(canonical, `${canonical}.held`);
+        renameSync(replacement, canonical);
+      },
+    })).rejects.toThrow("previous BASIC publication snapshot is invalid");
+
+    expect(existsSync(join(
+      root, ".cache", "basic-country", "XZ", candidate.runId, "review",
+    ))).toBe(false);
+  });
+
+  test("fails closed when a previously absent canonical country appears before publication", async () => {
+    const root = createRepo();
+    const candidate = createBasicCollectionAuditV3Fixture() as BasicCollectionAuditBundleV3;
+    writeCandidate(root, candidate);
+
+    await expect(generate(root, candidate, {
+      beforeAtomicPublish: async () => {
+        mkdirSync(join(root, "data", candidate.countryDirectory));
+      },
+    })).rejects.toThrow("previous BASIC publication snapshot is invalid");
+
+    expect(existsSync(join(
+      root, ".cache", "basic-country", "XZ", candidate.runId, "review",
+    ))).toBe(false);
+  });
+
   test.each([
     ["index.html", "write"],
     ["index.html", "sync"],
@@ -153,7 +206,6 @@ async function generate(
   try {
     await generateBasicReviewPackFiles(
       getBasicCandidateWorkspaceRootDirectory(workspace),
-      root,
       { countryCode: "XZ", runId: candidate.runId },
       hooks,
     );
@@ -199,4 +251,56 @@ function writeCandidate(root: string, bundle: BasicCollectionAuditBundleV3): str
     writeFileSync(join(directory, name), `${JSON.stringify(value)}\n`);
   }
   return directory;
+}
+
+function writePreviousPublication(root: string, runId: string): string {
+  const base = createBasicCountryPublicationFixture();
+  const candidate = replaceFixtureRunId(base.candidate, runId);
+  const candidateArtifactBytes = serializeBasicCollectionAuditArtifactsV2(
+    createBasicCollectionAuditArtifactsV2(candidate),
+  );
+  const approvalReceipt: BasicCountryPublicationApprovalReceipt = {
+    ...base.approvalReceipt,
+    runId,
+    artifactSha256: Object.fromEntries(Object.entries(candidateArtifactBytes).map(
+      ([name, bytes]) => [name, sha256Hex(bytes)],
+    )) as BasicCountryPublicationApprovalReceipt["artifactSha256"],
+  };
+  const approvalReceiptBytes = new TextEncoder().encode(
+    `${JSON.stringify(approvalReceipt)}\n`,
+  );
+  const manifest: BasicCountryPublicationManifestV2 = {
+    ...base.manifest,
+    activeRunId: runId,
+    auditBundlePath: `data/staging/example-land/${runId}`,
+    approvalReceiptPath: `data/approvals/example-land/${runId}.json`,
+    approvalReceiptSha256: sha256Hex(approvalReceiptBytes),
+  };
+  const canonical = materializeBasicCanonicalFromApprovedCandidateV2(candidate, manifest);
+  const canonicalDirectory = join(root, "data", "example-land");
+  mkdirSync(canonicalDirectory, { recursive: true });
+  writeFileSync(join(canonicalDirectory, "collection-manifest.json"), `${JSON.stringify(manifest)}\n`);
+  writeFileSync(join(canonicalDirectory, "country.json"), `${JSON.stringify(canonical.country)}\n`);
+  writeFileSync(
+    join(canonicalDirectory, "market-overview.json"),
+    `${JSON.stringify(canonical.marketOverview)}\n`,
+  );
+  const candidateDirectory = join(root, "data", "staging", "example-land", runId);
+  mkdirSync(candidateDirectory, { recursive: true });
+  for (const [name, bytes] of Object.entries(candidateArtifactBytes)) {
+    writeFileSync(join(candidateDirectory, name), bytes);
+  }
+  const approvalDirectory = join(root, "data", "approvals", "example-land");
+  mkdirSync(approvalDirectory, { recursive: true });
+  writeFileSync(join(approvalDirectory, `${runId}.json`), approvalReceiptBytes);
+  return canonicalDirectory;
+}
+
+function replaceFixtureRunId(
+  candidate: BasicCollectionAuditBundleV2,
+  runId: string,
+): BasicCollectionAuditBundleV2 {
+  return JSON.parse(
+    JSON.stringify(candidate).replaceAll("run-001", runId),
+  ) as BasicCollectionAuditBundleV2;
 }
