@@ -12,7 +12,7 @@ import { MODULE_KEYS } from "@navigator/shared-types/schema";
 import { describe, expect, test } from "vitest";
 
 import { writeBasicCountryPublicationV3RepositoryFixture } from "./basic-publication-v3-test-fixture.js";
-import { loadApprovedBasicCountryPublicationV2 } from "./collection/basic-publication-loader.js";
+import { loadApprovedBasicCountryPublicationVersioned } from "./collection/basic-publication-versioned-loader.js";
 import {
   ApprovedPublicationCountryReadRepositoryError,
   createApprovedPublicationCountryReadRepository,
@@ -76,7 +76,7 @@ const TECH_TO_PRISMA = {
 function approvedSnapshots(): CountryDataSnapshot[] {
   const snapshots = discoverApprovedBasicCountryDirectories(REPOSITORY_ROOT).map(
     (countryDirectory) => {
-      const publication = loadApprovedBasicCountryPublicationV2(
+      const publication = loadApprovedBasicCountryPublicationVersioned(
         REPOSITORY_ROOT,
         countryDirectory,
       );
@@ -255,7 +255,13 @@ for (const harness of harnesses) {
           (coverage as readonly JsonObject[]).map((item) => item.moduleKey),
         ).toEqual(MODULE_KEYS);
         expect(snapshot.marketOverview).not.toBeNull();
-        expect(snapshot.marketOverview).toHaveProperty("basicProfile", null);
+        if (snapshot.country.code === "ID") {
+          expect(snapshot.marketOverview?.basicProfile).toMatchObject({
+            schemaVersion: "basic-market-profile/v2",
+          });
+        } else {
+          expect(snapshot.marketOverview).toHaveProperty("basicProfile", null);
+        }
       }
     });
 
@@ -328,7 +334,9 @@ describe("country read deep-record normalization", () => {
     const { normalizeCountryReadSnapshot } = await import(
       "./read/country-read-normalization.js"
     );
-    const legacy = approvedSnapshots()[0];
+    const legacy = approvedSnapshots().find(
+      (snapshot) => snapshot.country.code === "VN",
+    );
     if (legacy === undefined || legacy.marketOverview === null) {
       throw new Error("Expected an approved legacy market overview");
     }

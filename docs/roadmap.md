@@ -196,6 +196,13 @@ ID STANDARD 的批准边界仅允许按已批准设计和首批来源目录生�
 - 完成边界：精确完整 identity 与 hashes 记录在 [indonesia-seed.md](./indonesia-seed.md)。外部 datastore 的 legacy Complete 清理由单独批准的 `OPS-DATA-ID-BASIC-CLEANUP` 处理；本任务未执行删除或其他数据库破坏性操作。
 - 人工确认：是（项目所有者已明确批准上述 country/run/hash identity 与本原子发布任务）。
 
+#### DATA-BASIC-ID-REFRESH Indonesia Basic r3 atomic refresh（已完成）
+- 目标：只将 Indonesia active BASIC 从 `data-basic-id-20260711-r2` 原子刷新到项目所有者明确批准的 `data-basic-id-20260720-r3`，保留 r2 candidate、回执、父 Git 提交与 private recovery tree 作为回滚/审计证据。
+- 验收：r3 四文件 candidate SHA-256 为 `0ae67bd1…ada94`、`b08fa0ba…326ad`、`3804d034…f3db3`、`416b537c…753b9`，与引入它们的 `8738970` 字节完全一致；批准回执 SHA-256 为 `b4643bc2…cfb75`。唯一批准的 `pnpm basic:refresh` 命令返回 `status=refreshed`、`previousRunId=data-basic-id-20260711-r2`、`activeRunId=data-basic-id-20260720-r3`、`postCommitVerified=true`；canonical exact-three SHA-256 为 `5a8e0788…d095a`、`f6881520…2d2a`、`c5a02cc…4e71`。
+- 测试：Indonesia r3 publication lock 覆盖 exact receipt/candidate hashes、八类 profile、精确双语 market summary、source-bound `NOT_AVAILABLE`、九模块占位和零 AI/deep records；r2 历史锁继续通过。六套 publication/import/Prisma/read contract 测试与 approved-publication CLI 验证六国集合，active Indonesia 通过严格 versioned loader 读取。
+- 完成边界：仅 repository canonical bytes 刷新；保持 `BASIC`、`aiUsable=false`、九模块 `BUILDING`/零项。未连接或写入 PostgreSQL/Prisma，未创建 KnowledgeChunk 或 AI index，未修改 schema、AI 检索边界、权限、计费、依赖、其他国家或产品代码。
+- 人工确认：是（项目所有者明确批准精确 r3 receipt、candidate hashes 与单国刷新；不授权 Standard、Complete、AI、数据库或其他国家发布）。
+
 #### DATA-BASIC-VN-COLLECT Vietnam Basic candidate collection（已完成；r3 后续已发布）
 - 目标：针对项目所有者批准启动的 `vietnam` / `VN` / `data-basic-vn-20260715-r3` identity，使用两条越南官方 HTML/PDF 来源与四条 World Bank deterministic sources，生成可追溯、双语、model-free 的 Basic `draft` 候选。
 - 验收：候选恰好包含 `source-register.json`、`extracted-facts.json`、`market-overview.draft.json` 与 `review-report.json`；四个 SHA-256 分别为 `9a164b73048b290a2fd964a292158149d722adcd6edc54d4fea1d67f6cb879a3`、`ca66fb3f8ee67c69ae9f33b4d941bf84209311cee139b68ed0a84d15ea9b99ce`、`3aa83f37cf0177e043d3ed0d5493c6193cb68e9f8dd33c75a46958a0079b5a95`、`163107e63f1ae72288dc10c8ed0770f94f9b93bf3dd896e67f0870f588492a1e`。候选通过 v2 validator，状态为 `ready-for-human-review`，保持 `reviewStatus = draft`、`aiUsable = false`、`humanDecision = null`，来源检查全部通过且无 injection risk。

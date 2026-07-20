@@ -8,6 +8,7 @@ import { describe, expect, test, vi } from "vitest";
 
 import { writeBasicCountryPublicationV3RepositoryFixture } from "./basic-publication-v3-test-fixture.js";
 import { loadApprovedBasicCountryPublicationV2 } from "./collection/basic-publication-loader.js";
+import { loadApprovedBasicCountryPublicationVersioned } from "./collection/basic-publication-versioned-loader.js";
 import {
   importAllApprovedBasicCountries,
   prepareAllApprovedBasicCountryImports,
@@ -67,7 +68,7 @@ describe("approved BASIC country Prisma import orchestration", () => {
   test("finishes all loading before a client can be constructed", () => {
     const createClient = vi.fn();
     const loaded: string[] = [];
-    const loadPublication: typeof loadApprovedBasicCountryPublicationV2 = (
+    const loadPublication: typeof loadApprovedBasicCountryPublicationVersioned = (
       repoRoot,
       countryDirectory,
     ) => {
@@ -75,7 +76,7 @@ describe("approved BASIC country Prisma import orchestration", () => {
       if (countryDirectory === "vietnam") {
         throw new Error("postgresql://secret@host/database /private/repo VN payload");
       }
-      return loadApprovedBasicCountryPublicationV2(repoRoot, countryDirectory);
+      return loadApprovedBasicCountryPublicationVersioned(repoRoot, countryDirectory);
     };
 
     expect(() => {

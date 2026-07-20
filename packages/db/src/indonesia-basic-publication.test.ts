@@ -5,8 +5,6 @@ import { join } from "node:path";
 
 import { describe, expect, test } from "vitest";
 
-import { loadApprovedBasicCountryPublicationV2 } from "./collection/basic-publication-loader.js";
-
 const REPO_ROOT = fileURLToPath(new URL("../../../", import.meta.url)).replace(
   /\/$/u,
   "",
@@ -23,13 +21,8 @@ const CANDIDATE_HASHES = {
   "review-report.json":
     "a644f07748f39870e57beb0915091d002acee2aab4d41401968f59e40f157409",
 } as const;
-const CANONICAL_FILES = [
-  "collection-manifest.json",
-  "country.json",
-  "market-overview.json",
-] as const;
 
-describe("Indonesia approved Basic publication", () => {
+describe("Indonesia r2 approved Basic publication history", () => {
   test("preserves the immutable four-file candidate byte identity", () => {
     const candidateRoot = join(
       REPO_ROOT,
@@ -49,8 +42,7 @@ describe("Indonesia approved Basic publication", () => {
     }
   });
 
-  test("binds the exact approval receipt and canonical allowlist", () => {
-    const canonicalRoot = join(REPO_ROOT, "data", COUNTRY_DIRECTORY);
+  test("preserves the exact historical approval receipt", () => {
     const receiptPath = join(
       REPO_ROOT,
       "data",
@@ -58,30 +50,10 @@ describe("Indonesia approved Basic publication", () => {
       COUNTRY_DIRECTORY,
       `${RUN_ID}.json`,
     );
-    const manifest = readJson(join(canonicalRoot, "collection-manifest.json"));
     const receipt = readJson(receiptPath);
 
-    expect(readdirSync(canonicalRoot).sort(compareText)).toEqual(CANONICAL_FILES);
-    expect(Object.keys(manifest)).toEqual([
-      "schemaVersion",
-      "activeRunId",
-      "mappingVersion",
-      "auditBundlePath",
-      "approvalReceiptPath",
-      "approvalReceiptSha256",
-    ]);
-    expect(manifest).toEqual({
-      schemaVersion: "basic-country-publication-manifest/v2",
-      activeRunId: RUN_ID,
-      mappingVersion: "basic-country-canonical/v2",
-      auditBundlePath: `data/staging/${COUNTRY_DIRECTORY}/${RUN_ID}`,
-      approvalReceiptPath:
-        `data/approvals/${COUNTRY_DIRECTORY}/${RUN_ID}.json`,
-      approvalReceiptSha256:
-        "aad39cb02b3d24aec4b57d2275062062b0a9a3b5531eb1289461ef41fbe73bb1",
-    });
     expect(sha256(readFileSync(receiptPath))).toBe(
-      manifest.approvalReceiptSha256,
+      "aad39cb02b3d24aec4b57d2275062062b0a9a3b5531eb1289461ef41fbe73bb1",
     );
     expect(receipt).toMatchObject({
       countryDirectory: COUNTRY_DIRECTORY,
@@ -94,64 +66,22 @@ describe("Indonesia approved Basic publication", () => {
     });
   });
 
-  test("validates the committed real bundle as BASIC with the AI boundary closed", () => {
-    const result = loadApprovedBasicCountryPublicationV2(
-      REPO_ROOT,
-      COUNTRY_DIRECTORY,
+  test("keeps the historical r2 candidate draft and non-AI", () => {
+    const draft = readJson(
+      join(
+        REPO_ROOT,
+        "data",
+        "staging",
+        COUNTRY_DIRECTORY,
+        RUN_ID,
+        "market-overview.draft.json",
+      ),
     );
 
-    expect(result.valid).toBe(true);
-    if (!result.valid) {
-      throw new Error(`Expected valid publication, received ${result.blockerCode}`);
-    }
-    expect(result.data.canonical.country).toMatchObject({
-      code: "ID",
-      coverageLevel: "BASIC",
-      name: { zh: "印度尼西亚", en: "Indonesia" },
-    });
-    expect(result.data.canonical.country.moduleCoverage).toEqual([
-      {
-        moduleKey: "market-overview",
-        status: "COMPLETE",
-        dataCount: 1,
-        updatedAt: "2026-01-09T00:00:00.000Z",
-      },
-      ...[
-        "policy",
-        "risk",
-        "opportunities",
-        "projects",
-        "partners",
-        "chinese-companies",
-        "entry-strategy",
-        "ai-advisor",
-        "reports",
-      ].map((moduleKey) => ({
-        moduleKey,
-        status: "BUILDING",
-        dataCount: 0,
-        updatedAt: "2026-01-09T00:00:00.000Z",
-      })),
-    ]);
-    expect(result.data.canonical.marketOverview).toMatchObject({
-      reviewStatus: "published",
+    expect(draft).toMatchObject({
+      reviewStatus: "draft",
       aiUsable: false,
       countryCode: "ID",
-      overview: {
-        zh: expect.stringContaining("可再生能源装机达到15,630兆瓦"),
-        en: expect.stringContaining("Installed renewable capacity reached 15,630 MW"),
-      },
-    });
-    expect(result.data.canonical).toMatchObject({
-      policy: [],
-      risk: [],
-      opportunities: [],
-      projects: [],
-      partners: [],
-      chineseCompanies: [],
-      entryStrategy: null,
-      reports: [],
-      knowledge: [],
     });
   });
 });

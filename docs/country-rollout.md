@@ -26,7 +26,7 @@ MVP 到商业化初期的当前建设目标是经人工批准的国家先完成 
 
 | 阶段 | 国家码 | 国家 | 目标覆盖 | 角色 | 状态 |
 |------|--------|------|----------|------|------|
-| 首次真实验证 | ID | 印度尼西亚 | Basic | 验证 Basic 十模块骨架与人工发布闸门 | 已发布 Basic |
+| 首次真实验证 | ID | 印度尼西亚 | Basic | r2 完成首次 Basic 验证；r3 是唯一 active publication，后续覆盖升级仍须独立人工批准 | 已刷新 Basic |
 | 扩展 | VN | 越南 | Basic | 已按批准的 v2 candidate 发布基础画像；后续覆盖升级仍须独立人工决定 | 已发布 Basic |
 | 扩展 | SA | 沙特阿拉伯 | Basic | r1 是不可变审计历史，永不得批准或发布，且不得作为任何批准决定或发布任务的输入；r2 是唯一 active publication，后续覆盖升级仍须独立人工批准 | 已发布 Basic |
 | 扩展 | AE | 阿联酋 | Basic | 已按批准的 r1 v2 candidate 发布基础画像；后续覆盖升级仍须独立人工决定 | 已发布 Basic |
@@ -42,7 +42,7 @@ MVP 到商业化初期的当前建设目标是经人工批准的国家先完成 
 
 | 国家码 | active run | 当前覆盖 |
 |--------|------------|----------|
-| ID | `data-basic-id-20260711-r2` | BASIC |
+| ID | `data-basic-id-20260720-r3` | BASIC |
 | VN | `data-basic-vn-20260715-r3` | BASIC |
 | SA | `data-basic-sa-20260717-r2` | BASIC |
 | AE | `data-basic-ae-20260717-r1` | BASIC |
@@ -59,6 +59,13 @@ MVP 到商业化初期的当前建设目标是经人工批准的国家先完成 
 2026-07-19 执行进度：`PLATFORM-DB-1`、`PLATFORM-API-1`、`PLATFORM-OPS-1` 均已完成；Gate 0 精确依赖已获批准。M1 已完成全量验证、独立审查、合并 `main`、推送与 CI-SHA 对齐：实施提交 `015010c29a5a0deb39ef32cbe4e1a9fe8fd07840` 已进入 `main`，merged-main CI [run 29693475214](https://github.com/zhaofei0923/navigator/actions/runs/29693475214) 为 `success`，本地、`origin/main`、远端与 CI head SHA 一致。
 
 与 M1 并行的 `DATA-STANDARD-ID` 已完成安全合成 fixture 切片；试点设计和首批来源目录现已获批，下一步仅可生成不可变 draft candidate，当前 M2 不得标记完成。任何候选事实与双语文本仍是未批准草稿，不构成 STANDARD 发布，也不授权 canonical/生产数据库写入、任何 `aiUsable` 变更、真实 KnowledgeChunk、AI 检索资格或 COMPLETE。ID 的真实 canonical publication 仍恰好为 BASIC。
+
+### ID r2 audit history and r3 Basic refresh record
+
+- `data-basic-id-20260711-r2` 保留为首次批准的不可变 BASIC 发布历史。其批准回执 SHA-256 仍为 `aad39cb02b3d24aec4b57d2275062062b0a9a3b5531eb1289461ef41fbe73bb1`，四文件 candidate SHA-256 仍为 `842f5675cc2ce3f5e18bb05b4b1dc016ec5e838e059cdfaf5b9025bc785f2799`、`953d200e586582cc21a74cc1837e5fa72ed83b2f532d4a264a205d6e7ae4b038`、`dd6172f7a8047b8f2701b9eb57b56681f6b7543da18dfed84055d1c3cf17adb7` 与 `a644f07748f39870e57beb0915091d002acee2aab4d41401968f59e40f157409`。
+- 项目所有者批准 `indonesia` / `ID` / `data-basic-id-20260720-r3` 刷新，reviewer 为 `github:zhaofei0923`，submitted / decided 均为 `2026-07-20T13:12:37.000Z`。r3 candidate 四文件 SHA-256 为 `source-register.json` `0ae67bd15962eea524a1ea2479a6cbaba7dafbaf3c8967b9595cf9c0c3eada94`、`extracted-facts.json` `b08fa0ba5c58a7f33074aef3de57cdb6c753a825a3c6acdb7611d654baf326ad`、`market-overview.draft.json` `3804d0349cc611f492bbb74a0aa680ca490dc9c2cf5d18dd2b046bba149f3db3` 与 `review-report.json` `416b537c6ecb4247050657250cf3148b3877afdada2a94fb739d4eeb54c753b9`；批准回执 SHA-256 为 `b4643bc2a6fec9a5aff10fa74b45b33e9c9c4712f2d958244e1a545beeecfb75`。
+- `pnpm basic:refresh` 返回 `status=refreshed`、`previousRunId=data-basic-id-20260711-r2`、`activeRunId=data-basic-id-20260720-r3` 与 `postCommitVerified=true`。刷新后的 exact-three canonical SHA-256 为 `collection-manifest.json` `5a8e07880b0b39f31f22687c1ee58e54fbbbd9d1749fee2f62555139cbcd095a`、`country.json` `f6881520525e217cbecd014f6a154a0e7cdf86f753d083c591bfa65efa392d2a` 与 `market-overview.json` `c5a02cc709f284396b8a609507cc98689e42ba468bf466b98222a4fad9ce4e71`；完整旧 canonical tree 以 private mode `0700` recovery artifact 保留。
+- r3 canonical 仍恰好为 `BASIC`：market overview 为唯一 `COMPLETE` 模块且 `reviewStatus=published`、`aiUsable=false`，其余九模块均为 `BUILDING`/零项；八类 BASIC profile 完整，所有 `NOT_AVAILABLE` 字段继续绑定已检查来源与双语原因。无 KnowledgeChunk、AI eligibility、deep-module、Prisma 或持久数据库变更。
 
 ### SA r1 audit history and r2 Basic publication record
 

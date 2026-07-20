@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "basic-country-publication-approval/v1",
+  "countryDirectory": "indonesia",
+  "countryCode": "ID",
+  "runId": "data-basic-id-20260720-r3",
+  "submission": {
+    "fromReviewStatus": "draft",
+    "toReviewStatus": "pending",
+    "submittedAt": "2026-07-20T13:12:37.000Z"
+  },
+  "decision": "approved",
+  "reviewerId": "github:zhaofei0923",
+  "decidedAt": "2026-07-20T13:12:37.000Z",
+  "authorizedPublication": {
+    "coverageLevel": "BASIC",
+    "fromReviewStatus": "pending",
+    "toReviewStatus": "published",
+    "aiUsable": false
+  },
+  "artifactSha256": {
+    "source-register.json": "0ae67bd15962eea524a1ea2479a6cbaba7dafbaf3c8967b9595cf9c0c3eada94",
+    "extracted-facts.json": "b08fa0ba5c58a7f33074aef3de57cdb6c753a825a3c6acdb7611d654baf326ad",
+    "market-overview.draft.json": "3804d0349cc611f492bbb74a0aa680ca490dc9c2cf5d18dd2b046bba149f3db3",
+    "review-report.json": "416b537c6ecb4247050657250cf3148b3877afdada2a94fb739d4eeb54c753b9"
+  }
+}

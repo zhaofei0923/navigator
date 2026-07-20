@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, test } from "vitest";
 
 import { writeBasicCountryPublicationV3RepositoryFixture } from "./basic-publication-v3-test-fixture.js";
-import { loadApprovedBasicCountryPublicationV2 } from "./collection/basic-publication-loader.js";
+import { loadApprovedBasicCountryPublicationVersioned } from "./collection/basic-publication-versioned-loader.js";
 import {
   discoverApprovedBasicCountryDirectories,
   validateApprovedBasicCountryPublications,
@@ -100,7 +100,7 @@ describe("approved Basic publications build validation", () => {
   });
 
   test("fails closed when two approved directories claim the same ISO2 code", () => {
-    const publication = loadApprovedBasicCountryPublicationV2(
+    const publication = loadApprovedBasicCountryPublicationVersioned(
       REPO_ROOT,
       "indonesia",
     );

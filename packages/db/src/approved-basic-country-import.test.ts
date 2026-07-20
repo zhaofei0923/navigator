@@ -10,7 +10,7 @@ import {
   parseApprovedBasicCountryPublicationImportArgs,
   prepareApprovedBasicCountryImport,
 } from "./seed/approved-basic-country-import.js";
-import { loadApprovedBasicCountryPublicationV2 } from "./collection/basic-publication-loader.js";
+import { loadApprovedBasicCountryPublicationVersioned } from "./collection/basic-publication-versioned-loader.js";
 
 const REPO_ROOT = fileURLToPath(new URL("../../../", import.meta.url)).replace(
   /\/$/u,
@@ -19,7 +19,7 @@ const REPO_ROOT = fileURLToPath(new URL("../../../", import.meta.url)).replace(
 
 describe("approved Basic country publication import", () => {
   test("prepares canonical data and a 12-operation plan from one loader snapshot", () => {
-    const publication = loadApprovedBasicCountryPublicationV2(
+    const publication = loadApprovedBasicCountryPublicationVersioned(
       REPO_ROOT,
       "indonesia",
     );
