@@ -2,6 +2,10 @@
 
 > 本文件定义 `DATA-BASIC-DETERMINISTIC-1` 的完成边界：从已审核的 catalog/capture/review/document/editorial material 生成可供人工审核的四文件 v2 candidate。它不修改 canonical 数据模型，不授权发布，也不改变 AI 检索边界。
 
+后续 `basic-country-audit/v3` 只新增独立的 BASIC profile 审计合同与
+versioned-loader 分派；本文件所述 production composition、writer、CLI、
+catalog identity 与 committed v2 candidate bytes 仍保持 v2，不在该合同任务中改写。
+
 ## 1. 四文件 v2 契约
 
 候选目录固定为：
@@ -120,16 +124,20 @@ CLI 成功只创建 isolated staging 四文件并停止。它不执行以下任�
 
 独立回执不是 reviewer 的 cryptographic signature；显式人工决定、protected Git review 和不可改写的提交历史仍是授权信任边界。publication loader 只读 repository files 并 fail closed，不执行 Prisma/API/AI/coverage import。现有 llama bridge 标记为 `legacy collection compatibility`，新 CLI 不使用它。
 
-## 6. v1/v2 loader 行为
+## 6. v1/v2/v3 loader 行为
 
-`loadBasicCollectionAuditBundle()` 保持原有 v1-only public contract。`loadBasicCollectionAuditBundleVersioned()` 从同一四文件 staging layout 加载纯 v1 或纯 v2：
+`loadBasicCollectionAuditBundle()` 保持原有 v1-only public contract。`loadBasicCollectionAuditBundleVersioned()` 从同一四文件 staging layout 加载纯 v1、纯 v2 或纯 v3：
 
 - 三个 envelope 全为 `basic-country-audit/v1` 时使用 v1 validator；
 - 三个 envelope 全为 `basic-country-audit/v2` 时使用 v2 validator；
-- 任意 v1/v2 混合、未知 schema、identity drift、symlink/special file、超限、读取期间文件或目录变化都 fail closed；
+- 三个 envelope 全为 `basic-country-audit/v3` 时使用独立 v3 parser/validator；草稿必须在既有精确字段之外含一个必需 `basicProfile`，文件名仍恰好为原有四个；
+- 任意 v1/v2/v3 混合、未知 schema、identity drift、symlink/special file、超限、读取期间文件或目录变化都 fail closed；
 - error 不泄露绝对路径或底层 filesystem 文本。
 
-versioned loader 只读取并验证，不发布、不导入，也不把 staging 变成 product data。
+v3 profile fact 使用
+`marketOverview.basicProfile.categories.<category>.fields.<fieldKey>`；每个草稿字段与事实严格一一对应，完整字段对象与 evidence `normalizedValue` 深度一致，evidence 来源集合与字段 `sourceIds` 集合相等，且 `checkedAt` 不早于每个引用 profile source 的 `retrievedAt` 日历日期。结构与来源绑定均有效的双语 `NOT_AVAILABLE` 字段不会单独产生 blocker。
+
+versioned loader 只读取并验证，不发布、不导入，也不把 staging 变成 product data。v3 dispatcher 不被现有 v2 production candidate composition 调用；接线属于后续独立任务。
 
 ## 7. 测试与 fixture 声明
 

@@ -193,16 +193,55 @@ structurally valid, have no blocker, and use the
 coverage, publication, KnowledgeChunk, or AI-index writes.
 
 The original v1 validator, loader, fixtures, schema string, and public surface
-remain unchanged. `loadBasicCollectionAuditBundleVersioned()` loads a pure v1
-or pure v2 four-file directory and rejects every mixed-version permutation
-before validation. The existing `loadBasicCollectionAuditBundle()` remains
-v1-only. Documents and Editorial remain the package-private upstream
+remain unchanged. The v2 exact shapes and committed bytes are also immutable.
+Documents and Editorial remain the package-private upstream
 materialization boundaries described in
 [basic-country-document-evidence.md](./basic-country-document-evidence.md) and
 [basic-country-editorial-input.md](./basic-country-editorial-input.md); the
 candidate still stops for mandatory human review before any publication task.
 
-## 6. 验证结果形状
+## 6. v3 BASIC profile candidate boundary
+
+`basic-country-audit/v3` is a separate, immutable audit shape. It keeps exactly
+the same four filenames. `source-register.json`, `extracted-facts.json`, and
+`review-report.json` are exact v3 envelopes with the same non-version fields as
+v2. The envelope-free `market-overview.draft.json` has the exact v2 draft keys
+plus one required, validated `basicProfile` property whose schema remains
+`basic-market-profile/v2` as defined in [data-schema.md](./data-schema.md).
+
+Each profile field has exactly one candidate fact at this semantic path:
+
+```text
+marketOverview.basicProfile.categories.<category>.fields.<fieldKey>
+```
+
+`category` is exactly one of `countryBasics`, `electricityMarket`,
+`energyAccess`, `renewableCapacity`, `solarResource`, `windResource`,
+`policyOverview`, or `marketSummary`. `fieldKey` is the field's lower-camel
+`key`. Every draft field must have exactly one such fact and every profile fact
+must resolve to exactly one draft field. Every evidence `normalizedValue` must
+deeply equal the complete field object, including label, status, value, unit,
+year, source IDs, checked date, reason, and note.
+
+For each profile fact, the set of evidence `sourceId` values must exactly equal
+the field's already-unique `sourceIds`. Those evidence sources remain subject
+to the v2 registered-source, locator, passed-source-check, and trust rules. A
+field's `checkedAt` calendar date must be no earlier than the calendar date in
+`retrievedAt` for every referenced `basicProfile.sources` record.
+
+`NOT_AVAILABLE` is valid candidate data rather than a missing-fact blocker when
+the profile shape is valid, its `value`, `unit`, and `year` are `null`, its
+`reason.zh` and `reason.en` are both nonblank, and all fact, source, evidence,
+and checked-date bindings pass. It does not relax trust or bilingual rules.
+
+`loadBasicCollectionAuditBundleVersioned()` dispatches only after all three
+envelopes are proven to be the same known v1, v2, or v3 version. Every mixed
+permutation fails before schema validation. `loadBasicCollectionAuditBundle()`
+remains v1-only. v3 does not modify v1/v2 constants, exact-key parsers,
+fixtures, source catalog identities, candidate bytes, production composition,
+canonical data, publication, coverage, Prisma, or AI behavior.
+
+## 7. 验证结果形状
 
 每次验证均返回 `BasicCollectionAuditSummary`：`countryCode`（字符串）、`runId`（字符串）、`sourceCount`（数值）和 `factCount`（数值）。`BasicCollectionAuditValidationResult` 是以下二选一结果：
 

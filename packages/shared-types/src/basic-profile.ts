@@ -280,9 +280,15 @@ function validDateParts(
   const year = Number(yearText);
   const month = Number(monthText);
   const day = Number(dayText);
-  const date = new Date(Date.UTC(year, month - 1, day));
-  return date.getUTCFullYear() === year &&
-    date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+  if (!Number.isInteger(year) || year < 1 || month < 1 || month > 12) {
+    return false;
+  }
+  const leapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const daysByMonth = [
+    31, leapYear ? 29 : 28, 31, 30, 31, 30,
+    31, 31, 30, 31, 30, 31,
+  ] as const;
+  return Number.isInteger(day) && day >= 1 && day <= daysByMonth[month - 1]!;
 }
 
 function exactRecord<const Keys extends readonly string[]>(

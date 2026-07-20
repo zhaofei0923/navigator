@@ -12,8 +12,13 @@ import {
   BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION,
   type BasicCollectionAuditBundleV2,
 } from "./basic-collection-v2-contracts.js";
+import {
+  BASIC_COLLECTION_AUDIT_V3_SCHEMA_VERSION,
+  type BasicCollectionAuditBundleV3,
+} from "./basic-collection-v3-contracts.js";
 import { validateBasicCollectionAuditBundle } from "./basic-collection-validator.js";
 import { validateBasicCollectionAuditBundleV2 } from "./basic-collection-v2-validator.js";
+import { validateBasicCollectionAuditBundleV3 } from "./basic-collection-v3-validator.js";
 import type { BasicCollectionAuditArtifactName } from "./basic-offline-audit-artifacts.js";
 import { BASIC_COUNTRY_PUBLICATION_JSON_MAX_BYTES } from "./basic-publication-contracts.js";
 import { readBasicStableJsonFileSet } from "./basic-stable-json-file-set.js";
@@ -30,13 +35,15 @@ const ARTIFACT_NAMES = Object.freeze([
 
 type AuditSchemaVersion =
   | typeof BASIC_COLLECTION_AUDIT_SCHEMA_VERSION
-  | typeof BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION;
+  | typeof BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION
+  | typeof BASIC_COLLECTION_AUDIT_V3_SCHEMA_VERSION;
 
 export function loadBasicCollectionAuditBundleVersioned(
   repoRoot: string,
   countryDirectory: string,
   runId: string,
-): BasicCollectionAuditBundle | BasicCollectionAuditBundleV2 {
+): BasicCollectionAuditBundle | BasicCollectionAuditBundleV2 |
+  BasicCollectionAuditBundleV3 {
   if (!SAFE_COUNTRY_DIRECTORY.test(countryDirectory)) {
     throw new Error("countryDirectory must be a safe slug");
   }
@@ -56,7 +63,8 @@ export function validateBasicCollectionAuditArtifactValuesVersioned(
   countryDirectory: string,
   runId: string,
   artifacts: Readonly<Record<BasicCollectionAuditArtifactName, unknown>>,
-): BasicCollectionAuditBundle | BasicCollectionAuditBundleV2 {
+): BasicCollectionAuditBundle | BasicCollectionAuditBundleV2 |
+  BasicCollectionAuditBundleV3 {
   const sourceRegister = artifacts["source-register.json"];
   const extractedFacts = artifacts["extracted-facts.json"];
   const marketOverviewDraft = artifacts["market-overview.draft.json"];
@@ -84,7 +92,12 @@ export function validateBasicCollectionAuditArtifactValuesVersioned(
     if (!validation.valid) throw new Error(INVALID_ERROR);
     return validation.data;
   }
-  const validation = validateBasicCollectionAuditBundleV2(bundle);
+  if (versions[0] === BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION) {
+    const validation = validateBasicCollectionAuditBundleV2(bundle);
+    if (!validation.valid) throw new Error(INVALID_ERROR);
+    return validation.data;
+  }
+  const validation = validateBasicCollectionAuditBundleV3(bundle);
   if (!validation.valid) throw new Error(INVALID_ERROR);
   return validation.data;
 }
@@ -143,7 +156,8 @@ function schemaVersionOf(value: unknown): AuditSchemaVersion | null {
   const descriptor = Object.getOwnPropertyDescriptor(value, "schemaVersion");
   if (descriptor === undefined || !Object.hasOwn(descriptor, "value")) return null;
   return descriptor.value === BASIC_COLLECTION_AUDIT_SCHEMA_VERSION ||
-    descriptor.value === BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION
+    descriptor.value === BASIC_COLLECTION_AUDIT_V2_SCHEMA_VERSION ||
+    descriptor.value === BASIC_COLLECTION_AUDIT_V3_SCHEMA_VERSION
     ? descriptor.value
     : null;
 }
