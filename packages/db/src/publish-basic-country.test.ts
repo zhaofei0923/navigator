@@ -19,7 +19,7 @@ const injectedFailure = vi.hoisted(() => ({ call: 0, failOn: null as number | nu
 const injectedCloseFailure = vi.hoisted(() => ({ enabled: false }));
 const injectedPostCommitFailure = vi.hoisted(() => ({
   committed: false,
-  mode: null as "sync" | "verify" | "snapshot-close" | null,
+  mode: null as "native-unverified" | "sync" | "verify" | "snapshot-close" | null,
 }));
 
 vi.mock("./cli/basic-candidate-native-fs.js", async (importOriginal) => {
@@ -31,6 +31,11 @@ vi.mock("./cli/basic-candidate-native-fs.js", async (importOriginal) => {
     ): ReturnType<typeof actual.renameBasicCandidateDirectoryChildNoReplaceNative> {
       const result = actual.renameBasicCandidateDirectoryChildNoReplaceNative(...args);
       injectedPostCommitFailure.committed = true;
+      if (injectedPostCommitFailure.mode === "native-unverified") {
+        return { committed: true, verified: false } as ReturnType<
+          typeof actual.renameBasicCandidateDirectoryChildNoReplaceNative
+        >;
+      }
       return result;
     },
   };
@@ -331,7 +336,7 @@ describe("approved BASIC publication CLI", () => {
     expectCanonicalExactThree(setup.root);
   });
 
-  test.each(["sync", "verify"] as const)(
+  test.each(["native-unverified", "sync", "verify"] as const)(
     "reports post-commit %s failure without making retry semantics ambiguous",
     async (mode) => {
       const setup = createSyntheticRepo();

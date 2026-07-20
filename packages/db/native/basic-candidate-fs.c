@@ -316,7 +316,7 @@ static napi_value rename_no_replace(napi_env env, napi_callback_info info) {
         !S_ISDIR(target_details.st_mode) ||
         (uint64_t)target_details.st_dev != expected_dev ||
         (uint64_t)target_details.st_ino != expected_ino) {
-      return make_status(env, "ERR_FAILED");
+      return make_status(env, "COMMITTED_UNVERIFIED");
     }
     return make_status(env, "OK");
   }

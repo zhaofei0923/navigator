@@ -45,6 +45,20 @@ export type BasicCandidateEnsuredNativeDirectory = BasicCandidateNativeDirectory
   created: boolean;
 }>;
 
+export type BasicCandidateRenameNativeResult = Readonly<{
+  committed: true;
+  verified: boolean;
+}>;
+
+const VERIFIED_RENAME_RESULT: BasicCandidateRenameNativeResult = Object.freeze({
+  committed: true,
+  verified: true,
+});
+const UNVERIFIED_RENAME_RESULT: BasicCandidateRenameNativeResult = Object.freeze({
+  committed: true,
+  verified: false,
+});
+
 const nativeOperations = loadNativeOperations();
 const NATIVE_DIRECTORIES = new WeakSet<object>();
 const CLOSED_NATIVE_DIRECTORIES = new WeakSet<object>();
@@ -109,18 +123,27 @@ export function renameBasicCandidateDirectoryChildNoReplaceNative(
   newName: unknown,
   expectedDev: unknown,
   expectedIno: unknown,
-): void {
+): BasicCandidateRenameNativeResult {
   try {
-    if (nativeOperations === null || nativeOperations.renameNoReplace(
+    if (nativeOperations === null) invalid();
+    return parseBasicCandidateRenameNativeStatus(nativeOperations.renameNoReplace(
       parseDirectoryFd(parentDirFd),
       parseComponent(oldName),
       parseComponent(newName),
       parseIdentity(expectedDev),
       parseIdentity(expectedIno),
-    ) !== "OK") invalid();
+    ));
   } catch {
     invalid();
   }
+}
+
+export function parseBasicCandidateRenameNativeStatus(
+  value: unknown,
+): BasicCandidateRenameNativeResult {
+  if (value === "OK") return VERIFIED_RENAME_RESULT;
+  if (value === "COMMITTED_UNVERIFIED") return UNVERIFIED_RENAME_RESULT;
+  invalid();
 }
 
 export function unlinkBasicCandidateRegularFileNative(

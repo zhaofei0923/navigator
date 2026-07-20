@@ -22,7 +22,7 @@ The build opens source, include, cache, output, and private temporary directorie
 - `createExclusiveDirectory`: creates an unpredictable mode-`0700` child exclusively and returns its held descriptor plus `dev`/`ino`.
 - `ensureDirectory`: synchronously creates or opens a mode-`0700` hierarchy child and returns its held identity and `created` status.
 - `closeDirectory`: closes a descriptor returned by a create or ensure operation.
-- `renameNoReplace`: verifies the old child against expected `dev`/`ino`, performs `renameat2(RENAME_NOREPLACE)`, and verifies the new child against the same identity in one synchronous native call.
+- `renameNoReplace`: verifies the old child against expected `dev`/`ino`, performs `renameat2(RENAME_NOREPLACE)`, and verifies the new child against the same identity in one synchronous native call. It returns `OK` when both rename and the native post-check succeed, or `COMMITTED_UNVERIFIED` when rename succeeded but the post-check did not; only pre-commit failures return an error status.
 
 The TypeScript loader opens the mode-`0500` addon with `O_NOFOLLOW`, loads the held object through `/proc/self/fd` with `process.dlopen`, verifies stable identity, and closes the descriptor.
 

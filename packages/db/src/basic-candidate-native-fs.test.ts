@@ -22,6 +22,7 @@ import {
   closeBasicCandidateNativeDirectory,
   createBasicCandidateExclusiveDirectoryNative,
   ensureBasicCandidateDirectoryNative,
+  parseBasicCandidateRenameNativeStatus,
   removeBasicCandidateDirectoryNative,
   renameBasicCandidateDirectoryChildNoReplaceNative,
   unlinkBasicCandidateRegularFileNative,
@@ -50,6 +51,22 @@ describe("Basic candidate native no-replace publisher", () => {
     ));
   });
 
+  test("classifies the native rename ABI without losing a completed syscall", () => {
+    expect(parseBasicCandidateRenameNativeStatus("OK")).toEqual({
+      committed: true,
+      verified: true,
+    });
+    expect(parseBasicCandidateRenameNativeStatus("COMMITTED_UNVERIFIED")).toEqual({
+      committed: true,
+      verified: false,
+    });
+    for (const status of ["ERR_FAILED", "ERR_EXISTS", "", null]) {
+      expect(() => parseBasicCandidateRenameNativeStatus(status)).toThrow(
+        FIXED_ERROR,
+      );
+    }
+  });
+
   test("redacts missing and invalid native addon loads", async () => {
     const root = await createTemporaryRoot();
     const parent = await openDirectory(root);
@@ -76,13 +93,13 @@ describe("Basic candidate native no-replace publisher", () => {
     const parent = await openDirectory(root);
     const source = await directoryIdentity(root, "source");
     try {
-      renameBasicCandidateDirectoryChildNoReplaceNative(
+      expect(renameBasicCandidateDirectoryChildNoReplaceNative(
         parent.fd,
         "source",
         "target",
         source.dev,
         source.ino,
-      );
+      )).toEqual({ committed: true, verified: true });
     } finally {
       await parent.close();
     }
@@ -427,6 +444,7 @@ describe("Basic candidate native no-replace publisher", () => {
     expect(wrapperSource).not.toContain("require(NATIVE_PATH)");
     expect(nativeSource).toContain("SYS_renameat2");
     expect(nativeSource).toContain("RENAME_NOREPLACE");
+    expect(nativeSource).toContain('make_status(env, "COMMITTED_UNVERIFIED")');
     expect(nativeSource).toContain("fstat");
     expect(nativeSource).toContain("fstatat");
     expect(nativeSource).toContain("S_ISDIR");

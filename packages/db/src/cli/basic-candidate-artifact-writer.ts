@@ -153,14 +153,14 @@ async function writeAuthenticatedCandidate(
     await requireBasicCandidateHeldChild(country, temporaryName, temporary);
     await requireWriterHierarchy(root, data, staging, country, authenticated.countryDirectory);
 
-    renameBasicCandidateDirectoryChildNoReplaceNative(
+    const renameResult = renameBasicCandidateDirectoryChildNoReplaceNative(
       country.handle.fd,
       temporaryName,
       authenticated.runId,
       temporary.identity.dev,
       temporary.identity.ino,
     );
-    published = true;
+    published = renameResult.committed;
     await requireBasicCandidateHeldChild(country, authenticated.runId, temporary);
     await verifyArtifacts(temporary, temporaryFiles, authenticated.serialized);
     await syncBasicCandidateParentDirectory(country);

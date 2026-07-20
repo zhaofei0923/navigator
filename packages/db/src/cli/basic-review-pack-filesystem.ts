@@ -140,10 +140,10 @@ async function writeReviewDirectory(
     await requireBasicCandidateHeldChild(parent, temporaryName, temporary);
     await hooks.beforeAtomicPublish?.();
     await verifyCandidate();
-    renameBasicCandidateDirectoryChildNoReplaceNative(
+    const renameResult = renameBasicCandidateDirectoryChildNoReplaceNative(
       parent.handle.fd, temporaryName, "review", temporary.identity.dev, temporary.identity.ino,
     );
-    published = true;
+    published = renameResult.committed;
     await requireBasicCandidateHeldChild(parent, "review", temporary);
     await syncBasicCandidateParentDirectory(parent);
     await requireReviewHierarchy(hierarchy);

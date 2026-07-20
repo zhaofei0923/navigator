@@ -63,14 +63,15 @@ export async function writeApprovedBasicPublication(
     await requireBasicCandidateHeldChild(data, temporaryName, temporary);
     await requireBasicCandidateHeldChild(authenticated.root, "data", data);
     await authenticated.verify();
-    renameBasicCandidateDirectoryChildNoReplaceNative(
+    const renameResult = renameBasicCandidateDirectoryChildNoReplaceNative(
       data.handle.fd,
       temporaryName,
       input.countryDirectory,
       temporary.identity.dev,
       temporary.identity.ino,
     );
-    committed = true;
+    committed = renameResult.committed;
+    if (!renameResult.verified) postCommitVerified = false;
     await requireBasicCandidateHeldChild(data, input.countryDirectory, temporary);
     await syncBasicCandidateParentDirectory(data);
     await requireBasicCandidateHeldChild(authenticated.root, "data", data);

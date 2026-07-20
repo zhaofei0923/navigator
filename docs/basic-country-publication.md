@@ -219,6 +219,9 @@ no-replace rename 成功是不可逆的 commit point。命令结果固定包含
 `status: "published"`，但将该字段设为 `false`，提示操作者进行只读复核。此时 canonical 已经
 durable published，命令不得返回“未发布”，再次执行也会因 no-replace 明确拒绝，而不是产生
 含糊的二次发布。
+native ABI 必须区分 `OK` 与 `COMMITTED_UNVERIFIED`：后者表示 `renameat2` 已成功、但 native
+目标 identity 后验失败，仍属于已提交且不得清理，只会令 `postCommitVerified=false`。只有明确
+发生在 rename commit point 之前的 native error 才属于未发布失败。
 
 现有 v2 parser、materializer、validator、loader 和六国 canonical bytes 保持不变；v3 profile
 只由新的 v3 parser/materializer/validator/CLI 路径处理。
