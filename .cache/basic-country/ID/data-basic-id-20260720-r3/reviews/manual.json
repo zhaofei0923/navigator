@@ -1,0 +1,10 @@
+{
+  "schemaVersion": "basic-manual-source-review/v1",
+  "runId": "data-basic-id-20260720-r3",
+  "countryCode": "ID",
+  "catalogVersion": "2026-07-20.1",
+  "catalogSha256": "6afa620bfef537573e7a52522fa0ef10e4d23bb1a1b291e28401628370f2c249",
+  "sources": [
+    { "sourceId": "indonesia-esdm-2025-performance", "publishedAt": "2026-01-09T00:00:00.000Z", "accessNotes": "Fresh official ESDM HTML capture reviewed against the retained locator set.", "promptInjectionRisk": "none", "sourceCheck": { "status": "passed", "notes": "Masthead and cited performance-release paragraphs were manually rechecked against fresh capture 4a2e693487d6feef4e39b4a77f6dcb2feae56dc80e99496072394a66f2b0bf7f." }, "injectionRisks": [] }
+  ]
+}

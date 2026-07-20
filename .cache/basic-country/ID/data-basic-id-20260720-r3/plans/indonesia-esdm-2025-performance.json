@@ -1,0 +1,35 @@
+{
+  "schemaVersion": "basic-document-observation-plan/v1",
+  "runId": "data-basic-id-20260720-r3",
+  "countryCode": "ID",
+  "catalogVersion": "2026-07-20.1",
+  "catalogSha256": "6afa620bfef537573e7a52522fa0ef10e4d23bb1a1b291e28401628370f2c249",
+  "sourceId": "indonesia-esdm-2025-performance",
+  "capture": {
+    "adapterId": "basic-manual-document-capture",
+    "adapterVersion": "1.0.0",
+    "requestUrl": "https://www.esdm.go.id/en/media-center/news-archives/capaian-positif-tahun-2025-negara-hadir-penuhi-kebutuhan-energi-masyarakat",
+    "retrievedAt": "2026-07-20T12:14:11.627Z",
+    "contentType": "text/html; charset=UTF-8",
+    "byteLength": 46539,
+    "contentSha256": "4a2e693487d6feef4e39b4a77f6dcb2feae56dc80e99496072394a66f2b0bf7f"
+  },
+  "observations": [
+    { "usage": "editorial-evidence", "fieldPath": "country.region", "locator": "html:press-release-002-pers-04-sji-2026#masthead-country", "rawValue": "REPUBLIK INDONESIA" },
+    { "usage": "editorial-evidence", "fieldPath": "country.summary", "locator": "html:press-release-002-pers-04-sji-2026#paragraph-129", "rawValue": { "renewableMixPercent": 15.75 } },
+    { "usage": "editorial-evidence", "fieldPath": "country.summary", "locator": "html:press-release-002-pers-04-sji-2026#paragraph-132", "rawValue": { "electricityConsumptionKwhPerCapita": 1584, "generationCapacityGw": 107.51 } },
+    { "usage": "editorial-evidence", "fieldPath": "marketOverview.energyDemand", "locator": "html:press-release-002-pers-04-sji-2026#paragraph-132", "rawValue": { "electricityConsumption2024KwhPerCapita": 1411, "electricityConsumption2025KwhPerCapita": 1584, "generationCapacity2025Gw": 107.51, "generationCapacityIncreaseGw": 7 } },
+    { "usage": "editorial-evidence", "fieldPath": "marketOverview.industryTags", "locator": "html:press-release-002-pers-04-sji-2026#paragraph-129", "rawValue": ["solar", "wind"] },
+    { "usage": "editorial-evidence", "fieldPath": "marketOverview.industryTags", "locator": "html:press-release-002-pers-04-sji-2026#paragraph-132", "rawValue": "installed generation capacity" },
+    { "usage": "editorial-evidence", "fieldPath": "marketOverview.keyIndicators[0].label", "locator": "html:press-release-002-pers-04-sji-2026#paragraph-129", "rawValue": "bauran energi dari EBT" },
+    { "usage": "source-fact", "fieldPath": "marketOverview.keyIndicators[0].unit", "locator": "html:press-release-002-pers-04-sji-2026#paragraph-129", "rawValue": "%", "normalizedValue": "%", "unit": "%", "year": 2025, "uncertainty": null },
+    { "usage": "source-fact", "fieldPath": "marketOverview.keyIndicators[0].value", "locator": "html:press-release-002-pers-04-sji-2026#paragraph-129", "rawValue": 15.75, "normalizedValue": "15.75", "unit": "%", "year": 2025, "uncertainty": null },
+    { "usage": "source-fact", "fieldPath": "marketOverview.keyIndicators[0].year", "locator": "html:press-release-002-pers-04-sji-2026#paragraph-129", "rawValue": 2025, "normalizedValue": 2025, "unit": "%", "year": 2025, "uncertainty": null },
+    { "usage": "editorial-evidence", "fieldPath": "marketOverview.keyIndicators[1].label", "locator": "html:press-release-002-pers-04-sji-2026#paragraph-132", "rawValue": "konsumsi listrik perkapita" },
+    { "usage": "source-fact", "fieldPath": "marketOverview.keyIndicators[1].unit", "locator": "html:press-release-002-pers-04-sji-2026#paragraph-132", "rawValue": "kWh/person", "normalizedValue": "kWh/person", "unit": "kWh/person", "year": 2025, "uncertainty": null },
+    { "usage": "source-fact", "fieldPath": "marketOverview.keyIndicators[1].value", "locator": "html:press-release-002-pers-04-sji-2026#paragraph-132", "rawValue": 1584, "normalizedValue": "1584", "unit": "kWh/person", "year": 2025, "uncertainty": null },
+    { "usage": "source-fact", "fieldPath": "marketOverview.keyIndicators[1].year", "locator": "html:press-release-002-pers-04-sji-2026#paragraph-132", "rawValue": 2025, "normalizedValue": 2025, "unit": "kWh/person", "year": 2025, "uncertainty": null },
+    { "usage": "editorial-evidence", "fieldPath": "marketOverview.overview", "locator": "html:press-release-002-pers-04-sji-2026#paragraph-127", "rawValue": { "electricityInvestmentUsdBillion": 4.6, "renewablesConservationInvestmentUsdBillion": 2.4, "totalInvestmentUsdBillion": 31.7 } },
+    { "usage": "editorial-evidence", "fieldPath": "marketOverview.renewableTarget", "locator": "html:press-release-002-pers-04-sji-2026#paragraph-129", "rawValue": { "actualRenewableMixPercent": 15.75, "year": 2025 } }
+  ]
+}
