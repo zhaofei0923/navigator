@@ -75,17 +75,17 @@ describe("readPrismaBasicCanonicalCountry", () => {
   });
 
   test("returns null for a legacy omission and round-trips a valid BASIC v2 profile", async () => {
-    const legacy = record(validRow());
+    const legacy = record(validRow("vietnam"));
     expect(record(
-      (await readPrismaBasicCanonicalCountry(transactionReturning(legacy), "ID"))
+      (await readPrismaBasicCanonicalCountry(transactionReturning(legacy), "VN"))
         ?.marketOverview,
     ).basicProfile).toBeNull();
 
-    const current = record(validRow());
+    const current = record(validRow("vietnam"));
     const profile = createValidBasicProfile();
     record(current.marketOverview).basicProfile = profile;
     expect(record(
-      (await readPrismaBasicCanonicalCountry(transactionReturning(current), "ID"))
+      (await readPrismaBasicCanonicalCountry(transactionReturning(current), "VN"))
         ?.marketOverview,
     ).basicProfile).toEqual(profile);
   });
@@ -97,13 +97,7 @@ describe("readPrismaBasicCanonicalCountry", () => {
 
     const result = await readPrismaBasicCanonicalCountry(transactionReturning(row), "ID");
 
-    expect(result).toEqual({
-      ...prepared.canonical,
-      marketOverview: {
-        ...prepared.canonical.marketOverview,
-        basicProfile: null,
-      },
-    });
+    expect(result).toEqual(prepared.canonical);
     expect(array(record(result?.country).moduleCoverage).map((item) => record(item).moduleKey))
       .toEqual(MODULE_KEYS);
     expectRecursivelyFrozen(result);
@@ -241,9 +235,9 @@ describe("readPrismaBasicCanonicalCountry", () => {
   });
 });
 
-function validRow(): unknown {
+function validRow(countryDirectory = "indonesia"): unknown {
   return canonicalToRow(
-    prepareApprovedBasicCountryImport(REPO_ROOT, "indonesia").canonical,
+    prepareApprovedBasicCountryImport(REPO_ROOT, countryDirectory).canonical,
   );
 }
 

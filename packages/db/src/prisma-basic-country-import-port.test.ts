@@ -110,7 +110,7 @@ describe("createPrismaBasicCountryImportPort", () => {
   });
 
   test("rebuilds the three operation variants into typed Prisma upserts", async () => {
-    const prepared = approved("indonesia");
+    const prepared = approved("vietnam");
     const transaction = createEmptyTransaction();
     const port = createPrismaBasicCountryImportPort(clientFor(transaction));
 
@@ -123,9 +123,9 @@ describe("createPrismaBasicCountryImportPort", () => {
     expect(transaction.marketOverview.upsert).toHaveBeenCalledTimes(1);
     const countryArgs = firstCallArg(vi.mocked(transaction.country.upsert));
     expect(countryArgs).toMatchObject({
-      where: { code: "ID" },
-      create: { code: "ID", region: "SOUTHEAST_ASIA", coverageLevel: "BASIC" },
-      update: { code: "ID", region: "SOUTHEAST_ASIA", coverageLevel: "BASIC" },
+      where: { code: "VN" },
+      create: { code: "VN", region: "SOUTHEAST_ASIA", coverageLevel: "BASIC" },
+      update: { code: "VN", region: "SOUTHEAST_ASIA", coverageLevel: "BASIC" },
     });
     expect(record(countryArgs.create).updatedAt).toBeInstanceOf(Date);
     const marketArgs = firstCallArg(vi.mocked(transaction.marketOverview.upsert));
@@ -215,7 +215,7 @@ describe("createPrismaBasicCountryImportPort", () => {
         ...prepared.canonical,
         marketOverview: {
           ...prepared.canonical.marketOverview,
-          basicProfile: null,
+          basicProfile: prepared.canonical.marketOverview.basicProfile ?? null,
         },
       });
     },
