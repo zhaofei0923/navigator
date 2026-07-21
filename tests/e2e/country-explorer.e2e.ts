@@ -250,9 +250,22 @@ test("country detail renders ten module skeleton and switches language", async (
   await expect(
     page.getByRole("heading", { name: "BASIC data profile" }),
   ).toBeVisible();
-  await expect(
-    page.getByRole("heading", { name: "Country basics" }),
-  ).toBeVisible();
+  const profile = page.locator(".basic-profile");
+  await expect(profile.locator(".basic-profile-category")).toHaveCount(8);
+  for (const categoryHeading of [
+    "Country basics",
+    "Electricity market",
+    "Energy access",
+    "Renewable capacity",
+    "Solar resource",
+    "Wind resource",
+    "Policy overview",
+    "Market summary",
+  ]) {
+    await expect(
+      profile.getByRole("heading", { exact: true, name: categoryHeading }),
+    ).toBeVisible();
+  }
   await expect(page.getByText("285,721,236", { exact: true })).toBeVisible();
   await expect(page.getByText("5,059.63", { exact: true })).toBeVisible();
   await expect(page.getByText("99.9", { exact: true })).toBeVisible();
@@ -294,9 +307,24 @@ test("country detail renders ten module skeleton and switches language", async (
   await expect(
     page.getByRole("heading", { name: "BASIC 八类数据" }),
   ).toBeVisible();
-  await expect(page.getByRole("heading", { name: "国家基础" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "政策概览" })).toBeVisible();
-  await expect(page.getByText("暂无数据", { exact: true }).first()).toBeVisible();
+  await expect(profile.locator(".basic-profile-category")).toHaveCount(8);
+  for (const categoryHeading of [
+    "国家基础",
+    "电力市场",
+    "能源可及性",
+    "可再生能源装机",
+    "太阳能资源",
+    "风能资源",
+    "政策概览",
+    "市场摘要",
+  ]) {
+    await expect(
+      profile.getByRole("heading", { exact: true, name: categoryHeading }),
+    ).toBeVisible();
+  }
+  await expect(
+    profile.locator("strong:visible", { hasText: /^暂无数据$/ }),
+  ).toHaveCount(14);
   await expect(
     page.getByRole("link", { name: /印尼国家电力总规划/ }).first(),
   ).toHaveAttribute(

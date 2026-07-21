@@ -1100,15 +1100,7 @@ a {
   font-weight: 800;
 }
 
-.basic-profile-source-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 12px;
-}
-
-.basic-profile a,
-.basic-profile-source-links a,
-.basic-profile-source-item a {
+.basic-profile a {
   color: #0057d8;
   overflow-wrap: anywhere;
 }
