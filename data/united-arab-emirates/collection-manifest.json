@@ -1,8 +1,0 @@
-{
-  "schemaVersion": "basic-country-publication-manifest/v2",
-  "activeRunId": "data-basic-ae-20260717-r1",
-  "mappingVersion": "basic-country-canonical/v2",
-  "auditBundlePath": "data/staging/united-arab-emirates/data-basic-ae-20260717-r1",
-  "approvalReceiptPath": "data/approvals/united-arab-emirates/data-basic-ae-20260717-r1.json",
-  "approvalReceiptSha256": "41b2f9c18e27a77c3129125cb50d3d88fa7405ffb8729e3e97f593efab3341f4"
-}

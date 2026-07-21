@@ -1,6 +1,0 @@
-{
-  "requestUrl": "https://api.worldbank.org/v2/country/VN/indicator/NY.GDP.MKTP.CD?source=2&format=json&mrv=1&per_page=1",
-  "recordedAt": "2026-07-10T09:40:00Z",
-  "contentSha256": "8fb1bd9738f682a7ac2e5cadf36afa6565687f30df51355b7cfb3afc4f182386",
-  "bodyBase64": "W3sicGFnZSI6MSwicGFnZXMiOjEsInBlcl9wYWdlIjoxLCJ0b3RhbCI6MSwic291cmNlaWQiOiIyIiwibGFzdHVwZGF0ZWQiOiIyMDI2LTA3LTAxIn0sW3siaW5kaWNhdG9yIjp7ImlkIjoiTlkuR0RQLk1LVFAuQ0QiLCJ2YWx1ZSI6IkdEUCAoY3VycmVudCBVUyQpIn0sImNvdW50cnkiOnsiaWQiOiJWTiIsInZhbHVlIjoiVmlldCBOYW0ifSwiY291bnRyeWlzbzNjb2RlIjoiVk5NIiwiZGF0ZSI6IjIwMjUiLCJ2YWx1ZSI6NTE0Njk3MjE1MTY1LjA2NSwidW5pdCI6IiIsIm9ic19zdGF0dXMiOiIiLCJkZWNpbWFsIjowfV1d"
-}
