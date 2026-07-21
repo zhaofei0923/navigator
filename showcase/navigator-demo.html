@@ -97,7 +97,7 @@
         <a href="#reports" data-i18n="navReports">数据产品</a>
         <a href="#partnership" data-i18n="navPartnership">合作价值</a>
       </nav>
-      <div class="locale-switcher" aria-label="Language selection">
+      <div class="locale-switcher" aria-label="语言选择" data-i18n-aria="localeSwitcherLabel">
         <button type="button" data-action="set-locale" data-locale="zh-CN" aria-pressed="true" data-i18n="localeChinese">中文</button>
         <button type="button" data-action="set-locale" data-locale="en" aria-pressed="false" data-i18n="localeEnglish">EN</button>
       </div>
@@ -116,7 +116,7 @@
           </div>
           <p class="demo-note" data-i18n="demoDisclaimer">本页面全部数据均为虚构演示数据，不构成投资或市场进入建议。</p>
         </div>
-        <svg class="intelligence-visual" viewBox="0 0 620 430" role="img" aria-label="Abstract energy intelligence visual">
+        <svg class="intelligence-visual" viewBox="0 0 620 430" role="img" aria-label="抽象全球能源情报图" data-i18n-aria="visualTitle">
           <title data-i18n="visualTitle">抽象全球能源情报图</title>
           <rect width="620" height="430" fill="#071b35" rx="2" />
           <path d="M70 260 C140 130 210 330 300 190 S470 90 555 220" fill="none" stroke="#4b87ce" stroke-width="2" />
@@ -184,6 +184,8 @@
       };
       COPY["zh-CN"].navigationLabel = "主导航";
       COPY.en.navigationLabel = "Primary navigation";
+      COPY["zh-CN"].localeSwitcherLabel = "语言选择";
+      COPY.en.localeSwitcherLabel = "Language selection";
       const DEMO_FIXTURES = Object.freeze({ market: "Market Alpha", isFictional: true });
       const state = { locale: "zh-CN", marketId: DEMO_FIXTURES.market, moduleKey: "market-overview", reportId: "market-entry-brief" };
 

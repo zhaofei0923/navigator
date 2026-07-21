@@ -47,6 +47,12 @@ test("keeps language control labels and navigation names in sync", async (t) => 
   const page = await browser.newPage();
   await page.goto(demoUrl);
   assert.equal(await page.locator("nav").getAttribute("aria-label"), "主导航");
+  assert.equal(await page.locator(".locale-switcher").getAttribute("aria-label"), "语言选择");
+  assert.equal(await page.locator("svg").getAttribute("aria-label"), "抽象全球能源情报图");
+  assert.equal(await page.getByRole("button", { name: "中文" }).getAttribute("aria-pressed"), "true");
   await page.getByRole("button", { name: "EN" }).click();
   assert.equal(await page.locator("nav").getAttribute("aria-label"), "Primary navigation");
+  assert.equal(await page.locator(".locale-switcher").getAttribute("aria-label"), "Language selection");
+  assert.equal(await page.locator("svg").getAttribute("aria-label"), "Abstract global energy intelligence visual");
+  assert.equal(await page.getByRole("button", { name: "EN" }).getAttribute("aria-pressed"), "true");
 });
