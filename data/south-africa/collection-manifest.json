@@ -1,8 +1,0 @@
-{
-  "schemaVersion": "basic-country-publication-manifest/v2",
-  "activeRunId": "data-basic-za-20260718-r2",
-  "mappingVersion": "basic-country-canonical/v2",
-  "auditBundlePath": "data/staging/south-africa/data-basic-za-20260718-r2",
-  "approvalReceiptPath": "data/approvals/south-africa/data-basic-za-20260718-r2.json",
-  "approvalReceiptSha256": "5e82bf08c86218c9b141d17b9f17bbadf7ca1a6f5634058abafb89e14e065e56"
-}
