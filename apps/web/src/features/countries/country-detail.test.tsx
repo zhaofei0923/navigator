@@ -84,6 +84,20 @@ describe("CountryDetail visible i18n", () => {
     expect(html).toContain("可再生能源占比");
     expect(html).toContain("<strong>15.75</strong>");
     expect(html).toContain("<strong>1584</strong>");
+    expect(html).toContain("BASIC 八类数据");
+    for (const label of [
+      "国家基础", "电力市场", "能源可及性", "可再生能源装机",
+      "太阳能资源", "风能资源", "政策概览", "市场摘要",
+    ]) expect(html).toContain(label);
+    expect(html).toContain("285,721,236");
+    expect(html).toContain("5,059.63");
+    expect(html).toContain("99.9");
+    expect(html).toContain("暂无数据");
+    expect(html).toContain("未提供已审核的Ember不可变标准化快照");
+    expect(html).toContain("印尼国家电力总规划");
+    expect(html).toContain(
+      'href="https://www.iea.org/policies/30494-national-electricity-general-plan"',
+    );
     expect(html.match(/数据建设中/g)).toHaveLength(9);
     expect(html).toContain("外部公开来源");
     expect(html).not.toContain("P1-2 manually curated");
@@ -105,6 +119,17 @@ describe("CountryDetail visible i18n", () => {
     expect(html).toContain("Renewable energy mix share");
     expect(html).toContain("<strong>15.75</strong>");
     expect(html).toContain("<strong>1584</strong>");
+    expect(html).toContain("BASIC data profile");
+    expect(html).toContain("Country basics");
+    expect(html).toContain("Electricity market");
+    expect(html).toContain("Energy access");
+    expect(html).toContain("Not available");
+    expect(html).toContain(
+      "A reviewed immutable normalized Ember snapshot was not provided",
+    );
+    expect(html).toContain(
+      'href="https://www.iea.org/policies/30494-national-electricity-general-plan"',
+    );
     expect(html.match(/Data Building/g)).toHaveLength(9);
     expect(html).toContain("External public source");
     expect(html).not.toContain("P1-2 manually curated");
@@ -112,6 +137,47 @@ describe("CountryDetail visible i18n", () => {
     expect(html).not.toContain("id_pol_001");
     expect(html).not.toContain("id_know_001");
     expect(html).not.toContain(">tags<");
+  });
+
+  test("keeps the legacy overview visible when the BASIC profile is null", () => {
+    const response = buildCountryDetailResponse("ID", { locale: "en" });
+    const marketOverview = buildCountryModuleResponse(
+      "ID",
+      "market-overview",
+      { locale: "en" },
+    );
+    if (
+      response === null ||
+      response.meta.textMode !== "localized" ||
+      marketOverview === null ||
+      marketOverview.meta.textMode !== "localized" ||
+      marketOverview.data.item === undefined
+    ) {
+      throw new Error("Expected localized Indonesia responses");
+    }
+
+    const html = renderToStaticMarkup(
+      <NextIntlClientProvider locale="en" messages={enMessages} timeZone="Asia/Shanghai">
+        <CountryDetail
+          country={response.data}
+          locale="en"
+          moduleResponses={{
+            "market-overview": {
+              ...marketOverview,
+              data: {
+                ...marketOverview.data,
+                item: { ...marketOverview.data.item, basicProfile: null },
+              },
+            },
+          }}
+        />
+      </NextIntlClientProvider>,
+    );
+
+    expect(html).toContain(
+      "Energy and mineral investment reached USD 31.7 billion in 2025, including USD 4.6 billion in electricity and USD 2.4 billion in renewables and conservation.",
+    );
+    expect(html).not.toContain("BASIC data profile");
   });
 
   test("renders Vietnam's published bilingual overview with the same nine placeholders", () => {

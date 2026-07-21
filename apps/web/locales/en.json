@@ -121,6 +121,35 @@
       "emptyTitle": "No published data",
       "emptyDescription": "The module is active, but no published records are available for this view.",
       "fallbackNotice": "{count, plural, one {# field is not translated} other {# fields are not translated}}",
+      "basicProfile": {
+        "title": "BASIC data profile",
+        "description": "Reviewed fields, unavailable-data explanations, and concrete sources in the unified BASIC structure.",
+        "updated": "Profile updated {date}",
+        "available": "Available",
+        "notAvailable": "Not available",
+        "checkedAt": "Checked {date}",
+        "year": "Data year {year}",
+        "sources": "Sources",
+        "sourceDirectory": "Source directory",
+        "retrievedAt": "Retrieved {date}",
+        "publishedAt": "Published {date}",
+        "categories": {
+          "countryBasics": "Country basics",
+          "electricityMarket": "Electricity market",
+          "energyAccess": "Energy access",
+          "renewableCapacity": "Renewable capacity",
+          "solarResource": "Solar resource",
+          "windResource": "Wind resource",
+          "policyOverview": "Policy overview",
+          "marketSummary": "Market summary"
+        },
+        "credibility": {
+          "OFFICIAL": "Official",
+          "VERIFIED": "Verified",
+          "ESTIMATED": "Estimated",
+          "UNVERIFIED": "Unverified"
+        }
+      },
       "riskCategory": {
         "political": "Political",
         "economic": "Economic",

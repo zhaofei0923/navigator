@@ -17,6 +17,8 @@ import type {
 import { useTranslations } from "next-intl";
 import React from "react";
 
+import { BasicProfileSection } from "./basic-profile.js";
+
 interface CountryDetailProps {
   country: LocalizedCountryDetail;
   locale: Locale;
@@ -259,6 +261,7 @@ function ObjectModuleBody({
           })}
         </div>
       ) : null}
+      <BasicProfileSection locale={locale} profileValue={item.basicProfile} />
       {steps.length > 0 ? (
         <ol className="strategy-step-list">
           {steps.map((step, index) => {

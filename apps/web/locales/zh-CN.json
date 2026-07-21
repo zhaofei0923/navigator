@@ -121,6 +121,35 @@
       "emptyTitle": "暂无已发布数据",
       "emptyDescription": "该模块已启用，但当前视图暂无可展示的已发布记录。",
       "fallbackNotice": "{count} 个字段未翻译",
+      "basicProfile": {
+        "title": "BASIC 八类数据",
+        "description": "按统一 BASIC 数据结构展示已审核字段、缺失说明和具体来源。",
+        "updated": "Profile 更新于 {date}",
+        "available": "可用",
+        "notAvailable": "暂无数据",
+        "checkedAt": "核查于 {date}",
+        "year": "数据年份 {year}",
+        "sources": "具体来源",
+        "sourceDirectory": "来源目录",
+        "retrievedAt": "获取于 {date}",
+        "publishedAt": "发布于 {date}",
+        "categories": {
+          "countryBasics": "国家基础",
+          "electricityMarket": "电力市场",
+          "energyAccess": "能源可及性",
+          "renewableCapacity": "可再生能源装机",
+          "solarResource": "太阳能资源",
+          "windResource": "风能资源",
+          "policyOverview": "政策概览",
+          "marketSummary": "市场摘要"
+        },
+        "credibility": {
+          "OFFICIAL": "官方",
+          "VERIFIED": "已核验",
+          "ESTIMATED": "估算",
+          "UNVERIFIED": "未核验"
+        }
+      },
       "riskCategory": {
         "political": "政治",
         "economic": "经济",
