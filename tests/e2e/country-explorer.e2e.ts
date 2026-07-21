@@ -252,7 +252,7 @@ test("country detail renders ten module skeleton and switches language", async (
   ).toBeVisible();
   const profile = page.locator(".basic-profile");
   await expect(profile.locator(".basic-profile-category")).toHaveCount(8);
-  for (const categoryHeading of [
+  const englishCategoryHeadings = [
     "Country basics",
     "Electricity market",
     "Energy access",
@@ -261,7 +261,11 @@ test("country detail renders ten module skeleton and switches language", async (
     "Wind resource",
     "Policy overview",
     "Market summary",
-  ]) {
+  ];
+  await expect(
+    profile.locator(".basic-profile-category > h4"),
+  ).toHaveText(englishCategoryHeadings);
+  for (const categoryHeading of englishCategoryHeadings) {
     await expect(
       profile.getByRole("heading", { exact: true, name: categoryHeading }),
     ).toBeVisible();
@@ -308,7 +312,7 @@ test("country detail renders ten module skeleton and switches language", async (
     page.getByRole("heading", { name: "BASIC 八类数据" }),
   ).toBeVisible();
   await expect(profile.locator(".basic-profile-category")).toHaveCount(8);
-  for (const categoryHeading of [
+  const chineseCategoryHeadings = [
     "国家基础",
     "电力市场",
     "能源可及性",
@@ -317,13 +321,19 @@ test("country detail renders ten module skeleton and switches language", async (
     "风能资源",
     "政策概览",
     "市场摘要",
-  ]) {
+  ];
+  await expect(
+    profile.locator(".basic-profile-category > h4"),
+  ).toHaveText(chineseCategoryHeadings);
+  for (const categoryHeading of chineseCategoryHeadings) {
     await expect(
       profile.getByRole("heading", { exact: true, name: categoryHeading }),
     ).toBeVisible();
   }
   await expect(
-    profile.locator("strong:visible", { hasText: /^暂无数据$/ }),
+    profile.locator(".basic-profile-status--not-available:visible", {
+      hasText: /^暂无数据$/,
+    }),
   ).toHaveCount(14);
   await expect(
     page.getByRole("link", { name: /印尼国家电力总规划/ }).first(),

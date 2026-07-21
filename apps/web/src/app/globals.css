@@ -1087,15 +1087,23 @@ a {
   min-width: 0;
 }
 
-.basic-profile-field dd > strong {
-  background: #fff4dd;
+.basic-profile-status {
   border-radius: 999px;
-  color: #9a6200;
   font-size: 10px;
   padding: 3px 7px;
 }
 
-.basic-profile-field dd > span:first-of-type {
+.basic-profile-status--available {
+  background: #e9f7ef;
+  color: #17643a;
+}
+
+.basic-profile-status--not-available {
+  background: #fff4dd;
+  color: #9a6200;
+}
+
+.basic-profile-value {
   color: #0057d8;
   font-weight: 800;
 }

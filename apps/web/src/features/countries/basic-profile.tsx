@@ -16,11 +16,15 @@ interface Props {
 }
 
 function formatProfileDate(value: string, locale: Locale): string {
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(value)
+    ? new Date(`${value}T00:00:00.000Z`)
+    : new Date(value);
   return new Intl.DateTimeFormat(locale, {
     day: "2-digit",
     month: "short",
+    timeZone: "UTC",
     year: "numeric",
-  }).format(new Date(value));
+  }).format(date);
 }
 
 function formatFieldValue(value: number | string, locale: Locale): string {
@@ -53,8 +57,12 @@ function BasicProfileFieldRow({
     <div className="basic-profile-field">
       <dt>{field.label}</dt>
       <dd>
-        <strong>{field.status === "AVAILABLE" ? t("available") : t("notAvailable")}</strong>
-        {value !== null ? <span>{value}</span> : null}
+        <strong className={`basic-profile-status basic-profile-status--${
+          field.status === "AVAILABLE" ? "available" : "not-available"
+        }`}>
+          {field.status === "AVAILABLE" ? t("available") : t("notAvailable")}
+        </strong>
+        {value !== null ? <span className="basic-profile-value">{value}</span> : null}
         {field.unit !== null ? <span>{field.unit}</span> : null}
         {field.year !== null ? <span>{t("year", { year: field.year })}</span> : null}
         <span>{t("checkedAt", { date: formatProfileDate(field.checkedAt, locale) })}</span>
