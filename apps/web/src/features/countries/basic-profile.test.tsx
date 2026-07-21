@@ -7,6 +7,7 @@ import enMessages from "../../../locales/en.json";
 import zhMessages from "../../../locales/zh-CN.json";
 
 import { BasicProfileSection } from "./basic-profile.js";
+import * as basicProfileFeature from "./basic-profile.js";
 import { buildCountryModuleResponse } from "./country-service.test-fixture.js";
 import type {
   JsonObject,
@@ -45,6 +46,10 @@ function renderProfile(
 }
 
 describe("BasicProfileSection", () => {
+  test("exposes only the country detail renderer", () => {
+    expect(Object.keys(basicProfileFeature)).toEqual(["BasicProfileSection"]);
+  });
+
   test("renders a localized profile with cited available and unavailable fields", () => {
     const chinese = renderProfile(profileValue("zh-CN"), "zh-CN");
     const english = renderProfile(profileValue("en"), "en");
