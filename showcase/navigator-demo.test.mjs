@@ -83,6 +83,26 @@ test("keeps a pending AI request busy and bound to its submitted market", async 
   assert.equal(await page.locator("html").getAttribute("lang"), "en");
 });
 
+test("wraps a long unbroken AI query without mobile page overflow", async (t) => {
+  const browser = await chromium.launch({
+    executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE || undefined,
+  });
+  t.after(() => browser.close());
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const query = "x".repeat(600);
+  await page.goto(demoUrl);
+
+  await page.locator("#ai-question").fill(query);
+  await page.locator("#ai-submit").click();
+  await page.locator("#ai-result").getByText(/暂无对应数据/).waitFor();
+  assert.match(await page.locator("#ai-result").innerText(), new RegExp(query));
+  const viewport = await page.evaluate(() => ({
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+  }));
+  assert.equal(viewport.scrollWidth, viewport.clientWidth);
+});
+
 test("previews fictional reports and keeps the selected locale across reloads", async (t) => {
   const browser = await chromium.launch({
     executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE || undefined,
