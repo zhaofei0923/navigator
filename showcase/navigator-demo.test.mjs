@@ -25,6 +25,70 @@ test("is a self-contained offline document with explicit demo boundaries", async
   for (const moduleKey of ["market-overview", "policy", "risk", "opportunities", "projects", "partners", "chinese-companies", "entry-strategy", "ai-advisor", "reports"]) assert.match(source, new RegExp(moduleKey));
 });
 
+test("keeps fictional market coverage aligned with the three aggregation levels", async (t) => {
+  const browser = await chromium.launch({
+    executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE || undefined,
+  });
+  t.after(() => browser.close());
+  const page = await browser.newPage();
+  await page.goto(demoUrl);
+
+  const fixtures = await page.evaluate(() => ({
+    moduleKeys: MODULES.map(({ key }) => key),
+    markets: DEMO_FIXTURES.markets.map(({ id, coverage, modules }) => ({
+      id,
+      coverage,
+      statuses: Object.fromEntries(Object.entries(modules).map(([key, value]) => [key, value.status])),
+    })),
+  }));
+  const expectedModuleKeys = ["market-overview", "policy", "risk", "opportunities", "projects", "partners", "chinese-companies", "entry-strategy", "ai-advisor", "reports"];
+  assert.deepEqual(fixtures.moduleKeys, expectedModuleKeys);
+
+  const aurora = fixtures.markets.find(({ id }) => id === "aurora");
+  assert.equal(aurora.coverage, "BASIC");
+  assert.ok(["PARTIAL", "COMPLETE"].includes(aurora.statuses["market-overview"]));
+  assert.deepEqual(
+    Object.fromEntries(expectedModuleKeys.filter((key) => key !== "market-overview").map((key) => [key, aurora.statuses[key]])),
+    Object.fromEntries(expectedModuleKeys.filter((key) => key !== "market-overview").map((key) => [key, "BUILDING"])),
+  );
+
+  const meridian = fixtures.markets.find(({ id }) => id === "meridian");
+  assert.equal(meridian.coverage, "STANDARD");
+  for (const key of ["market-overview", "policy", "risk", "opportunities", "ai-advisor"]) {
+    assert.ok(["PARTIAL", "COMPLETE"].includes(meridian.statuses[key]), `${key} must be at least partial`);
+  }
+  for (const key of ["projects", "partners", "chinese-companies", "entry-strategy", "reports"]) {
+    assert.ok(["BUILDING", "PARTIAL"].includes(meridian.statuses[key]), `${key} must remain a deeper standard module`);
+  }
+
+  const solstice = fixtures.markets.find(({ id }) => id === "solstice");
+  assert.equal(solstice.coverage, "COMPLETE");
+  assert.deepEqual(solstice.statuses, Object.fromEntries(expectedModuleKeys.map((key) => [key, "COMPLETE"])));
+});
+
+test("gates deterministic AI answers by the selected market AI coverage", async (t) => {
+  const browser = await chromium.launch({
+    executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE || undefined,
+  });
+  t.after(() => browser.close());
+  const page = await browser.newPage();
+  await page.goto(demoUrl);
+
+  await page.locator("#ai-question").fill("这个市场有哪些主要风险？");
+  await page.locator("#ai-submit").click();
+  await page.waitForTimeout(250);
+  const auroraAnswer = await page.locator("#ai-result").innerText();
+  assert.match(auroraAnswer, /数据建设中/);
+  assert.doesNotMatch(auroraAnswer, /冬季施工窗口短/);
+  assert.doesNotMatch(auroraAnswer, /模拟来源/);
+
+  await page.locator('[data-market-id="meridian"]').click();
+  await page.locator("#ai-question").fill("这个市场有哪些主要风险？");
+  await page.locator("#ai-submit").click();
+  await page.locator("#ai-result").getByText(/模拟来源/).waitFor();
+  assert.match(await page.locator("#ai-result").innerText(), /并网规则仍在模拟调整/);
+});
+
 test("simulates matched and no-data AI answers without persisting user content", async (t) => {
   const browser = await chromium.launch({
     executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE || undefined,
@@ -33,6 +97,7 @@ test("simulates matched and no-data AI answers without persisting user content",
   const page = await browser.newPage();
   await page.goto(demoUrl);
 
+  await page.locator('[data-market-id="meridian"]').click();
   assert.equal(await page.locator("[data-prompt-id]").count(), 3);
   assert.deepEqual(await page.evaluate(() => [typeof matchDemoAnswer, typeof renderAiAnswer]), ["function", "function"]);
   await page.locator('[data-prompt-id="risk"]').click();
@@ -68,18 +133,20 @@ test("keeps a pending AI request busy and bound to its submitted market", async 
   const page = await browser.newPage();
   await page.goto(demoUrl);
 
+  await page.locator('[data-market-id="meridian"]').click();
+
   const busyAfterRerenders = await page.evaluate(() => {
     document.querySelector("#ai-question").value = "这个市场有哪些主要风险？";
-    document.querySelector("#ai-form").requestSubmit();
+    document.querySelector("#ai-submit").click();
     document.querySelector('[data-action="set-locale"][data-locale="en"]').click();
-    document.querySelector('[data-market-id="meridian"]').click();
+    document.querySelector('[data-market-id="solstice"]').click();
     return document.querySelector("#ai-result").getAttribute("aria-busy");
   });
   assert.equal(busyAfterRerenders, "true");
   await page.locator("#ai-result").getByText(/Simulated source/).waitFor();
   const answer = await page.locator("#ai-result").innerText();
-  assert.match(answer, /Aurora Market Fictional Observatory/);
-  assert.doesNotMatch(answer, /Meridian Market Fictional Observatory/);
+  assert.match(answer, /Meridian Market Fictional Observatory/);
+  assert.doesNotMatch(answer, /Solstice Market Fictional Observatory/);
   assert.equal(await page.locator("html").getAttribute("lang"), "en");
 });
 
@@ -92,6 +159,7 @@ test("wraps a long unbroken AI query without mobile page overflow", async (t) =>
   const query = "x".repeat(600);
   await page.goto(demoUrl);
 
+  await page.locator('[data-market-id="meridian"]').click();
   await page.locator("#ai-question").fill(query);
   await page.locator("#ai-submit").click();
   await page.locator("#ai-result").getByText(/暂无对应数据/).waitFor();
@@ -155,6 +223,56 @@ test("stacks the mobile experience without page-level horizontal overflow", asyn
   assert.equal(controlHeights.every((height) => height >= 44), true);
 });
 
+test("does not serialize an AI question when JavaScript is disabled", async (t) => {
+  const browser = await chromium.launch({
+    executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE || undefined,
+  });
+  t.after(() => browser.close());
+  const context = await browser.newContext({ javaScriptEnabled: false });
+  const page = await context.newPage();
+  await page.goto(demoUrl);
+
+  assert.match(await page.locator("main").innerText(), /出海决策/);
+  assert.match(await page.locator("noscript").innerText(), /请启用 JavaScript.*Enable JavaScript/);
+  const initialUrl = page.url();
+  const initialHistoryLength = await page.evaluate(() => history.length);
+  await page.locator("#ai-question").fill("private-demo-question");
+  await page.locator("#ai-submit").evaluate((element) => element.click());
+  await page.waitForTimeout(250);
+  assert.equal(page.url(), initialUrl);
+  assert.equal(await page.evaluate(() => history.length), initialHistoryLength);
+  assert.doesNotMatch(page.url(), /private-demo-question/);
+});
+
+test("restores logical keyboard focus after workbench rerenders", async (t) => {
+  const browser = await chromium.launch({
+    executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE || undefined,
+  });
+  t.after(() => browser.close());
+  const page = await browser.newPage();
+  await page.goto(demoUrl);
+
+  const regionFilter = page.locator("#region-filter");
+  await regionFilter.focus();
+  await regionFilter.selectOption("central-corridor");
+  assert.equal(await page.locator("#region-filter").evaluate((element) => document.activeElement === element), true);
+
+  const market = page.locator('[data-market-id="meridian"]');
+  await market.focus();
+  await page.keyboard.press("Enter");
+  assert.equal(await page.locator('[data-market-id="meridian"]').evaluate((element) => document.activeElement === element), true);
+
+  const module = page.locator('[data-module-key="policy"]');
+  await module.focus();
+  await page.keyboard.press("Enter");
+  assert.equal(await page.locator('[data-module-key="policy"]').evaluate((element) => document.activeElement === element), true);
+
+  const reset = page.locator('[data-action="reset-filters"]').first();
+  await reset.focus();
+  await page.keyboard.press("Enter");
+  assert.equal(await page.locator('[data-action="reset-filters"]').first().evaluate((element) => document.activeElement === element), true);
+});
+
 test("renders the bilingual narrative shell from a file URL", async (t) => {
   const browser = await chromium.launch({
     executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE || undefined,
@@ -162,8 +280,12 @@ test("renders the bilingual narrative shell from a file URL", async (t) => {
   t.after(() => browser.close());
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   const consoleErrors = [];
+  const networkRequests = [];
   page.on("console", (message) => {
     if (message.type() === "error") consoleErrors.push(message.text());
+  });
+  page.on("request", (request) => {
+    if (/^https?:/i.test(request.url())) networkRequests.push(request.url());
   });
   await page.goto(demoUrl);
   await assert.doesNotReject(() => page.locator("h1").waitFor());
@@ -186,6 +308,7 @@ test("renders the bilingual narrative shell from a file URL", async (t) => {
   await page.locator("#industry-filter").selectOption("wind");
   await assert.doesNotReject(() => page.getByText(/没有匹配市场/).waitFor());
   assert.deepEqual(consoleErrors, []);
+  assert.deepEqual(networkRequests, []);
 });
 
 test("keeps language control labels and navigation names in sync", async (t) => {
