@@ -8,7 +8,7 @@ import {
   parseLocalizedBasicProfile,
   type LocalizedBasicProfileField,
   type LocalizedBasicProfileSource,
-} from "./basic-profile-parser.js";
+} from "./basic-profile-parser";
 
 interface Props {
   locale: Locale;

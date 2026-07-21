@@ -12,7 +12,7 @@ import {
   isRfc3339,
   nonEmptyString,
   nullableNonEmptyString,
-} from "./basic-profile-parser-helpers.js";
+} from "./basic-profile-parser-helpers";
 
 export interface LocalizedBasicProfileField {
   key: string;

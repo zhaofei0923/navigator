@@ -17,7 +17,7 @@ import type {
 import { useTranslations } from "next-intl";
 import React from "react";
 
-import { BasicProfileSection } from "./basic-profile.js";
+import { BasicProfileSection } from "./basic-profile";
 
 interface CountryDetailProps {
   country: LocalizedCountryDetail;
