@@ -244,6 +244,32 @@ test("does not serialize an AI question when JavaScript is disabled", async (t) 
   assert.doesNotMatch(page.url(), /private-demo-question/);
 });
 
+test("ignores composing Enter before submitting an ordinary Enter", async (t) => {
+  const browser = await chromium.launch({
+    executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE || undefined,
+  });
+  t.after(() => browser.close());
+  const page = await browser.newPage();
+  await page.goto(demoUrl);
+  await page.locator('[data-market-id="meridian"]').click();
+
+  const input = page.locator("#ai-question");
+  const result = page.locator("#ai-result");
+  const initialResult = await result.innerText();
+  await input.fill("这个市场有哪些主要风险？");
+  await input.dispatchEvent("compositionstart", { data: "风险" });
+  await input.dispatchEvent("keydown", { key: "Enter", code: "Enter", isComposing: true, keyCode: 229 });
+  await input.dispatchEvent("compositionend", { data: "风险" });
+
+  assert.equal(await result.getAttribute("aria-busy"), "false");
+  assert.equal(await result.innerText(), initialResult);
+
+  await input.press("Enter");
+  assert.equal(await result.getAttribute("aria-busy"), "true");
+  await result.getByText(/模拟来源/).waitFor();
+  assert.equal(await result.getAttribute("aria-busy"), "false");
+});
+
 test("restores logical keyboard focus after workbench rerenders", async (t) => {
   const browser = await chromium.launch({
     executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE || undefined,
