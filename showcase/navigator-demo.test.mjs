@@ -13,6 +13,8 @@ test("is a self-contained offline document with explicit demo boundaries", async
   const source = await readFile(demoPath, "utf8");
   assert.match(source, /<!doctype html>/i);
   assert.doesNotMatch(source, /<(?:script|link|img)[^>]+(?:src|href)=["']https?:/i);
+  assert.doesNotMatch(source, /<a[^>]+href=["']https?:/i);
+  assert.doesNotMatch(source, /<a[^>]*href=["']\$\{escapeHtml\(market\.source\.url\)\}["']/);
   assert.doesNotMatch(source, /fetch\s*\(|XMLHttpRequest|WebSocket/);
   assert.match(source, /DEMO_FIXTURES/);
   assert.match(source, /虚构演示数据/);
@@ -70,4 +72,21 @@ test("keeps language control labels and navigation names in sync", async (t) => 
   assert.equal(await page.locator(".locale-switcher").getAttribute("aria-label"), "Language selection");
   assert.equal(await page.locator(".intelligence-visual").getAttribute("aria-label"), "Abstract global energy intelligence visual");
   assert.equal(await page.locator('[data-action="set-locale"][data-locale="en"]').getAttribute("aria-pressed"), "true");
+});
+
+test("keeps fictional source provenance inert and localizes business content", async (t) => {
+  const browser = await chromium.launch({
+    executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE || undefined,
+  });
+  t.after(() => browser.close());
+  const page = await browser.newPage();
+  await page.goto(demoUrl);
+  const provenance = page.locator("#module-panel .metadata");
+  assert.equal(await provenance.locator("a").count(), 0);
+  assert.match(await provenance.innerText(), /极光市场虚构观察站.*aurora-observatory\.example/);
+  assert.match(await page.locator(".metric-grid").innerText(), /12周/);
+  await page.getByRole("button", { name: "EN", exact: true }).click();
+  assert.match(await provenance.innerText(), /Aurora Market Fictional Observatory.*aurora-observatory\.example/);
+  assert.match(await page.locator(".metric-grid").innerText(), /12wk/);
+  assert.doesNotMatch(await page.locator(".metric-grid").innerText(), /周/);
 });
