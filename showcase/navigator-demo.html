@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Navigator offline bilingual showcase" />
+    <title>Navigator — Offline Showcase</title>
+    <style>
+      :root {
+        --ink: #172033;
+        --navy: #071b35;
+        --blue: #1f5ea8;
+        --green: #168266;
+        --amber: #a8640a;
+        --red: #b8473c;
+        --line: #d6dfeb;
+        --surface: #f5f8fc;
+        --muted: #64748b;
+        color: var(--ink);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        scroll-behavior: smooth;
+      }
+
+      * { box-sizing: border-box; }
+      body { margin: 0; background: #fff; line-height: 1.6; }
+      a { color: inherit; text-underline-offset: 0.18em; }
+      button { font: inherit; }
+      :focus-visible { outline: 3px solid var(--amber); outline-offset: 3px; }
+      .skip-link { left: 1rem; position: fixed; top: -4rem; z-index: 5; }
+      .skip-link:focus { background: #fff; padding: 0.5rem 0.75rem; top: 1rem; }
+      .site-header { align-items: center; backdrop-filter: blur(12px); background: rgb(255 255 255 / 0.94); border-bottom: 1px solid var(--line); display: flex; gap: 1.5rem; justify-content: space-between; padding: 0.85rem max(1.5rem, calc((100vw - 1200px) / 2)); position: sticky; top: 0; z-index: 2; }
+      .brand { color: var(--navy); font-weight: 800; letter-spacing: -0.03em; text-decoration: none; }
+      .site-nav { display: flex; flex-wrap: wrap; gap: 0.8rem 1.2rem; }
+      .site-nav a { color: var(--muted); font-size: 0.88rem; text-decoration: none; }
+      .site-nav a:hover { color: var(--blue); }
+      .locale-switcher { display: flex; gap: 0.3rem; }
+      .locale-switcher button { background: transparent; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); cursor: pointer; min-width: 3.4rem; padding: 0.35rem 0.65rem; }
+      .locale-switcher button[aria-pressed="true"] { background: var(--navy); border-color: var(--navy); color: #fff; }
+      main > section { margin: 0 auto; max-width: 1200px; padding: 5.5rem 1.5rem; }
+      .hero { align-items: center; display: grid; gap: 3rem; grid-template-columns: 1.1fr 0.9fr; min-height: calc(100vh - 4.5rem); }
+      .eyebrow { color: var(--blue); font-size: 0.8rem; font-weight: 750; letter-spacing: 0.1em; text-transform: uppercase; }
+      h1, h2, h3, p { margin-top: 0; }
+      h1 { color: var(--navy); font-size: clamp(2.6rem, 6vw, 5.4rem); letter-spacing: -0.065em; line-height: 0.98; margin-bottom: 1.5rem; max-width: 11ch; }
+      h2 { color: var(--navy); font-size: clamp(1.8rem, 3vw, 3rem); letter-spacing: -0.04em; line-height: 1.08; }
+      .lede { color: #34445b; font-size: clamp(1.1rem, 1.8vw, 1.4rem); max-width: 40rem; }
+      .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.8rem; }
+      .button { background: var(--navy); border: 1px solid var(--navy); color: #fff; font-weight: 700; padding: 0.75rem 1rem; text-decoration: none; }
+      .button.secondary { background: transparent; color: var(--navy); }
+      .demo-note { border-left: 3px solid var(--amber); color: var(--amber); font-size: 0.9rem; margin-top: 1.7rem; max-width: 42rem; padding-left: 0.75rem; }
+      .intelligence-visual { width: 100%; }
+      .section-intro { color: var(--muted); max-width: 48rem; }
+      .narrative-grid { border-top: 1px solid var(--line); display: grid; gap: 1.5rem; grid-template-columns: repeat(3, 1fr); margin-top: 2rem; }
+      .narrative-grid article { border-bottom: 1px solid var(--line); padding: 1.25rem 0; }
+      .narrative-grid h3 { color: var(--navy); margin-bottom: 0.55rem; }
+      .module-list { columns: 2; list-style: none; margin: 2rem 0 0; padding: 0; }
+      .module-list li { border-bottom: 1px solid var(--line); color: var(--muted); padding: 0.65rem 0; }
+      .demo-band { background: var(--surface); max-width: none; }
+      .demo-band > div { margin: 0 auto; max-width: 1200px; }
+      .signal-row { align-items: baseline; border-block: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 1rem 2.5rem; padding: 1.25rem 0; }
+      .signal-row strong { color: var(--green); }
+      .demo-panel { background: #fff; border: 1px solid var(--line); margin-top: 1.5rem; padding: 1.5rem; }
+      .demo-panel p:last-child { margin-bottom: 0; }
+      .status { color: var(--green); font-weight: 700; }
+      .report-list { border-top: 1px solid var(--line); list-style: none; margin: 1.5rem 0 0; padding: 0; }
+      .report-list li { border-bottom: 1px solid var(--line); padding: 0.8rem 0; }
+      footer { background: var(--navy); color: #dce8f5; padding: 2.5rem 1.5rem; }
+      footer > div { margin: 0 auto; max-width: 1200px; }
+      footer a { color: #fff; }
+      .no-script { background: #fff4d6; color: #664400; margin: 0; padding: 0.75rem 1.5rem; text-align: center; }
+      @media (max-width: 960px) {
+        .site-header { align-items: flex-start; flex-wrap: wrap; }
+        .hero { grid-template-columns: 1fr; min-height: auto; }
+        .narrative-grid { grid-template-columns: 1fr; }
+        .intelligence-visual { max-width: 38rem; }
+      }
+      @media (max-width: 640px) {
+        .site-header { gap: 0.8rem; padding-inline: 1rem; }
+        .site-nav { gap: 0.55rem 0.85rem; order: 3; width: 100%; }
+        main > section { padding: 3.75rem 1rem; }
+        .module-list { columns: 1; }
+        h1 { font-size: 2.7rem; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        :root { scroll-behavior: auto; }
+        *, *::before, *::after { animation-duration: 0.01ms !important; scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content" data-i18n="skipToContent">跳至主要内容</a>
+    <header class="site-header">
+      <a class="brand" href="#top" data-i18n="brand">Navigator</a>
+      <nav class="site-nav" aria-label="主导航" data-i18n-aria="navigationLabel">
+        <a href="#capabilities" data-i18n="navCapabilities">平台能力</a>
+        <a href="#demo" data-i18n="navDemo">产品演示</a>
+        <a href="#ai-advisor" data-i18n="navAiAdvisor">AI 顾问</a>
+        <a href="#reports" data-i18n="navReports">数据产品</a>
+        <a href="#partnership" data-i18n="navPartnership">合作价值</a>
+      </nav>
+      <div class="locale-switcher" aria-label="Language selection">
+        <button type="button" data-action="set-locale" data-locale="zh-CN" aria-pressed="true" data-i18n="localeChinese">中文</button>
+        <button type="button" data-action="set-locale" data-locale="en" aria-pressed="false" data-i18n="localeEnglish">EN</button>
+      </div>
+    </header>
+
+    <noscript><p class="no-script" data-i18n="noScript">请启用 JavaScript 以操作产品演示。 / Enable JavaScript to operate the product demo.</p></noscript>
+    <main id="main-content">
+      <section class="hero" id="top">
+        <div>
+          <p class="eyebrow" data-i18n="heroEyebrow">全球新能源市场情报</p>
+          <h1 data-i18n="heroTitle">把分散信息转化为可执行的出海决策</h1>
+          <p class="lede" data-i18n="heroLead">用统一、可信、双语的市场情报，为每一次海外布局建立清晰判断。</p>
+          <div class="actions">
+            <a class="button" href="#demo" data-i18n="heroPrimaryCta">体验产品 Demo</a>
+            <a class="button secondary" href="#capabilities" data-i18n="heroSecondaryCta">了解平台能力</a>
+          </div>
+          <p class="demo-note" data-i18n="demoDisclaimer">本页面全部数据均为虚构演示数据，不构成投资或市场进入建议。</p>
+        </div>
+        <svg class="intelligence-visual" viewBox="0 0 620 430" role="img" aria-label="Abstract energy intelligence visual">
+          <title data-i18n="visualTitle">抽象全球能源情报图</title>
+          <rect width="620" height="430" fill="#071b35" rx="2" />
+          <path d="M70 260 C140 130 210 330 300 190 S470 90 555 220" fill="none" stroke="#4b87ce" stroke-width="2" />
+          <path d="M50 330 C155 240 255 390 350 255 S500 205 575 115" fill="none" stroke="#42b98e" stroke-width="2" />
+          <g fill="#fff"><circle cx="70" cy="260" r="6" /><circle cx="300" cy="190" r="6" /><circle cx="555" cy="220" r="6" /></g>
+          <g fill="#ffca62"><circle cx="50" cy="330" r="6" /><circle cx="350" cy="255" r="6" /><circle cx="575" cy="115" r="6" /></g>
+          <text x="50" y="65" fill="#dce8f5" font-size="20" font-family="system-ui" data-i18n="visualLabel">统一信号 · 清晰判断</text>
+          <text x="50" y="395" fill="#a9bdd4" font-size="15" font-family="system-ui" data-i18n="visualCaption">虚构演示数据 / Fictional demo data</text>
+        </svg>
+      </section>
+
+      <section id="capabilities">
+        <p class="eyebrow" data-i18n="capabilitiesEyebrow">平台能力</p>
+        <h2 data-i18n="capabilitiesTitle">把跨市场比较变成一致的决策语言</h2>
+        <p class="section-intro" data-i18n="capabilitiesLead">Navigator 将分散来源、语言隔阂和不可比的市场判断，整理为可复用的国家情报框架。</p>
+        <div class="narrative-grid">
+          <article><h3 data-i18n="problemOneTitle">信息分散</h3><p data-i18n="problemOneBody">市场、政策和项目线索分布在不同渠道，难以建立完整视图。</p></article>
+          <article><h3 data-i18n="problemTwoTitle">判断不一</h3><p data-i18n="problemTwoBody">跨团队与跨语言沟通时，优先级和风险判断常常失去可比性。</p></article>
+          <article><h3 data-i18n="problemThreeTitle">行动滞后</h3><p data-i18n="problemThreeBody">缺少结构化证据时，机会验证与合作推进容易延迟。</p></article>
+        </div>
+        <h3 data-i18n="modelTitle">十个固定分析模块，一套可渐进建设的统一模型</h3>
+        <ul class="module-list">
+          <li data-i18n="moduleMarket">市场概览</li><li data-i18n="modulePolicy">政策</li><li data-i18n="moduleRisk">风险</li><li data-i18n="moduleOpportunities">机会</li><li data-i18n="moduleProjects">项目</li><li data-i18n="modulePartners">伙伴</li><li data-i18n="moduleChineseCompanies">中资企业</li><li data-i18n="moduleEntryStrategy">进入策略</li><li data-i18n="moduleAiAdvisor">AI 顾问</li><li data-i18n="moduleReports">报告</li>
+        </ul>
+      </section>
+
+      <section class="demo-band" id="demo"><div>
+        <p class="eyebrow" data-i18n="demoEyebrow">产品演示</p>
+        <h2 data-i18n="demoTitle">统一模板，呈现不同深度的市场情报</h2>
+        <p class="demo-note" data-i18n="demoDisclaimer">本页面全部数据均为虚构演示数据，不构成投资或市场进入建议。</p>
+        <div class="signal-row"><span data-i18n="demoSignalLabel">虚构市场 Alpha · 标准覆盖</span><strong data-i18n="demoSignalValue">机会信号：可进一步验证</strong><span data-i18n="demoSignalBody">统一结构保留来源、时间、可信度与审核边界。</span></div>
+        <div class="demo-panel"><h3 data-i18n="demoPanelTitle">市场工作台</h3><p class="status" data-i18n="demoPanelStatus">数据建设中 / Data Building</p><p data-i18n="demoPanelBody">此静态壳展示产品结构和视觉语言，不加载真实市场数据。</p></div>
+      </div></section>
+
+      <section id="ai-advisor">
+        <p class="eyebrow" data-i18n="aiEyebrow">AI 出海顾问</p>
+        <h2 data-i18n="aiTitle">在已审核的边界内，把问题连接到证据</h2>
+        <div class="demo-panel"><p data-i18n="aiBody">本演示页仅展示本地模拟的回答结构：来源、更新时间与风险提示始终可见。</p><p class="demo-note" data-i18n="aiDisclaimer">虚构演示数据，不构成投资或市场进入建议。</p></div>
+      </section>
+
+      <section id="reports">
+        <p class="eyebrow" data-i18n="reportsEyebrow">数据产品</p>
+        <h2 data-i18n="reportsTitle">把情报交付为团队可用的决策材料</h2>
+        <p class="demo-note" data-i18n="demoDisclaimer">本页面全部数据均为虚构演示数据，不构成投资或市场进入建议。</p>
+        <ul class="report-list"><li data-i18n="reportBrief">市场进入简报（演示预览）</li><li data-i18n="reportPolicy">政策追踪（演示预览）</li><li data-i18n="reportProjects">机会项目清单（演示预览）</li></ul>
+      </section>
+
+      <section id="partnership">
+        <p class="eyebrow" data-i18n="partnershipEyebrow">合作价值</p>
+        <h2 data-i18n="partnershipTitle">让投资与产业合作建立在可复查的共同判断上</h2>
+        <p class="section-intro" data-i18n="partnershipBody">以统一的市场框架和清晰的数据边界，支持合作方更快识别机会、交流风险并设计下一步行动。</p>
+        <div class="actions"><a class="button" href="mailto:hello@example.invalid" data-i18n="partnershipCta">联系合作团队</a></div>
+      </section>
+    </main>
+    <footer><div><p data-i18n="footerDisclaimer">虚构演示数据，不构成投资或市场进入建议。 / Fictional demo data; not investment or market-entry advice.</p></div></footer>
+
+    <script>
+      const COPY = {
+        "zh-CN": {
+          skipToContent: "跳至主要内容", brand: "Navigator", navCapabilities: "平台能力", navDemo: "产品演示", navAiAdvisor: "AI 顾问", navReports: "数据产品", navPartnership: "合作价值", localeChinese: "中文", localeEnglish: "EN", noScript: "请启用 JavaScript 以操作产品演示。 / Enable JavaScript to operate the product demo.", heroEyebrow: "全球新能源市场情报", heroTitle: "把分散信息转化为可执行的出海决策", heroLead: "用统一、可信、双语的市场情报，为每一次海外布局建立清晰判断。", heroPrimaryCta: "体验产品 Demo", heroSecondaryCta: "了解平台能力", demoDisclaimer: "本页面全部数据均为虚构演示数据，不构成投资或市场进入建议。", visualTitle: "抽象全球能源情报图", visualLabel: "统一信号 · 清晰判断", visualCaption: "虚构演示数据 / Fictional demo data", capabilitiesEyebrow: "平台能力", capabilitiesTitle: "把跨市场比较变成一致的决策语言", capabilitiesLead: "Navigator 将分散来源、语言隔阂和不可比的市场判断，整理为可复用的国家情报框架。", problemOneTitle: "信息分散", problemOneBody: "市场、政策和项目线索分布在不同渠道，难以建立完整视图。", problemTwoTitle: "判断不一", problemTwoBody: "跨团队与跨语言沟通时，优先级和风险判断常常失去可比性。", problemThreeTitle: "行动滞后", problemThreeBody: "缺少结构化证据时，机会验证与合作推进容易延迟。", modelTitle: "十个固定分析模块，一套可渐进建设的统一模型", moduleMarket: "市场概览", modulePolicy: "政策", moduleRisk: "风险", moduleOpportunities: "机会", moduleProjects: "项目", modulePartners: "伙伴", moduleChineseCompanies: "中资企业", moduleEntryStrategy: "进入策略", moduleAiAdvisor: "AI 顾问", moduleReports: "报告", demoEyebrow: "产品演示", demoTitle: "统一模板，呈现不同深度的市场情报", demoSignalLabel: "虚构市场 Alpha · 标准覆盖", demoSignalValue: "机会信号：可进一步验证", demoSignalBody: "统一结构保留来源、时间、可信度与审核边界。", demoPanelTitle: "市场工作台", demoPanelStatus: "数据建设中 / Data Building", demoPanelBody: "此静态壳展示产品结构和视觉语言，不加载真实市场数据。", aiEyebrow: "AI 出海顾问", aiTitle: "在已审核的边界内，把问题连接到证据", aiBody: "本演示页仅展示本地模拟的回答结构：来源、更新时间与风险提示始终可见。", aiDisclaimer: "虚构演示数据，不构成投资或市场进入建议。", reportsEyebrow: "数据产品", reportsTitle: "把情报交付为团队可用的决策材料", reportBrief: "市场进入简报（演示预览）", reportPolicy: "政策追踪（演示预览）", reportProjects: "机会项目清单（演示预览）", partnershipEyebrow: "合作价值", partnershipTitle: "让投资与产业合作建立在可复查的共同判断上", partnershipBody: "以统一的市场框架和清晰的数据边界，支持合作方更快识别机会、交流风险并设计下一步行动。", partnershipCta: "联系合作团队", footerDisclaimer: "虚构演示数据，不构成投资或市场进入建议。 / Fictional demo data; not investment or market-entry advice."
+        },
+        en: {
+          skipToContent: "Skip to main content", brand: "Navigator", navCapabilities: "Capabilities", navDemo: "Product demo", navAiAdvisor: "AI advisor", navReports: "Data products", navPartnership: "Partnership", localeChinese: "中文", localeEnglish: "EN", noScript: "Enable JavaScript to operate the product demo. / 请启用 JavaScript 以操作产品演示。", heroEyebrow: "Global clean-energy market intelligence", heroTitle: "Turn fragmented information into actionable market intelligence", heroLead: "A unified, credible, bilingual view for clearer decisions on every international move.", heroPrimaryCta: "Explore the product demo", heroSecondaryCta: "Discover the platform", demoDisclaimer: "All content on this page is fictional demo data and is not investment or market-entry advice.", visualTitle: "Abstract global energy intelligence visual", visualLabel: "Unified signals · Clear decisions", visualCaption: "Fictional demo data / 虚构演示数据", capabilitiesEyebrow: "Platform capabilities", capabilitiesTitle: "Give cross-market comparison one consistent decision language", capabilitiesLead: "Navigator turns fragmented sources, language barriers, and incomparable market views into a reusable market-intelligence framework.", problemOneTitle: "Fragmented information", problemOneBody: "Market, policy, and project signals are scattered across channels, making a complete view difficult.", problemTwoTitle: "Inconsistent judgment", problemTwoBody: "Priorities and risk assessments lose comparability across teams and languages.", problemThreeTitle: "Delayed action", problemThreeBody: "Without structured evidence, validating opportunities and advancing partnerships can stall.", modelTitle: "Ten fixed analysis modules, one model that grows with coverage", moduleMarket: "Market overview", modulePolicy: "Policy", moduleRisk: "Risk", moduleOpportunities: "Opportunities", moduleProjects: "Projects", modulePartners: "Partners", moduleChineseCompanies: "Chinese companies", moduleEntryStrategy: "Entry strategy", moduleAiAdvisor: "AI advisor", moduleReports: "Reports", demoEyebrow: "Product demo", demoTitle: "One template, market intelligence at different coverage depths", demoSignalLabel: "Fictional Market Alpha · Standard coverage", demoSignalValue: "Opportunity signal: ready for validation", demoSignalBody: "The shared structure preserves source, timing, credibility, and review boundaries.", demoPanelTitle: "Market workspace", demoPanelStatus: "Data Building", demoPanelBody: "This static shell shows product structure and visual language without loading real market data.", aiEyebrow: "AI market advisor", aiTitle: "Connect questions to evidence within reviewed boundaries", aiBody: "This page only demonstrates a local answer structure: source, update time, and risk notice remain visible.", aiDisclaimer: "Fictional demo data; not investment or market-entry advice.", reportsEyebrow: "Data products", reportsTitle: "Deliver intelligence as decision material your team can use", reportBrief: "Market-entry brief (demo preview)", reportPolicy: "Policy tracker (demo preview)", reportProjects: "Opportunity project list (demo preview)", partnershipEyebrow: "Partnership value", partnershipTitle: "Build investment and industry partnerships on shared, reviewable judgment", partnershipBody: "A unified market framework and clear data boundaries help partners identify opportunities, discuss risk, and shape next actions faster.", partnershipCta: "Contact the partnership team", footerDisclaimer: "Fictional demo data; not investment or market-entry advice. / 虚构演示数据，不构成投资或市场进入建议。"
+        }
+      };
+      COPY["zh-CN"].navigationLabel = "主导航";
+      COPY.en.navigationLabel = "Primary navigation";
+      const DEMO_FIXTURES = Object.freeze({ market: "Market Alpha", isFictional: true });
+      const state = { locale: "zh-CN", marketId: DEMO_FIXTURES.market, moduleKey: "market-overview", reportId: "market-entry-brief" };
+
+      function readStoredLocale() {
+        try { return localStorage.getItem("navigator-demo-locale"); } catch { return null; }
+      }
+      function persistLocale(locale) {
+        try { localStorage.setItem("navigator-demo-locale", locale); } catch { /* Storage is optional for the offline demo. */ }
+      }
+      function setLocale(locale) {
+        state.locale = Object.hasOwn(COPY, locale) ? locale : "zh-CN";
+        persistLocale(state.locale);
+        renderApp();
+      }
+      function applyCopy() {
+        const copy = COPY[state.locale];
+        document.documentElement.lang = state.locale;
+        document.querySelectorAll("[data-i18n]").forEach((node) => { node.textContent = copy[node.dataset.i18n]; });
+        document.querySelectorAll("[data-i18n-aria]").forEach((node) => { node.setAttribute("aria-label", copy[node.dataset.i18nAria]); });
+        document.querySelectorAll('[data-action="set-locale"]').forEach((button) => { button.setAttribute("aria-pressed", String(button.dataset.locale === state.locale)); });
+      }
+      function renderApp() { applyCopy(); }
+
+      const storedLocale = readStoredLocale();
+      if (Object.hasOwn(COPY, storedLocale)) state.locale = storedLocale;
+      document.querySelectorAll('[data-action="set-locale"]').forEach((button) => button.addEventListener("click", () => setLocale(button.dataset.locale)));
+      renderApp();
+    </script>
+  </body>
+</html>
