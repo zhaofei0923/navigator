@@ -60,6 +60,28 @@
       .signal-row strong { color: var(--green); }
       .demo-panel { background: #fff; border: 1px solid var(--line); margin-top: 1.5rem; padding: 1.5rem; }
       .demo-panel p:last-child { margin-bottom: 0; }
+      .demo-shell { display: grid; gap: 1.5rem; margin-top: 1.5rem; }
+      .filter-grid, .market-grid, .workbench-grid, .metric-grid { display: grid; gap: 0.9rem; }
+      .filter-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      .filter-grid label { color: var(--muted); display: grid; font-size: 0.85rem; font-weight: 700; gap: 0.35rem; }
+      select { background: #fff; border: 1px solid var(--line); color: var(--navy); min-height: 2.6rem; padding: 0.35rem; }
+      .market-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 1rem; }
+      .market-card, .module-button { background: #fff; border: 1px solid var(--line); color: var(--navy); cursor: pointer; padding: 1rem; text-align: left; }
+      .market-card[aria-pressed="true"], .module-button[aria-pressed="true"] { border-color: var(--green); box-shadow: inset 0 0 0 2px var(--green); }
+      .market-card strong, .market-card span { display: block; }
+      .market-card span { color: var(--muted); font-size: 0.9rem; margin-top: 0.35rem; }
+      .workbench-grid { grid-template-columns: minmax(0, 1.4fr) minmax(15rem, 0.9fr); }
+      .metric-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 1rem 0; }
+      .metric { background: var(--surface); padding: 0.75rem; }
+      .metric strong, .metric span { display: block; }
+      .metric span { color: var(--muted); font-size: 0.85rem; }
+      .module-nav { display: grid; gap: 0.45rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .module-button { font-size: 0.9rem; padding: 0.7rem; }
+      .state-badge { align-items: center; color: var(--green); display: inline-flex; font-size: 0.85rem; font-weight: 700; gap: 0.35rem; }
+      .metadata { color: var(--muted); font-size: 0.85rem; }
+      .metadata a { color: inherit; }
+      .trend-chart { background: var(--surface); display: block; margin-top: 1rem; max-width: 100%; }
+      .empty-state { border: 1px dashed var(--line); padding: 1.25rem; }
       .status { color: var(--green); font-weight: 700; }
       .report-list { border-top: 1px solid var(--line); list-style: none; margin: 1.5rem 0 0; padding: 0; }
       .report-list li { border-bottom: 1px solid var(--line); padding: 0.8rem 0; }
@@ -72,6 +94,7 @@
         .hero { grid-template-columns: 1fr; min-height: auto; }
         .narrative-grid { grid-template-columns: 1fr; }
         .intelligence-visual { max-width: 38rem; }
+        .filter-grid, .market-grid, .workbench-grid { grid-template-columns: 1fr; }
       }
       @media (max-width: 640px) {
         .site-header { gap: 0.8rem; padding-inline: 1rem; }
@@ -147,8 +170,7 @@
         <p class="eyebrow" data-i18n="demoEyebrow">产品演示</p>
         <h2 data-i18n="demoTitle">统一模板，呈现不同深度的市场情报</h2>
         <p class="demo-note" data-i18n="demoDisclaimer">本页面全部数据均为虚构演示数据，不构成投资或市场进入建议。</p>
-        <div class="signal-row"><span data-i18n="demoSignalLabel">虚构市场 Alpha · 标准覆盖</span><strong data-i18n="demoSignalValue">机会信号：可进一步验证</strong><span data-i18n="demoSignalBody">统一结构保留来源、时间、可信度与审核边界。</span></div>
-        <div class="demo-panel"><h3 data-i18n="demoPanelTitle">市场工作台</h3><p class="status" data-i18n="demoPanelStatus">数据建设中 / Data Building</p><p data-i18n="demoPanelBody">此静态壳展示产品结构和视觉语言，不加载真实市场数据。</p></div>
+        <div class="demo-shell"><div id="dashboard"></div><div id="workbench"></div></div>
       </div></section>
 
       <section id="ai-advisor">
@@ -186,14 +208,97 @@
       COPY.en.navigationLabel = "Primary navigation";
       COPY["zh-CN"].localeSwitcherLabel = "语言选择";
       COPY.en.localeSwitcherLabel = "Language selection";
-      const DEMO_FIXTURES = Object.freeze({ market: "Market Alpha", isFictional: true });
-      const state = { locale: "zh-CN", marketId: DEMO_FIXTURES.market, moduleKey: "market-overview", reportId: "market-entry-brief" };
+      Object.assign(COPY["zh-CN"], {
+        regionFilter: "地区", industryFilter: "行业", technologyFilter: "技术", coverageFilter: "覆盖等级", allFilters: "全部", resetFilters: "重置筛选", noMatches: "没有匹配市场", noMatchesHint: "调整筛选条件，查看其他虚构市场。", dashboardTitle: "虚构市场仪表盘", workbenchTitle: "市场决策工作台", metricsTitle: "关键指标", opportunityTitle: "机会摘要", riskTitle: "风险摘要", moduleTitle: "十个分析模块", sourceLabel: "虚构来源", updatedLabel: "更新时间", coverageLabel: "覆盖等级", trendTitle: "七期趋势（虚构）", dataBuilding: "数据建设中", dataBuildingExplanation: "该模块的虚构演示数据仍在建设中，暂不提供深度内容。", BASIC: "基础覆盖", STANDARD: "标准覆盖", COMPLETE: "完整覆盖", PARTIAL: "部分覆盖", buildingIcon: "建设中", partialIcon: "部分覆盖", completeIcon: "完整覆盖"
+      });
+      Object.assign(COPY.en, {
+        regionFilter: "Region", industryFilter: "Industry", technologyFilter: "Technology", coverageFilter: "Coverage", allFilters: "All", resetFilters: "Reset filters", noMatches: "No matching markets", noMatchesHint: "Adjust the filters to view other fictional markets.", dashboardTitle: "Fictional market dashboard", workbenchTitle: "Market decision workbench", metricsTitle: "Key metrics", opportunityTitle: "Opportunity summary", riskTitle: "Risk summary", moduleTitle: "Ten analysis modules", sourceLabel: "Fictional source", updatedLabel: "Updated", coverageLabel: "Coverage", trendTitle: "Seven-period trend (fictional)", dataBuilding: "Data Building", dataBuildingExplanation: "This fictional demo module is still being built, so deep content is not available.", BASIC: "Basic", STANDARD: "Standard", COMPLETE: "Complete", PARTIAL: "Partial", buildingIcon: "Building", partialIcon: "Partial", completeIcon: "Complete"
+      });
+
+      const MODULES = Object.freeze([
+        { key: "market-overview", label: { zh: "市场概览", en: "Market overview" } },
+        { key: "policy", label: { zh: "政策", en: "Policy" } },
+        { key: "risk", label: { zh: "风险", en: "Risk" } },
+        { key: "opportunities", label: { zh: "机会", en: "Opportunities" } },
+        { key: "projects", label: { zh: "项目", en: "Projects" } },
+        { key: "partners", label: { zh: "伙伴", en: "Partners" } },
+        { key: "chinese-companies", label: { zh: "中资企业", en: "Chinese companies" } },
+        { key: "entry-strategy", label: { zh: "进入策略", en: "Entry strategy" } },
+        { key: "ai-advisor", label: { zh: "AI 顾问", en: "AI advisor" } },
+        { key: "reports", label: { zh: "报告", en: "Reports" } }
+      ]);
+      const DEMO_META = Object.freeze({
+        regions: [{ id: "north-arc", label: { zh: "北部弧区", en: "North arc" } }, { id: "central-corridor", label: { zh: "中央走廊", en: "Central corridor" } }, { id: "southern-belt", label: { zh: "南部地带", en: "Southern belt" } }],
+        industries: [{ id: "solar", label: { zh: "光伏", en: "Solar" } }, { id: "storage", label: { zh: "储能", en: "Storage" } }, { id: "wind", label: { zh: "风电", en: "Wind" } }],
+        technologies: [{ id: "pv", label: { zh: "光伏组件", en: "PV" } }, { id: "bess", label: { zh: "电池储能", en: "Battery storage" } }, { id: "onshore-wind", label: { zh: "陆上风电", en: "Onshore wind" } }]
+      });
+
+      function makeModules(statuses) {
+        return Object.fromEntries(MODULES.map(({ key, label }) => [key, {
+          status: statuses[key],
+          summary: { zh: `${label.zh}的虚构演示摘要，可供团队讨论。`, en: `A fictional ${label.en.toLowerCase()} demo summary for team discussion.` }
+        }]));
+      }
+      function makeMarket(id, region, industry, technology, coverage, name, summary, opportunities, risks, entry, metrics, trend, statuses, sourceUrl, updatedAt) {
+        return Object.freeze({ id, fictional: true, region, industry, technology, coverage, name, summary, opportunities, risks, entry, metrics, trend, modules: makeModules(statuses), source: { name: `${name.en} Fictional Observatory`, url: sourceUrl }, updatedAt });
+      }
+      const DEMO_FIXTURES = Object.freeze({
+        fictional: true,
+        markets: Object.freeze([
+          makeMarket("aurora", "north-arc", "solar", "pv", "BASIC", { zh: "极光市场", en: "Aurora Market" }, { zh: "高纬度虚构市场，正评估分布式光伏。", en: "A fictional high-latitude market assessing distributed solar." }, { zh: "屋顶光伏试点与本地集成商合作机会。", en: "Rooftop pilot opportunities with local integrators." }, { zh: "冬季施工窗口短，需先验证供应链节奏。", en: "Short winter construction windows require supply-chain validation." }, { zh: "先以技术验证和小规模试点进入。", en: "Enter through technical validation and a small pilot." }, [{ label: { zh: "试点容量", en: "Pilot capacity" }, value: "48", unit: "MW" }, { label: { zh: "合作线索", en: "Partner leads" }, value: "6", unit: "" }, { label: { zh: "评估周期", en: "Review cycle" }, value: "12", unit: "周" }], [18, 22, 28, 31, 35, 39, 44], { "market-overview": "COMPLETE", policy: "PARTIAL", risk: "PARTIAL", opportunities: "COMPLETE", projects: "BUILDING", partners: "PARTIAL", "chinese-companies": "BUILDING", "entry-strategy": "PARTIAL", "ai-advisor": "BUILDING", reports: "BUILDING" }, "https://aurora-observatory.example/brief", "2032-04-18"),
+          makeMarket("meridian", "central-corridor", "storage", "bess", "STANDARD", { zh: "子午线市场", en: "Meridian Market" }, { zh: "中央走廊的虚构储能市场，调峰需求正在上升。", en: "A fictional central-corridor storage market with rising balancing demand." }, { zh: "电网侧储能采购试点正在形成。", en: "Grid-side storage procurement pilots are taking shape." }, { zh: "并网规则仍在模拟调整，需控制合规节奏。", en: "Interconnection rules are still being simulated, requiring a measured compliance pace." }, { zh: "与本地工程伙伴共同提交预资格材料。", en: "Submit prequalification material with a local engineering partner." }, [{ label: { zh: "储能需求", en: "Storage demand" }, value: "1.2", unit: "GWh" }, { label: { zh: "采购窗口", en: "Procurement windows" }, value: "4", unit: "" }, { label: { zh: "目标回报", en: "Target return" }, value: "11", unit: "%" }], [24, 26, 29, 37, 42, 51, 57], { "market-overview": "COMPLETE", policy: "PARTIAL", risk: "COMPLETE", opportunities: "COMPLETE", projects: "PARTIAL", partners: "COMPLETE", "chinese-companies": "PARTIAL", "entry-strategy": "COMPLETE", "ai-advisor": "PARTIAL", reports: "PARTIAL" }, "https://meridian-observatory.example/brief", "2032-05-09"),
+          makeMarket("solstice", "southern-belt", "wind", "onshore-wind", "COMPLETE", { zh: "至点市场", en: "Solstice Market" }, { zh: "南部地带的虚构陆上风电市场，招标路径成熟。", en: "A fictional southern-belt onshore wind market with a mature tender path." }, { zh: "可参与下一轮区域风电组合招标。", en: "Participate in the next regional wind portfolio tender." }, { zh: "土地协调与社区沟通应纳入前期预算。", en: "Land coordination and community engagement should enter the early budget." }, { zh: "以联合体方式进入，并提前布局社区沟通。", en: "Enter through a consortium and prepare community engagement early." }, [{ label: { zh: "招标容量", en: "Tender capacity" }, value: "860", unit: "MW" }, { label: { zh: "候选地块", en: "Candidate sites" }, value: "9", unit: "" }, { label: { zh: "并网准备度", en: "Grid readiness" }, value: "78", unit: "%" }], [31, 36, 39, 45, 53, 62, 70], { "market-overview": "COMPLETE", policy: "COMPLETE", risk: "COMPLETE", opportunities: "COMPLETE", projects: "COMPLETE", partners: "COMPLETE", "chinese-companies": "PARTIAL", "entry-strategy": "COMPLETE", "ai-advisor": "PARTIAL", reports: "COMPLETE" }, "https://solstice-observatory.example/brief", "2032-06-22")
+        ])
+      });
+      const DEFAULT_FILTERS = Object.freeze({ region: "", industry: "", technology: "", coverage: "" });
+      const state = { locale: "zh-CN", marketId: "aurora", moduleKey: "market-overview", filters: { ...DEFAULT_FILTERS }, reportId: "market-entry-brief" };
 
       function readStoredLocale() {
         try { return localStorage.getItem("navigator-demo-locale"); } catch { return null; }
       }
       function persistLocale(locale) {
         try { localStorage.setItem("navigator-demo-locale", locale); } catch { /* Storage is optional for the offline demo. */ }
+      }
+      function readStoredSelection(storageKey, allowed, fallback) {
+        try {
+          const value = localStorage.getItem(storageKey);
+          return allowed.includes(value) ? value : fallback;
+        } catch { return fallback; }
+      }
+      function persistSelection(storageKey, value, allowed) {
+        if (!allowed.includes(value)) return;
+        try { localStorage.setItem(storageKey, value); } catch { /* Storage is optional for the offline demo. */ }
+      }
+      function pickText(text) {
+        const primary = text[state.locale === "zh-CN" ? "zh" : "en"];
+        return primary || text[state.locale === "zh-CN" ? "en" : "zh"] || "";
+      }
+      function escapeHtml(value) {
+        return String(value).replace(/[&<>"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[character]);
+      }
+      function filterMarkets(filters) {
+        return DEMO_FIXTURES.markets.filter((market) => (
+          (!filters.region || market.region === filters.region) &&
+          (!filters.industry || market.industry === filters.industry) &&
+          (!filters.technology || market.technology === filters.technology) &&
+          (!filters.coverage || market.coverage === filters.coverage)
+        ));
+      }
+      function selectMarket(marketId) {
+        if (!DEMO_FIXTURES.markets.some((market) => market.id === marketId)) return;
+        state.marketId = marketId;
+        persistSelection("navigator-demo-market-id", marketId, DEMO_FIXTURES.markets.map((market) => market.id));
+        renderApp();
+      }
+      function selectModule(moduleKey) {
+        if (!MODULES.some((module) => module.key === moduleKey)) return;
+        state.moduleKey = moduleKey;
+        persistSelection("navigator-demo-module-key", moduleKey, MODULES.map((module) => module.key));
+        renderApp();
+      }
+      function resetFilters() {
+        state.filters = { ...DEFAULT_FILTERS };
+        renderApp();
       }
       function setLocale(locale) {
         state.locale = Object.hasOwn(COPY, locale) ? locale : "zh-CN";
@@ -207,10 +312,64 @@
         document.querySelectorAll("[data-i18n-aria]").forEach((node) => { node.setAttribute("aria-label", copy[node.dataset.i18nAria]); });
         document.querySelectorAll('[data-action="set-locale"]').forEach((button) => { button.setAttribute("aria-pressed", String(button.dataset.locale === state.locale)); });
       }
-      function renderApp() { applyCopy(); }
+      function renderOptions(items, filterName) {
+        const selected = state.filters[filterName];
+        return [`<option value="">${escapeHtml(COPY[state.locale].allFilters)}</option>`, ...items.map((item) => `<option value="${item.id}"${item.id === selected ? " selected" : ""}>${escapeHtml(pickText(item.label))}</option>`)].join("");
+      }
+      function renderDashboard() {
+        const copy = COPY[state.locale];
+        const markets = filterMarkets(state.filters);
+        if (!markets.some((market) => market.id === state.marketId)) state.marketId = markets[0]?.id || null;
+        const dashboard = document.querySelector("#dashboard");
+        const controls = [
+          ["region", "regionFilter", DEMO_META.regions], ["industry", "industryFilter", DEMO_META.industries], ["technology", "technologyFilter", DEMO_META.technologies],
+          ["coverage", "coverageFilter", ["BASIC", "STANDARD", "COMPLETE"].map((id) => ({ id, label: { zh: COPY["zh-CN"][id], en: COPY.en[id] } }))]
+        ].map(([filterName, labelKey, items]) => `<label>${escapeHtml(copy[labelKey])}<select id="${filterName}-filter" data-filter="${filterName}">${renderOptions(items, filterName)}</select></label>`).join("");
+        const cards = markets.length ? `<div class="market-grid">${markets.map((market) => `<button class="market-card" type="button" data-market-id="${market.id}" aria-pressed="${market.id === state.marketId}"><strong>${escapeHtml(pickText(market.name))}</strong><span>${escapeHtml(copy[market.coverage])} · ${escapeHtml(pickText(DEMO_META.regions.find((region) => region.id === market.region).label))}</span><span>${escapeHtml(pickText(market.summary))}</span></button>`).join("")}</div>` : `<div class="empty-state"><strong>${escapeHtml(copy.noMatches)}</strong><p>${escapeHtml(copy.noMatchesHint)}</p><button class="button secondary" type="button" data-action="reset-filters">${escapeHtml(copy.resetFilters)}</button></div>`;
+        dashboard.innerHTML = `<section class="demo-panel" aria-label="${escapeHtml(copy.dashboardTitle)}"><h3>${escapeHtml(copy.dashboardTitle)}</h3><div class="filter-grid">${controls}</div><button class="button secondary" type="button" data-action="reset-filters">${escapeHtml(copy.resetFilters)}</button>${cards}</section>`;
+      }
+      function renderTrend(market) {
+        const values = market.trend;
+        const max = Math.max(...values);
+        const min = Math.min(...values);
+        const points = values.map((value, index) => `${10 + index * 30},${72 - ((value - min) / (max - min || 1)) * 56}`).join(" ");
+        return `<svg class="trend-chart" viewBox="0 0 200 82" role="img" aria-label="${escapeHtml(COPY[state.locale].trendTitle)}"><path d="M10 72H190" stroke="#a9bdd4" /><polyline fill="none" points="${points}" stroke="#42b98e" stroke-width="3" /></svg>`;
+      }
+      function renderWorkbench() {
+        const copy = COPY[state.locale];
+        const market = DEMO_FIXTURES.markets.find((item) => item.id === state.marketId);
+        const workbench = document.querySelector("#workbench");
+        if (!market) {
+          workbench.innerHTML = "";
+          return;
+        }
+        const module = market.modules[state.moduleKey] || market.modules["market-overview"];
+        const statusKey = module.status === "BUILDING" ? "dataBuilding" : module.status;
+        const statusIcon = module.status === "BUILDING" ? "buildingIcon" : module.status === "PARTIAL" ? "partialIcon" : "completeIcon";
+        const moduleNav = MODULES.map(({ key, label }) => {
+          const item = market.modules[key];
+          const itemStatus = item.status === "BUILDING" ? copy.dataBuilding : copy[item.status];
+          return `<button class="module-button" type="button" data-module-key="${key}" aria-pressed="${key === state.moduleKey}">${escapeHtml(pickText(label))}<span class="state-badge"><span aria-hidden="true">●</span>${escapeHtml(itemStatus)}</span></button>`;
+        }).join("");
+        const metrics = market.metrics.map((metric) => `<div class="metric"><strong>${escapeHtml(`${metric.value}${metric.unit}`)}</strong><span>${escapeHtml(pickText(metric.label))}</span></div>`).join("");
+        const panelBody = module.status === "BUILDING" ? copy.dataBuildingExplanation : pickText(module.summary);
+        workbench.innerHTML = `<section class="demo-panel"><p class="eyebrow">${escapeHtml(copy.workbenchTitle)}</p><h3>${escapeHtml(pickText(market.name))}</h3><p>${escapeHtml(pickText(market.entry))}</p><div class="workbench-grid"><div><h4>${escapeHtml(copy.metricsTitle)}</h4><div class="metric-grid">${metrics}</div>${renderTrend(market)}<h4>${escapeHtml(copy.opportunityTitle)}</h4><p>${escapeHtml(pickText(market.opportunities))}</p><h4>${escapeHtml(copy.riskTitle)}</h4><p>${escapeHtml(pickText(market.risks))}</p></div><div><h4>${escapeHtml(copy.moduleTitle)}</h4><div class="module-nav">${moduleNav}</div></div></div><article id="module-panel" class="demo-panel"><p class="state-badge"><span aria-hidden="true">●</span>${escapeHtml(copy[statusIcon])}: ${escapeHtml(copy[statusKey])}</p><h4>${escapeHtml(pickText(MODULES.find((item) => item.key === state.moduleKey).label))}</h4><p>${escapeHtml(panelBody)}</p><p class="metadata">${escapeHtml(copy.coverageLabel)}: ${escapeHtml(copy[market.coverage])} · ${escapeHtml(copy.sourceLabel)}: <a href="${escapeHtml(market.source.url)}">${escapeHtml(market.source.name)}</a> · ${escapeHtml(copy.updatedLabel)}: ${escapeHtml(market.updatedAt)}</p></article></section>`;
+      }
+      function bindDemoEvents() {
+        document.querySelectorAll("select[data-filter]").forEach((control) => control.addEventListener("change", () => {
+          state.filters[control.dataset.filter] = control.value;
+          renderApp();
+        }));
+        document.querySelectorAll("[data-market-id]").forEach((button) => button.addEventListener("click", () => selectMarket(button.dataset.marketId)));
+        document.querySelectorAll("[data-module-key]").forEach((button) => button.addEventListener("click", () => selectModule(button.dataset.moduleKey)));
+        document.querySelectorAll('[data-action="reset-filters"]').forEach((button) => button.addEventListener("click", resetFilters));
+      }
+      function renderApp() { applyCopy(); renderDashboard(); renderWorkbench(); bindDemoEvents(); }
 
       const storedLocale = readStoredLocale();
       if (Object.hasOwn(COPY, storedLocale)) state.locale = storedLocale;
+      state.marketId = readStoredSelection("navigator-demo-market-id", DEMO_FIXTURES.markets.map((market) => market.id), state.marketId);
+      state.moduleKey = readStoredSelection("navigator-demo-module-key", MODULES.map((module) => module.key), state.moduleKey);
       document.querySelectorAll('[data-action="set-locale"]').forEach((button) => button.addEventListener("click", () => setLocale(button.dataset.locale)));
       renderApp();
     </script>
