@@ -248,6 +248,28 @@ test("country detail renders ten module skeleton and switches language", async (
     ),
   ).toBeVisible();
   await expect(
+    page.getByRole("heading", { name: "BASIC data profile" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Country basics" }),
+  ).toBeVisible();
+  await expect(page.getByText("285,721,236", { exact: true })).toBeVisible();
+  await expect(page.getByText("5,059.63", { exact: true })).toBeVisible();
+  await expect(page.getByText("99.9", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("link", {
+      name: /Indonesia National Electricity General Plan/,
+    }).first(),
+  ).toHaveAttribute(
+    "href",
+    "https://www.iea.org/policies/30494-national-electricity-general-plan",
+  );
+  const profileGrid = page.locator(".basic-profile-categories");
+  const desktopColumnCount = await profileGrid.evaluate((element) =>
+    getComputedStyle(element).gridTemplateColumns.split(" ").length,
+  );
+  expect(desktopColumnCount).toBe(2);
+  await expect(
     page.getByRole("heading", { exact: true, name: "AI Advisor" }),
   ).toBeVisible();
   await expect(page.getByText("Data Building", { exact: true })).toHaveCount(9);
@@ -269,6 +291,33 @@ test("country detail renders ten module skeleton and switches language", async (
       { exact: true },
     ),
   ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "BASIC 八类数据" }),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "国家基础" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "政策概览" })).toBeVisible();
+  await expect(page.getByText("暂无数据", { exact: true }).first()).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: /印尼国家电力总规划/ }).first(),
+  ).toHaveAttribute(
+    "href",
+    "https://www.iea.org/policies/30494-national-electricity-general-plan",
+  );
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(
+    page.getByRole("heading", { name: "BASIC 八类数据" }),
+  ).toBeVisible();
+  const hasHorizontalOverflow = await page.evaluate(
+    () =>
+      document.documentElement.scrollWidth >
+      document.documentElement.clientWidth,
+  );
+  expect(hasHorizontalOverflow).toBe(false);
+  const mobileColumnCount = await page.locator(".basic-profile-categories")
+    .evaluate((element) =>
+      getComputedStyle(element).gridTemplateColumns.split(" ").length,
+    );
+  expect(mobileColumnCount).toBe(1);
   await expect(page.getByText("数据建设中", { exact: true })).toHaveCount(9);
   const chineseVisibleText = await main.innerText();
   expect(chineseVisibleText).not.toContain("id_pol_001");
