@@ -8,11 +8,15 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from navigator_data_readiness.baseline import sha256_file
 from navigator_data_readiness.d1_sources import (
+    ASSIGNMENT_EVIDENCE_KIND,
     COUNTRY_SOURCE_TARGETS,
     RESEARCH_CATALOG_NAME,
+    SOURCE_EVIDENCE_KINDS,
     USE_BOUNDARIES,
     build_d1_assessment,
+    build_d1_evidence_manifest_template,
     build_domain_source_matrix_template,
     build_source_coverage_gap_report,
     build_source_registry_template,
@@ -24,7 +28,20 @@ from navigator_data_readiness.d1_sources import (
 from navigator_data_readiness.paths import RepositoryPaths, discover_repository
 
 
+def _source_evidence_id(source_id: str, evidence_kind: str) -> str:
+    if evidence_kind == "terms_snapshot":
+        return f"TERMS-{source_id}"
+    if evidence_kind == "license_snapshot":
+        return f"LICENSE-{source_id}"
+    if evidence_kind == "robots_snapshot":
+        return f"ROBOTS-{source_id}"
+    return f"EVD-{evidence_kind.upper().replace('_', '-')}-{source_id}"
+
+
 def _activate_source(item: dict[str, Any], country: str) -> None:
+    evidence_ids = [
+        _source_evidence_id(str(item["source_id"]), kind) for kind in sorted(SOURCE_EVIDENCE_KINDS)
+    ]
     item.update(
         {
             "scope_codes": [country],
@@ -35,9 +52,9 @@ def _activate_source(item: dict[str, Any], country: str) -> None:
             "compliance_reviewer": "合规负责人姓名",
             "reviewed_at": "2026-08-02T09:00:00+08:00",
             "next_review_at": "2027-08-02T09:00:00+08:00",
-            "terms_snapshot_id": f"TERMS-{item['source_id']}",
-            "license_snapshot_id": f"LICENSE-{item['source_id']}",
-            "robots_snapshot_id": f"ROBOTS-{item['source_id']}",
+            "terms_snapshot_id": _source_evidence_id(str(item["source_id"]), "terms_snapshot"),
+            "license_snapshot_id": _source_evidence_id(str(item["source_id"]), "license_snapshot"),
+            "robots_snapshot_id": _source_evidence_id(str(item["source_id"]), "robots_snapshot"),
             "attribution_requirement": "明确标注机构和来源链接",
             "retention_rule": "按许可保留；撤权触发影响评估",
             "usage_boundaries": {
@@ -55,7 +72,7 @@ def _activate_source(item: dict[str, Any], country: str) -> None:
                 "identifiable_user_agent_required": True,
                 "access_control_bypass_prohibited": True,
             },
-            "approval_evidence_ids": [f"EVD-{item['source_id']}"],
+            "approval_evidence_ids": evidence_ids,
             "status": "active",
         }
     )
@@ -109,11 +126,57 @@ def _completed_d1_payloads(paths: RepositoryPaths) -> tuple[dict[str, Any], dict
     return registry, matrix
 
 
+def _completed_evidence_manifest(
+    paths: RepositoryPaths,
+    registry: dict[str, Any],
+    matrix: dict[str, Any],
+) -> dict[str, Any]:
+    manifest = build_d1_evidence_manifest_template(paths)
+    manifest["template_only"] = False
+    evidence_path = paths.d1_evidence_dir / "research_catalog_baseline.json"
+    evidence_hash = sha256_file(evidence_path)
+    entries: list[dict[str, Any]] = []
+    for source in registry["sources"]:
+        source_id = str(source["source_id"])
+        for evidence_kind in sorted(SOURCE_EVIDENCE_KINDS):
+            entries.append(
+                {
+                    "evidence_id": _source_evidence_id(source_id, evidence_kind),
+                    "evidence_kind": evidence_kind,
+                    "path": "data/d1/evidence/research_catalog_baseline.json",
+                    "sha256": evidence_hash,
+                    "reviewer": "实际复核人",
+                    "reviewed_at": "2026-08-02T11:00:00+08:00",
+                    "status": "approved",
+                    "source_ids": [source_id],
+                    "assignment_keys": [],
+                }
+            )
+    for assignment in matrix["assignments"]:
+        assignment_key = f"{assignment['country']}/{assignment['domain_id']}"
+        entries.append(
+            {
+                "evidence_id": str(assignment["evidence_ids"][0]),
+                "evidence_kind": ASSIGNMENT_EVIDENCE_KIND,
+                "path": "data/d1/evidence/research_catalog_baseline.json",
+                "sha256": evidence_hash,
+                "reviewer": "实际复核人",
+                "reviewed_at": "2026-08-02T11:00:00+08:00",
+                "status": "approved",
+                "source_ids": [],
+                "assignment_keys": [assignment_key],
+            }
+        )
+    manifest["evidence"] = entries
+    return manifest
+
+
 def test_d1_templates_expose_frozen_counts_and_country_gaps() -> None:
     paths = discover_repository()
 
     registry = build_source_registry_template(paths)
     matrix = build_domain_source_matrix_template(paths)
+    evidence = build_d1_evidence_manifest_template(paths)
     gap = build_source_coverage_gap_report(paths)
     assessment = build_d1_assessment(paths)
     gaps = {item["country"]: item for item in gap["countries"]}
@@ -122,6 +185,10 @@ def test_d1_templates_expose_frozen_counts_and_country_gaps() -> None:
     assert len(registry["sources"]) == 59
     assert all(item["status"] == "under_review" for item in registry["sources"])
     assert len(matrix["assignments"]) == 40
+    assert evidence["template_only"] is True
+    assert len(evidence["source_checklists"]) == 59
+    assert len(evidence["assignment_checklists"]) == 40
+    assert evidence["evidence"] == []
     assert gap["frozen_seed_source_count"] == 18
     assert gap["researched_candidate_count"] == 41
     assert gaps["IDN"]["frozen_seed_candidates"] == 2
@@ -290,6 +357,39 @@ def test_missing_malformed_overlapping_and_incomplete_research_catalogs_are_reje
         build_source_registry_template(replace(source_paths, d1_research_dir=incomplete_dir))
 
 
+def test_research_catalog_evidence_baseline_must_match_current_catalog(
+    tmp_path: Path,
+) -> None:
+    source_paths = discover_repository()
+    missing_paths = replace(source_paths, d1_evidence_dir=tmp_path / "missing")
+    with pytest.raises(ValueError, match="Cannot read"):
+        build_d1_evidence_manifest_template(missing_paths)
+
+    malformed_dir = tmp_path / "malformed-evidence"
+    malformed_dir.mkdir()
+    (malformed_dir / "research_catalog_baseline.json").write_text(
+        "{",
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="Cannot read"):
+        build_d1_evidence_manifest_template(replace(source_paths, d1_evidence_dir=malformed_dir))
+
+    baseline = json.loads(
+        (source_paths.d1_evidence_dir / "research_catalog_baseline.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    baseline["source_catalog"]["sha256"] = "0" * 64
+    mismatch_dir = tmp_path / "mismatched-evidence"
+    mismatch_dir.mkdir()
+    (mismatch_dir / "research_catalog_baseline.json").write_text(
+        json.dumps(baseline),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="does not match"):
+        build_d1_evidence_manifest_template(replace(source_paths, d1_evidence_dir=mismatch_dir))
+
+
 def test_unfilled_d1_templates_fail_all_hard_categories() -> None:
     paths = discover_repository()
     registry = build_source_registry_template(paths)
@@ -314,6 +414,194 @@ def test_completed_d1_registry_and_matrix_pass_when_d0_is_ready() -> None:
     checks = validate_d1_admission(paths, registry, matrix, d0_ready=True)
 
     assert checks == []
+
+
+def test_completed_d1_registry_matrix_and_hashed_evidence_pass_when_d0_is_ready() -> None:
+    paths = discover_repository()
+    registry, matrix = _completed_d1_payloads(paths)
+    evidence = _completed_evidence_manifest(paths, registry, matrix)
+
+    checks = validate_d1_admission(
+        paths,
+        registry,
+        matrix,
+        evidence,
+        d0_ready=True,
+    )
+
+    assert checks == []
+
+
+def test_d1_evidence_manifest_header_template_baseline_and_list_are_enforced() -> None:
+    paths = discover_repository()
+    registry = build_source_registry_template(paths)
+    matrix = build_domain_source_matrix_template(paths)
+    evidence = build_d1_evidence_manifest_template(paths)
+    evidence["schema_version"] = 2
+    evidence["baseline"] = {}
+    evidence["evidence"] = "invalid"
+
+    codes = {
+        item.code
+        for item in validate_d1_admission(
+            paths,
+            registry,
+            matrix,
+            evidence,
+            d0_ready=True,
+        )
+    }
+
+    assert {
+        "D1_EVIDENCE_HEADER_INVALID",
+        "D1_EVIDENCE_TEMPLATE_UNCOPIED",
+        "D1_EVIDENCE_BASELINE_STALE",
+        "D1_EVIDENCE_LIST_INVALID",
+    } <= codes
+
+
+def _evidence_entry(
+    paths: RepositoryPaths,
+    evidence_id: str,
+    evidence_kind: str,
+) -> dict[str, Any]:
+    return {
+        "evidence_id": evidence_id,
+        "evidence_kind": evidence_kind,
+        "path": "data/d1/evidence/research_catalog_baseline.json",
+        "sha256": sha256_file(paths.d1_evidence_dir / "research_catalog_baseline.json"),
+        "reviewer": "实际复核人",
+        "reviewed_at": "2026-08-02T11:00:00+08:00",
+        "status": "approved",
+        "source_ids": ["SRC-IDN-ESDM"],
+        "assignment_keys": [],
+    }
+
+
+def test_d1_evidence_entries_reject_invalid_metadata_scope_paths_and_hashes() -> None:
+    paths = discover_repository()
+    registry = build_source_registry_template(paths)
+    matrix = build_domain_source_matrix_template(paths)
+    evidence = build_d1_evidence_manifest_template(paths)
+    evidence["template_only"] = False
+    valid = _evidence_entry(paths, "EVD-VALID", "source_identity")
+    duplicate = copy.deepcopy(valid)
+    invalid_kind = _evidence_entry(paths, "EVD-KIND", "invented")
+    pending = _evidence_entry(paths, "EVD-PENDING", "access_review")
+    pending["status"] = "pending"
+    invalid_source_scope = _evidence_entry(paths, "EVD-SCOPE", "access_review")
+    invalid_source_scope["source_ids"] = []
+    invalid_source_scope["assignment_keys"] = ["IDN/DOM-COUNTRY"]
+    unknown_source = _evidence_entry(paths, "EVD-SOURCE", "access_review")
+    unknown_source["source_ids"] = ["SRC-UNKNOWN"]
+    unknown_assignment = _evidence_entry(
+        paths,
+        "EVD-ASSIGNMENT",
+        ASSIGNMENT_EVIDENCE_KIND,
+    )
+    unknown_assignment["source_ids"] = []
+    unknown_assignment["assignment_keys"] = ["IDN/DOM-UNKNOWN"]
+    absolute_path = _evidence_entry(paths, "EVD-ABSOLUTE", "access_review")
+    absolute_path["path"] = str(paths.d1_evidence_dir / "research_catalog_baseline.json")
+    escaped_path = _evidence_entry(paths, "EVD-ESCAPE", "access_review")
+    escaped_path["path"] = "../outside.txt"
+    outside_evidence_dir = _evidence_entry(paths, "EVD-OUTSIDE-DIR", "access_review")
+    outside_evidence_dir["path"] = "README.md"
+    placeholder_file = _evidence_entry(paths, "EVD-PLACEHOLDER", "access_review")
+    placeholder_file["path"] = "data/d1/evidence/README.md"
+    invalid_hash = _evidence_entry(paths, "EVD-HASH", "access_review")
+    invalid_hash["sha256"] = "invalid"
+    missing_file = _evidence_entry(paths, "EVD-MISSING", "access_review")
+    missing_file["path"] = "data/d1/evidence/missing.txt"
+    mismatched_hash = _evidence_entry(paths, "EVD-MISMATCH", "access_review")
+    mismatched_hash["sha256"] = "0" * 64
+    evidence["evidence"] = [
+        None,
+        {"evidence_id": "EVD-INCOMPLETE"},
+        valid,
+        duplicate,
+        invalid_kind,
+        pending,
+        invalid_source_scope,
+        unknown_source,
+        unknown_assignment,
+        absolute_path,
+        escaped_path,
+        outside_evidence_dir,
+        placeholder_file,
+        invalid_hash,
+        missing_file,
+        mismatched_hash,
+    ]
+
+    codes = {
+        item.code
+        for item in validate_d1_admission(
+            paths,
+            registry,
+            matrix,
+            evidence,
+            d0_ready=True,
+        )
+    }
+
+    assert {
+        "D1_EVIDENCE_ENTRY_INVALID",
+        "D1_EVIDENCE_METADATA_INCOMPLETE",
+        "D1_EVIDENCE_ID_DUPLICATE",
+        "D1_EVIDENCE_KIND_INVALID",
+        "D1_EVIDENCE_STATUS_INVALID",
+        "D1_EVIDENCE_SCOPE_INVALID",
+        "D1_EVIDENCE_SOURCE_UNKNOWN",
+        "D1_EVIDENCE_ASSIGNMENT_UNKNOWN",
+        "D1_EVIDENCE_PATH_INVALID",
+        "D1_EVIDENCE_PLACEHOLDER_FILE",
+        "D1_EVIDENCE_HASH_INVALID",
+        "D1_EVIDENCE_FILE_MISSING",
+        "D1_EVIDENCE_HASH_MISMATCH",
+    } <= codes
+
+
+def test_active_sources_and_approved_assignments_require_scoped_evidence() -> None:
+    paths = discover_repository()
+    registry, matrix = _completed_d1_payloads(paths)
+    evidence = _completed_evidence_manifest(paths, registry, matrix)
+    active_sources = [item for item in registry["sources"] if item["status"] == "active"]
+
+    active_sources[0]["approval_evidence_ids"] = "invalid"
+    active_sources[1]["approval_evidence_ids"] = [
+        "EVD-UNKNOWN",
+        active_sources[1]["terms_snapshot_id"],
+    ]
+    active_sources[2]["approval_evidence_ids"][0] = active_sources[1]["approval_evidence_ids"][1]
+    active_sources[3]["terms_snapshot_id"] = active_sources[3]["license_snapshot_id"]
+
+    matrix["assignments"][0]["evidence_ids"] = "invalid"
+    matrix["assignments"][1]["evidence_ids"] = ["EVD-MATRIX-UNKNOWN"]
+    matrix["assignments"][2]["evidence_ids"] = [str(matrix["assignments"][3]["evidence_ids"][0])]
+
+    codes = {
+        item.code
+        for item in validate_d1_admission(
+            paths,
+            registry,
+            matrix,
+            evidence,
+            d0_ready=True,
+        )
+    }
+
+    assert {
+        "D1_ACTIVE_EVIDENCE_REFERENCE_INVALID",
+        "D1_ACTIVE_EVIDENCE_REFERENCE_UNKNOWN",
+        "D1_ACTIVE_EVIDENCE_SCOPE_MISMATCH",
+        "D1_ACTIVE_EVIDENCE_KIND_MISSING",
+        "D1_SNAPSHOT_EVIDENCE_INVALID",
+        "D1_MATRIX_EVIDENCE_REFERENCE_INVALID",
+        "D1_MATRIX_EVIDENCE_REFERENCE_UNKNOWN",
+        "D1_MATRIX_EVIDENCE_SCOPE_MISMATCH",
+        "D1_MATRIX_EVIDENCE_KIND_MISSING",
+    } <= codes
 
 
 def test_active_source_compliance_and_access_conflicts_are_blocked() -> None:
@@ -496,9 +784,15 @@ def test_write_and_load_d1_artifacts(tmp_path: Path) -> None:
     written = write_d1_candidates(paths)
     registry_path = paths.d1_candidates_dir / "source_admission_registry.template.json"
     matrix_path = paths.d1_candidates_dir / "domain_source_matrix.template.json"
-    checks = load_and_validate_d1_admission(paths, registry_path, matrix_path)
+    evidence_path = paths.d1_candidates_dir / "d1_evidence_manifest.template.json"
+    checks = load_and_validate_d1_admission(
+        paths,
+        registry_path,
+        matrix_path,
+        evidence_path,
+    )
 
-    assert len(written) == 4
+    assert len(written) == 5
     assert all(path.is_file() for path in written)
     assert any(item.code == "D1_D0_DEPENDENCY_PENDING" for item in checks)
 
@@ -512,9 +806,14 @@ def test_load_d1_artifacts_handles_missing_invalid_and_non_object_files(tmp_path
     array = tmp_path / "array.json"
     array.write_text("[]", encoding="utf-8")
 
-    missing = load_and_validate_d1_admission(paths, tmp_path / "missing.json", valid)
-    malformed = load_and_validate_d1_admission(paths, invalid, valid)
-    non_object = load_and_validate_d1_admission(paths, array, valid)
+    missing = load_and_validate_d1_admission(
+        paths,
+        tmp_path / "missing.json",
+        valid,
+        valid,
+    )
+    malformed = load_and_validate_d1_admission(paths, invalid, valid, valid)
+    non_object = load_and_validate_d1_admission(paths, array, valid, valid)
 
     assert missing[0].code == "D1_ARTIFACT_INVALID"
     assert malformed[0].code == "D1_ARTIFACT_INVALID"

@@ -17,6 +17,7 @@ class RepositoryPaths:
     d0_research_dir: Path
     d0_review_dir: Path
     d1_candidates_dir: Path
+    d1_evidence_dir: Path
     d1_research_dir: Path
     d2_candidates_dir: Path
     d3_candidates_dir: Path
@@ -41,6 +42,7 @@ def discover_repository(start: Path | None = None) -> RepositoryPaths:
                 d0_research_dir=root / "data" / "d0" / "research",
                 d0_review_dir=root / "data" / "d0" / "review",
                 d1_candidates_dir=root / "data" / "d1" / "candidates",
+                d1_evidence_dir=root / "data" / "d1" / "evidence",
                 d1_research_dir=root / "data" / "d1" / "research",
                 d2_candidates_dir=root / "data" / "d2" / "candidates",
                 d3_candidates_dir=root / "data" / "d3" / "candidates",

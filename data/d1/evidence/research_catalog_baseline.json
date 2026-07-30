@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "stage": "D1",
+  "status": "research_only",
+  "captured_on": "2026-07-31",
+  "evidence_kind": "source_identity_research",
+  "source_catalog": {
+    "path": "data/d1/research/official_source_candidates.json",
+    "sha256": "b1986a7ff2d0abceea0360c84cd3dd3dd9725d257ff0523dedc8721a2aaae34d"
+  },
+  "warning": "本文件只固化官方候选目录的发现基线，不是条款、许可、robots、用途边界、试采或准入批准。"
+}

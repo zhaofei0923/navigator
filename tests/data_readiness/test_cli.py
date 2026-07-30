@@ -159,8 +159,10 @@ def test_validate_d1_command_reports_blockers(
 ) -> None:
     registry = tmp_path / "registry.json"
     matrix = tmp_path / "matrix.json"
+    evidence = tmp_path / "evidence.json"
     registry.write_text("{}", encoding="utf-8")
     matrix.write_text("{}", encoding="utf-8")
+    evidence.write_text("{}", encoding="utf-8")
 
     exit_code = main(
         [
@@ -169,6 +171,8 @@ def test_validate_d1_command_reports_blockers(
             str(registry),
             "--matrix",
             str(matrix),
+            "--evidence",
+            str(evidence),
         ]
     )
 

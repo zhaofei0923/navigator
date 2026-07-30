@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from collections import Counter
 from pathlib import Path
 from typing import Any
@@ -19,6 +20,23 @@ ACCESS_DECISIONS = {"pending", "allowed", "prohibited", "manual_only", "contract
 FINAL_ACCESS_DECISIONS = ACCESS_DECISIONS - {"pending"}
 RESEARCH_CATALOG_NAME = "official_source_candidates.json"
 RESEARCH_STATUS = "official_candidate_identified"
+APPROVED_EVIDENCE_STATES = {"approved"}
+SOURCE_EVIDENCE_KINDS = {
+    "source_identity",
+    "terms_snapshot",
+    "license_snapshot",
+    "robots_snapshot",
+    "access_review",
+    "usage_boundary_approval",
+    "pilot_result",
+    "admission_approval",
+}
+ASSIGNMENT_EVIDENCE_KIND = "domain_source_approval"
+SNAPSHOT_EVIDENCE_FIELDS = {
+    "terms_snapshot_id": "terms_snapshot",
+    "license_snapshot_id": "license_snapshot",
+    "robots_snapshot_id": "robots_snapshot",
+}
 
 USE_BOUNDARIES = (
     "collect_metadata",
@@ -182,6 +200,35 @@ def load_official_source_candidates(paths: RepositoryPaths) -> dict[str, Any]:
         if item.get("status") == "active":
             raise ValueError(f"{source_id} research catalog cannot mark a source active")
     return payload
+
+
+def _research_catalog_evidence_baseline(paths: RepositoryPaths) -> dict[str, str]:
+    evidence_path = paths.d1_evidence_dir / "research_catalog_baseline.json"
+    try:
+        payload = json.loads(evidence_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as error:
+        raise ValueError(f"Cannot read D1 research catalog evidence baseline: {error}") from error
+    expected_catalog_path = (
+        (paths.d1_research_dir / RESEARCH_CATALOG_NAME).relative_to(paths.root).as_posix()
+    )
+    expected_catalog_hash = sha256_file(paths.d1_research_dir / RESEARCH_CATALOG_NAME)
+    source_catalog = payload.get("source_catalog") if isinstance(payload, dict) else None
+    if (
+        not isinstance(payload, dict)
+        or payload.get("schema_version") != 1
+        or payload.get("stage") != "D1"
+        or payload.get("status") != "research_only"
+        or not isinstance(source_catalog, dict)
+        or source_catalog.get("path") != expected_catalog_path
+        or source_catalog.get("sha256") != expected_catalog_hash
+    ):
+        raise ValueError(
+            "D1 research catalog evidence baseline does not match the current research catalog"
+        )
+    return {
+        "path": evidence_path.relative_to(paths.root).as_posix(),
+        "sha256": sha256_file(evidence_path),
+    }
 
 
 def _research_source(item: dict[str, Any]) -> dict[str, Any]:
@@ -349,6 +396,51 @@ def build_domain_source_matrix_template(paths: RepositoryPaths) -> dict[str, Any
     }
 
 
+def build_d1_evidence_manifest_template(paths: RepositoryPaths) -> dict[str, Any]:
+    registry = build_source_registry_template(paths)
+    matrix = build_domain_source_matrix_template(paths)
+    return {
+        "schema_version": 1,
+        "stage": "D1",
+        "template_only": True,
+        "warning": (
+            "证据必须由实际复核人生成并保存；机器不得代签、伪造审批、"
+            "用空文件充当快照或把待审来源改为active"
+        ),
+        "baseline": {
+            "registry_baseline": registry["baseline"],
+            "registry_template_sha256": _payload_sha256(registry),
+            "matrix_template_sha256": _payload_sha256(matrix),
+            "research_catalog_evidence": _research_catalog_evidence_baseline(paths),
+        },
+        "requirements": {
+            "source_evidence_kinds": sorted(SOURCE_EVIDENCE_KINDS),
+            "assignment_evidence_kind": ASSIGNMENT_EVIDENCE_KIND,
+            "evidence_status": sorted(APPROVED_EVIDENCE_STATES),
+            "path_rule": "data/d1/evidence内的仓库相对路径；文件必须非空且SHA-256匹配",
+        },
+        "source_checklists": [
+            {
+                "source_id": item["source_id"],
+                "status": "pending",
+                "required_evidence_kinds": sorted(SOURCE_EVIDENCE_KINDS),
+                "evidence_ids": [],
+            }
+            for item in registry["sources"]
+        ],
+        "assignment_checklists": [
+            {
+                "assignment_key": f"{item['country']}/{item['domain_id']}",
+                "status": "pending",
+                "required_evidence_kind": ASSIGNMENT_EVIDENCE_KIND,
+                "evidence_ids": [],
+            }
+            for item in matrix["assignments"]
+        ],
+        "evidence": [],
+    }
+
+
 def _scope_counts(sources: list[dict[str, Any]], *, active_only: bool) -> Counter[str]:
     counts: Counter[str] = Counter()
     for item in sources:
@@ -442,6 +534,7 @@ def build_d1_assessment(paths: RepositoryPaths) -> dict[str, Any]:
 def d1_candidate_payloads(paths: RepositoryPaths) -> dict[str, dict[str, Any]]:
     return {
         "d1_acceptance_assessment.json": build_d1_assessment(paths),
+        "d1_evidence_manifest.template.json": build_d1_evidence_manifest_template(paths),
         "domain_source_matrix.template.json": build_domain_source_matrix_template(paths),
         "source_admission_registry.template.json": build_source_registry_template(paths),
         "source_coverage_gap_report.json": build_source_coverage_gap_report(paths),
@@ -820,16 +913,373 @@ def _index_assignments(
     return indexed
 
 
+def _string_values(value: Any) -> set[str]:
+    if not isinstance(value, list):
+        return set()
+    return {str(item).strip() for item in value}
+
+
+def _validate_d1_evidence_manifest(
+    paths: RepositoryPaths,
+    evidence_manifest: dict[str, Any],
+    sources: dict[str, dict[str, Any]],
+    assignments: dict[tuple[str, str], dict[str, Any]],
+    current_template: dict[str, Any],
+) -> list[CheckResult]:
+    checks: list[CheckResult] = []
+    if evidence_manifest.get("schema_version") != 1 or evidence_manifest.get("stage") != "D1":
+        checks.append(
+            CheckResult(
+                code="D1_EVIDENCE_HEADER_INVALID",
+                message="Evidence manifest requires schema_version 1 and stage D1",
+                location="evidence",
+            )
+        )
+    if evidence_manifest.get("template_only") is not False:
+        checks.append(
+            CheckResult(
+                code="D1_EVIDENCE_TEMPLATE_UNCOPIED",
+                message="Copy the evidence template and set template_only to false",
+                location="evidence.template_only",
+            )
+        )
+    if evidence_manifest.get("baseline") != current_template["baseline"]:
+        checks.append(
+            CheckResult(
+                code="D1_EVIDENCE_BASELINE_STALE",
+                message="Evidence baseline does not match the current D1 candidate templates",
+                location="evidence.baseline",
+            )
+        )
+
+    entries = evidence_manifest.get("evidence")
+    if not isinstance(entries, list):
+        return [
+            *checks,
+            CheckResult(
+                code="D1_EVIDENCE_LIST_INVALID",
+                message="Evidence manifest field 'evidence' must be a list",
+                location="evidence.evidence",
+            ),
+        ]
+
+    root = paths.root.resolve()
+    evidence_root = paths.d1_evidence_dir.resolve()
+    known_source_ids = set(sources)
+    known_assignment_keys = {f"{country}/{domain}" for country, domain in assignments}
+    indexed: dict[str, dict[str, Any]] = {}
+    for index, item in enumerate(entries):
+        location = f"evidence.evidence[{index}]"
+        if not isinstance(item, dict):
+            checks.append(
+                CheckResult(
+                    code="D1_EVIDENCE_ENTRY_INVALID",
+                    message=f"Evidence entry {index} must be an object",
+                    location=location,
+                )
+            )
+            continue
+        missing = [
+            field
+            for field in (
+                "evidence_id",
+                "evidence_kind",
+                "path",
+                "sha256",
+                "reviewer",
+                "reviewed_at",
+                "status",
+            )
+            if not str(item.get(field) or "").strip()
+        ]
+        if missing:
+            checks.append(
+                CheckResult(
+                    code="D1_EVIDENCE_METADATA_INCOMPLETE",
+                    message=f"Missing required fields: {', '.join(missing)}",
+                    location=location,
+                )
+            )
+            continue
+        evidence_id = str(item["evidence_id"]).strip()
+        if evidence_id in indexed:
+            checks.append(
+                CheckResult(
+                    code="D1_EVIDENCE_ID_DUPLICATE",
+                    message=f"Duplicate evidence_id: {evidence_id}",
+                    location=location,
+                )
+            )
+            continue
+        indexed[evidence_id] = item
+
+        evidence_kind = str(item["evidence_kind"]).strip()
+        allowed_kinds = SOURCE_EVIDENCE_KINDS | {ASSIGNMENT_EVIDENCE_KIND}
+        if evidence_kind not in allowed_kinds:
+            checks.append(
+                CheckResult(
+                    code="D1_EVIDENCE_KIND_INVALID",
+                    message=f"Unsupported evidence kind: {evidence_kind}",
+                    location=location,
+                )
+            )
+        if item.get("status") not in APPROVED_EVIDENCE_STATES:
+            checks.append(
+                CheckResult(
+                    code="D1_EVIDENCE_STATUS_INVALID",
+                    message=f"{evidence_id} is not approved",
+                    location=location,
+                )
+            )
+
+        source_ids = item.get("source_ids", [])
+        assignment_keys = item.get("assignment_keys", [])
+        if evidence_kind in SOURCE_EVIDENCE_KINDS:
+            if (
+                not isinstance(source_ids, list)
+                or not source_ids
+                or assignment_keys not in (None, [])
+            ):
+                checks.append(
+                    CheckResult(
+                        code="D1_EVIDENCE_SCOPE_INVALID",
+                        message=f"{evidence_id} requires source_ids only",
+                        location=location,
+                    )
+                )
+            elif unknown_sources := sorted(_string_values(source_ids) - known_source_ids):
+                checks.append(
+                    CheckResult(
+                        code="D1_EVIDENCE_SOURCE_UNKNOWN",
+                        message=f"Unknown source IDs: {', '.join(unknown_sources)}",
+                        location=location,
+                    )
+                )
+        elif evidence_kind == ASSIGNMENT_EVIDENCE_KIND:
+            if (
+                not isinstance(assignment_keys, list)
+                or not assignment_keys
+                or source_ids not in (None, [])
+            ):
+                checks.append(
+                    CheckResult(
+                        code="D1_EVIDENCE_SCOPE_INVALID",
+                        message=f"{evidence_id} requires assignment_keys only",
+                        location=location,
+                    )
+                )
+            elif unknown_assignments := sorted(
+                _string_values(assignment_keys) - known_assignment_keys
+            ):
+                checks.append(
+                    CheckResult(
+                        code="D1_EVIDENCE_ASSIGNMENT_UNKNOWN",
+                        message=f"Unknown assignment keys: {', '.join(unknown_assignments)}",
+                        location=location,
+                    )
+                )
+
+        relative_path = Path(str(item["path"]))
+        if relative_path.is_absolute():
+            checks.append(
+                CheckResult(
+                    code="D1_EVIDENCE_PATH_INVALID",
+                    message=f"Evidence path must be repository-relative: {relative_path}",
+                    location=location,
+                )
+            )
+            continue
+        evidence_path = (root / relative_path).resolve()
+        try:
+            evidence_path.relative_to(root)
+        except ValueError:
+            checks.append(
+                CheckResult(
+                    code="D1_EVIDENCE_PATH_INVALID",
+                    message=f"Evidence path escapes repository: {relative_path}",
+                    location=location,
+                )
+            )
+            continue
+        try:
+            evidence_path.relative_to(evidence_root)
+        except ValueError:
+            checks.append(
+                CheckResult(
+                    code="D1_EVIDENCE_PATH_INVALID",
+                    message=(f"Evidence path must stay under data/d1/evidence: {relative_path}"),
+                    location=location,
+                )
+            )
+            continue
+        if evidence_path.name.lower() == "readme.md":
+            checks.append(
+                CheckResult(
+                    code="D1_EVIDENCE_PLACEHOLDER_FILE",
+                    message="Evidence directory instructions cannot be used as approval evidence",
+                    location=location,
+                )
+            )
+            continue
+        expected_hash = str(item["sha256"]).strip()
+        if re.fullmatch(r"[0-9a-f]{64}", expected_hash) is None:
+            checks.append(
+                CheckResult(
+                    code="D1_EVIDENCE_HASH_INVALID",
+                    message=f"{evidence_id} requires a lowercase SHA-256",
+                    location=location,
+                )
+            )
+        if not evidence_path.is_file():
+            checks.append(
+                CheckResult(
+                    code="D1_EVIDENCE_FILE_MISSING",
+                    message=f"Evidence file does not exist: {relative_path}",
+                    location=location,
+                )
+            )
+        elif evidence_path.stat().st_size == 0:
+            checks.append(
+                CheckResult(
+                    code="D1_EVIDENCE_FILE_EMPTY",
+                    message=f"Evidence file is empty: {relative_path}",
+                    location=location,
+                )
+            )
+        elif sha256_file(evidence_path) != expected_hash:
+            checks.append(
+                CheckResult(
+                    code="D1_EVIDENCE_HASH_MISMATCH",
+                    message=f"Evidence hash does not match: {relative_path}",
+                    location=location,
+                )
+            )
+
+    for source_id, source in sources.items():
+        if source.get("status") != "active":
+            continue
+        location = f"registry.sources.{source_id}"
+        evidence_ids = source.get("approval_evidence_ids")
+        if not isinstance(evidence_ids, list):
+            checks.append(
+                CheckResult(
+                    code="D1_ACTIVE_EVIDENCE_REFERENCE_INVALID",
+                    message=f"{source_id} approval_evidence_ids must be a list",
+                    location=location,
+                )
+            )
+            continue
+        source_referenced: list[dict[str, Any]] = []
+        for evidence_id in {str(value).strip() for value in evidence_ids}:
+            entry = indexed.get(evidence_id)
+            if entry is None:
+                checks.append(
+                    CheckResult(
+                        code="D1_ACTIVE_EVIDENCE_REFERENCE_UNKNOWN",
+                        message=f"{source_id} references unknown evidence: {evidence_id}",
+                        location=location,
+                    )
+                )
+            elif source_id not in _string_values(entry.get("source_ids")):
+                checks.append(
+                    CheckResult(
+                        code="D1_ACTIVE_EVIDENCE_SCOPE_MISMATCH",
+                        message=f"{evidence_id} is not scoped to {source_id}",
+                        location=location,
+                    )
+                )
+            else:
+                source_referenced.append(entry)
+        referenced_kinds = {str(item.get("evidence_kind") or "") for item in source_referenced}
+        missing_kinds = sorted(SOURCE_EVIDENCE_KINDS - referenced_kinds)
+        if missing_kinds:
+            checks.append(
+                CheckResult(
+                    code="D1_ACTIVE_EVIDENCE_KIND_MISSING",
+                    message=f"{source_id} missing evidence kinds: {', '.join(missing_kinds)}",
+                    location=location,
+                )
+            )
+        for snapshot_field, expected_kind in SNAPSHOT_EVIDENCE_FIELDS.items():
+            evidence_id = str(source.get(snapshot_field) or "").strip()
+            entry = indexed.get(evidence_id)
+            if (
+                entry is None
+                or entry.get("evidence_kind") != expected_kind
+                or source_id not in _string_values(entry.get("source_ids"))
+            ):
+                checks.append(
+                    CheckResult(
+                        code="D1_SNAPSHOT_EVIDENCE_INVALID",
+                        message=(
+                            f"{source_id} {snapshot_field} must reference scoped "
+                            f"{expected_kind} evidence"
+                        ),
+                        location=location,
+                    )
+                )
+
+    for (country, domain), assignment in assignments.items():
+        if assignment.get("status") != "approved":
+            continue
+        assignment_key = f"{country}/{domain}"
+        location = f"matrix.assignments.{assignment_key}"
+        evidence_ids = assignment.get("evidence_ids")
+        if not isinstance(evidence_ids, list):
+            checks.append(
+                CheckResult(
+                    code="D1_MATRIX_EVIDENCE_REFERENCE_INVALID",
+                    message=f"{assignment_key} evidence_ids must be a list",
+                    location=location,
+                )
+            )
+            continue
+        assignment_referenced: list[dict[str, Any]] = []
+        for evidence_id in {str(value).strip() for value in evidence_ids}:
+            entry = indexed.get(evidence_id)
+            if entry is None:
+                checks.append(
+                    CheckResult(
+                        code="D1_MATRIX_EVIDENCE_REFERENCE_UNKNOWN",
+                        message=f"{assignment_key} references unknown evidence: {evidence_id}",
+                        location=location,
+                    )
+                )
+            elif assignment_key not in _string_values(entry.get("assignment_keys")):
+                checks.append(
+                    CheckResult(
+                        code="D1_MATRIX_EVIDENCE_SCOPE_MISMATCH",
+                        message=f"{evidence_id} is not scoped to {assignment_key}",
+                        location=location,
+                    )
+                )
+            else:
+                assignment_referenced.append(entry)
+        if ASSIGNMENT_EVIDENCE_KIND not in {
+            str(item.get("evidence_kind") or "") for item in assignment_referenced
+        }:
+            checks.append(
+                CheckResult(
+                    code="D1_MATRIX_EVIDENCE_KIND_MISSING",
+                    message=f"{assignment_key} requires {ASSIGNMENT_EVIDENCE_KIND} evidence",
+                    location=location,
+                )
+            )
+    return checks
+
+
 def validate_d1_admission(
     paths: RepositoryPaths,
     registry: dict[str, Any],
     matrix: dict[str, Any],
+    evidence_manifest: dict[str, Any] | None = None,
     *,
     d0_ready: bool | None = None,
 ) -> list[CheckResult]:
     checks: list[CheckResult] = []
     current_registry = build_source_registry_template(paths)
     current_matrix = build_domain_source_matrix_template(paths)
+    current_evidence = build_d1_evidence_manifest_template(paths)
 
     if registry.get("schema_version") != 1 or registry.get("stage") != "D1":
         checks.append(
@@ -977,6 +1427,17 @@ def validate_d1_admission(
                     )
                 )
 
+    if evidence_manifest is not None:
+        checks.extend(
+            _validate_d1_evidence_manifest(
+                paths,
+                evidence_manifest,
+                sources,
+                assignments,
+                current_evidence,
+            )
+        )
+
     dependency_ready = build_readiness_report(paths).ready if d0_ready is None else d0_ready
     if not dependency_ready:
         checks.append(
@@ -993,9 +1454,14 @@ def load_and_validate_d1_admission(
     paths: RepositoryPaths,
     registry_path: Path,
     matrix_path: Path,
+    evidence_path: Path,
 ) -> list[CheckResult]:
     payloads: list[dict[str, Any]] = []
-    for label, path in (("registry", registry_path), ("matrix", matrix_path)):
+    for label, path in (
+        ("registry", registry_path),
+        ("matrix", matrix_path),
+        ("evidence", evidence_path),
+    ):
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError) as error:
@@ -1015,4 +1481,4 @@ def load_and_validate_d1_admission(
                 )
             ]
         payloads.append(payload)
-    return validate_d1_admission(paths, payloads[0], payloads[1])
+    return validate_d1_admission(paths, payloads[0], payloads[1], payloads[2])

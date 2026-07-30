@@ -1,0 +1,1179 @@
+{
+  "assignment_checklists": [
+    {
+      "assignment_key": "IDN/DOM-COUNTRY",
+      "evidence_ids": [],
+      "required_evidence_kind": "domain_source_approval",
+      "status": "pending"
+    },
+    {
+      "assignment_key": "IDN/DOM-POLICY",
+      "evidence_ids": [],
+      "required_evidence_kind": "domain_source_approval",
+      "status": "pending"
+    },
+    {
+      "assignment_key": "IDN/DOM-MARKET",
+      "evidence_ids": [],
+      "required_evidence_kind": "domain_source_approval",
+      "status": "pending"
+    },
+    {
+      "assignment_key": "IDN/DOM-RISK",
+      "evidence_ids": [],
+      "required_evidence_kind": "domain_source_approval",
+      "status": "pending"
+    },
+    {
+      "assignment_key": "IDN/DOM-PROJECT",
+      "evidence_ids": [],
+      "required_evidence_kind": "domain_source_approval",
+      "status": "pending"
+    },
+    {
+      "assignment_key": "IDN/DOM-TENDER",
+      "evidence_ids": [],
+      "required_evidence_kind": "domain_source_approval",
+      "status": "pending"
+    },
+    {
+      "assignment_key": "IDN/DOM-PARTNER",
+      "evidence_ids": [],
+      "required_evidence_kind": "domain_source_approval",
+      "status": "pending"
+    },
+    {
+      "assignment_key": "IDN/DOM-RAG",
+      "evidence_ids": [],
+      "required_evidence_kind": "domain_source_approval",
+      "status": "pending"
+    },
+    {
+      "assignment_key": "VNM/DOM-COUNTRY",
+      "evidence_ids": [],
+      "required_evidence_kind": "domain_source_approval",
+      "status": "pending"
+    },
+    {
+      "assignment_key": "VNM/DOM-POLICY",
+      "evidence_ids": [],
+      "required_evidence_kind": "domain_source_approval",
+      "status": "pending"
+    },
+    {
+      "assignment_key": "VNM/DOM-MARKET",
+      "evidence_ids": [],
+      "required_evidence_kind": "domain_source_approval",
+      "status": "pending"
+    },
+    {
+      "assignment_key": "VNM/DOM-RISK",
+      "evidence_ids": [],
+      "required_evidence_kind": "domain_source_approval",
+      "status": "pending"
+    },
+    {
+      "assignment_key": "VNM/DOM-PROJECT",
+      "evidence_ids": [],
+      "required_evidence_kind": "domain_source_approval",
+      "status": "pending"
+    },
+    {
+      "assignment_key": "VNM/DOM-TENDER",
+      "evidence_ids": [],
+      "required_evidence_kind": "domain_source_approval",
+      "status": "pending"
+    },
+    {
+      "assignment_key": "VNM/DOM-PARTNER",
+      "evidence_ids": [],
+      "required_evidence_kind": "domain_source_approval",
+      "status": "pending"
+    },
+    {
+      "assignment_key": "VNM/DOM-RAG",
+      "evidence_ids": [],
+      "required_evidence_kind": "domain_source_approval",
+      "status": "pending"
+    },
+    {
+      "assignment_key": "SAU/DOM-COUNTRY",
+      "evidence_ids": [],
+      "required_evidence_kind": "domain_source_approval",
+      "status": "pending"
+    },
+    {
+      "assignment_key": "SAU/DOM-POLICY",
+      "evidence_ids": [],
+      "required_evidence_kind": "domain_source_approval",
+      "status": "pending"
+    },
+    {
+      "assignment_key": "SAU/DOM-MARKET",
+      "evidence_ids": [],
+      "required_evidence_kind": "domain_source_approval",
+      "status": "pending"
+    },
+    {
+      "assignment_key": "SAU/DOM-RISK",
+      "evidence_ids": [],
+      "required_evidence_kind": "domain_source_approval",
+      "status": "pending"
+    },
+    {
+      "assignment_key": "SAU/DOM-PROJECT",
+      "evidence_ids": [],
+      "required_evidence_kind": "domain_source_approval",
+      "status": "pending"
+    },
+    {
+      "assignment_key": "SAU/DOM-TENDER",
+      "evidence_ids": [],
+      "required_evidence_kind": "domain_source_approval",
+      "status": "pending"
+    },
+    {
+      "assignment_key": "SAU/DOM-PARTNER",
+      "evidence_ids": [],
+      "required_evidence_kind": "domain_source_approval",
+      "status": "pending"
+    },
+    {
+      "assignment_key": "SAU/DOM-RAG",
+      "evidence_ids": [],
+      "required_evidence_kind": "domain_source_approval",
+      "status": "pending"
+    },
+    {
+      "assignment_key": "ZAF/DOM-COUNTRY",
+      "evidence_ids": [],
+      "required_evidence_kind": "domain_source_approval",
+      "status": "pending"
+    },
+    {
+      "assignment_key": "ZAF/DOM-POLICY",
+      "evidence_ids": [],
+      "required_evidence_kind": "domain_source_approval",
+      "status": "pending"
+    },
+    {
+      "assignment_key": "ZAF/DOM-MARKET",
+      "evidence_ids": [],
+      "required_evidence_kind": "domain_source_approval",
+      "status": "pending"
+    },
+    {
+      "assignment_key": "ZAF/DOM-RISK",
+      "evidence_ids": [],
+      "required_evidence_kind": "domain_source_approval",
+      "status": "pending"
+    },
+    {
+      "assignment_key": "ZAF/DOM-PROJECT",
+      "evidence_ids": [],
+      "required_evidence_kind": "domain_source_approval",
+      "status": "pending"
+    },
+    {
+      "assignment_key": "ZAF/DOM-TENDER",
+      "evidence_ids": [],
+      "required_evidence_kind": "domain_source_approval",
+      "status": "pending"
+    },
+    {
+      "assignment_key": "ZAF/DOM-PARTNER",
+      "evidence_ids": [],
+      "required_evidence_kind": "domain_source_approval",
+      "status": "pending"
+    },
+    {
+      "assignment_key": "ZAF/DOM-RAG",
+      "evidence_ids": [],
+      "required_evidence_kind": "domain_source_approval",
+      "status": "pending"
+    },
+    {
+      "assignment_key": "BRA/DOM-COUNTRY",
+      "evidence_ids": [],
+      "required_evidence_kind": "domain_source_approval",
+      "status": "pending"
+    },
+    {
+      "assignment_key": "BRA/DOM-POLICY",
+      "evidence_ids": [],
+      "required_evidence_kind": "domain_source_approval",
+      "status": "pending"
+    },
+    {
+      "assignment_key": "BRA/DOM-MARKET",
+      "evidence_ids": [],
+      "required_evidence_kind": "domain_source_approval",
+      "status": "pending"
+    },
+    {
+      "assignment_key": "BRA/DOM-RISK",
+      "evidence_ids": [],
+      "required_evidence_kind": "domain_source_approval",
+      "status": "pending"
+    },
+    {
+      "assignment_key": "BRA/DOM-PROJECT",
+      "evidence_ids": [],
+      "required_evidence_kind": "domain_source_approval",
+      "status": "pending"
+    },
+    {
+      "assignment_key": "BRA/DOM-TENDER",
+      "evidence_ids": [],
+      "required_evidence_kind": "domain_source_approval",
+      "status": "pending"
+    },
+    {
+      "assignment_key": "BRA/DOM-PARTNER",
+      "evidence_ids": [],
+      "required_evidence_kind": "domain_source_approval",
+      "status": "pending"
+    },
+    {
+      "assignment_key": "BRA/DOM-RAG",
+      "evidence_ids": [],
+      "required_evidence_kind": "domain_source_approval",
+      "status": "pending"
+    }
+  ],
+  "baseline": {
+    "matrix_template_sha256": "5bc37e931e3c47480c78a72652929451ac13ec2e71c79206a17a0334ad02277e",
+    "registry_baseline": {
+      "d1_input_sha256": "2241b398b288a751e05e46a1275dad97a532c3cd6bc3f89143fee1ef5f47c970",
+      "sources": {
+        "d0_workbook": {
+          "path": "doc/doc/新能源企业出海导航仪_D0数据标准冻结执行台账.xlsx",
+          "sha256": "224e9a35bcbb363cf41c007499ba32aa6394cfdbf06331830c02d994e1c7ddff"
+        },
+        "official_source_research_catalog": {
+          "path": "data/d1/research/official_source_candidates.json",
+          "sha256": "b1986a7ff2d0abceea0360c84cd3dd3dd9725d257ff0523dedc8721a2aaae34d"
+        },
+        "technical_workbook": {
+          "path": "doc/doc/新能源企业出海导航仪_V1.0技术附件_BASELINE.xlsx",
+          "sha256": "8b36f7cad337d72713f09c2b36d7eaf6ebe0bc2cd13f2bf0c05c45edbd065fb8"
+        }
+      },
+      "version": "V1.0-BASELINE"
+    },
+    "registry_template_sha256": "7064f0bc7a5b524a32687abdde2360e0da175bdaf4d898f8f2a1d11d5a727047",
+    "research_catalog_evidence": {
+      "path": "data/d1/evidence/research_catalog_baseline.json",
+      "sha256": "de249e1058b39c6b19d405da949d3c7b66f5a6f984566e9bee2b54f4cd3e56d3"
+    }
+  },
+  "evidence": [],
+  "requirements": {
+    "assignment_evidence_kind": "domain_source_approval",
+    "evidence_status": [
+      "approved"
+    ],
+    "path_rule": "data/d1/evidence内的仓库相对路径；文件必须非空且SHA-256匹配",
+    "source_evidence_kinds": [
+      "access_review",
+      "admission_approval",
+      "license_snapshot",
+      "pilot_result",
+      "robots_snapshot",
+      "source_identity",
+      "terms_snapshot",
+      "usage_boundary_approval"
+    ]
+  },
+  "schema_version": 1,
+  "source_checklists": [
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-WB-DATA",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-WB-PROJ",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-IRENA",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-COMTRADE",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-ADB",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-AFDB",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-UNGM",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-IDN-ESDM",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-IDN-PLN",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-VNM-MOIT",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-VNM-EVN",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-SAU-MOE",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-SAU-PB",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-ZAF-DMRE",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-ZAF-IPP",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-BRA-MME",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-BRA-ANEEL",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-BRA-EPE",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-IDN-BPS",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-IDN-BKPM-DATA",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-IDN-OSS",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-IDN-JDIH-ESDM",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-IDN-BPK-REG",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-IDN-DEN",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-IDN-BI",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-IDN-OJK",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-IDN-KEMENKEU",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-IDN-BEACUKAI",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-IDN-KEMENPERIN",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-IDN-KEMENDAG",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-IDN-KEMENLH",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-IDN-LKPP",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-IDN-INAPROC",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-IDN-IDX",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-IDN-GEOSPATIAL",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-IDN-PLN-REPORTS",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-VNM-NSO",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-VNM-FIA",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-VNM-ERAV",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-VNM-VBPL",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-VNM-MUASAMCONG",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-VNM-SBV",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-SAU-GASTAT",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-SAU-MISA",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-SAU-ETIMAD",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-SAU-WERA",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-SAU-ZATCA",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-SAU-SAMA",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-ZAF-STATSSA",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-ZAF-NERSA",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-ZAF-ESKOM",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-ZAF-ETENDERS",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-ZAF-DFFE-EGIS",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-ZAF-CIPC",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-BRA-IBGE",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-BRA-ONS",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-BRA-CCEE",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-BRA-BNDES",
+      "status": "pending"
+    },
+    {
+      "evidence_ids": [],
+      "required_evidence_kinds": [
+        "access_review",
+        "admission_approval",
+        "license_snapshot",
+        "pilot_result",
+        "robots_snapshot",
+        "source_identity",
+        "terms_snapshot",
+        "usage_boundary_approval"
+      ],
+      "source_id": "SRC-BRA-COMPRAS",
+      "status": "pending"
+    }
+  ],
+  "stage": "D1",
+  "template_only": true,
+  "warning": "证据必须由实际复核人生成并保存；机器不得代签、伪造审批、用空文件充当快照或把待审来源改为active"
+}

@@ -57,10 +57,11 @@ def _parser() -> argparse.ArgumentParser:
     )
     d1_validation = commands.add_parser(
         "validate-d1",
-        help="Validate completed D1 source registry and domain-source assignments.",
+        help="Validate completed D1 registry, assignments, and hashed evidence manifest.",
     )
     d1_validation.add_argument("--registry", type=Path, required=True)
     d1_validation.add_argument("--matrix", type=Path, required=True)
+    d1_validation.add_argument("--evidence", type=Path, required=True)
     commands.add_parser(
         "prepare-d2",
         help="Generate D2 collection-job, immutable raw-manifest, and stop-signal templates.",
@@ -157,7 +158,13 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "validate-d1":
         registry_path = args.registry if args.registry.is_absolute() else paths.root / args.registry
         matrix_path = args.matrix if args.matrix.is_absolute() else paths.root / args.matrix
-        checks = load_and_validate_d1_admission(paths, registry_path, matrix_path)
+        evidence_path = args.evidence if args.evidence.is_absolute() else paths.root / args.evidence
+        checks = load_and_validate_d1_admission(
+            paths,
+            registry_path,
+            matrix_path,
+            evidence_path,
+        )
         _print_checks(checks)
         return 1 if checks else 0
 
