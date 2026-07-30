@@ -1,0 +1,56 @@
+{
+  "checks": [
+    {
+      "check_id": "TRIAL-BATCH-COUNTRY",
+      "description": "采集批次国家必须存在于首批国家范围",
+      "failures": [],
+      "status": "pass"
+    },
+    {
+      "check_id": "TRIAL-BATCH-SOURCE",
+      "description": "采集批次来源必须存在于来源起始清单",
+      "failures": [],
+      "status": "pass"
+    },
+    {
+      "check_id": "TRIAL-RAW-REFERENCES",
+      "description": "原始资料示例必须引用已登记国家、来源和批次",
+      "failures": [],
+      "status": "pass"
+    },
+    {
+      "check_id": "TRIAL-MAPPING-TARGET",
+      "description": "字段映射目标必须存在于冻结字段清单",
+      "failures": [
+        {
+          "mapping_id": "MAP-AMOUNT",
+          "target": "tender.budget_original"
+        },
+        {
+          "mapping_id": "MAP-COUNTRY-NAME",
+          "target": "country.name_zh"
+        },
+        {
+          "mapping_id": "MAP-ENTITY",
+          "target": "partner.legal_name"
+        },
+        {
+          "mapping_id": "MAP-ISO3",
+          "target": "country.iso3"
+        },
+        {
+          "mapping_id": "MAP-POLICY-DATE",
+          "target": "policy.published_at"
+        },
+        {
+          "mapping_id": "MAP-PROJECT-CAP",
+          "target": "project.capacity_mw"
+        }
+      ],
+      "status": "fail"
+    }
+  ],
+  "purpose": "D0模板交叉试填；不进入正式库，不代表来源准入或数据发布",
+  "schema_version": 1,
+  "status": "fail"
+}

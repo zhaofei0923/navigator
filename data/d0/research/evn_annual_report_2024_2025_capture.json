@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "record_id": "D0-CAPTURE-VNM-EVN-2024-2025",
+  "raw_id": "RAW-EXAMPLE-002",
+  "source_id": "SRC-VNM-EVN",
+  "country": "VNM",
+  "organization": "Vietnam Electricity",
+  "title": "Annual Report 2024-2025",
+  "publication_page": "https://en.evn.com.vn/en-US/bao-cao-thuong-nien/Annual-Report-60-13",
+  "final_url": "https://en.evn.com.vn/userfile/files/2026/4/AnnualRepot2025_V23-20260408155435105.pdf",
+  "published_at": "2026-01-07",
+  "captured_at": "2026-07-31T00:54:01+08:00",
+  "access_method": "manual_public_download",
+  "language": "en",
+  "mime_type": "application/pdf",
+  "byte_size": 4940283,
+  "sha256": "304153ae8bbf9b980f36ef474d187aef887a506b70c165de5f02f9bdacb00e26",
+  "pdf": {
+    "pages": 19,
+    "encrypted": false,
+    "javascript": false,
+    "version": "1.6",
+    "visual_check": "cover_confirmed"
+  },
+  "license_status": "pending_compliance_review",
+  "license_snapshot_id": null,
+  "citation_requirement": "Information cited from this website must clearly state the source www.evn.com.vn.",
+  "redistribution_allowed": false,
+  "ai_index_allowed": false,
+  "local_file_committed": false,
+  "review_status": "candidate_pending_professional_review",
+  "notes": "Public official download and source attribution requirement verified; no explicit redistribution or AI-indexing permission was identified."
+}

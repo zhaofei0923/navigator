@@ -23,6 +23,8 @@ uv run ruff check .
 uv run mypy
 uv run navigator-data validate
 uv run navigator-data snapshot
+uv run navigator-data prepare-d0
+uv run navigator-data assess-d0
 uv run navigator-data report
 uv run pytest --cov
 ```
@@ -34,6 +36,12 @@ uv run navigator-data gate --stage D0
 ```
 
 在当前台账尚未完成责任签署和验收的情况下，该命令应返回非零状态；这是正确的门禁行为。
+
+`prepare-d0`生成的候选验收包位于
+[`data/d0/candidates`](data/d0/candidates/README.md)。当前模板试填已定位6条未知字段
+目标。印尼 ESDM 与越南 EVN 两份公开原件已完成来源、日期、文件哈希和 PDF
+安全属性核验，但许可快照和专业复核仍待完成；沙特样例尚未绑定具体原件。这些问题
+修复并签署前，工具不会允许D0通过。
 
 完整实施顺序见
 [`docs/development/P0_IMPLEMENTATION_PLAN.md`](docs/development/P0_IMPLEMENTATION_PLAN.md)。

@@ -13,6 +13,8 @@ class RepositoryPaths:
     d0_workbook: Path
     technical_workbook: Path
     contracts_dir: Path
+    d0_candidates_dir: Path
+    d0_research_dir: Path
     evidence_manifest: Path
 
 
@@ -29,6 +31,8 @@ def discover_repository(start: Path | None = None) -> RepositoryPaths:
                 d0_workbook=d0_matches[0],
                 technical_workbook=tech_matches[0],
                 contracts_dir=root / "data" / "contracts" / "current",
+                d0_candidates_dir=root / "data" / "d0" / "candidates",
+                d0_research_dir=root / "data" / "d0" / "research",
                 evidence_manifest=root / "data" / "d0" / "evidence" / "manifest.json",
             )
     raise FileNotFoundError(

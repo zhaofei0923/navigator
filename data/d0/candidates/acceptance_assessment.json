@@ -1,0 +1,149 @@
+{
+  "assessments": [
+    {
+      "acceptance_id": "D0-AC-001",
+      "findings": [],
+      "human_status": "pending",
+      "machine_status": "pass",
+      "summary": "25条核心关系的编号、主子实体、键、权威记录和关键约束机器检查"
+    },
+    {
+      "acceptance_id": "D0-AC-002",
+      "findings": [],
+      "human_status": "pending",
+      "machine_status": "pass",
+      "summary": "92个字段的唯一标识、类型、必填、敏感、来源和更新规则机器检查"
+    },
+    {
+      "acceptance_id": "D0-AC-003",
+      "findings": [],
+      "human_status": "pending",
+      "machine_status": "pass",
+      "summary": "251条枚举的对象内代码唯一性机器检查；迁移语义仍需业务复核"
+    },
+    {
+      "acceptance_id": "D0-AC-004",
+      "findings": [
+        "conventions.json待产品、数据和语言审校批准"
+      ],
+      "human_status": "pending",
+      "machine_status": "candidate_generated",
+      "summary": "已从冻结正文生成单位、货币、时区、精度和多语言候选规则"
+    },
+    {
+      "acceptance_id": "D0-AC-005",
+      "findings": [
+        {
+          "mapping_id": "MAP-AMOUNT",
+          "target": "tender.budget_original"
+        },
+        {
+          "mapping_id": "MAP-COUNTRY-NAME",
+          "target": "country.name_zh"
+        },
+        {
+          "mapping_id": "MAP-ENTITY",
+          "target": "partner.legal_name"
+        },
+        {
+          "mapping_id": "MAP-ISO3",
+          "target": "country.iso3"
+        },
+        {
+          "mapping_id": "MAP-POLICY-DATE",
+          "target": "policy.published_at"
+        },
+        {
+          "mapping_id": "MAP-PROJECT-CAP",
+          "target": "project.capacity_mw"
+        }
+      ],
+      "human_status": "pending",
+      "machine_status": "fail",
+      "summary": "来源、批次、原始资料和字段映射跨模板试填"
+    },
+    {
+      "acceptance_id": "D0-AC-006",
+      "findings": [
+        {
+          "raw_id": "RAW-EXAMPLE-001",
+          "unresolved": [
+            "许可快照",
+            "行类型仍为示例"
+          ]
+        },
+        {
+          "raw_id": "RAW-EXAMPLE-002",
+          "unresolved": [
+            "许可快照",
+            "行类型仍为示例"
+          ]
+        },
+        {
+          "raw_id": "RAW-EXAMPLE-003",
+          "unresolved": [
+            "SHA-256",
+            "发布日期",
+            "采集时间",
+            "许可快照",
+            "行类型仍为示例"
+          ]
+        }
+      ],
+      "human_status": "pending",
+      "machine_status": "incomplete",
+      "summary": "金标准样本仍含占位值；45组/251条术语已进入专业复核队列"
+    },
+    {
+      "acceptance_id": "D0-AC-007",
+      "findings": [
+        "项目批准人",
+        "数据负责人",
+        "产品负责人",
+        "数据质量负责人",
+        "数据工程负责人",
+        "国家研究负责人",
+        "语言审校负责人",
+        "合规负责人",
+        "后端/数据架构负责人"
+      ],
+      "human_status": "pending",
+      "machine_status": "fail",
+      "summary": "实名责任人和替补签署检查"
+    },
+    {
+      "acceptance_id": "D0-AC-008",
+      "findings": [
+        "file_rules.json待数据和合规负责人批准"
+      ],
+      "human_status": "pending",
+      "machine_status": "candidate_generated",
+      "summary": "版本哈希、证据清单和原始文件命名规则候选已生成"
+    },
+    {
+      "acceptance_id": "D0-AC-009",
+      "findings": [
+        "D0-01",
+        "D0-02",
+        "D0-03",
+        "D0-04"
+      ],
+      "human_status": "pending",
+      "machine_status": "fail",
+      "summary": "D0任务和阻塞状态检查"
+    },
+    {
+      "acceptance_id": "D0-AC-010",
+      "findings": [
+        "项目批准人尚未签署D0通过结论"
+      ],
+      "human_status": "pending",
+      "machine_status": "blocked",
+      "summary": "最终D0结论只能由项目批准人签署"
+    }
+  ],
+  "automated_assessment_only": true,
+  "overall_status": "not_ready",
+  "schema_version": 1,
+  "warning": "机器检查不能代替专业复核、责任签署或项目批准"
+}

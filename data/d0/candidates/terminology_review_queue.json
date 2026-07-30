@@ -1,0 +1,1580 @@
+{
+  "group_count": 45,
+  "groups": [
+    {
+      "object_field": "*.freshness_status",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "current",
+          "enum_id": "ENUM-FRESH-001",
+          "zh_name": "当前"
+        },
+        {
+          "code": "due",
+          "enum_id": "ENUM-FRESH-002",
+          "zh_name": "临近复核"
+        },
+        {
+          "code": "overdue",
+          "enum_id": "ENUM-FRESH-003",
+          "zh_name": "逾期未复核"
+        },
+        {
+          "code": "unknown",
+          "enum_id": "ENUM-FRESH-004",
+          "zh_name": "未知"
+        }
+      ]
+    },
+    {
+      "object_field": "*.recommendation_status",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "eligible",
+          "enum_id": "ENUM-RECOMMEND-D4-001",
+          "zh_name": "可推荐"
+        },
+        {
+          "code": "review_required",
+          "enum_id": "ENUM-RECOMMEND-D4-002",
+          "zh_name": "需复核"
+        },
+        {
+          "code": "blocked",
+          "enum_id": "ENUM-RECOMMEND-D4-003",
+          "zh_name": "阻断"
+        },
+        {
+          "code": "insufficient",
+          "enum_id": "ENUM-RECOMMEND-D4-004",
+          "zh_name": "信息不足"
+        }
+      ]
+    },
+    {
+      "object_field": "*.value_status",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "available",
+          "enum_id": "ENUM-VALUE-001",
+          "zh_name": "有值"
+        },
+        {
+          "code": "pending",
+          "enum_id": "ENUM-VALUE-002",
+          "zh_name": "待采集"
+        },
+        {
+          "code": "not_applicable",
+          "enum_id": "ENUM-VALUE-003",
+          "zh_name": "不适用"
+        },
+        {
+          "code": "unverified",
+          "enum_id": "ENUM-VALUE-004",
+          "zh_name": "未核实"
+        },
+        {
+          "code": "not_public",
+          "enum_id": "ENUM-VALUE-005",
+          "zh_name": "暂未公开"
+        }
+      ]
+    },
+    {
+      "object_field": "ai_message.answer_status",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "completed",
+          "enum_id": "ENUM-AI-001",
+          "zh_name": "完整回答"
+        },
+        {
+          "code": "completed_with_warning",
+          "enum_id": "ENUM-AI-002",
+          "zh_name": "带警示完成"
+        },
+        {
+          "code": "need_clarification",
+          "enum_id": "ENUM-AI-003",
+          "zh_name": "需要澄清"
+        },
+        {
+          "code": "insufficient_evidence",
+          "enum_id": "ENUM-AI-004",
+          "zh_name": "证据不足"
+        },
+        {
+          "code": "permission_denied",
+          "enum_id": "ENUM-AI-005",
+          "zh_name": "权限不足"
+        },
+        {
+          "code": "failed",
+          "enum_id": "ENUM-AI-006",
+          "zh_name": "生成失败"
+        }
+      ]
+    },
+    {
+      "object_field": "country.coverage_level",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "Basic",
+          "enum_id": "ENUM-COVERAGE-001",
+          "zh_name": "基础覆盖"
+        },
+        {
+          "code": "Standard",
+          "enum_id": "ENUM-COVERAGE-002",
+          "zh_name": "标准覆盖"
+        },
+        {
+          "code": "Complete",
+          "enum_id": "ENUM-COVERAGE-003",
+          "zh_name": "完整覆盖"
+        }
+      ]
+    },
+    {
+      "object_field": "country.coverage_status",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "covered",
+          "enum_id": "ENUM-COVERAGE-STATUS-001",
+          "zh_name": "已纳入覆盖"
+        },
+        {
+          "code": "not_covered",
+          "enum_id": "ENUM-COVERAGE-STATUS-002",
+          "zh_name": "暂未覆盖"
+        }
+      ]
+    },
+    {
+      "object_field": "country.opportunity_level",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "high",
+          "enum_id": "ENUM-COUNTRY-OPP-001",
+          "zh_name": "高机会"
+        },
+        {
+          "code": "medium",
+          "enum_id": "ENUM-COUNTRY-OPP-002",
+          "zh_name": "中机会"
+        },
+        {
+          "code": "low",
+          "enum_id": "ENUM-COUNTRY-OPP-003",
+          "zh_name": "低机会"
+        },
+        {
+          "code": "pending",
+          "enum_id": "ENUM-COUNTRY-OPP-004",
+          "zh_name": "待评估"
+        }
+      ]
+    },
+    {
+      "object_field": "country.policy_friendliness_level",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "high",
+          "enum_id": "ENUM-POLICY-FRIEND-001",
+          "zh_name": "高友好度"
+        },
+        {
+          "code": "medium",
+          "enum_id": "ENUM-POLICY-FRIEND-002",
+          "zh_name": "中友好度"
+        },
+        {
+          "code": "low",
+          "enum_id": "ENUM-POLICY-FRIEND-003",
+          "zh_name": "低友好度"
+        },
+        {
+          "code": "pending",
+          "enum_id": "ENUM-POLICY-FRIEND-004",
+          "zh_name": "待评估"
+        }
+      ]
+    },
+    {
+      "object_field": "country.risk_assessment_status",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "assessed",
+          "enum_id": "ENUM-COUNTRY-RISK-ASSESS-001",
+          "zh_name": "已评估"
+        },
+        {
+          "code": "unknown",
+          "enum_id": "ENUM-COUNTRY-RISK-ASSESS-002",
+          "zh_name": "未评估"
+        }
+      ]
+    },
+    {
+      "object_field": "country.risk_level",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "low",
+          "enum_id": "ENUM-COUNTRY-RISK-001",
+          "zh_name": "低"
+        },
+        {
+          "code": "medium",
+          "enum_id": "ENUM-COUNTRY-RISK-002",
+          "zh_name": "中"
+        },
+        {
+          "code": "high",
+          "enum_id": "ENUM-COUNTRY-RISK-003",
+          "zh_name": "高"
+        },
+        {
+          "code": "critical",
+          "enum_id": "ENUM-COUNTRY-RISK-004",
+          "zh_name": "极高"
+        }
+      ]
+    },
+    {
+      "object_field": "crm_opportunity.stage",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "discovery",
+          "enum_id": "ENUM-OPP-001",
+          "zh_name": "需求确认"
+        },
+        {
+          "code": "solution",
+          "enum_id": "ENUM-OPP-002",
+          "zh_name": "方案形成"
+        },
+        {
+          "code": "proposal",
+          "enum_id": "ENUM-OPP-003",
+          "zh_name": "方案/报价已提交"
+        },
+        {
+          "code": "negotiation",
+          "enum_id": "ENUM-OPP-004",
+          "zh_name": "商务谈判"
+        },
+        {
+          "code": "on_hold",
+          "enum_id": "ENUM-OPP-005",
+          "zh_name": "暂缓"
+        },
+        {
+          "code": "won",
+          "enum_id": "ENUM-OPP-006",
+          "zh_name": "成功"
+        },
+        {
+          "code": "lost",
+          "enum_id": "ENUM-OPP-007",
+          "zh_name": "失败"
+        },
+        {
+          "code": "cancelled",
+          "enum_id": "ENUM-OPP-008",
+          "zh_name": "取消"
+        }
+      ]
+    },
+    {
+      "object_field": "data_record_version.publication_status",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "draft",
+          "enum_id": "ENUM-PUB-D4-001",
+          "zh_name": "草稿"
+        },
+        {
+          "code": "pending_review",
+          "enum_id": "ENUM-PUB-D4-002",
+          "zh_name": "待审核"
+        },
+        {
+          "code": "need_revision",
+          "enum_id": "ENUM-PUB-D4-003",
+          "zh_name": "退回修改"
+        },
+        {
+          "code": "approved",
+          "enum_id": "ENUM-PUB-D4-004",
+          "zh_name": "已批准待发布"
+        },
+        {
+          "code": "published",
+          "enum_id": "ENUM-PUB-D4-005",
+          "zh_name": "已发布"
+        },
+        {
+          "code": "unpublished",
+          "enum_id": "ENUM-PUB-D4-006",
+          "zh_name": "已下架"
+        },
+        {
+          "code": "archived",
+          "enum_id": "ENUM-PUB-D4-007",
+          "zh_name": "已归档"
+        }
+      ]
+    },
+    {
+      "object_field": "data_record_version.quality_status",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "passed",
+          "enum_id": "ENUM-QUALITY-D4-001",
+          "zh_name": "通过"
+        },
+        {
+          "code": "warning",
+          "enum_id": "ENUM-QUALITY-D4-002",
+          "zh_name": "警示"
+        },
+        {
+          "code": "failed",
+          "enum_id": "ENUM-QUALITY-D4-003",
+          "zh_name": "不通过"
+        },
+        {
+          "code": "conflicted",
+          "enum_id": "ENUM-QUALITY-D4-004",
+          "zh_name": "来源冲突"
+        }
+      ]
+    },
+    {
+      "object_field": "enterprise.verification_status",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "unverified",
+          "enum_id": "ENUM-ENTERPRISE-001",
+          "zh_name": "未认证"
+        },
+        {
+          "code": "pending",
+          "enum_id": "ENUM-ENTERPRISE-002",
+          "zh_name": "待审核"
+        },
+        {
+          "code": "verified",
+          "enum_id": "ENUM-ENTERPRISE-003",
+          "zh_name": "已认证"
+        },
+        {
+          "code": "rejected",
+          "enum_id": "ENUM-ENTERPRISE-004",
+          "zh_name": "已驳回"
+        },
+        {
+          "code": "suspended",
+          "enum_id": "ENUM-ENTERPRISE-005",
+          "zh_name": "已暂停"
+        },
+        {
+          "code": "change_review",
+          "enum_id": "ENUM-ENTERPRISE-006",
+          "zh_name": "关键变更待复核"
+        }
+      ]
+    },
+    {
+      "object_field": "lead.status",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "new",
+          "enum_id": "ENUM-LEAD-001",
+          "zh_name": "新线索"
+        },
+        {
+          "code": "assigned",
+          "enum_id": "ENUM-LEAD-002",
+          "zh_name": "已分配"
+        },
+        {
+          "code": "contacting",
+          "enum_id": "ENUM-LEAD-003",
+          "zh_name": "联系中"
+        },
+        {
+          "code": "qualified",
+          "enum_id": "ENUM-LEAD-004",
+          "zh_name": "已验证"
+        },
+        {
+          "code": "nurturing",
+          "enum_id": "ENUM-LEAD-005",
+          "zh_name": "培育中"
+        },
+        {
+          "code": "converted",
+          "enum_id": "ENUM-LEAD-006",
+          "zh_name": "已转商机"
+        },
+        {
+          "code": "disqualified",
+          "enum_id": "ENUM-LEAD-007",
+          "zh_name": "无效"
+        },
+        {
+          "code": "closed",
+          "enum_id": "ENUM-LEAD-008",
+          "zh_name": "关闭"
+        }
+      ]
+    },
+    {
+      "object_field": "localized_text.translation_status",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "source",
+          "enum_id": "ENUM-TRANS-D4-001",
+          "zh_name": "原文"
+        },
+        {
+          "code": "machine_translated",
+          "enum_id": "ENUM-TRANS-D4-002",
+          "zh_name": "机器翻译"
+        },
+        {
+          "code": "human_reviewed",
+          "enum_id": "ENUM-TRANS-D4-003",
+          "zh_name": "人工校对"
+        },
+        {
+          "code": "stale",
+          "enum_id": "ENUM-TRANS-D4-004",
+          "zh_name": "译文失效"
+        }
+      ]
+    },
+    {
+      "object_field": "membership.status",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "pending_activation",
+          "enum_id": "ENUM-MEMBER-001",
+          "zh_name": "待开通"
+        },
+        {
+          "code": "active",
+          "enum_id": "ENUM-MEMBER-002",
+          "zh_name": "有效"
+        },
+        {
+          "code": "suspended",
+          "enum_id": "ENUM-MEMBER-003",
+          "zh_name": "暂停"
+        },
+        {
+          "code": "expired",
+          "enum_id": "ENUM-MEMBER-004",
+          "zh_name": "到期"
+        },
+        {
+          "code": "cancelled",
+          "enum_id": "ENUM-MEMBER-005",
+          "zh_name": "取消"
+        }
+      ]
+    },
+    {
+      "object_field": "partner.review_status",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "verified",
+          "enum_id": "ENUM-PARTNER-REVIEW-001",
+          "zh_name": "已验证"
+        },
+        {
+          "code": "partly_verified",
+          "enum_id": "ENUM-PARTNER-REVIEW-002",
+          "zh_name": "部分验证"
+        },
+        {
+          "code": "pending",
+          "enum_id": "ENUM-PARTNER-REVIEW-003",
+          "zh_name": "待验证"
+        },
+        {
+          "code": "disputed",
+          "enum_id": "ENUM-PARTNER-REVIEW-004",
+          "zh_name": "争议中"
+        },
+        {
+          "code": "invalid",
+          "enum_id": "ENUM-PARTNER-REVIEW-005",
+          "zh_name": "已失效"
+        }
+      ]
+    },
+    {
+      "object_field": "partner_recommendation.grade",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "R1",
+          "enum_id": "ENUM-PARTNER-GRADE-001",
+          "zh_name": "高度匹配"
+        },
+        {
+          "code": "R2",
+          "enum_id": "ENUM-PARTNER-GRADE-002",
+          "zh_name": "较匹配"
+        },
+        {
+          "code": "R3",
+          "enum_id": "ENUM-PARTNER-GRADE-003",
+          "zh_name": "可评估"
+        },
+        {
+          "code": "R4",
+          "enum_id": "ENUM-PARTNER-GRADE-004",
+          "zh_name": "谨慎"
+        },
+        {
+          "code": "N",
+          "enum_id": "ENUM-PARTNER-GRADE-005",
+          "zh_name": "信息不足"
+        }
+      ]
+    },
+    {
+      "object_field": "policy.content_status",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "draft",
+          "enum_id": "ENUM-POLICY-CONTENT-001",
+          "zh_name": "草稿"
+        },
+        {
+          "code": "pending_review",
+          "enum_id": "ENUM-POLICY-CONTENT-002",
+          "zh_name": "待审核"
+        },
+        {
+          "code": "need_more_info",
+          "enum_id": "ENUM-POLICY-CONTENT-003",
+          "zh_name": "退回补充"
+        },
+        {
+          "code": "approved",
+          "enum_id": "ENUM-POLICY-CONTENT-004",
+          "zh_name": "审核通过"
+        },
+        {
+          "code": "published",
+          "enum_id": "ENUM-POLICY-CONTENT-005",
+          "zh_name": "已发布"
+        },
+        {
+          "code": "disputed",
+          "enum_id": "ENUM-POLICY-CONTENT-006",
+          "zh_name": "争议中"
+        },
+        {
+          "code": "unpublished",
+          "enum_id": "ENUM-POLICY-CONTENT-007",
+          "zh_name": "已下架"
+        },
+        {
+          "code": "archived",
+          "enum_id": "ENUM-POLICY-CONTENT-008",
+          "zh_name": "已归档"
+        }
+      ]
+    },
+    {
+      "object_field": "policy.effective_status",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "draft",
+          "enum_id": "ENUM-POLICY-001",
+          "zh_name": "草案"
+        },
+        {
+          "code": "pending_effective",
+          "enum_id": "ENUM-POLICY-002",
+          "zh_name": "待生效"
+        },
+        {
+          "code": "effective",
+          "enum_id": "ENUM-POLICY-003",
+          "zh_name": "现行有效"
+        },
+        {
+          "code": "partially_effective",
+          "enum_id": "ENUM-POLICY-004",
+          "zh_name": "部分有效"
+        },
+        {
+          "code": "amended",
+          "enum_id": "ENUM-POLICY-005",
+          "zh_name": "已修订"
+        },
+        {
+          "code": "suspended",
+          "enum_id": "ENUM-POLICY-006",
+          "zh_name": "暂停执行"
+        },
+        {
+          "code": "expired",
+          "enum_id": "ENUM-POLICY-007",
+          "zh_name": "已失效"
+        },
+        {
+          "code": "repealed",
+          "enum_id": "ENUM-POLICY-008",
+          "zh_name": "已废止"
+        },
+        {
+          "code": "unknown",
+          "enum_id": "ENUM-POLICY-009",
+          "zh_name": "无法确认"
+        }
+      ]
+    },
+    {
+      "object_field": "project.business_status",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "active",
+          "enum_id": "ENUM-PSTATUS-001",
+          "zh_name": "活跃"
+        },
+        {
+          "code": "on_hold",
+          "enum_id": "ENUM-PSTATUS-002",
+          "zh_name": "暂缓"
+        },
+        {
+          "code": "suspended",
+          "enum_id": "ENUM-PSTATUS-003",
+          "zh_name": "暂停"
+        },
+        {
+          "code": "cancelled",
+          "enum_id": "ENUM-PSTATUS-004",
+          "zh_name": "取消"
+        },
+        {
+          "code": "completed",
+          "enum_id": "ENUM-PSTATUS-005",
+          "zh_name": "完成"
+        },
+        {
+          "code": "stale",
+          "enum_id": "ENUM-PSTATUS-006",
+          "zh_name": "长期无更新"
+        },
+        {
+          "code": "disputed",
+          "enum_id": "ENUM-PSTATUS-007",
+          "zh_name": "争议中"
+        }
+      ]
+    },
+    {
+      "object_field": "project.opportunity_window",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "not_started",
+          "enum_id": "ENUM-PWINDOW-001",
+          "zh_name": "未开始"
+        },
+        {
+          "code": "prepare",
+          "enum_id": "ENUM-PWINDOW-002",
+          "zh_name": "可准备"
+        },
+        {
+          "code": "open",
+          "enum_id": "ENUM-PWINDOW-003",
+          "zh_name": "开放"
+        },
+        {
+          "code": "closing_soon",
+          "enum_id": "ENUM-PWINDOW-004",
+          "zh_name": "即将截止"
+        },
+        {
+          "code": "closed",
+          "enum_id": "ENUM-PWINDOW-005",
+          "zh_name": "已截止"
+        },
+        {
+          "code": "result_pending",
+          "enum_id": "ENUM-PWINDOW-006",
+          "zh_name": "结果待公布"
+        },
+        {
+          "code": "terminated",
+          "enum_id": "ENUM-PWINDOW-007",
+          "zh_name": "已关闭"
+        },
+        {
+          "code": "unknown",
+          "enum_id": "ENUM-PWINDOW-008",
+          "zh_name": "未知"
+        }
+      ]
+    },
+    {
+      "object_field": "project.stage",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "signal",
+          "enum_id": "ENUM-PSTAGE-001",
+          "zh_name": "信号/构想"
+        },
+        {
+          "code": "planning",
+          "enum_id": "ENUM-PSTAGE-002",
+          "zh_name": "规划"
+        },
+        {
+          "code": "feasibility",
+          "enum_id": "ENUM-PSTAGE-003",
+          "zh_name": "预可研/可研"
+        },
+        {
+          "code": "permitting",
+          "enum_id": "ENUM-PSTAGE-004",
+          "zh_name": "审批许可"
+        },
+        {
+          "code": "financing",
+          "enum_id": "ENUM-PSTAGE-005",
+          "zh_name": "融资"
+        },
+        {
+          "code": "procurement",
+          "enum_id": "ENUM-PSTAGE-006",
+          "zh_name": "采购"
+        },
+        {
+          "code": "construction",
+          "enum_id": "ENUM-PSTAGE-007",
+          "zh_name": "建设"
+        },
+        {
+          "code": "commissioning",
+          "enum_id": "ENUM-PSTAGE-008",
+          "zh_name": "试运行"
+        },
+        {
+          "code": "operation",
+          "enum_id": "ENUM-PSTAGE-009",
+          "zh_name": "投运"
+        },
+        {
+          "code": "expansion",
+          "enum_id": "ENUM-PSTAGE-010",
+          "zh_name": "扩建/技改"
+        },
+        {
+          "code": "retired",
+          "enum_id": "ENUM-PSTAGE-011",
+          "zh_name": "退役"
+        },
+        {
+          "code": "unknown",
+          "enum_id": "ENUM-PSTAGE-012",
+          "zh_name": "未知"
+        }
+      ]
+    },
+    {
+      "object_field": "project.verification_status",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "unverified",
+          "enum_id": "ENUM-PROJECT-001",
+          "zh_name": "待核实"
+        },
+        {
+          "code": "partly_verified",
+          "enum_id": "ENUM-PROJECT-002",
+          "zh_name": "部分核实"
+        },
+        {
+          "code": "verified",
+          "enum_id": "ENUM-PROJECT-003",
+          "zh_name": "已核实"
+        },
+        {
+          "code": "disputed",
+          "enum_id": "ENUM-PROJECT-004",
+          "zh_name": "存在争议"
+        }
+      ]
+    },
+    {
+      "object_field": "project_opportunity_assessment.context_type",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "platform_generic",
+          "enum_id": "ENUM-SCORE-CONTEXT-001",
+          "zh_name": "平台通用"
+        },
+        {
+          "code": "enterprise_personal",
+          "enum_id": "ENUM-SCORE-CONTEXT-002",
+          "zh_name": "企业个性化"
+        }
+      ]
+    },
+    {
+      "object_field": "quality_issue.severity",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "P0",
+          "enum_id": "ENUM-DQ-SEV-001",
+          "zh_name": "阻断级"
+        },
+        {
+          "code": "P1",
+          "enum_id": "ENUM-DQ-SEV-002",
+          "zh_name": "严重"
+        },
+        {
+          "code": "P2",
+          "enum_id": "ENUM-DQ-SEV-003",
+          "zh_name": "一般"
+        },
+        {
+          "code": "P3",
+          "enum_id": "ENUM-DQ-SEV-004",
+          "zh_name": "提示"
+        }
+      ]
+    },
+    {
+      "object_field": "quality_issue.status",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "open",
+          "enum_id": "ENUM-DQ-STATUS-001",
+          "zh_name": "开放"
+        },
+        {
+          "code": "assigned",
+          "enum_id": "ENUM-DQ-STATUS-002",
+          "zh_name": "已分配"
+        },
+        {
+          "code": "fixing",
+          "enum_id": "ENUM-DQ-STATUS-003",
+          "zh_name": "修复中"
+        },
+        {
+          "code": "recheck",
+          "enum_id": "ENUM-DQ-STATUS-004",
+          "zh_name": "待复检"
+        },
+        {
+          "code": "resolved",
+          "enum_id": "ENUM-DQ-STATUS-005",
+          "zh_name": "已解决"
+        },
+        {
+          "code": "waived",
+          "enum_id": "ENUM-DQ-STATUS-006",
+          "zh_name": "临时豁免"
+        }
+      ]
+    },
+    {
+      "object_field": "report.business_status",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "draft",
+          "enum_id": "ENUM-REPORT-BIZ-001",
+          "zh_name": "草稿"
+        },
+        {
+          "code": "generating",
+          "enum_id": "ENUM-REPORT-BIZ-002",
+          "zh_name": "生成中"
+        },
+        {
+          "code": "validating",
+          "enum_id": "ENUM-REPORT-BIZ-003",
+          "zh_name": "自动校验中"
+        },
+        {
+          "code": "review_pending",
+          "enum_id": "ENUM-REPORT-BIZ-004",
+          "zh_name": "待人工复核"
+        },
+        {
+          "code": "revision_required",
+          "enum_id": "ENUM-REPORT-BIZ-005",
+          "zh_name": "退回修改"
+        },
+        {
+          "code": "completed",
+          "enum_id": "ENUM-REPORT-BIZ-006",
+          "zh_name": "已完成"
+        },
+        {
+          "code": "published",
+          "enum_id": "ENUM-REPORT-BIZ-007",
+          "zh_name": "已发布"
+        },
+        {
+          "code": "failed",
+          "enum_id": "ENUM-REPORT-BIZ-008",
+          "zh_name": "生成失败"
+        },
+        {
+          "code": "withdrawn",
+          "enum_id": "ENUM-REPORT-BIZ-009",
+          "zh_name": "已撤回"
+        },
+        {
+          "code": "archived",
+          "enum_id": "ENUM-REPORT-BIZ-010",
+          "zh_name": "已归档"
+        }
+      ]
+    },
+    {
+      "object_field": "report_task.status",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "queued",
+          "enum_id": "ENUM-REPORT-001",
+          "zh_name": "排队中"
+        },
+        {
+          "code": "processing",
+          "enum_id": "ENUM-REPORT-002",
+          "zh_name": "生成中"
+        },
+        {
+          "code": "completed",
+          "enum_id": "ENUM-REPORT-003",
+          "zh_name": "已完成"
+        },
+        {
+          "code": "failed",
+          "enum_id": "ENUM-REPORT-004",
+          "zh_name": "失败"
+        },
+        {
+          "code": "cancelled",
+          "enum_id": "ENUM-REPORT-005",
+          "zh_name": "已取消"
+        },
+        {
+          "code": "expired",
+          "enum_id": "ENUM-REPORT-006",
+          "zh_name": "文件已过期"
+        }
+      ]
+    },
+    {
+      "object_field": "review_task.status",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "unassigned",
+          "enum_id": "ENUM-REVIEW-001",
+          "zh_name": "待分配"
+        },
+        {
+          "code": "in_review",
+          "enum_id": "ENUM-REVIEW-002",
+          "zh_name": "审核中"
+        },
+        {
+          "code": "need_more_info",
+          "enum_id": "ENUM-REVIEW-003",
+          "zh_name": "待补充"
+        },
+        {
+          "code": "approved",
+          "enum_id": "ENUM-REVIEW-004",
+          "zh_name": "通过"
+        },
+        {
+          "code": "approved_with_conditions",
+          "enum_id": "ENUM-REVIEW-005",
+          "zh_name": "有条件通过"
+        },
+        {
+          "code": "returned",
+          "enum_id": "ENUM-REVIEW-006",
+          "zh_name": "退回"
+        },
+        {
+          "code": "closed",
+          "enum_id": "ENUM-REVIEW-007",
+          "zh_name": "关闭"
+        }
+      ]
+    },
+    {
+      "object_field": "risk.assessment_status",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "assessed",
+          "enum_id": "ENUM-RISK-ASSESS-001",
+          "zh_name": "已评估"
+        },
+        {
+          "code": "unknown",
+          "enum_id": "ENUM-RISK-ASSESS-002",
+          "zh_name": "未评估"
+        }
+      ]
+    },
+    {
+      "object_field": "risk.risk_level",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "low",
+          "enum_id": "ENUM-RISK-001",
+          "zh_name": "低"
+        },
+        {
+          "code": "medium",
+          "enum_id": "ENUM-RISK-002",
+          "zh_name": "中"
+        },
+        {
+          "code": "high",
+          "enum_id": "ENUM-RISK-003",
+          "zh_name": "高"
+        },
+        {
+          "code": "critical",
+          "enum_id": "ENUM-RISK-004",
+          "zh_name": "极高"
+        }
+      ]
+    },
+    {
+      "object_field": "scoring_model_version.status",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "draft",
+          "enum_id": "ENUM-MODEL-001",
+          "zh_name": "草稿"
+        },
+        {
+          "code": "testing",
+          "enum_id": "ENUM-MODEL-002",
+          "zh_name": "测试中"
+        },
+        {
+          "code": "approved",
+          "enum_id": "ENUM-MODEL-003",
+          "zh_name": "已批准"
+        },
+        {
+          "code": "effective",
+          "enum_id": "ENUM-MODEL-004",
+          "zh_name": "生效"
+        },
+        {
+          "code": "retired",
+          "enum_id": "ENUM-MODEL-005",
+          "zh_name": "退役"
+        },
+        {
+          "code": "rolled_back",
+          "enum_id": "ENUM-MODEL-006",
+          "zh_name": "已回滚"
+        }
+      ]
+    },
+    {
+      "object_field": "scoring_result.grade_code[DATA_TRUST]",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "high",
+          "enum_id": "ENUM-DATA-TRUST-001",
+          "zh_name": "高可信"
+        },
+        {
+          "code": "medium",
+          "enum_id": "ENUM-DATA-TRUST-002",
+          "zh_name": "中可信"
+        },
+        {
+          "code": "low",
+          "enum_id": "ENUM-DATA-TRUST-003",
+          "zh_name": "低可信"
+        },
+        {
+          "code": "pending",
+          "enum_id": "ENUM-DATA-TRUST-004",
+          "zh_name": "证据不足"
+        }
+      ]
+    },
+    {
+      "object_field": "scoring_result.grade_code[PROJECT_OPPORTUNITY_*]",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "A",
+          "enum_id": "ENUM-PROJECT-GRADE-001",
+          "zh_name": "A优先"
+        },
+        {
+          "code": "B",
+          "enum_id": "ENUM-PROJECT-GRADE-002",
+          "zh_name": "B关注"
+        },
+        {
+          "code": "C",
+          "enum_id": "ENUM-PROJECT-GRADE-003",
+          "zh_name": "C观察"
+        },
+        {
+          "code": "D",
+          "enum_id": "ENUM-PROJECT-GRADE-004",
+          "zh_name": "D谨慎"
+        },
+        {
+          "code": "N",
+          "enum_id": "ENUM-PROJECT-GRADE-005",
+          "zh_name": "N数据不足"
+        }
+      ]
+    },
+    {
+      "object_field": "scoring_result.grade_code[RECOMMEND_PRIORITY]",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "top",
+          "enum_id": "ENUM-PRIORITY-GRADE-001",
+          "zh_name": "优先推进"
+        },
+        {
+          "code": "consider",
+          "enum_id": "ENUM-PRIORITY-GRADE-002",
+          "zh_name": "建议评估"
+        },
+        {
+          "code": "watch",
+          "enum_id": "ENUM-PRIORITY-GRADE-003",
+          "zh_name": "持续观察"
+        },
+        {
+          "code": "caution",
+          "enum_id": "ENUM-PRIORITY-GRADE-004",
+          "zh_name": "谨慎推进"
+        },
+        {
+          "code": "pending",
+          "enum_id": "ENUM-PRIORITY-GRADE-005",
+          "zh_name": "信息不足"
+        }
+      ]
+    },
+    {
+      "object_field": "scoring_result.status",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "calculated",
+          "enum_id": "ENUM-SCORE-RESULT-001",
+          "zh_name": "已计算"
+        },
+        {
+          "code": "review_pending",
+          "enum_id": "ENUM-SCORE-RESULT-002",
+          "zh_name": "待审核"
+        },
+        {
+          "code": "published",
+          "enum_id": "ENUM-SCORE-RESULT-003",
+          "zh_name": "已发布"
+        },
+        {
+          "code": "stale",
+          "enum_id": "ENUM-SCORE-RESULT-004",
+          "zh_name": "已过期"
+        }
+      ]
+    },
+    {
+      "object_field": "service_request.status",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "partner_contacted",
+          "enum_id": "ENUM-PARTNER-REQ-001",
+          "zh_name": "已联系伙伴"
+        },
+        {
+          "code": "partner_accepted",
+          "enum_id": "ENUM-PARTNER-REQ-002",
+          "zh_name": "伙伴接受"
+        },
+        {
+          "code": "partner_declined",
+          "enum_id": "ENUM-PARTNER-REQ-003",
+          "zh_name": "伙伴拒绝"
+        },
+        {
+          "code": "introduced",
+          "enum_id": "ENUM-PARTNER-REQ-004",
+          "zh_name": "已完成引荐"
+        },
+        {
+          "code": "draft",
+          "enum_id": "ENUM-REQUEST-001",
+          "zh_name": "草稿"
+        },
+        {
+          "code": "submitted",
+          "enum_id": "ENUM-REQUEST-002",
+          "zh_name": "已提交"
+        },
+        {
+          "code": "need_more_info",
+          "enum_id": "ENUM-REQUEST-003",
+          "zh_name": "待补充"
+        },
+        {
+          "code": "under_review",
+          "enum_id": "ENUM-REQUEST-004",
+          "zh_name": "审核中"
+        },
+        {
+          "code": "approved",
+          "enum_id": "ENUM-REQUEST-005",
+          "zh_name": "已批准"
+        },
+        {
+          "code": "rejected",
+          "enum_id": "ENUM-REQUEST-006",
+          "zh_name": "已驳回"
+        },
+        {
+          "code": "cancelled",
+          "enum_id": "ENUM-REQUEST-007",
+          "zh_name": "已取消"
+        },
+        {
+          "code": "expired",
+          "enum_id": "ENUM-REQUEST-008",
+          "zh_name": "已到期"
+        }
+      ]
+    },
+    {
+      "object_field": "source_registry.authority_level",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "A",
+          "enum_id": "ENUM-SOURCE-AUTH-001",
+          "zh_name": "官方"
+        },
+        {
+          "code": "B",
+          "enum_id": "ENUM-SOURCE-AUTH-002",
+          "zh_name": "权威"
+        },
+        {
+          "code": "C",
+          "enum_id": "ENUM-SOURCE-AUTH-003",
+          "zh_name": "行业"
+        },
+        {
+          "code": "D",
+          "enum_id": "ENUM-SOURCE-AUTH-004",
+          "zh_name": "线索"
+        }
+      ]
+    },
+    {
+      "object_field": "source_registry.status",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "active",
+          "enum_id": "ENUM-SOURCE-STATUS-001",
+          "zh_name": "正常"
+        },
+        {
+          "code": "degraded",
+          "enum_id": "ENUM-SOURCE-STATUS-002",
+          "zh_name": "降级"
+        },
+        {
+          "code": "blocked",
+          "enum_id": "ENUM-SOURCE-STATUS-003",
+          "zh_name": "阻断"
+        },
+        {
+          "code": "under_review",
+          "enum_id": "ENUM-SOURCE-STATUS-004",
+          "zh_name": "复核中"
+        },
+        {
+          "code": "retired",
+          "enum_id": "ENUM-SOURCE-STATUS-005",
+          "zh_name": "退役"
+        }
+      ]
+    },
+    {
+      "object_field": "tender.official_status",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "pre_notice",
+          "enum_id": "ENUM-TENDER-STATUS-001",
+          "zh_name": "预告"
+        },
+        {
+          "code": "announced",
+          "enum_id": "ENUM-TENDER-STATUS-002",
+          "zh_name": "已公告"
+        },
+        {
+          "code": "open",
+          "enum_id": "ENUM-TENDER-STATUS-003",
+          "zh_name": "报名/投标开放"
+        },
+        {
+          "code": "clarification",
+          "enum_id": "ENUM-TENDER-STATUS-004",
+          "zh_name": "澄清"
+        },
+        {
+          "code": "evaluation",
+          "enum_id": "ENUM-TENDER-STATUS-005",
+          "zh_name": "评审"
+        },
+        {
+          "code": "awarded",
+          "enum_id": "ENUM-TENDER-STATUS-006",
+          "zh_name": "已授标"
+        },
+        {
+          "code": "cancelled",
+          "enum_id": "ENUM-TENDER-STATUS-007",
+          "zh_name": "取消"
+        },
+        {
+          "code": "closed",
+          "enum_id": "ENUM-TENDER-STATUS-008",
+          "zh_name": "已关闭"
+        },
+        {
+          "code": "unknown",
+          "enum_id": "ENUM-TENDER-STATUS-009",
+          "zh_name": "未知"
+        }
+      ]
+    },
+    {
+      "object_field": "tender.opportunity_window",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "not_started",
+          "enum_id": "ENUM-TENDER-WINDOW-001",
+          "zh_name": "未开始"
+        },
+        {
+          "code": "prepare",
+          "enum_id": "ENUM-TENDER-WINDOW-002",
+          "zh_name": "可准备"
+        },
+        {
+          "code": "open",
+          "enum_id": "ENUM-TENDER-WINDOW-003",
+          "zh_name": "开放"
+        },
+        {
+          "code": "closing_soon",
+          "enum_id": "ENUM-TENDER-WINDOW-004",
+          "zh_name": "即将截止"
+        },
+        {
+          "code": "closed",
+          "enum_id": "ENUM-TENDER-WINDOW-005",
+          "zh_name": "已截止"
+        },
+        {
+          "code": "result_pending",
+          "enum_id": "ENUM-TENDER-WINDOW-006",
+          "zh_name": "结果待公布"
+        },
+        {
+          "code": "terminated",
+          "enum_id": "ENUM-TENDER-WINDOW-007",
+          "zh_name": "已关闭"
+        },
+        {
+          "code": "unknown",
+          "enum_id": "ENUM-TENDER-WINDOW-008",
+          "zh_name": "未知"
+        }
+      ]
+    },
+    {
+      "object_field": "ui.async_state",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "idle",
+          "enum_id": "ENUM-UI-001",
+          "zh_name": "待触发"
+        },
+        {
+          "code": "loading",
+          "enum_id": "ENUM-UI-002",
+          "zh_name": "加载中"
+        },
+        {
+          "code": "success",
+          "enum_id": "ENUM-UI-003",
+          "zh_name": "加载成功"
+        },
+        {
+          "code": "empty",
+          "enum_id": "ENUM-UI-004",
+          "zh_name": "无结果"
+        },
+        {
+          "code": "partial",
+          "enum_id": "ENUM-UI-005",
+          "zh_name": "部分成功"
+        },
+        {
+          "code": "error",
+          "enum_id": "ENUM-UI-006",
+          "zh_name": "加载失败"
+        }
+      ]
+    },
+    {
+      "object_field": "ui.form_state",
+      "reviewer": null,
+      "status": "pending_professional_review",
+      "terms": [
+        {
+          "code": "editing",
+          "enum_id": "ENUM-FORM-001",
+          "zh_name": "编辑中"
+        },
+        {
+          "code": "submitting",
+          "enum_id": "ENUM-FORM-002",
+          "zh_name": "提交中"
+        },
+        {
+          "code": "succeeded",
+          "enum_id": "ENUM-FORM-003",
+          "zh_name": "提交成功"
+        },
+        {
+          "code": "failed",
+          "enum_id": "ENUM-FORM-004",
+          "zh_name": "提交失败"
+        }
+      ]
+    }
+  ],
+  "purpose": "D0术语复核队列；稳定代码不翻译，中文名称和跨语种译法需专业复核",
+  "schema_version": 1,
+  "source_contract": "data/contracts/current/enums.json",
+  "status": "pending_professional_review",
+  "term_count": 251
+}

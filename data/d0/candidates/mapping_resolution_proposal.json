@@ -1,0 +1,55 @@
+{
+  "proposals": [
+    {
+      "confidence": "high",
+      "current_target": "country.iso3",
+      "mapping_id": "MAP-ISO3",
+      "proposed_action": "replace_target",
+      "proposed_target": "country.iso_code",
+      "reason": "DATA-COUNTRY-001已冻结为country.iso_code，正文示例也使用该字段"
+    },
+    {
+      "confidence": "not_assessed",
+      "current_target": "country.name_zh",
+      "mapping_id": "MAP-COUNTRY-NAME",
+      "proposed_action": "domain_decision",
+      "proposed_target": null,
+      "reason": "正文采用国家本地化名称实体，冻结字段清单没有country.name_zh"
+    },
+    {
+      "confidence": "not_assessed",
+      "current_target": "policy.published_at",
+      "mapping_id": "MAP-POLICY-DATE",
+      "proposed_action": "add_or_model_field",
+      "proposed_target": null,
+      "reason": "published_at与已冻结effective_date语义不同，禁止直接互换"
+    },
+    {
+      "confidence": "not_assessed",
+      "current_target": "project.capacity_mw",
+      "mapping_id": "MAP-PROJECT-CAP",
+      "proposed_action": "add_or_model_field",
+      "proposed_target": null,
+      "reason": "需同时定义原值、原单位、标准值、标准单位和精度"
+    },
+    {
+      "confidence": "not_assessed",
+      "current_target": "tender.budget_original",
+      "mapping_id": "MAP-AMOUNT",
+      "proposed_action": "add_or_model_field",
+      "proposed_target": null,
+      "reason": "需同时定义原币、原值、换算值、汇率来源和基准日"
+    },
+    {
+      "confidence": "not_assessed",
+      "current_target": "partner.legal_name",
+      "mapping_id": "MAP-ENTITY",
+      "proposed_action": "domain_decision",
+      "proposed_target": null,
+      "reason": "需先明确伙伴展示实体与法律主体主数据边界"
+    }
+  ],
+  "schema_version": 1,
+  "status": "decision_required",
+  "warning": "候选处理不得直接改写冻结附件；每项需数据负责人批准并同步版本记录"
+}

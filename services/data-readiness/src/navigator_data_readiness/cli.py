@@ -7,6 +7,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from .baseline import write_snapshot
+from .d0_candidates import candidate_payloads, write_candidates
 from .models import CheckResult
 from .paths import discover_repository
 from .readiness import build_readiness_report, render_markdown
@@ -27,6 +28,15 @@ def _parser() -> argparse.ArgumentParser:
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("validate", help="Validate baseline sheets, identifiers, and dependencies.")
     commands.add_parser("snapshot", help="Write a versioned JSON contract snapshot.")
+    commands.add_parser(
+        "prepare-d0",
+        help="Generate D0 candidate conventions, template-trial, terminology, and gap reports.",
+    )
+    assessment = commands.add_parser(
+        "assess-d0",
+        help="Print the machine-verifiable D0 acceptance assessment.",
+    )
+    assessment.add_argument("--format", choices=("json",), default="json")
 
     report = commands.add_parser("report", help="Render the current D0 readiness report.")
     report.add_argument("--format", choices=("markdown", "json"), default="markdown")
@@ -60,6 +70,17 @@ def main(argv: list[str] | None = None) -> int:
         written = write_snapshot(paths)
         for path in written:
             print(path.relative_to(paths.root).as_posix())
+        return 0
+
+    if args.command == "prepare-d0":
+        written = write_candidates(paths)
+        for path in written:
+            print(path.relative_to(paths.root).as_posix())
+        return 0
+
+    if args.command == "assess-d0":
+        assessment = candidate_payloads(paths)["acceptance_assessment.json"]
+        print(json.dumps(assessment, ensure_ascii=False, indent=2))
         return 0
 
     report = build_readiness_report(paths)

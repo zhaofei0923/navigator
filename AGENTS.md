@@ -19,7 +19,9 @@
 
 - Target Python 3.13 for D0-D4 tooling.
 - Treat the source workbooks as read-only. Generated contracts belong in
-  `data/contracts/current`.
+  `data/contracts/current`; machine-generated D0 candidates belong in `data/d0/candidates`.
+- Candidate reports and machine checks never authorize changing workbook task, acceptance, or
+  signature states. Only actual named reviewers may do that.
 - Any new behavior must include tests and update the implementation plan or operating
   documentation when its contract changes.
 - Run `uv run ruff format --check .`, `uv run ruff check .`, `uv run mypy`,

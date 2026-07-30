@@ -1,0 +1,71 @@
+{
+  "approval": {
+    "approved_at": null,
+    "data_owner": null,
+    "language_reviewer": null,
+    "product_owner": null
+  },
+  "purpose": "D0-02单位、货币、时区、精度与多语言规则候选",
+  "rules": {
+    "currency": {
+      "constraint": "不同年度金额不得直接比较；名义价格与实际价格分开",
+      "normalized": [
+        "换算值",
+        "汇率来源",
+        "汇率类型",
+        "基准日"
+      ],
+      "preserve": [
+        "原币种ISO代码",
+        "原值"
+      ],
+      "source": "03-页面交互与设计规范.md:774,1075,1239; 04-数据体系与数据采集.md:1077"
+    },
+    "language": {
+      "constraint": "正式输出保留原文定位；机器翻译不得称为官方文本",
+      "encoding": "UTF-8",
+      "principles": [
+        "稳定代码不翻译",
+        "原文不覆盖",
+        "译文有状态",
+        "缺失有回退"
+      ],
+      "source": "04-数据体系与数据采集.md:238-255,1051-1064",
+      "translation_status": [
+        "source",
+        "machine_translated",
+        "human_reviewed",
+        "stale"
+      ]
+    },
+    "precision": {
+      "constraint": "保留来源精度和换算规则，不得自动裁剪异常值",
+      "source": "04-数据体系与数据采集.md:255,294,996,1076",
+      "storage": "精确数值类型；格式化字符串不得作为计算依据"
+    },
+    "time": {
+      "display": "按用户区域与业务时区显示，禁止浏览器时区静默改变业务含义",
+      "preserve": [
+        "来源当地时间",
+        "IANA时区",
+        "来源日期",
+        "统计期"
+      ],
+      "source": "04-数据体系与数据采集.md:255,340,1042,1074",
+      "storage": "UTC语义的timestamptz"
+    },
+    "unit": {
+      "constraint": "MW与MWh、AC与DC、额定与可用值不得混用",
+      "normalized": "使用批准的统一基础单位和单位代码",
+      "preserve": [
+        "原值",
+        "原单位",
+        "换算系数",
+        "原始精度"
+      ],
+      "source": "09-首批数据采集实施方案.md:118-119; 04-数据体系与数据采集.md:1076"
+    }
+  },
+  "schema_version": 1,
+  "status": "candidate_pending_approval"
+}

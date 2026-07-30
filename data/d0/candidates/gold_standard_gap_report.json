@@ -1,0 +1,47 @@
+{
+  "candidates": [
+    {
+      "capture_record": "D0-CAPTURE-IDN-HEESI-2024",
+      "country": "IDN",
+      "raw_id": "RAW-EXAMPLE-001",
+      "source_id": "SRC-IDN-ESDM",
+      "status": "candidate_incomplete",
+      "unresolved": [
+        "许可快照",
+        "行类型仍为示例"
+      ],
+      "verified_capture": true
+    },
+    {
+      "capture_record": "D0-CAPTURE-VNM-EVN-2024-2025",
+      "country": "VNM",
+      "raw_id": "RAW-EXAMPLE-002",
+      "source_id": "SRC-VNM-EVN",
+      "status": "candidate_incomplete",
+      "unresolved": [
+        "许可快照",
+        "行类型仍为示例"
+      ],
+      "verified_capture": true
+    },
+    {
+      "capture_record": null,
+      "country": "SAU",
+      "raw_id": "RAW-EXAMPLE-003",
+      "source_id": "SRC-SAU-PB",
+      "status": "candidate_incomplete",
+      "unresolved": [
+        "SHA-256",
+        "发布日期",
+        "采集时间",
+        "许可快照",
+        "行类型仍为示例"
+      ],
+      "verified_capture": false
+    }
+  ],
+  "purpose": "D0金标准样本缺口清单；禁止把示例行当作已复核事实",
+  "required_professional_review": true,
+  "schema_version": 1,
+  "status": "incomplete"
+}

@@ -1,0 +1,36 @@
+{
+  "approval": {
+    "approved_at": null,
+    "compliance_owner": null,
+    "data_owner": null
+  },
+  "directories": [
+    "data/l0_raw/{country}/{source_code}/{yyyy}/{mm}/{run_id}/",
+    "data/l1_parsed/{entity}/{batch_id}/",
+    "data/l2_standardized/{entity}/{batch_id}/",
+    "data/l3_published/{release_id}/",
+    "data/manifests/",
+    "data/quality_reports/"
+  ],
+  "raw_filename": "{country}_{source_code}_{document_type}_{published_date}_{source_id}_{content_hash8}.{ext}",
+  "required_manifest_fields": [
+    "original_url",
+    "final_url",
+    "organization",
+    "title",
+    "published_at",
+    "captured_at",
+    "access_method",
+    "language",
+    "mime_type",
+    "byte_size",
+    "sha256",
+    "run_id",
+    "license_snapshot_id",
+    "parse_status",
+    "retention_until"
+  ],
+  "schema_version": 1,
+  "source": "09-首批数据采集实施方案.md:164-184",
+  "status": "candidate_pending_approval"
+}

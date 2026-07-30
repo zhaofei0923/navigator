@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "record_id": "D0-CAPTURE-IDN-HEESI-2024",
+  "raw_id": "RAW-EXAMPLE-001",
+  "source_id": "SRC-IDN-ESDM",
+  "country": "IDN",
+  "organization": "Ministry of Energy and Mineral Resources, Republic of Indonesia",
+  "title": "Handbook of Energy & Economic Statistics of Indonesia 2024",
+  "publication_page": "https://www.esdm.go.id/en/publication/handbook-of-energy-economic-statistics-of-indonesia-heesi",
+  "final_url": "https://www.esdm.go.id/assets/media/content/content-handbook-of-energy-and-economic-statistics-of-indonesia-2024.pdf",
+  "published_at": "2025-07-11",
+  "captured_at": "2026-07-31T00:50:51+08:00",
+  "access_method": "manual_public_download",
+  "language": "en",
+  "mime_type": "application/pdf",
+  "byte_size": 15477022,
+  "sha256": "fd4ca2f12d6d93296c3c26fab5ba4eeba0532f4dfb5a25d370e6816b6c2fec47",
+  "pdf": {
+    "pages": 152,
+    "encrypted": false,
+    "javascript": false,
+    "version": "1.5",
+    "visual_check": "cover_confirmed"
+  },
+  "license_status": "pending_compliance_review",
+  "license_snapshot_id": null,
+  "redistribution_allowed": false,
+  "ai_index_allowed": false,
+  "local_file_committed": false,
+  "review_status": "candidate_pending_professional_review",
+  "notes": "Public official download verified; publication page did not state a reuse or redistribution license."
+}

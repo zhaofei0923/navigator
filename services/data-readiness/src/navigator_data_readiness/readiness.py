@@ -5,6 +5,11 @@ from datetime import UTC, datetime
 from typing import Any
 
 from .baseline import extract_contracts, sha256_file
+from .d0_candidates import (
+    build_gold_standard_gap_report,
+    build_template_trial,
+    load_research_captures,
+)
 from .models import CheckResult, ReadinessReport, StageSummary
 from .paths import RepositoryPaths
 from .validation import validate_evidence, validate_structure
@@ -77,6 +82,29 @@ def build_readiness_report(paths: RepositoryPaths) -> ReadinessReport:
     }
     evidence_checks = validate_evidence(paths, required_acceptance_ids=acceptance_ids)
     blockers.extend(evidence_checks)
+
+    template_trial = build_template_trial(contracts)
+    for check in template_trial["checks"]:
+        if check["status"] == "fail":
+            blockers.append(
+                CheckResult(
+                    code=f"D0_{check['check_id'].replace('-', '_')}",
+                    message=(
+                        f"{check['description']} failed with {len(check['failures'])} item(s)"
+                    ),
+                    location="D0模板试填",
+                )
+            )
+
+    gold_gap = build_gold_standard_gap_report(contracts, load_research_captures(paths))
+    if gold_gap["status"] != "candidate_ready_for_review":
+        blockers.append(
+            CheckResult(
+                code="D0_GOLD_STANDARD_INCOMPLETE",
+                message="Gold-standard candidates still contain placeholders or example rows",
+                location="原始资料登记模板",
+            )
+        )
 
     roadmap = contracts["d0_d4_roadmap"]
     state_counts = Counter(str(task.get("状态", "")).strip() for task in roadmap)

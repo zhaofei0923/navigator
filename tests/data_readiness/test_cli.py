@@ -74,3 +74,30 @@ def test_validate_command_prints_checks(
     assert exit_code == 1
     captured = capsys.readouterr()
     assert "TEST_ERROR: failed" in captured.err
+
+
+def test_prepare_d0_command_lists_candidates(
+    monkeypatch: MonkeyPatch,
+    capsys: CaptureFixture[str],
+) -> None:
+    paths = discover_repository()
+    candidate = paths.d0_candidates_dir / "candidate.json"
+    monkeypatch.setattr(
+        "navigator_data_readiness.cli.write_candidates",
+        lambda _paths: [candidate],
+    )
+
+    exit_code = main(["prepare-d0"])
+
+    assert exit_code == 0
+    captured = capsys.readouterr()
+    assert "data/d0/candidates/candidate.json" in captured.out
+
+
+def test_assess_d0_command_outputs_machine_boundary(capsys: CaptureFixture[str]) -> None:
+    exit_code = main(["assess-d0", "--format", "json"])
+
+    assert exit_code == 0
+    captured = capsys.readouterr()
+    assert '"automated_assessment_only": true' in captured.out
+    assert '"overall_status": "not_ready"' in captured.out
