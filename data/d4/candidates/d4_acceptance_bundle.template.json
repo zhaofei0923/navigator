@@ -1,0 +1,1091 @@
+{
+  "acceptance": {
+    "committee_approvals": [],
+    "d4_gate_evidence_id": null,
+    "decision": "pending",
+    "reported_total_score": null,
+    "signed_at": null,
+    "tasks": [
+      {
+        "evidence_ids": [],
+        "status": "pending",
+        "task_id": "D4-01"
+      },
+      {
+        "evidence_ids": [],
+        "status": "pending",
+        "task_id": "D4-02"
+      },
+      {
+        "evidence_ids": [],
+        "status": "pending",
+        "task_id": "D4-03"
+      },
+      {
+        "evidence_ids": [],
+        "status": "pending",
+        "task_id": "D4-04"
+      }
+    ]
+  },
+  "append_only": true,
+  "baseline": {
+    "d4_input_sha256": "37b8ec086ed8cddf94df23ed35c937b3401a65be2079754b18b59defde1a3f69",
+    "sources": {
+      "d0_workbook": {
+        "path": "doc/doc/新能源企业出海导航仪_D0数据标准冻结执行台账.xlsx",
+        "sha256": "224e9a35bcbb363cf41c007499ba32aa6394cfdbf06331830c02d994e1c7ddff"
+      },
+      "technical_workbook": {
+        "path": "doc/doc/新能源企业出海导航仪_V1.0技术附件_BASELINE.xlsx",
+        "sha256": "8b36f7cad337d72713f09c2b36d7eaf6ebe0bc2cd13f2bf0c05c45edbd065fb8"
+      }
+    },
+    "version": "V1.0-BASELINE"
+  },
+  "country_coverage": [
+    {
+      "actual_pct": null,
+      "applicable_core_fields": null,
+      "available_valid_fields": null,
+      "country": "IDN",
+      "evidence_ids": [],
+      "minimum_pct": 90.0
+    },
+    {
+      "actual_pct": null,
+      "applicable_core_fields": null,
+      "available_valid_fields": null,
+      "country": "VNM",
+      "evidence_ids": [],
+      "minimum_pct": 70.0
+    },
+    {
+      "actual_pct": null,
+      "applicable_core_fields": null,
+      "available_valid_fields": null,
+      "country": "SAU",
+      "evidence_ids": [],
+      "minimum_pct": 70.0
+    },
+    {
+      "actual_pct": null,
+      "applicable_core_fields": null,
+      "available_valid_fields": null,
+      "country": "ZAF",
+      "evidence_ids": [],
+      "minimum_pct": 70.0
+    },
+    {
+      "actual_pct": null,
+      "applicable_core_fields": null,
+      "available_valid_fields": null,
+      "country": "BRA",
+      "evidence_ids": [],
+      "minimum_pct": 70.0
+    }
+  ],
+  "dependencies": {
+    "d3_gate_evidence_id": null,
+    "d3_gate_status": "pending"
+  },
+  "dimension_scores": [
+    {
+      "calculation_note": null,
+      "dimension_code": "D4-DIM-STANDARD",
+      "evidence_ids": [],
+      "metric_version": null,
+      "name": "标准与模板完整",
+      "reviewed_at": null,
+      "reviewer": null,
+      "score": null,
+      "weight": 10
+    },
+    {
+      "calculation_note": null,
+      "dimension_code": "D4-DIM-SOURCE",
+      "evidence_ids": [],
+      "metric_version": null,
+      "name": "来源准入与合法使用",
+      "reviewed_at": null,
+      "reviewer": null,
+      "score": null,
+      "weight": 15
+    },
+    {
+      "calculation_note": null,
+      "dimension_code": "D4-DIM-COVERAGE",
+      "evidence_ids": [],
+      "metric_version": null,
+      "name": "数据覆盖与完整性",
+      "reviewed_at": null,
+      "reviewer": null,
+      "score": null,
+      "weight": 20
+    },
+    {
+      "calculation_note": null,
+      "dimension_code": "D4-DIM-ACCURACY",
+      "evidence_ids": [],
+      "metric_version": null,
+      "name": "准确性与一致性",
+      "reviewed_at": null,
+      "reviewer": null,
+      "score": null,
+      "weight": 20
+    },
+    {
+      "calculation_note": null,
+      "dimension_code": "D4-DIM-TRACE",
+      "evidence_ids": [],
+      "metric_version": null,
+      "name": "可追溯性",
+      "reviewed_at": null,
+      "reviewer": null,
+      "score": null,
+      "weight": 15
+    },
+    {
+      "calculation_note": null,
+      "dimension_code": "D4-DIM-FRESHNESS",
+      "evidence_ids": [],
+      "metric_version": null,
+      "name": "时效性",
+      "reviewed_at": null,
+      "reviewer": null,
+      "score": null,
+      "weight": 10
+    },
+    {
+      "calculation_note": null,
+      "dimension_code": "D4-DIM-REPLAY",
+      "evidence_ids": [],
+      "metric_version": null,
+      "name": "可重放与可移交",
+      "reviewed_at": null,
+      "reviewer": null,
+      "score": null,
+      "weight": 10
+    }
+  ],
+  "domain_coverage": [
+    {
+      "actual_count": null,
+      "country": "IDN",
+      "coverage_id": "D4-COVERAGE-IDN-ACTIVE_SOURCE",
+      "domain": "ACTIVE_SOURCE",
+      "evidence_ids": [],
+      "minimum_target": 20
+    },
+    {
+      "actual_count": null,
+      "country": "IDN",
+      "coverage_id": "D4-COVERAGE-IDN-POLICY",
+      "domain": "POLICY",
+      "evidence_ids": [],
+      "minimum_target": 30
+    },
+    {
+      "actual_count": null,
+      "country": "IDN",
+      "coverage_id": "D4-COVERAGE-IDN-MARKET_METRIC",
+      "domain": "MARKET_METRIC",
+      "evidence_ids": [],
+      "minimum_target": 25
+    },
+    {
+      "actual_count": null,
+      "country": "IDN",
+      "coverage_id": "D4-COVERAGE-IDN-RISK",
+      "domain": "RISK",
+      "evidence_ids": [],
+      "minimum_target": 20
+    },
+    {
+      "actual_count": null,
+      "country": "IDN",
+      "coverage_id": "D4-COVERAGE-IDN-PROJECT",
+      "domain": "PROJECT",
+      "evidence_ids": [],
+      "minimum_target": 50
+    },
+    {
+      "actual_count": null,
+      "country": "IDN",
+      "coverage_id": "D4-COVERAGE-IDN-TENDER",
+      "domain": "TENDER",
+      "evidence_ids": [],
+      "minimum_target": 20
+    },
+    {
+      "actual_count": null,
+      "country": "IDN",
+      "coverage_id": "D4-COVERAGE-IDN-PARTNER",
+      "domain": "PARTNER",
+      "evidence_ids": [],
+      "minimum_target": 80
+    },
+    {
+      "actual_count": null,
+      "country": "IDN",
+      "coverage_id": "D4-COVERAGE-IDN-RAG_DOCUMENT",
+      "domain": "RAG_DOCUMENT",
+      "evidence_ids": [],
+      "minimum_target": 60
+    },
+    {
+      "actual_count": null,
+      "country": "VNM",
+      "coverage_id": "D4-COVERAGE-VNM-ACTIVE_SOURCE",
+      "domain": "ACTIVE_SOURCE",
+      "evidence_ids": [],
+      "minimum_target": 8
+    },
+    {
+      "actual_count": null,
+      "country": "VNM",
+      "coverage_id": "D4-COVERAGE-VNM-POLICY",
+      "domain": "POLICY",
+      "evidence_ids": [],
+      "minimum_target": 12
+    },
+    {
+      "actual_count": null,
+      "country": "VNM",
+      "coverage_id": "D4-COVERAGE-VNM-MARKET_METRIC",
+      "domain": "MARKET_METRIC",
+      "evidence_ids": [],
+      "minimum_target": 12
+    },
+    {
+      "actual_count": null,
+      "country": "VNM",
+      "coverage_id": "D4-COVERAGE-VNM-RISK",
+      "domain": "RISK",
+      "evidence_ids": [],
+      "minimum_target": 8
+    },
+    {
+      "actual_count": null,
+      "country": "VNM",
+      "coverage_id": "D4-COVERAGE-VNM-PROJECT",
+      "domain": "PROJECT",
+      "evidence_ids": [],
+      "minimum_target": 20
+    },
+    {
+      "actual_count": null,
+      "country": "VNM",
+      "coverage_id": "D4-COVERAGE-VNM-TENDER",
+      "domain": "TENDER",
+      "evidence_ids": [],
+      "minimum_target": 8
+    },
+    {
+      "actual_count": null,
+      "country": "VNM",
+      "coverage_id": "D4-COVERAGE-VNM-PARTNER",
+      "domain": "PARTNER",
+      "evidence_ids": [],
+      "minimum_target": 30
+    },
+    {
+      "actual_count": null,
+      "country": "VNM",
+      "coverage_id": "D4-COVERAGE-VNM-RAG_DOCUMENT",
+      "domain": "RAG_DOCUMENT",
+      "evidence_ids": [],
+      "minimum_target": 20
+    },
+    {
+      "actual_count": null,
+      "country": "SAU",
+      "coverage_id": "D4-COVERAGE-SAU-ACTIVE_SOURCE",
+      "domain": "ACTIVE_SOURCE",
+      "evidence_ids": [],
+      "minimum_target": 8
+    },
+    {
+      "actual_count": null,
+      "country": "SAU",
+      "coverage_id": "D4-COVERAGE-SAU-POLICY",
+      "domain": "POLICY",
+      "evidence_ids": [],
+      "minimum_target": 12
+    },
+    {
+      "actual_count": null,
+      "country": "SAU",
+      "coverage_id": "D4-COVERAGE-SAU-MARKET_METRIC",
+      "domain": "MARKET_METRIC",
+      "evidence_ids": [],
+      "minimum_target": 12
+    },
+    {
+      "actual_count": null,
+      "country": "SAU",
+      "coverage_id": "D4-COVERAGE-SAU-RISK",
+      "domain": "RISK",
+      "evidence_ids": [],
+      "minimum_target": 8
+    },
+    {
+      "actual_count": null,
+      "country": "SAU",
+      "coverage_id": "D4-COVERAGE-SAU-PROJECT",
+      "domain": "PROJECT",
+      "evidence_ids": [],
+      "minimum_target": 20
+    },
+    {
+      "actual_count": null,
+      "country": "SAU",
+      "coverage_id": "D4-COVERAGE-SAU-TENDER",
+      "domain": "TENDER",
+      "evidence_ids": [],
+      "minimum_target": 8
+    },
+    {
+      "actual_count": null,
+      "country": "SAU",
+      "coverage_id": "D4-COVERAGE-SAU-PARTNER",
+      "domain": "PARTNER",
+      "evidence_ids": [],
+      "minimum_target": 30
+    },
+    {
+      "actual_count": null,
+      "country": "SAU",
+      "coverage_id": "D4-COVERAGE-SAU-RAG_DOCUMENT",
+      "domain": "RAG_DOCUMENT",
+      "evidence_ids": [],
+      "minimum_target": 20
+    },
+    {
+      "actual_count": null,
+      "country": "ZAF",
+      "coverage_id": "D4-COVERAGE-ZAF-ACTIVE_SOURCE",
+      "domain": "ACTIVE_SOURCE",
+      "evidence_ids": [],
+      "minimum_target": 8
+    },
+    {
+      "actual_count": null,
+      "country": "ZAF",
+      "coverage_id": "D4-COVERAGE-ZAF-POLICY",
+      "domain": "POLICY",
+      "evidence_ids": [],
+      "minimum_target": 12
+    },
+    {
+      "actual_count": null,
+      "country": "ZAF",
+      "coverage_id": "D4-COVERAGE-ZAF-MARKET_METRIC",
+      "domain": "MARKET_METRIC",
+      "evidence_ids": [],
+      "minimum_target": 12
+    },
+    {
+      "actual_count": null,
+      "country": "ZAF",
+      "coverage_id": "D4-COVERAGE-ZAF-RISK",
+      "domain": "RISK",
+      "evidence_ids": [],
+      "minimum_target": 8
+    },
+    {
+      "actual_count": null,
+      "country": "ZAF",
+      "coverage_id": "D4-COVERAGE-ZAF-PROJECT",
+      "domain": "PROJECT",
+      "evidence_ids": [],
+      "minimum_target": 20
+    },
+    {
+      "actual_count": null,
+      "country": "ZAF",
+      "coverage_id": "D4-COVERAGE-ZAF-TENDER",
+      "domain": "TENDER",
+      "evidence_ids": [],
+      "minimum_target": 8
+    },
+    {
+      "actual_count": null,
+      "country": "ZAF",
+      "coverage_id": "D4-COVERAGE-ZAF-PARTNER",
+      "domain": "PARTNER",
+      "evidence_ids": [],
+      "minimum_target": 30
+    },
+    {
+      "actual_count": null,
+      "country": "ZAF",
+      "coverage_id": "D4-COVERAGE-ZAF-RAG_DOCUMENT",
+      "domain": "RAG_DOCUMENT",
+      "evidence_ids": [],
+      "minimum_target": 20
+    },
+    {
+      "actual_count": null,
+      "country": "BRA",
+      "coverage_id": "D4-COVERAGE-BRA-ACTIVE_SOURCE",
+      "domain": "ACTIVE_SOURCE",
+      "evidence_ids": [],
+      "minimum_target": 8
+    },
+    {
+      "actual_count": null,
+      "country": "BRA",
+      "coverage_id": "D4-COVERAGE-BRA-POLICY",
+      "domain": "POLICY",
+      "evidence_ids": [],
+      "minimum_target": 12
+    },
+    {
+      "actual_count": null,
+      "country": "BRA",
+      "coverage_id": "D4-COVERAGE-BRA-MARKET_METRIC",
+      "domain": "MARKET_METRIC",
+      "evidence_ids": [],
+      "minimum_target": 12
+    },
+    {
+      "actual_count": null,
+      "country": "BRA",
+      "coverage_id": "D4-COVERAGE-BRA-RISK",
+      "domain": "RISK",
+      "evidence_ids": [],
+      "minimum_target": 8
+    },
+    {
+      "actual_count": null,
+      "country": "BRA",
+      "coverage_id": "D4-COVERAGE-BRA-PROJECT",
+      "domain": "PROJECT",
+      "evidence_ids": [],
+      "minimum_target": 20
+    },
+    {
+      "actual_count": null,
+      "country": "BRA",
+      "coverage_id": "D4-COVERAGE-BRA-TENDER",
+      "domain": "TENDER",
+      "evidence_ids": [],
+      "minimum_target": 8
+    },
+    {
+      "actual_count": null,
+      "country": "BRA",
+      "coverage_id": "D4-COVERAGE-BRA-PARTNER",
+      "domain": "PARTNER",
+      "evidence_ids": [],
+      "minimum_target": 30
+    },
+    {
+      "actual_count": null,
+      "country": "BRA",
+      "coverage_id": "D4-COVERAGE-BRA-RAG_DOCUMENT",
+      "domain": "RAG_DOCUMENT",
+      "evidence_ids": [],
+      "minimum_target": 20
+    }
+  ],
+  "handover_items": [
+    {
+      "artifact_sha256": null,
+      "evidence_ids": [],
+      "handover_id": "D4-HO-D0",
+      "name": "D0数据标准包",
+      "owner": null,
+      "reviewed_at": null,
+      "reviewer": null,
+      "status": "pending"
+    },
+    {
+      "artifact_sha256": null,
+      "evidence_ids": [],
+      "handover_id": "D4-HO-D1",
+      "name": "D1来源准入包",
+      "owner": null,
+      "reviewed_at": null,
+      "reviewer": null,
+      "status": "pending"
+    },
+    {
+      "artifact_sha256": null,
+      "evidence_ids": [],
+      "handover_id": "D4-HO-D2",
+      "name": "D2不可变原始包",
+      "owner": null,
+      "reviewed_at": null,
+      "reviewer": null,
+      "status": "pending"
+    },
+    {
+      "artifact_sha256": null,
+      "evidence_ids": [],
+      "handover_id": "D4-HO-D3",
+      "name": "D3标准化候选包",
+      "owner": null,
+      "reviewed_at": null,
+      "reviewer": null,
+      "status": "pending"
+    },
+    {
+      "artifact_sha256": null,
+      "evidence_ids": [],
+      "handover_id": "D4-HO-SEED",
+      "name": "D4已审核种子库与回滚说明",
+      "owner": null,
+      "reviewed_at": null,
+      "reviewer": null,
+      "status": "pending"
+    },
+    {
+      "artifact_sha256": null,
+      "evidence_ids": [],
+      "handover_id": "D4-HO-QUALITY",
+      "name": "数据质量报告与问题关闭清单",
+      "owner": null,
+      "reviewed_at": null,
+      "reviewer": null,
+      "status": "pending"
+    },
+    {
+      "artifact_sha256": null,
+      "evidence_ids": [],
+      "handover_id": "D4-HO-RAG",
+      "name": "RAG候选、权限、切分、引用与撤权资料",
+      "owner": null,
+      "reviewed_at": null,
+      "reviewer": null,
+      "status": "pending"
+    },
+    {
+      "artifact_sha256": null,
+      "evidence_ids": [],
+      "handover_id": "D4-HO-SAMPLES",
+      "name": "V0.1真实产品开发样本",
+      "owner": null,
+      "reviewed_at": null,
+      "reviewer": null,
+      "status": "pending"
+    },
+    {
+      "artifact_sha256": null,
+      "evidence_ids": [],
+      "handover_id": "D4-HO-ACCEPTANCE",
+      "name": "D4评分、证据、批准与交接清单",
+      "owner": null,
+      "reviewed_at": null,
+      "reviewer": null,
+      "status": "pending"
+    }
+  ],
+  "hard_gate_metrics": {
+    "correct_sampled_fields": null,
+    "duplicate_effective_records": null,
+    "effective_records": null,
+    "high_risk_correct": null,
+    "high_risk_sampled": null,
+    "licensed_production_sources": null,
+    "open_p0_issues": null,
+    "passed_required_enum_checks": null,
+    "permission_leaks": null,
+    "production_sources": null,
+    "published_key_facts": null,
+    "required_enum_checks": null,
+    "revoked_source_index_residuals": null,
+    "sampled_fields": null,
+    "traceable_key_facts": null
+  },
+  "production_sources": [],
+  "publication_records": [],
+  "quality_issues": [],
+  "rag_candidates": [],
+  "rehearsals": [
+    {
+      "code_version": null,
+      "evidence_ids": [],
+      "executed_at": null,
+      "history_preserved": null,
+      "input_sha256": null,
+      "isolated_environment": null,
+      "name": "隔离环境从空库导入种子包",
+      "operator": null,
+      "output_sha256": null,
+      "rehearsal_id": "D4-DRILL-IMPORT",
+      "residual_count": null,
+      "reviewer": null,
+      "run_id": null,
+      "status": "planned"
+    },
+    {
+      "code_version": null,
+      "evidence_ids": [],
+      "executed_at": null,
+      "history_preserved": null,
+      "input_sha256": null,
+      "isolated_environment": null,
+      "name": "从冻结输入重建结构化种子数据",
+      "operator": null,
+      "output_sha256": null,
+      "rehearsal_id": "D4-DRILL-REBUILD",
+      "residual_count": null,
+      "reviewer": null,
+      "run_id": null,
+      "status": "planned"
+    },
+    {
+      "code_version": null,
+      "evidence_ids": [],
+      "executed_at": null,
+      "history_preserved": null,
+      "input_sha256": null,
+      "isolated_environment": null,
+      "name": "回滚当前指针且保留历史版本",
+      "operator": null,
+      "output_sha256": null,
+      "rehearsal_id": "D4-DRILL-ROLLBACK",
+      "residual_count": null,
+      "reviewer": null,
+      "run_id": null,
+      "status": "planned"
+    },
+    {
+      "code_version": null,
+      "evidence_ids": [],
+      "executed_at": null,
+      "history_preserved": null,
+      "input_sha256": null,
+      "isolated_environment": null,
+      "name": "撤回来源并隔离页面、导出、搜索和AI",
+      "operator": null,
+      "output_sha256": null,
+      "rehearsal_id": "D4-DRILL-SOURCE-REVOKE",
+      "residual_count": null,
+      "reviewer": null,
+      "run_id": null,
+      "status": "planned"
+    },
+    {
+      "code_version": null,
+      "evidence_ids": [],
+      "executed_at": null,
+      "history_preserved": null,
+      "input_sha256": null,
+      "isolated_environment": null,
+      "name": "仅从已发布且获AI许可的数据重建RAG候选",
+      "operator": null,
+      "output_sha256": null,
+      "rehearsal_id": "D4-DRILL-RAG-REBUILD",
+      "residual_count": null,
+      "reviewer": null,
+      "run_id": null,
+      "status": "planned"
+    }
+  ],
+  "sampling_reviews": [
+    {
+      "correct_count": null,
+      "country": "IDN",
+      "evidence_ids": [],
+      "full_population_review": true,
+      "minimum_sample": null,
+      "population_count": null,
+      "reviewer_one": null,
+      "reviewer_two": null,
+      "sample_id": "D4-SAMPLE-CORE-IDN",
+      "sample_manifest_sha256": null,
+      "sampled_count": null,
+      "scope": "COUNTRY_CORE",
+      "status": "planned"
+    },
+    {
+      "correct_count": null,
+      "country": "IDN",
+      "evidence_ids": [],
+      "full_population_review": false,
+      "minimum_sample": 20,
+      "population_count": null,
+      "reviewer_one": null,
+      "reviewer_two": null,
+      "sample_id": "D4-SAMPLE-POLICY-IDN",
+      "sample_manifest_sha256": null,
+      "sampled_count": null,
+      "scope": "POLICY",
+      "status": "planned"
+    },
+    {
+      "correct_count": null,
+      "country": "IDN",
+      "evidence_ids": [],
+      "full_population_review": false,
+      "minimum_sample": 10,
+      "population_count": null,
+      "reviewer_one": null,
+      "reviewer_two": null,
+      "sample_id": "D4-SAMPLE-PROJECT_TENDER-IDN",
+      "sample_manifest_sha256": null,
+      "sampled_count": null,
+      "scope": "PROJECT_TENDER",
+      "status": "planned"
+    },
+    {
+      "correct_count": null,
+      "country": "IDN",
+      "evidence_ids": [],
+      "full_population_review": false,
+      "minimum_sample": 10,
+      "population_count": null,
+      "reviewer_one": null,
+      "reviewer_two": null,
+      "sample_id": "D4-SAMPLE-PARTNER-IDN",
+      "sample_manifest_sha256": null,
+      "sampled_count": null,
+      "scope": "PARTNER",
+      "status": "planned"
+    },
+    {
+      "correct_count": null,
+      "country": "IDN",
+      "evidence_ids": [],
+      "full_population_review": false,
+      "minimum_sample": 10,
+      "population_count": null,
+      "reviewer_one": null,
+      "reviewer_two": null,
+      "sample_id": "D4-SAMPLE-RAG_DOCUMENT-IDN",
+      "sample_manifest_sha256": null,
+      "sampled_count": null,
+      "scope": "RAG_DOCUMENT",
+      "status": "planned"
+    },
+    {
+      "correct_count": null,
+      "country": "VNM",
+      "evidence_ids": [],
+      "full_population_review": false,
+      "minimum_sample": 20,
+      "population_count": null,
+      "reviewer_one": null,
+      "reviewer_two": null,
+      "sample_id": "D4-SAMPLE-CORE-VNM",
+      "sample_manifest_sha256": null,
+      "sampled_count": null,
+      "scope": "COUNTRY_CORE",
+      "status": "planned"
+    },
+    {
+      "correct_count": null,
+      "country": "VNM",
+      "evidence_ids": [],
+      "full_population_review": false,
+      "minimum_sample": 8,
+      "population_count": null,
+      "reviewer_one": null,
+      "reviewer_two": null,
+      "sample_id": "D4-SAMPLE-POLICY-VNM",
+      "sample_manifest_sha256": null,
+      "sampled_count": null,
+      "scope": "POLICY",
+      "status": "planned"
+    },
+    {
+      "correct_count": null,
+      "country": "VNM",
+      "evidence_ids": [],
+      "full_population_review": false,
+      "minimum_sample": 10,
+      "population_count": null,
+      "reviewer_one": null,
+      "reviewer_two": null,
+      "sample_id": "D4-SAMPLE-PROJECT_TENDER-VNM",
+      "sample_manifest_sha256": null,
+      "sampled_count": null,
+      "scope": "PROJECT_TENDER",
+      "status": "planned"
+    },
+    {
+      "correct_count": null,
+      "country": "VNM",
+      "evidence_ids": [],
+      "full_population_review": false,
+      "minimum_sample": 10,
+      "population_count": null,
+      "reviewer_one": null,
+      "reviewer_two": null,
+      "sample_id": "D4-SAMPLE-PARTNER-VNM",
+      "sample_manifest_sha256": null,
+      "sampled_count": null,
+      "scope": "PARTNER",
+      "status": "planned"
+    },
+    {
+      "correct_count": null,
+      "country": "VNM",
+      "evidence_ids": [],
+      "full_population_review": false,
+      "minimum_sample": 10,
+      "population_count": null,
+      "reviewer_one": null,
+      "reviewer_two": null,
+      "sample_id": "D4-SAMPLE-RAG_DOCUMENT-VNM",
+      "sample_manifest_sha256": null,
+      "sampled_count": null,
+      "scope": "RAG_DOCUMENT",
+      "status": "planned"
+    },
+    {
+      "correct_count": null,
+      "country": "SAU",
+      "evidence_ids": [],
+      "full_population_review": false,
+      "minimum_sample": 20,
+      "population_count": null,
+      "reviewer_one": null,
+      "reviewer_two": null,
+      "sample_id": "D4-SAMPLE-CORE-SAU",
+      "sample_manifest_sha256": null,
+      "sampled_count": null,
+      "scope": "COUNTRY_CORE",
+      "status": "planned"
+    },
+    {
+      "correct_count": null,
+      "country": "SAU",
+      "evidence_ids": [],
+      "full_population_review": false,
+      "minimum_sample": 8,
+      "population_count": null,
+      "reviewer_one": null,
+      "reviewer_two": null,
+      "sample_id": "D4-SAMPLE-POLICY-SAU",
+      "sample_manifest_sha256": null,
+      "sampled_count": null,
+      "scope": "POLICY",
+      "status": "planned"
+    },
+    {
+      "correct_count": null,
+      "country": "SAU",
+      "evidence_ids": [],
+      "full_population_review": false,
+      "minimum_sample": 10,
+      "population_count": null,
+      "reviewer_one": null,
+      "reviewer_two": null,
+      "sample_id": "D4-SAMPLE-PROJECT_TENDER-SAU",
+      "sample_manifest_sha256": null,
+      "sampled_count": null,
+      "scope": "PROJECT_TENDER",
+      "status": "planned"
+    },
+    {
+      "correct_count": null,
+      "country": "SAU",
+      "evidence_ids": [],
+      "full_population_review": false,
+      "minimum_sample": 10,
+      "population_count": null,
+      "reviewer_one": null,
+      "reviewer_two": null,
+      "sample_id": "D4-SAMPLE-PARTNER-SAU",
+      "sample_manifest_sha256": null,
+      "sampled_count": null,
+      "scope": "PARTNER",
+      "status": "planned"
+    },
+    {
+      "correct_count": null,
+      "country": "SAU",
+      "evidence_ids": [],
+      "full_population_review": false,
+      "minimum_sample": 10,
+      "population_count": null,
+      "reviewer_one": null,
+      "reviewer_two": null,
+      "sample_id": "D4-SAMPLE-RAG_DOCUMENT-SAU",
+      "sample_manifest_sha256": null,
+      "sampled_count": null,
+      "scope": "RAG_DOCUMENT",
+      "status": "planned"
+    },
+    {
+      "correct_count": null,
+      "country": "ZAF",
+      "evidence_ids": [],
+      "full_population_review": false,
+      "minimum_sample": 20,
+      "population_count": null,
+      "reviewer_one": null,
+      "reviewer_two": null,
+      "sample_id": "D4-SAMPLE-CORE-ZAF",
+      "sample_manifest_sha256": null,
+      "sampled_count": null,
+      "scope": "COUNTRY_CORE",
+      "status": "planned"
+    },
+    {
+      "correct_count": null,
+      "country": "ZAF",
+      "evidence_ids": [],
+      "full_population_review": false,
+      "minimum_sample": 8,
+      "population_count": null,
+      "reviewer_one": null,
+      "reviewer_two": null,
+      "sample_id": "D4-SAMPLE-POLICY-ZAF",
+      "sample_manifest_sha256": null,
+      "sampled_count": null,
+      "scope": "POLICY",
+      "status": "planned"
+    },
+    {
+      "correct_count": null,
+      "country": "ZAF",
+      "evidence_ids": [],
+      "full_population_review": false,
+      "minimum_sample": 10,
+      "population_count": null,
+      "reviewer_one": null,
+      "reviewer_two": null,
+      "sample_id": "D4-SAMPLE-PROJECT_TENDER-ZAF",
+      "sample_manifest_sha256": null,
+      "sampled_count": null,
+      "scope": "PROJECT_TENDER",
+      "status": "planned"
+    },
+    {
+      "correct_count": null,
+      "country": "ZAF",
+      "evidence_ids": [],
+      "full_population_review": false,
+      "minimum_sample": 10,
+      "population_count": null,
+      "reviewer_one": null,
+      "reviewer_two": null,
+      "sample_id": "D4-SAMPLE-PARTNER-ZAF",
+      "sample_manifest_sha256": null,
+      "sampled_count": null,
+      "scope": "PARTNER",
+      "status": "planned"
+    },
+    {
+      "correct_count": null,
+      "country": "ZAF",
+      "evidence_ids": [],
+      "full_population_review": false,
+      "minimum_sample": 10,
+      "population_count": null,
+      "reviewer_one": null,
+      "reviewer_two": null,
+      "sample_id": "D4-SAMPLE-RAG_DOCUMENT-ZAF",
+      "sample_manifest_sha256": null,
+      "sampled_count": null,
+      "scope": "RAG_DOCUMENT",
+      "status": "planned"
+    },
+    {
+      "correct_count": null,
+      "country": "BRA",
+      "evidence_ids": [],
+      "full_population_review": false,
+      "minimum_sample": 20,
+      "population_count": null,
+      "reviewer_one": null,
+      "reviewer_two": null,
+      "sample_id": "D4-SAMPLE-CORE-BRA",
+      "sample_manifest_sha256": null,
+      "sampled_count": null,
+      "scope": "COUNTRY_CORE",
+      "status": "planned"
+    },
+    {
+      "correct_count": null,
+      "country": "BRA",
+      "evidence_ids": [],
+      "full_population_review": false,
+      "minimum_sample": 8,
+      "population_count": null,
+      "reviewer_one": null,
+      "reviewer_two": null,
+      "sample_id": "D4-SAMPLE-POLICY-BRA",
+      "sample_manifest_sha256": null,
+      "sampled_count": null,
+      "scope": "POLICY",
+      "status": "planned"
+    },
+    {
+      "correct_count": null,
+      "country": "BRA",
+      "evidence_ids": [],
+      "full_population_review": false,
+      "minimum_sample": 10,
+      "population_count": null,
+      "reviewer_one": null,
+      "reviewer_two": null,
+      "sample_id": "D4-SAMPLE-PROJECT_TENDER-BRA",
+      "sample_manifest_sha256": null,
+      "sampled_count": null,
+      "scope": "PROJECT_TENDER",
+      "status": "planned"
+    },
+    {
+      "correct_count": null,
+      "country": "BRA",
+      "evidence_ids": [],
+      "full_population_review": false,
+      "minimum_sample": 10,
+      "population_count": null,
+      "reviewer_one": null,
+      "reviewer_two": null,
+      "sample_id": "D4-SAMPLE-PARTNER-BRA",
+      "sample_manifest_sha256": null,
+      "sampled_count": null,
+      "scope": "PARTNER",
+      "status": "planned"
+    },
+    {
+      "correct_count": null,
+      "country": "BRA",
+      "evidence_ids": [],
+      "full_population_review": false,
+      "minimum_sample": 10,
+      "population_count": null,
+      "reviewer_one": null,
+      "reviewer_two": null,
+      "sample_id": "D4-SAMPLE-RAG_DOCUMENT-BRA",
+      "sample_manifest_sha256": null,
+      "sampled_count": null,
+      "scope": "RAG_DOCUMENT",
+      "status": "planned"
+    },
+    {
+      "correct_count": null,
+      "country": "ALL",
+      "evidence_ids": [],
+      "full_population_review": true,
+      "minimum_sample": null,
+      "population_count": null,
+      "reviewer_one": null,
+      "reviewer_two": null,
+      "sample_id": "D4-SAMPLE-HIGH-RISK-ALL",
+      "sample_manifest_sha256": null,
+      "sampled_count": null,
+      "scope": "HIGH_RISK_CONFLICT_MERGE",
+      "status": "planned"
+    }
+  ],
+  "schema_version": 1,
+  "seed_package": {
+    "artifacts": [],
+    "data_version": null,
+    "manifest_sha256": null,
+    "record_count": null,
+    "schema_version": null
+  },
+  "stage": "D4",
+  "template_only": true,
+  "warning": "D4模板和机器评分不能代替真实数据、双人复核或项目委员会签署"
+}

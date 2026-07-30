@@ -1,0 +1,95 @@
+{
+  "dimensions": [
+    {
+      "dimension_code": "D4-DIM-STANDARD",
+      "minimum_score": 7.0,
+      "name": "标准与模板完整",
+      "weight": 10
+    },
+    {
+      "dimension_code": "D4-DIM-SOURCE",
+      "minimum_score": 10.5,
+      "name": "来源准入与合法使用",
+      "weight": 15
+    },
+    {
+      "dimension_code": "D4-DIM-COVERAGE",
+      "minimum_score": 14.0,
+      "name": "数据覆盖与完整性",
+      "weight": 20
+    },
+    {
+      "dimension_code": "D4-DIM-ACCURACY",
+      "minimum_score": 14.0,
+      "name": "准确性与一致性",
+      "weight": 20
+    },
+    {
+      "dimension_code": "D4-DIM-TRACE",
+      "minimum_score": 10.5,
+      "name": "可追溯性",
+      "weight": 15
+    },
+    {
+      "dimension_code": "D4-DIM-FRESHNESS",
+      "minimum_score": 7.0,
+      "name": "时效性",
+      "weight": 10
+    },
+    {
+      "dimension_code": "D4-DIM-REPLAY",
+      "minimum_score": 7.0,
+      "name": "可重放与可移交",
+      "weight": 10
+    }
+  ],
+  "domain_targets": {
+    "ACTIVE_SOURCE": {
+      "IDN": 20,
+      "comparison_country": 8
+    },
+    "MARKET_METRIC": {
+      "IDN": 25,
+      "comparison_country": 12
+    },
+    "PARTNER": {
+      "IDN": 80,
+      "comparison_country": 30
+    },
+    "POLICY": {
+      "IDN": 30,
+      "comparison_country": 12
+    },
+    "PROJECT": {
+      "IDN": 50,
+      "comparison_country": 20
+    },
+    "RAG_DOCUMENT": {
+      "IDN": 60,
+      "comparison_country": 20
+    },
+    "RISK": {
+      "IDN": 20,
+      "comparison_country": 8
+    },
+    "TENDER": {
+      "IDN": 20,
+      "comparison_country": 8
+    }
+  },
+  "hard_gates": {
+    "IDN_core_field_completeness_min_pct": 90,
+    "comparison_country_core_field_completeness_min_pct": 70,
+    "duplicate_effective_record_max_pct": 1,
+    "high_risk_sample_accuracy_pct": 100,
+    "open_p0_issues": 0,
+    "permission_leaks": 0,
+    "production_source_license_metadata_pct": 100,
+    "published_key_fact_traceability_pct": 100,
+    "revoked_source_index_residuals": 0,
+    "sample_accuracy_min_pct": 95
+  },
+  "overall_minimum": 85,
+  "schema_version": 1,
+  "stage": "D4"
+}

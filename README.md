@@ -30,6 +30,7 @@ uv run navigator-data prepare-d0-review
 uv run navigator-data prepare-d1
 uv run navigator-data prepare-d2
 uv run navigator-data prepare-d3
+uv run navigator-data prepare-d4
 uv run navigator-data report
 uv run pytest --cov
 ```
@@ -68,6 +69,12 @@ D3候选包位于
 `D3-PARSE`、`D3-STANDARDIZE`和`D3-ENTITY`三段可重放流水线，要求逐条保存
 L0来源、原文与译文、原值与标准值、转换规则、运行清单、实体决策、冲突证据和
 可撤销合并历史。所有D3输出仍是候选数据，不得发布或进入AI索引。
+
+D4候选包位于
+[`data/d4/candidates`](data/d4/candidates/README.md)。它把五国最低样本、七维
+100分评分、双人抽样、追溯/许可/准确率/重复率/P0硬门、种子导入与重建、回滚、
+来源撤权、RAG权限、九项移交物和项目委员会签署做成一套可复算合同。只有真实完成
+并通过`validate-d4`的评审副本，才可能作为进入V0.1的证据。
 
 完整实施顺序见
 [`docs/development/P0_IMPLEMENTATION_PLAN.md`](docs/development/P0_IMPLEMENTATION_PLAN.md)。

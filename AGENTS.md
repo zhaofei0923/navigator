@@ -29,6 +29,9 @@
 - Generated D3 processing templates belong in `data/d3/candidates`; source text and original values
   are immutable, every candidate must be replayable through all three run manifests, and fuzzy
   entity matches or conflicts require review. D3 outputs are never publishable or AI-indexable.
+- Generated D4 acceptance templates belong in `data/d4/candidates`; score totals must be
+  recalculated from evidence, P0/traceability/license/permission gates cannot be waived by an
+  average score, and only actual authorized people may sign the final approval.
 - Candidate reports and machine checks never authorize changing workbook task, acceptance, or
   signature states. Only actual named reviewers may do that.
 - Any new behavior must include tests and update the implementation plan or operating
@@ -36,7 +39,7 @@
 - Run `uv run ruff format --check .`, `uv run ruff check .`, `uv run mypy`,
   `uv run navigator-data validate`, `uv run navigator-data prepare-d0`,
   `uv run navigator-data prepare-d0-review`, `uv run navigator-data prepare-d1`,
-  `uv run navigator-data prepare-d2`, `uv run navigator-data prepare-d3`, and
-  `uv run pytest --cov` before committing.
+  `uv run navigator-data prepare-d2`, `uv run navigator-data prepare-d3`,
+  `uv run navigator-data prepare-d4`, and `uv run pytest --cov` before committing.
 - Never commit secrets, private contact details, restricted source material, or unredacted
   evidence.

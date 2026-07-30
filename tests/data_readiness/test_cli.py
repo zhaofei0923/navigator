@@ -259,3 +259,45 @@ def test_validate_d3_command_reports_blockers(
     assert exit_code == 1
     captured = capsys.readouterr()
     assert "D3_HEADER_INVALID" in captured.err
+
+
+def test_prepare_d4_command_lists_candidates(
+    monkeypatch: MonkeyPatch,
+    capsys: CaptureFixture[str],
+) -> None:
+    paths = discover_repository()
+    candidate = paths.d4_candidates_dir / "candidate.json"
+    monkeypatch.setattr(
+        "navigator_data_readiness.cli.write_d4_candidates",
+        lambda _paths: [candidate],
+    )
+
+    exit_code = main(["prepare-d4"])
+
+    assert exit_code == 0
+    captured = capsys.readouterr()
+    assert "data/d4/candidates/candidate.json" in captured.out
+
+
+def test_validate_d4_command_reports_blockers(
+    tmp_path: Path,
+    capsys: CaptureFixture[str],
+) -> None:
+    bundle = tmp_path / "bundle.json"
+    d3_bundle = tmp_path / "d3.json"
+    bundle.write_text("{}", encoding="utf-8")
+    d3_bundle.write_text("{}", encoding="utf-8")
+
+    exit_code = main(
+        [
+            "validate-d4",
+            "--bundle",
+            str(bundle),
+            "--d3-bundle",
+            str(d3_bundle),
+        ]
+    )
+
+    assert exit_code == 1
+    captured = capsys.readouterr()
+    assert "D4_HEADER_INVALID" in captured.err

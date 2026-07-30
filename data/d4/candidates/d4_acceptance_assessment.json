@@ -1,0 +1,38 @@
+{
+  "automated_assessment_only": true,
+  "checks": [
+    {
+      "check_id": "D4-D3-DEPENDENCY",
+      "finding": "D3候选处理包尚未通过正式门禁",
+      "status": "fail"
+    },
+    {
+      "check_id": "D4-PUBLICATION",
+      "finding": "尚无经职责分离审核的发布记录或生产来源",
+      "status": "fail"
+    },
+    {
+      "check_id": "D4-QUANTITATIVE",
+      "finding": "7个维度和硬门已生成",
+      "status": "candidate_generated"
+    },
+    {
+      "check_id": "D4-SAMPLING",
+      "finding": "26条分层双人抽样计划已生成",
+      "status": "candidate_generated"
+    },
+    {
+      "check_id": "D4-HANDOVER",
+      "finding": "种子包、重建/回滚/撤权演练和9项移交物尚未完成",
+      "status": "fail"
+    },
+    {
+      "check_id": "D4-SIGNOFF",
+      "finding": "项目委员会尚未完成D4正式批准",
+      "status": "fail"
+    }
+  ],
+  "overall_status": "not_ready",
+  "schema_version": 1,
+  "stage": "D4"
+}
