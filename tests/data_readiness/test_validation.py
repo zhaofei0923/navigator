@@ -81,6 +81,7 @@ def test_unknown_unapproved_missing_evidence_is_rejected(tmp_path: Path) -> None
         "stage": "D0",
         "evidence": [
             {
+                "evidence_id": "EVD-D0-999",
                 "acceptance_id": "D0-AC-999",
                 "path": "tmp/missing-evidence.txt",
                 "sha256": "0" * 64,
@@ -103,3 +104,34 @@ def test_unknown_unapproved_missing_evidence_is_rejected(tmp_path: Path) -> None
         "EVIDENCE_FILE_MISSING",
         "EVIDENCE_ACCEPTANCE_MISSING",
     }
+
+
+def test_duplicate_evidence_ids_are_rejected(tmp_path: Path) -> None:
+    paths = _paths_with_manifest(tmp_path)
+    payload = {
+        "schema_version": 1,
+        "stage": "D0",
+        "evidence": [
+            {
+                "evidence_id": "EVD-D0-DUPLICATE",
+                "acceptance_id": "D0-AC-001",
+                "path": "tmp/missing-1.txt",
+                "sha256": "0" * 64,
+                "reviewer": "Reviewer",
+                "status": "已复核",
+            },
+            {
+                "evidence_id": "EVD-D0-DUPLICATE",
+                "acceptance_id": "D0-AC-001",
+                "path": "tmp/missing-2.txt",
+                "sha256": "0" * 64,
+                "reviewer": "Reviewer",
+                "status": "已复核",
+            },
+        ],
+    }
+    paths.evidence_manifest.write_text(json.dumps(payload), encoding="utf-8")
+
+    checks = validate_evidence(paths)
+
+    assert any(check.code == "EVIDENCE_ID_DUPLICATE" for check in checks)

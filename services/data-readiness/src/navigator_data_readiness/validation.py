@@ -149,6 +149,7 @@ def validate_evidence(
             )
         ]
     covered_acceptance_ids: set[str] = set()
+    seen_evidence_ids: set[str] = set()
     for index, entry in enumerate(entries):
         if not isinstance(entry, dict):
             checks.append(
@@ -160,12 +161,14 @@ def validate_evidence(
             )
             continue
         relative_path = entry.get("path")
+        evidence_id = entry.get("evidence_id")
         expected_hash = entry.get("sha256")
         acceptance_id = entry.get("acceptance_id")
         reviewer = entry.get("reviewer")
         status = entry.get("status")
         if (
             not relative_path
+            or not evidence_id
             or not expected_hash
             or not acceptance_id
             or not reviewer
@@ -175,13 +178,23 @@ def validate_evidence(
                 CheckResult(
                     code="EVIDENCE_METADATA_INCOMPLETE",
                     message=(
-                        f"Evidence entry {index} requires acceptance_id, path, sha256, "
-                        "reviewer, and status"
+                        f"Evidence entry {index} requires evidence_id, acceptance_id, path, "
+                        "sha256, reviewer, and status"
                     ),
                     location=str(paths.evidence_manifest),
                 )
             )
             continue
+        normalized_evidence_id = str(evidence_id).strip()
+        if normalized_evidence_id in seen_evidence_ids:
+            checks.append(
+                CheckResult(
+                    code="EVIDENCE_ID_DUPLICATE",
+                    message=f"Evidence ID is duplicated: {normalized_evidence_id}",
+                    location=str(paths.evidence_manifest),
+                )
+            )
+        seen_evidence_ids.add(normalized_evidence_id)
         normalized_acceptance_id = str(acceptance_id).strip()
         covered_acceptance_ids.add(normalized_acceptance_id)
         if (

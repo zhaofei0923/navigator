@@ -101,3 +101,35 @@ def test_assess_d0_command_outputs_machine_boundary(capsys: CaptureFixture[str])
     captured = capsys.readouterr()
     assert '"automated_assessment_only": true' in captured.out
     assert '"overall_status": "not_ready"' in captured.out
+
+
+def test_prepare_d0_review_command_lists_template(
+    monkeypatch: MonkeyPatch,
+    capsys: CaptureFixture[str],
+) -> None:
+    paths = discover_repository()
+    template = paths.d0_review_dir / "d0_review_packet.template.json"
+    monkeypatch.setattr(
+        "navigator_data_readiness.cli.write_review_template",
+        lambda _paths: template,
+    )
+
+    exit_code = main(["prepare-d0-review"])
+
+    assert exit_code == 0
+    captured = capsys.readouterr()
+    assert "data/d0/review/d0_review_packet.template.json" in captured.out
+
+
+def test_validate_d0_review_command_reports_blockers(
+    tmp_path: Path,
+    capsys: CaptureFixture[str],
+) -> None:
+    packet = tmp_path / "review.json"
+    packet.write_text("{}", encoding="utf-8")
+
+    exit_code = main(["validate-d0-review", "--input", str(packet)])
+
+    assert exit_code == 1
+    captured = capsys.readouterr()
+    assert "D0_REVIEW_HEADER_INVALID" in captured.err

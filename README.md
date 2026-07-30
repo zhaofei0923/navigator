@@ -25,6 +25,7 @@ uv run navigator-data validate
 uv run navigator-data snapshot
 uv run navigator-data prepare-d0
 uv run navigator-data assess-d0
+uv run navigator-data prepare-d0-review
 uv run navigator-data report
 uv run pytest --cov
 ```
@@ -42,6 +43,11 @@ uv run navigator-data gate --stage D0
 目标。印尼 ESDM 与越南 EVN 两份公开原件已完成来源、日期、文件哈希和 PDF
 安全属性核验，但许可快照和专业复核仍待完成；沙特样例尚未绑定具体原件。这些问题
 修复并签署前，工具不会允许D0通过。
+
+正式责任人可按
+[`data/d0/review`](data/d0/review/README.md)中的流程复制评审模板，填写角色、映射、
+样本、候选规范和D0-AC-001至010的实际决策，再用 `validate-d0-review` 做提交前检查。
+该检查只验证完整性和基线一致性，不能代替授权与签署。
 
 完整实施顺序见
 [`docs/development/P0_IMPLEMENTATION_PLAN.md`](docs/development/P0_IMPLEMENTATION_PLAN.md)。

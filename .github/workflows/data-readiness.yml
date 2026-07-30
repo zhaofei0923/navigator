@@ -25,4 +25,6 @@ jobs:
       - run: uv run navigator-data validate
       - run: uv run navigator-data prepare-d0
       - run: git diff --exit-code -- data/d0/candidates
+      - run: uv run navigator-data prepare-d0-review
+      - run: git diff --exit-code -- data/d0/review/d0_review_packet.template.json
       - run: uv run pytest --cov --cov-report=term-missing

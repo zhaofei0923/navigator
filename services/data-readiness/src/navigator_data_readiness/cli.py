@@ -8,6 +8,7 @@ from pathlib import Path
 
 from .baseline import write_snapshot
 from .d0_candidates import candidate_payloads, write_candidates
+from .d0_review import load_and_validate_review_packet, write_review_template
 from .models import CheckResult
 from .paths import discover_repository
 from .readiness import build_readiness_report, render_markdown
@@ -37,6 +38,15 @@ def _parser() -> argparse.ArgumentParser:
         help="Print the machine-verifiable D0 acceptance assessment.",
     )
     assessment.add_argument("--format", choices=("json",), default="json")
+    commands.add_parser(
+        "prepare-d0-review",
+        help="Generate a reviewer-fillable D0 decision and sign-off template.",
+    )
+    review_validation = commands.add_parser(
+        "validate-d0-review",
+        help="Validate a completed D0 review packet without changing the frozen workbooks.",
+    )
+    review_validation.add_argument("--input", type=Path, required=True)
 
     report = commands.add_parser("report", help="Render the current D0 readiness report.")
     report.add_argument("--format", choices=("markdown", "json"), default="markdown")
@@ -82,6 +92,17 @@ def main(argv: list[str] | None = None) -> int:
         assessment = candidate_payloads(paths)["acceptance_assessment.json"]
         print(json.dumps(assessment, ensure_ascii=False, indent=2))
         return 0
+
+    if args.command == "prepare-d0-review":
+        path = write_review_template(paths)
+        print(path.relative_to(paths.root).as_posix())
+        return 0
+
+    if args.command == "validate-d0-review":
+        packet_path = args.input if args.input.is_absolute() else paths.root / args.input
+        checks = load_and_validate_review_packet(paths, packet_path)
+        _print_checks(checks)
+        return 1 if checks else 0
 
     report = build_readiness_report(paths)
     output = (
