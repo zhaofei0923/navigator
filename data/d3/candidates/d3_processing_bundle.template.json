@@ -1,0 +1,121 @@
+{
+  "append_only": true,
+  "baseline": {
+    "d3_input_sha256": "639696e80f11639c0fff94e93672a24cd4de887e0e77855f12a4483a62df35af",
+    "sources": {
+      "d0_workbook": {
+        "path": "doc/doc/新能源企业出海导航仪_D0数据标准冻结执行台账.xlsx",
+        "sha256": "224e9a35bcbb363cf41c007499ba32aa6394cfdbf06331830c02d994e1c7ddff"
+      },
+      "technical_workbook": {
+        "path": "doc/doc/新能源企业出海导航仪_V1.0技术附件_BASELINE.xlsx",
+        "sha256": "8b36f7cad337d72713f09c2b36d7eaf6ebe0bc2cd13f2bf0c05c45edbd065fb8"
+      }
+    },
+    "version": "V1.0-BASELINE"
+  },
+  "conflicts": [],
+  "dependencies": {
+    "d2_gate_evidence_id": null,
+    "d2_gate_status": "pending"
+  },
+  "entity_decisions": [],
+  "field_values": [],
+  "merge_actions": [],
+  "pipelines": [
+    {
+      "config": {
+        "language_detector_version": null,
+        "locator_strategy_version": null,
+        "mapping_contract_version": null,
+        "ocr_version": null,
+        "parser_version": null
+      },
+      "conflict_action": "preserve_all_evidence_and_review",
+      "fuzzy_merge_action": "preview_and_human_review",
+      "idempotency_key_template": null,
+      "input_layer": "L0",
+      "input_snapshot_immutable": true,
+      "name": "解析、语言识别和字段映射",
+      "output_layer": "L0.5",
+      "pipeline_id": "D3-PARSE",
+      "preserve_original_values": true,
+      "preserve_source_text": true,
+      "required_config": [
+        "parser_version",
+        "ocr_version",
+        "language_detector_version",
+        "locator_strategy_version",
+        "mapping_contract_version"
+      ],
+      "status": "planned",
+      "task_id": "D3-01",
+      "unknown_enum_action": "candidate_dictionary_and_review"
+    },
+    {
+      "config": {
+        "currency_rule_version": null,
+        "enum_contract_version": null,
+        "glossary_version": null,
+        "timezone_rule_version": null,
+        "unit_rule_version": null
+      },
+      "conflict_action": "preserve_all_evidence_and_review",
+      "fuzzy_merge_action": "preview_and_human_review",
+      "idempotency_key_template": null,
+      "input_layer": "L0.5",
+      "input_snapshot_immutable": true,
+      "name": "单位币种标准化、翻译和术语复核",
+      "output_layer": "L1",
+      "pipeline_id": "D3-STANDARDIZE",
+      "preserve_original_values": true,
+      "preserve_source_text": true,
+      "required_config": [
+        "unit_rule_version",
+        "currency_rule_version",
+        "timezone_rule_version",
+        "enum_contract_version",
+        "glossary_version"
+      ],
+      "status": "planned",
+      "task_id": "D3-02",
+      "unknown_enum_action": "candidate_dictionary_and_review"
+    },
+    {
+      "config": {
+        "conflict_rule_version": null,
+        "deterministic_key_version": null,
+        "fuzzy_model_version": null,
+        "fuzzy_review_threshold": null,
+        "merge_policy_version": null
+      },
+      "conflict_action": "preserve_all_evidence_and_review",
+      "fuzzy_merge_action": "preview_and_human_review",
+      "idempotency_key_template": null,
+      "input_layer": "L1",
+      "input_snapshot_immutable": true,
+      "name": "实体解析、去重、冲突和版本化",
+      "output_layer": "L2-candidate",
+      "pipeline_id": "D3-ENTITY",
+      "preserve_original_values": true,
+      "preserve_source_text": true,
+      "required_config": [
+        "deterministic_key_version",
+        "fuzzy_model_version",
+        "fuzzy_review_threshold",
+        "conflict_rule_version",
+        "merge_policy_version"
+      ],
+      "status": "planned",
+      "task_id": "D3-03",
+      "unknown_enum_action": "candidate_dictionary_and_review"
+    }
+  ],
+  "records": [],
+  "schema_version": 1,
+  "stage": "D3",
+  "template_only": true,
+  "transformation_runs": [],
+  "translations": [],
+  "warning": "D3仅生成候选版本；原值、原文和冲突证据不可覆盖，模糊实体不得自动合并"
+}

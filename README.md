@@ -10,7 +10,8 @@ D0 数据标准冻结；D4 数据就绪评审正式通过之前，只建设数�
 - 校验工作簿结构、唯一编号、任务依赖和冻结基线哈希；
 - 生成可版本化的数据合同快照；
 - 输出 D0 就绪报告，并对缺少签署、任务、验收和证据给出明确阻断原因；
-- 校验验收证据文件的哈希和关联关系。
+- 校验验收证据文件的哈希和关联关系；
+- 生成并校验 D1 来源准入、D2 不可变采集和 D3 可重放处理候选合同。
 
 ## 本地运行
 
@@ -28,6 +29,7 @@ uv run navigator-data assess-d0
 uv run navigator-data prepare-d0-review
 uv run navigator-data prepare-d1
 uv run navigator-data prepare-d2
+uv run navigator-data prepare-d3
 uv run navigator-data report
 uv run pytest --cov
 ```
@@ -60,6 +62,12 @@ D2候选包位于
 [`data/d2/candidates`](data/d2/candidates/README.md)。它将6个冻结批次固化为采集任务，
 要求每次运行保存幂等、水位和请求响应证据，每个L0对象保存不可变原件元数据和
 SHA-256，并对403、验证码、付费墙、许可、robots和schema漂移执行停止而非绕过。
+
+D3候选包位于
+[`data/d3/candidates`](data/d3/candidates/README.md)。它固化
+`D3-PARSE`、`D3-STANDARDIZE`和`D3-ENTITY`三段可重放流水线，要求逐条保存
+L0来源、原文与译文、原值与标准值、转换规则、运行清单、实体决策、冲突证据和
+可撤销合并历史。所有D3输出仍是候选数据，不得发布或进入AI索引。
 
 完整实施顺序见
 [`docs/development/P0_IMPLEMENTATION_PLAN.md`](docs/development/P0_IMPLEMENTATION_PLAN.md)。

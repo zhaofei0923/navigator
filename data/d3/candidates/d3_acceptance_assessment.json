@@ -1,0 +1,33 @@
+{
+  "automated_assessment_only": true,
+  "checks": [
+    {
+      "check_id": "D3-D2-DEPENDENCY",
+      "finding": "D2不可变原始包尚未通过正式门禁",
+      "status": "fail"
+    },
+    {
+      "check_id": "D3-PIPELINES",
+      "finding": "3条D3流水线已生成配置候选",
+      "status": "candidate_generated"
+    },
+    {
+      "check_id": "D3-REPLAY",
+      "finding": "尚无输入快照、规则版本、参数哈希或成功运行",
+      "status": "fail"
+    },
+    {
+      "check_id": "D3-CANDIDATE-DATA",
+      "finding": "尚无解析记录、字段值、翻译、实体决策或冲突记录",
+      "status": "fail"
+    },
+    {
+      "check_id": "D3-MAPPING-DEPENDENCY",
+      "finding": "D0发现的6条未知字段映射仍须正式解决",
+      "status": "fail"
+    }
+  ],
+  "overall_status": "not_ready",
+  "schema_version": 1,
+  "stage": "D3"
+}

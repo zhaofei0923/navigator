@@ -11,6 +11,7 @@ from .d0_candidates import candidate_payloads, write_candidates
 from .d0_review import load_and_validate_review_packet, write_review_template
 from .d1_sources import load_and_validate_d1_admission, write_d1_candidates
 from .d2_collection import load_and_validate_d2_bundle, write_d2_candidates
+from .d3_processing import load_and_validate_d3_bundle, write_d3_candidates
 from .models import CheckResult
 from .paths import discover_repository
 from .readiness import build_readiness_report, render_markdown
@@ -69,6 +70,16 @@ def _parser() -> argparse.ArgumentParser:
     )
     d2_validation.add_argument("--bundle", type=Path, required=True)
     d2_validation.add_argument("--d1-registry", type=Path, required=True)
+    commands.add_parser(
+        "prepare-d3",
+        help="Generate D3 replayable parsing, normalization, and entity-resolution templates.",
+    )
+    d3_validation = commands.add_parser(
+        "validate-d3",
+        help="Validate a completed D3 candidate-processing bundle against a closed D2 bundle.",
+    )
+    d3_validation.add_argument("--bundle", type=Path, required=True)
+    d3_validation.add_argument("--d2-bundle", type=Path, required=True)
 
     report = commands.add_parser("report", help="Render the current D0 readiness report.")
     report.add_argument("--format", choices=("markdown", "json"), default="markdown")
@@ -151,6 +162,21 @@ def main(argv: list[str] | None = None) -> int:
             args.d1_registry if args.d1_registry.is_absolute() else paths.root / args.d1_registry
         )
         checks = load_and_validate_d2_bundle(paths, bundle_path, d1_registry_path)
+        _print_checks(checks)
+        return 1 if checks else 0
+
+    if args.command == "prepare-d3":
+        written = write_d3_candidates(paths)
+        for path in written:
+            print(path.relative_to(paths.root).as_posix())
+        return 0
+
+    if args.command == "validate-d3":
+        bundle_path = args.bundle if args.bundle.is_absolute() else paths.root / args.bundle
+        d2_bundle_path = (
+            args.d2_bundle if args.d2_bundle.is_absolute() else paths.root / args.d2_bundle
+        )
+        checks = load_and_validate_d3_bundle(paths, bundle_path, d2_bundle_path)
         _print_checks(checks)
         return 1 if checks else 0
 
