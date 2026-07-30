@@ -1,0 +1,34 @@
+{
+  "baseline_version": "V1.0-BASELINE",
+  "generated_at": "2026-07-30T16:36:32+00:00",
+  "record_counts": {
+    "collection_batch_template": 6,
+    "collection_rules": 14,
+    "countries": 5,
+    "d0_acceptance": 10,
+    "d0_d4_roadmap": 19,
+    "d0_tasks": 4,
+    "data_issue_template": 8,
+    "domain_targets": 9,
+    "entities": 25,
+    "enums": 251,
+    "field_mapping_template": 6,
+    "fields": 92,
+    "quality_rules": 16,
+    "raw_asset_template": 3,
+    "responsibilities": 9,
+    "review_checklist": 12,
+    "source_registry_seed": 18
+  },
+  "schema_version": 1,
+  "sources": {
+    "d0_workbook": {
+      "path": "doc/doc/新能源企业出海导航仪_D0数据标准冻结执行台账.xlsx",
+      "sha256": "224e9a35bcbb363cf41c007499ba32aa6394cfdbf06331830c02d994e1c7ddff"
+    },
+    "technical_workbook": {
+      "path": "doc/doc/新能源企业出海导航仪_V1.0技术附件_BASELINE.xlsx",
+      "sha256": "8b36f7cad337d72713f09c2b36d7eaf6ebe0bc2cd13f2bf0c05c45edbd065fb8"
+    }
+  }
+}

@@ -1,0 +1,28 @@
+# Repository rules
+
+## Source of truth
+
+- The approved V1.0 baseline under `doc/doc` is authoritative.
+- Requirement, field, API, route, permission, and test identifiers come from the technical workbook.
+- Do not reinterpret an unapproved status, missing signature, or missing evidence as complete.
+
+## Current phase gate
+
+- The repository is currently in D0 data-standard freeze.
+- Until `uv run navigator-data gate --stage D0` passes and D1-D4 are formally completed,
+  work is limited to data preparation, source onboarding, collection, normalization, quality,
+  evidence, and acceptance tooling.
+- Do not create user-facing V0.1 functionality before the D4 review is signed. A change to this
+  rule requires a formal project-baseline decision, not a code-only workaround.
+
+## Engineering
+
+- Target Python 3.13 for D0-D4 tooling.
+- Treat the source workbooks as read-only. Generated contracts belong in
+  `data/contracts/current`.
+- Any new behavior must include tests and update the implementation plan or operating
+  documentation when its contract changes.
+- Run `uv run ruff format --check .`, `uv run ruff check .`, `uv run mypy`,
+  `uv run navigator-data validate`, and `uv run pytest --cov` before committing.
+- Never commit secrets, private contact details, restricted source material, or unredacted
+  evidence.

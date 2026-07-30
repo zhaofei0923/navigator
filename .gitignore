@@ -1,2 +1,33 @@
 # Microsoft Office temporary lock files
 ~$*
+
+# Python
+.venv/
+.tools/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node and frontend build output
+node_modules/
+.next/
+dist/
+coverage/
+
+# Local runtime state and generated evidence reports
+.env
+.env.*
+!.env.example
+artifacts/
+data/d0/evidence/files/
+tmp/
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

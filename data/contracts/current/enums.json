@@ -1,0 +1,2512 @@
+[
+  {
+    "业务含义": "具备核心摘要字段和合格来源",
+    "中文名称": "基础覆盖",
+    "代码值": "Basic",
+    "可转向": "Standard",
+    "备注": "不得显示未覆盖深度字段为0",
+    "对象.字段": "country.coverage_level",
+    "枚举编号": "ENUM-COVERAGE-001",
+    "进入条件": "通过Basic验收"
+  },
+  {
+    "业务含义": "具备主要市场、政策、风险和机会数据",
+    "中文名称": "标准覆盖",
+    "代码值": "Standard",
+    "可转向": "Complete/Basic",
+    "备注": "降级需记录原因",
+    "对象.字段": "country.coverage_level",
+    "枚举编号": "ENUM-COVERAGE-002",
+    "进入条件": "通过Standard验收"
+  },
+  {
+    "业务含义": "达到重点国家完整验收标准",
+    "中文名称": "完整覆盖",
+    "代码值": "Complete",
+    "可转向": "Standard",
+    "备注": "首个样板为印尼",
+    "对象.字段": "country.coverage_level",
+    "枚举编号": "ENUM-COVERAGE-003",
+    "进入条件": "通过Complete验收"
+  },
+  {
+    "业务含义": "当前规则版本下综合机会显著",
+    "中文名称": "高机会",
+    "代码值": "high",
+    "可转向": "medium/low/pending",
+    "备注": "显示规则版本、评价日和依据",
+    "对象.字段": "country.opportunity_level",
+    "枚举编号": "ENUM-COUNTRY-OPP-001",
+    "进入条件": "评分完成＋人工审核"
+  },
+  {
+    "业务含义": "当前规则版本下综合机会居中",
+    "中文名称": "中机会",
+    "代码值": "medium",
+    "可转向": "high/low/pending",
+    "备注": "不得解释为无风险",
+    "对象.字段": "country.opportunity_level",
+    "枚举编号": "ENUM-COUNTRY-OPP-002",
+    "进入条件": "评分完成＋人工审核"
+  },
+  {
+    "业务含义": "当前规则版本下综合机会有限",
+    "中文名称": "低机会",
+    "代码值": "low",
+    "可转向": "high/medium/pending",
+    "备注": "不得解释为禁止进入",
+    "对象.字段": "country.opportunity_level",
+    "枚举编号": "ENUM-COUNTRY-OPP-003",
+    "进入条件": "评分完成＋人工审核"
+  },
+  {
+    "业务含义": "数据、规则或审核条件不足",
+    "中文名称": "待评估",
+    "代码值": "pending",
+    "可转向": "high/medium/low",
+    "备注": "不得默认显示为低机会",
+    "对象.字段": "country.opportunity_level",
+    "枚举编号": "ENUM-COUNTRY-OPP-004",
+    "进入条件": "未完成评分或复核"
+  },
+  {
+    "业务含义": "政策环境对目标技术和进入活动总体支持",
+    "中文名称": "高友好度",
+    "代码值": "high",
+    "可转向": "medium/low/pending",
+    "备注": "与单项政策法律状态分离",
+    "对象.字段": "country.policy_friendliness_level",
+    "枚举编号": "ENUM-POLICY-FRIEND-001",
+    "进入条件": "规则评分＋人工审核"
+  },
+  {
+    "业务含义": "支持与约束并存或条件性支持",
+    "中文名称": "中友好度",
+    "代码值": "medium",
+    "可转向": "high/low/pending",
+    "备注": "显示主要支持与限制",
+    "对象.字段": "country.policy_friendliness_level",
+    "枚举编号": "ENUM-POLICY-FRIEND-002",
+    "进入条件": "规则评分＋人工审核"
+  },
+  {
+    "业务含义": "约束明显或支持条件有限",
+    "中文名称": "低友好度",
+    "代码值": "low",
+    "可转向": "high/medium/pending",
+    "备注": "不得替代法律或投资意见",
+    "对象.字段": "country.policy_friendliness_level",
+    "枚举编号": "ENUM-POLICY-FRIEND-003",
+    "进入条件": "规则评分＋人工审核"
+  },
+  {
+    "业务含义": "关键政策数据、规则或审核不足",
+    "中文名称": "待评估",
+    "代码值": "pending",
+    "可转向": "high/medium/low",
+    "备注": "不得默认显示为低友好度",
+    "对象.字段": "country.policy_friendliness_level",
+    "枚举编号": "ENUM-POLICY-FRIEND-004",
+    "进入条件": "未完成评分或复核"
+  },
+  {
+    "业务含义": "综合风险达到评分和审核条件",
+    "中文名称": "已评估",
+    "代码值": "assessed",
+    "可转向": "unknown",
+    "备注": "risk_level必须为四级之一",
+    "对象.字段": "country.risk_assessment_status",
+    "枚举编号": "ENUM-COUNTRY-RISK-ASSESS-001",
+    "进入条件": "评分完成＋人工审核"
+  },
+  {
+    "业务含义": "证据、评分或审核不足",
+    "中文名称": "未评估",
+    "代码值": "unknown",
+    "可转向": "assessed",
+    "备注": "risk_level必须为空，不得默认低风险",
+    "对象.字段": "country.risk_assessment_status",
+    "枚举编号": "ENUM-COUNTRY-RISK-ASSESS-002",
+    "进入条件": "尚未完成评估或复核"
+  },
+  {
+    "业务含义": "尚未提交或未完成企业认证",
+    "中文名称": "未认证",
+    "代码值": "unverified",
+    "可转向": "pending/suspended",
+    "备注": "仅可使用基础能力",
+    "对象.字段": "enterprise.verification_status",
+    "枚举编号": "ENUM-ENTERPRISE-001",
+    "进入条件": "创建企业"
+  },
+  {
+    "业务含义": "认证材料已提交",
+    "中文名称": "待审核",
+    "代码值": "pending",
+    "可转向": "verified/rejected",
+    "备注": "审核意见内部可见",
+    "对象.字段": "enterprise.verification_status",
+    "枚举编号": "ENUM-ENTERPRISE-002",
+    "进入条件": "材料校验通过"
+  },
+  {
+    "业务含义": "企业主体已按规则核验",
+    "中文名称": "已认证",
+    "代码值": "verified",
+    "可转向": "change_review/suspended",
+    "备注": "不等同持续信用背书",
+    "对象.字段": "enterprise.verification_status",
+    "枚举编号": "ENUM-ENTERPRISE-003",
+    "进入条件": "审核通过"
+  },
+  {
+    "业务含义": "认证未通过",
+    "中文名称": "已驳回",
+    "代码值": "rejected",
+    "可转向": "pending",
+    "备注": "向用户显示可操作原因",
+    "对象.字段": "enterprise.verification_status",
+    "枚举编号": "ENUM-ENTERPRISE-004",
+    "进入条件": "审核驳回"
+  },
+  {
+    "业务含义": "因风险、注销或合规原因暂停",
+    "中文名称": "已暂停",
+    "代码值": "suspended",
+    "可转向": "pending/verified",
+    "备注": "保留申诉与历史记录",
+    "对象.字段": "enterprise.verification_status",
+    "枚举编号": "ENUM-ENTERPRISE-005",
+    "进入条件": "授权操作"
+  },
+  {
+    "业务含义": "已认证企业的关键主体字段发生变更",
+    "中文名称": "关键变更待复核",
+    "代码值": "change_review",
+    "可转向": "verified/rejected/suspended",
+    "备注": "复核完成前保留原认证历史并按风险限制敏感操作",
+    "对象.字段": "enterprise.verification_status",
+    "枚举编号": "ENUM-ENTERPRISE-006",
+    "进入条件": "提交关键字段变更"
+  },
+  {
+    "业务含义": "开通单已批准但尚未生效",
+    "中文名称": "待开通",
+    "代码值": "pending_activation",
+    "可转向": "active/cancelled",
+    "备注": "保存权益快照",
+    "对象.字段": "membership.status",
+    "枚举编号": "ENUM-MEMBER-001",
+    "进入条件": "批准/等待生效日"
+  },
+  {
+    "业务含义": "权益处于生效期且未暂停",
+    "中文名称": "有效",
+    "代码值": "active",
+    "可转向": "suspended/expired/cancelled",
+    "备注": "所有调用仍做实时校验",
+    "对象.字段": "membership.status",
+    "枚举编号": "ENUM-MEMBER-002",
+    "进入条件": "生效条件满足"
+  },
+  {
+    "业务含义": "暂时停止新增受限操作",
+    "中文名称": "暂停",
+    "代码值": "suspended",
+    "可转向": "active/cancelled/expired",
+    "备注": "保留历史记录",
+    "对象.字段": "membership.status",
+    "枚举编号": "ENUM-MEMBER-003",
+    "进入条件": "授权暂停"
+  },
+  {
+    "业务含义": "已超过权益有效期",
+    "中文名称": "到期",
+    "代码值": "expired",
+    "可转向": "active/cancelled",
+    "备注": "不删除历史业务记录",
+    "对象.字段": "membership.status",
+    "枚举编号": "ENUM-MEMBER-004",
+    "进入条件": "系统到期任务"
+  },
+  {
+    "业务含义": "权益实例提前终止或作废",
+    "中文名称": "取消",
+    "代码值": "cancelled",
+    "可转向": "无",
+    "备注": "必须记录原因与实际终止时间",
+    "对象.字段": "membership.status",
+    "枚举编号": "ENUM-MEMBER-005",
+    "进入条件": "批准的变更单"
+  },
+  {
+    "业务含义": "字段已核实并可展示",
+    "中文名称": "有值",
+    "代码值": "available",
+    "可转向": "unverified/not_public/pending",
+    "备注": "保存来源与时间；过期通过freshness字段表达",
+    "对象.字段": "*.value_status",
+    "枚举编号": "ENUM-VALUE-001",
+    "进入条件": "审核通过"
+  },
+  {
+    "业务含义": "应有但尚未采集",
+    "中文名称": "待采集",
+    "代码值": "pending",
+    "可转向": "available/not_public/not_applicable",
+    "备注": "不可显示为0",
+    "对象.字段": "*.value_status",
+    "枚举编号": "ENUM-VALUE-002",
+    "进入条件": "模板创建"
+  },
+  {
+    "业务含义": "该字段对对象不适用",
+    "中文名称": "不适用",
+    "代码值": "not_applicable",
+    "可转向": "available/pending",
+    "备注": "需说明原因",
+    "对象.字段": "*.value_status",
+    "枚举编号": "ENUM-VALUE-003",
+    "进入条件": "审核确认"
+  },
+  {
+    "业务含义": "已获得线索但未完成核实",
+    "中文名称": "未核实",
+    "代码值": "unverified",
+    "可转向": "available/not_public/pending",
+    "备注": "不得作为确定事实；冲突另由quality_status表达",
+    "对象.字段": "*.value_status",
+    "枚举编号": "ENUM-VALUE-004",
+    "进入条件": "采集入库"
+  },
+  {
+    "业务含义": "可靠来源表明信息未公开",
+    "中文名称": "暂未公开",
+    "代码值": "not_public",
+    "可转向": "available/pending",
+    "备注": "与待采集区分",
+    "对象.字段": "*.value_status",
+    "枚举编号": "ENUM-VALUE-005",
+    "进入条件": "审核确认"
+  },
+  {
+    "业务含义": "官方或可靠来源发布但尚未通过的草案",
+    "中文名称": "草案",
+    "代码值": "draft",
+    "可转向": "pending_effective/unknown",
+    "备注": "未通过的草案以采编状态归档，不另造rejected法律状态",
+    "对象.字段": "policy.effective_status",
+    "枚举编号": "ENUM-POLICY-001",
+    "进入条件": "草案发布"
+  },
+  {
+    "业务含义": "已正式通过但生效日尚未到达",
+    "中文名称": "待生效",
+    "代码值": "pending_effective",
+    "可转向": "effective/amended/repealed",
+    "备注": "显示生效日期",
+    "对象.字段": "policy.effective_status",
+    "枚举编号": "ENUM-POLICY-002",
+    "进入条件": "通过文件核实"
+  },
+  {
+    "业务含义": "当前完整适用",
+    "中文名称": "现行有效",
+    "代码值": "effective",
+    "可转向": "partially_effective/amended/suspended/expired/repealed",
+    "备注": "高风险解读优先官方源",
+    "对象.字段": "policy.effective_status",
+    "枚举编号": "ENUM-POLICY-003",
+    "进入条件": "生效条件满足且审核通过"
+  },
+  {
+    "业务含义": "仅部分条款、地区或对象仍适用",
+    "中文名称": "部分有效",
+    "代码值": "partially_effective",
+    "可转向": "effective/amended/suspended/expired/repealed",
+    "备注": "列明仍有效范围",
+    "对象.字段": "policy.effective_status",
+    "枚举编号": "ENUM-POLICY-004",
+    "进入条件": "变更文件核实"
+  },
+  {
+    "业务含义": "原版本被修订，新版本另行关联",
+    "中文名称": "已修订",
+    "代码值": "amended",
+    "可转向": "partially_effective/expired/repealed",
+    "备注": "关联替代版本",
+    "对象.字段": "policy.effective_status",
+    "枚举编号": "ENUM-POLICY-005",
+    "进入条件": "修订文件核实"
+  },
+  {
+    "业务含义": "政策或部分义务暂时停止执行",
+    "中文名称": "暂停执行",
+    "代码值": "suspended",
+    "可转向": "effective/amended/expired/repealed",
+    "备注": "记录暂停范围与期限",
+    "对象.字段": "policy.effective_status",
+    "枚举编号": "ENUM-POLICY-006",
+    "进入条件": "暂停文件核实"
+  },
+  {
+    "业务含义": "因有效期届满不再适用",
+    "中文名称": "已失效",
+    "代码值": "expired",
+    "可转向": "无/新版本",
+    "备注": "与废止区分",
+    "对象.字段": "policy.effective_status",
+    "枚举编号": "ENUM-POLICY-007",
+    "进入条件": "期限与来源核实"
+  },
+  {
+    "业务含义": "由有权主体明确废止",
+    "中文名称": "已废止",
+    "代码值": "repealed",
+    "可转向": "无/新版本",
+    "备注": "历史可检索但不得默认推荐",
+    "对象.字段": "policy.effective_status",
+    "枚举编号": "ENUM-POLICY-008",
+    "进入条件": "废止文件核实"
+  },
+  {
+    "业务含义": "现有证据不足以可靠判断效力",
+    "中文名称": "无法确认",
+    "代码值": "unknown",
+    "可转向": "任一确定状态",
+    "备注": "AI不得按现行政策回答",
+    "对象.字段": "policy.effective_status",
+    "枚举编号": "ENUM-POLICY-009",
+    "进入条件": "证据不足或冲突"
+  },
+  {
+    "业务含义": "平台内容仍在编辑",
+    "中文名称": "草稿",
+    "代码值": "draft",
+    "可转向": "pending_review/archived",
+    "备注": "用户端不可见",
+    "对象.字段": "policy.content_status",
+    "枚举编号": "ENUM-POLICY-CONTENT-001",
+    "进入条件": "创建记录"
+  },
+  {
+    "业务含义": "已提交审核",
+    "中文名称": "待审核",
+    "代码值": "pending_review",
+    "可转向": "need_more_info/approved/disputed",
+    "备注": "保留提交版本",
+    "对象.字段": "policy.content_status",
+    "枚举编号": "ENUM-POLICY-CONTENT-002",
+    "进入条件": "编辑提交"
+  },
+  {
+    "业务含义": "审核要求补充材料或修订",
+    "中文名称": "退回补充",
+    "代码值": "need_more_info",
+    "可转向": "pending_review/archived",
+    "备注": "说明补充项",
+    "对象.字段": "policy.content_status",
+    "枚举编号": "ENUM-POLICY-CONTENT-003",
+    "进入条件": "审核退回"
+  },
+  {
+    "业务含义": "内容审核通过等待发布",
+    "中文名称": "审核通过",
+    "代码值": "approved",
+    "可转向": "published/disputed/archived",
+    "备注": "与法律有效状态分离",
+    "对象.字段": "policy.content_status",
+    "枚举编号": "ENUM-POLICY-CONTENT-004",
+    "进入条件": "审核批准"
+  },
+  {
+    "业务含义": "当前可在用户端展示",
+    "中文名称": "已发布",
+    "代码值": "published",
+    "可转向": "disputed/unpublished/archived",
+    "备注": "只有本状态可公开展示",
+    "对象.字段": "policy.content_status",
+    "枚举编号": "ENUM-POLICY-CONTENT-005",
+    "进入条件": "发布操作"
+  },
+  {
+    "业务含义": "来源冲突或关键内容争议待处理",
+    "中文名称": "争议中",
+    "代码值": "disputed",
+    "可转向": "pending_review/published/unpublished/archived",
+    "备注": "保留最后已核实版本和冲突说明",
+    "对象.字段": "policy.content_status",
+    "枚举编号": "ENUM-POLICY-CONTENT-006",
+    "进入条件": "审核确认冲突"
+  },
+  {
+    "业务含义": "停止用户端公开展示",
+    "中文名称": "已下架",
+    "代码值": "unpublished",
+    "可转向": "pending_review/archived",
+    "备注": "不删除历史引用",
+    "对象.字段": "policy.content_status",
+    "枚举编号": "ENUM-POLICY-CONTENT-007",
+    "进入条件": "授权下架"
+  },
+  {
+    "业务含义": "记录只供历史追溯",
+    "中文名称": "已归档",
+    "代码值": "archived",
+    "可转向": "无",
+    "备注": "不可用于新回答的默认检索",
+    "对象.字段": "policy.content_status",
+    "枚举编号": "ENUM-POLICY-CONTENT-008",
+    "进入条件": "归档操作"
+  },
+  {
+    "业务含义": "仍在对象复核周期内",
+    "中文名称": "当前",
+    "代码值": "current",
+    "可转向": "due/overdue/unknown",
+    "备注": "不代表法律有效或来源可访问",
+    "对象.字段": "*.freshness_status",
+    "枚举编号": "ENUM-FRESH-001",
+    "进入条件": "统一时效服务"
+  },
+  {
+    "业务含义": "接近next_review_at并进入提前提醒窗口",
+    "中文名称": "临近复核",
+    "代码值": "due",
+    "可转向": "current/overdue/unknown",
+    "备注": "沿用已确认第8章稳定代码",
+    "对象.字段": "*.freshness_status",
+    "枚举编号": "ENUM-FRESH-002",
+    "进入条件": "统一时效服务"
+  },
+  {
+    "业务含义": "超过复核期限且尚未完成复核",
+    "中文名称": "逾期未复核",
+    "代码值": "overdue",
+    "可转向": "current/due/unknown",
+    "备注": "不写入quality_status",
+    "对象.字段": "*.freshness_status",
+    "枚举编号": "ENUM-FRESH-003",
+    "进入条件": "统一时效服务"
+  },
+  {
+    "业务含义": "规则输入或复核依据不足",
+    "中文名称": "未知",
+    "代码值": "unknown",
+    "可转向": "current/due/overdue",
+    "备注": "来源可访问性由source_registry.status表达",
+    "对象.字段": "*.freshness_status",
+    "枚举编号": "ENUM-FRESH-004",
+    "进入条件": "规则/证据不足"
+  },
+  {
+    "业务含义": "短期影响有限且可常规管理",
+    "中文名称": "低",
+    "代码值": "low",
+    "可转向": "medium/high",
+    "备注": "仍显示依据",
+    "对象.字段": "risk.risk_level",
+    "枚举编号": "ENUM-RISK-001",
+    "进入条件": "评分＋审核"
+  },
+  {
+    "业务含义": "需制定缓释措施并持续跟踪",
+    "中文名称": "中",
+    "代码值": "medium",
+    "可转向": "low/high",
+    "备注": "不代表可忽略",
+    "对象.字段": "risk.risk_level",
+    "枚举编号": "ENUM-RISK-002",
+    "进入条件": "评分＋审核"
+  },
+  {
+    "业务含义": "可能显著影响进入或项目推进",
+    "中文名称": "高",
+    "代码值": "high",
+    "可转向": "medium/critical",
+    "备注": "触发复核提示",
+    "对象.字段": "risk.risk_level",
+    "枚举编号": "ENUM-RISK-003",
+    "进入条件": "评分＋审核"
+  },
+  {
+    "业务含义": "可能导致停止推进或重大损失",
+    "中文名称": "极高",
+    "代码值": "critical",
+    "可转向": "high",
+    "备注": "触发预警和人工复核",
+    "对象.字段": "risk.risk_level",
+    "枚举编号": "ENUM-RISK-004",
+    "进入条件": "重大事件＋审核"
+  },
+  {
+    "业务含义": "该风险记录达到评级和审核条件",
+    "中文名称": "已评估",
+    "代码值": "assessed",
+    "可转向": "unknown",
+    "备注": "risk_level必须为四级之一",
+    "对象.字段": "risk.assessment_status",
+    "枚举编号": "ENUM-RISK-ASSESS-001",
+    "进入条件": "评分完成＋人工审核"
+  },
+  {
+    "业务含义": "证据、评分或审核不足",
+    "中文名称": "未评估",
+    "代码值": "unknown",
+    "可转向": "assessed",
+    "备注": "risk_level必须为空，不得默认低风险",
+    "对象.字段": "risk.assessment_status",
+    "枚举编号": "ENUM-RISK-ASSESS-002",
+    "进入条件": "尚未完成评估或复核"
+  },
+  {
+    "业务含义": "单一或低可信来源线索",
+    "中文名称": "待核实",
+    "代码值": "unverified",
+    "可转向": "partly_verified/disputed",
+    "备注": "不得展示为确定项目",
+    "对象.字段": "project.verification_status",
+    "枚举编号": "ENUM-PROJECT-001",
+    "进入条件": "首次采集"
+  },
+  {
+    "业务含义": "部分关键事实有可靠证据",
+    "中文名称": "部分核实",
+    "代码值": "partly_verified",
+    "可转向": "verified/disputed",
+    "备注": "列明待核实项",
+    "对象.字段": "project.verification_status",
+    "枚举编号": "ENUM-PROJECT-002",
+    "进入条件": "至少一项交叉核实"
+  },
+  {
+    "业务含义": "关键事实达到核实规则",
+    "中文名称": "已核实",
+    "代码值": "verified",
+    "可转向": "disputed",
+    "备注": "保存最近核实时间",
+    "对象.字段": "project.verification_status",
+    "枚举编号": "ENUM-PROJECT-003",
+    "进入条件": "交叉验证＋审核"
+  },
+  {
+    "业务含义": "来源冲突或主体否认",
+    "中文名称": "存在争议",
+    "代码值": "disputed",
+    "可转向": "任一核实状态",
+    "备注": "暂停敏感披露",
+    "对象.字段": "project.verification_status",
+    "枚举编号": "ENUM-PROJECT-004",
+    "进入条件": "审核确认冲突"
+  },
+  {
+    "业务含义": "机会评分和证据达到A级阈值",
+    "中文名称": "A优先",
+    "代码值": "A",
+    "可转向": "B/C/D/N",
+    "备注": "project.opportunity_grade仅缓存已发布通用结果；历史“A级”为兼容别名",
+    "对象.字段": "scoring_result.grade_code[PROJECT_OPPORTUNITY_*]",
+    "枚举编号": "ENUM-PROJECT-GRADE-001",
+    "进入条件": "评分＋人工审核"
+  },
+  {
+    "业务含义": "机会评分和证据达到B级阈值",
+    "中文名称": "B关注",
+    "代码值": "B",
+    "可转向": "A/C/D/N",
+    "备注": "缓存字段project.opportunity_grade共用该枚举；不代表项目已核实",
+    "对象.字段": "scoring_result.grade_code[PROJECT_OPPORTUNITY_*]",
+    "枚举编号": "ENUM-PROJECT-GRADE-002",
+    "进入条件": "评分＋人工审核"
+  },
+  {
+    "业务含义": "机会评分和证据达到C级阈值",
+    "中文名称": "C观察",
+    "代码值": "C",
+    "可转向": "A/B/D/N",
+    "备注": "与风险、核实状态分开",
+    "对象.字段": "scoring_result.grade_code[PROJECT_OPPORTUNITY_*]",
+    "枚举编号": "ENUM-PROJECT-GRADE-003",
+    "进入条件": "评分＋人工审核"
+  },
+  {
+    "业务含义": "当前机会优先级较低或不利因素显著",
+    "中文名称": "D谨慎",
+    "代码值": "D",
+    "可转向": "A/B/C/N",
+    "备注": "不表示项目虚假或取消",
+    "对象.字段": "scoring_result.grade_code[PROJECT_OPPORTUNITY_*]",
+    "枚举编号": "ENUM-PROJECT-GRADE-004",
+    "进入条件": "评分＋人工审核"
+  },
+  {
+    "业务含义": "关键数据、上下文或审核不足",
+    "中文名称": "N数据不足",
+    "代码值": "N",
+    "可转向": "A/B/C/D",
+    "备注": "不得默认映射为D；blocked时等级为空",
+    "对象.字段": "scoring_result.grade_code[PROJECT_OPPORTUNITY_*]",
+    "枚举编号": "ENUM-PROJECT-GRADE-005",
+    "进入条件": "门槛未达"
+  },
+  {
+    "业务含义": "存在公开意向或市场信号，尚未形成稳定规划",
+    "中文名称": "信号/构想",
+    "代码值": "signal",
+    "可转向": "planning/feasibility/unknown",
+    "备注": "与已核实项目分开",
+    "对象.字段": "project.stage",
+    "枚举编号": "ENUM-PSTAGE-001",
+    "进入条件": "可靠线索入库"
+  },
+  {
+    "业务含义": "已形成公开规划但未进入实质采购",
+    "中文名称": "规划",
+    "代码值": "planning",
+    "可转向": "feasibility/permitting/financing",
+    "备注": "记录规划主体和日期",
+    "对象.字段": "project.stage",
+    "枚举编号": "ENUM-PSTAGE-002",
+    "进入条件": "可靠规划来源"
+  },
+  {
+    "业务含义": "正在开展前期论证",
+    "中文名称": "预可研/可研",
+    "代码值": "feasibility",
+    "可转向": "permitting/financing/procurement",
+    "备注": "记录最近进展",
+    "对象.字段": "project.stage",
+    "枚举编号": "ENUM-PSTAGE-003",
+    "进入条件": "可靠进展来源"
+  },
+  {
+    "业务含义": "正在取得项目所需许可或批复",
+    "中文名称": "审批许可",
+    "代码值": "permitting",
+    "可转向": "financing/procurement/construction",
+    "备注": "与政策有效状态分离",
+    "对象.字段": "project.stage",
+    "枚举编号": "ENUM-PSTAGE-004",
+    "进入条件": "许可/批复来源"
+  },
+  {
+    "业务含义": "项目处于资金落实或融资关闭阶段",
+    "中文名称": "融资",
+    "代码值": "financing",
+    "可转向": "procurement/construction",
+    "备注": "资金意向不等于已落实",
+    "对象.字段": "project.stage",
+    "枚举编号": "ENUM-PSTAGE-005",
+    "进入条件": "融资来源"
+  },
+  {
+    "业务含义": "已进入采购、资格或招投标阶段",
+    "中文名称": "采购",
+    "代码值": "procurement",
+    "可转向": "construction/commissioning",
+    "备注": "关联招标实体与补遗",
+    "对象.字段": "project.stage",
+    "枚举编号": "ENUM-PSTAGE-006",
+    "进入条件": "有效采购信息"
+  },
+  {
+    "业务含义": "已进入施工或设备交付",
+    "中文名称": "建设",
+    "代码值": "construction",
+    "可转向": "commissioning/operation",
+    "备注": "避免仅凭中标即判定建设",
+    "对象.字段": "project.stage",
+    "枚举编号": "ENUM-PSTAGE-007",
+    "进入条件": "可靠进展来源"
+  },
+  {
+    "业务含义": "设备或项目进入测试与试运行",
+    "中文名称": "试运行",
+    "代码值": "commissioning",
+    "可转向": "operation",
+    "备注": "记录日期和范围",
+    "对象.字段": "project.stage",
+    "枚举编号": "ENUM-PSTAGE-008",
+    "进入条件": "试运行证据"
+  },
+  {
+    "业务含义": "项目已投运",
+    "中文名称": "投运",
+    "代码值": "operation",
+    "可转向": "expansion/retired",
+    "备注": "记录实际投运日期",
+    "对象.字段": "project.stage",
+    "枚举编号": "ENUM-PSTAGE-009",
+    "进入条件": "投运证据"
+  },
+  {
+    "业务含义": "已投运项目进入扩建或技术改造",
+    "中文名称": "扩建/技改",
+    "代码值": "expansion",
+    "可转向": "operation/retired",
+    "备注": "与原项目建立版本/阶段关系",
+    "对象.字段": "project.stage",
+    "枚举编号": "ENUM-PSTAGE-010",
+    "进入条件": "可靠变更来源"
+  },
+  {
+    "业务含义": "项目已结束运行或退役",
+    "中文名称": "退役",
+    "代码值": "retired",
+    "可转向": "无",
+    "备注": "历史保留，不与取消混用",
+    "对象.字段": "project.stage",
+    "枚举编号": "ENUM-PSTAGE-011",
+    "进入条件": "退役证据"
+  },
+  {
+    "业务含义": "证据不足以判断生命周期阶段",
+    "中文名称": "未知",
+    "代码值": "unknown",
+    "可转向": "signal/planning/feasibility/permitting/financing/procurement/construction/commissioning/operation/expansion/retired",
+    "备注": "不得默认映射为规划",
+    "对象.字段": "project.stage",
+    "枚举编号": "ENUM-PSTAGE-012",
+    "进入条件": "证据不足或冲突"
+  },
+  {
+    "业务含义": "当前仍有可靠推进信号",
+    "中文名称": "活跃",
+    "代码值": "active",
+    "可转向": "on_hold/suspended/cancelled/completed/stale/disputed",
+    "备注": "与生命周期阶段分离",
+    "对象.字段": "project.business_status",
+    "枚举编号": "ENUM-PSTATUS-001",
+    "进入条件": "来源/人工确认"
+  },
+  {
+    "业务含义": "业务推进暂时放缓",
+    "中文名称": "暂缓",
+    "代码值": "on_hold",
+    "可转向": "active/suspended/cancelled/stale",
+    "备注": "记录原因与复核日",
+    "对象.字段": "project.business_status",
+    "枚举编号": "ENUM-PSTATUS-002",
+    "进入条件": "来源/人工确认"
+  },
+  {
+    "业务含义": "项目被明确暂停",
+    "中文名称": "暂停",
+    "代码值": "suspended",
+    "可转向": "active/cancelled/completed",
+    "备注": "不得仅由截止日推断",
+    "对象.字段": "project.business_status",
+    "枚举编号": "ENUM-PSTATUS-003",
+    "进入条件": "可靠来源/审核"
+  },
+  {
+    "业务含义": "项目被明确取消",
+    "中文名称": "取消",
+    "代码值": "cancelled",
+    "可转向": "active（重启事件）",
+    "备注": "保留取消和重启证据",
+    "对象.字段": "project.business_status",
+    "枚举编号": "ENUM-PSTATUS-004",
+    "进入条件": "可靠来源/审核"
+  },
+  {
+    "业务含义": "项目达到定义的完成里程碑",
+    "中文名称": "完成",
+    "代码值": "completed",
+    "可转向": "无",
+    "备注": "不等同CRM成交",
+    "对象.字段": "project.business_status",
+    "枚举编号": "ENUM-PSTATUS-005",
+    "进入条件": "可靠来源/审核"
+  },
+  {
+    "业务含义": "超过规则复核周期且无新证据",
+    "中文名称": "长期无更新",
+    "代码值": "stale",
+    "可转向": "active/on_hold/cancelled/completed/disputed",
+    "备注": "显示原最后更新时间",
+    "对象.字段": "project.business_status",
+    "枚举编号": "ENUM-PSTATUS-006",
+    "进入条件": "规则建议＋人工确认"
+  },
+  {
+    "业务含义": "来源冲突或主体否认当前业务状态",
+    "中文名称": "争议中",
+    "代码值": "disputed",
+    "可转向": "active/on_hold/suspended/cancelled/completed/stale",
+    "备注": "与核实状态关联但不替代",
+    "对象.字段": "project.business_status",
+    "枚举编号": "ENUM-PSTATUS-007",
+    "进入条件": "双人复核"
+  },
+  {
+    "业务含义": "可行动窗口尚未开始",
+    "中文名称": "未开始",
+    "代码值": "not_started",
+    "可转向": "prepare/open/unknown",
+    "备注": "显示时区和依据",
+    "对象.字段": "project.opportunity_window",
+    "枚举编号": "ENUM-PWINDOW-001",
+    "进入条件": "日期/官方状态"
+  },
+  {
+    "业务含义": "尚未开放但可开展准备",
+    "中文名称": "可准备",
+    "代码值": "prepare",
+    "可转向": "open/closing_soon/unknown",
+    "备注": "不表示已公告",
+    "对象.字段": "project.opportunity_window",
+    "枚举编号": "ENUM-PWINDOW-002",
+    "进入条件": "规则＋审核"
+  },
+  {
+    "业务含义": "当前接受报名、资格或投标",
+    "中文名称": "开放",
+    "代码值": "open",
+    "可转向": "closing_soon/closed/result_pending/unknown",
+    "备注": "不自动推断授标",
+    "对象.字段": "project.opportunity_window",
+    "枚举编号": "ENUM-PWINDOW-003",
+    "进入条件": "官方状态＋日期"
+  },
+  {
+    "业务含义": "进入配置的临近截止窗口",
+    "中文名称": "即将截止",
+    "代码值": "closing_soon",
+    "可转向": "closed/open/unknown",
+    "备注": "规则阈值版本化",
+    "对象.字段": "project.opportunity_window",
+    "枚举编号": "ENUM-PWINDOW-004",
+    "进入条件": "日期规则"
+  },
+  {
+    "业务含义": "已超过截止时间或窗口关闭",
+    "中文名称": "已截止",
+    "代码值": "closed",
+    "可转向": "result_pending/terminated/open/unknown",
+    "备注": "不等同项目取消",
+    "对象.字段": "project.opportunity_window",
+    "枚举编号": "ENUM-PWINDOW-005",
+    "进入条件": "日期＋官方状态"
+  },
+  {
+    "业务含义": "采购窗口结束且结果未发布",
+    "中文名称": "结果待公布",
+    "代码值": "result_pending",
+    "可转向": "terminated/open/unknown",
+    "备注": "不得推断中标方",
+    "对象.字段": "project.opportunity_window",
+    "枚举编号": "ENUM-PWINDOW-006",
+    "进入条件": "官方状态/审核"
+  },
+  {
+    "业务含义": "官方确认本次机会窗口终止",
+    "中文名称": "已关闭",
+    "代码值": "terminated",
+    "可转向": "open/unknown",
+    "备注": "保留历史招标记录",
+    "对象.字段": "project.opportunity_window",
+    "枚举编号": "ENUM-PWINDOW-007",
+    "进入条件": "官方状态/审核"
+  },
+  {
+    "业务含义": "日期、时区或官方状态不足",
+    "中文名称": "未知",
+    "代码值": "unknown",
+    "可转向": "not_started/prepare/open/closing_soon/closed/result_pending/terminated",
+    "备注": "不得计算确定剩余天数",
+    "对象.字段": "project.opportunity_window",
+    "枚举编号": "ENUM-PWINDOW-008",
+    "进入条件": "证据不足或冲突"
+  },
+  {
+    "业务含义": "采购方发布前期预告或计划",
+    "中文名称": "预告",
+    "代码值": "pre_notice",
+    "可转向": "announced/open/cancelled/unknown",
+    "备注": "不得显示为已开放",
+    "对象.字段": "tender.official_status",
+    "枚举编号": "ENUM-TENDER-STATUS-001",
+    "进入条件": "官方预告＋审核"
+  },
+  {
+    "业务含义": "正式公告已发布但尚未确认开放窗口",
+    "中文名称": "已公告",
+    "代码值": "announced",
+    "可转向": "open/clarification/evaluation/cancelled/closed/unknown",
+    "备注": "显示公告时间与来源",
+    "对象.字段": "tender.official_status",
+    "枚举编号": "ENUM-TENDER-STATUS-002",
+    "进入条件": "官方公告＋审核"
+  },
+  {
+    "业务含义": "官方确认当前接受报名、资格或投标",
+    "中文名称": "报名/投标开放",
+    "代码值": "open",
+    "可转向": "clarification/evaluation/cancelled/closed/unknown",
+    "备注": "与机会窗口分字段",
+    "对象.字段": "tender.official_status",
+    "枚举编号": "ENUM-TENDER-STATUS-003",
+    "进入条件": "官方状态＋审核"
+  },
+  {
+    "业务含义": "正在答疑、澄清或补遗阶段",
+    "中文名称": "澄清",
+    "代码值": "clarification",
+    "可转向": "open/evaluation/cancelled/closed/unknown",
+    "备注": "补遗与原文件建立版本关系",
+    "对象.字段": "tender.official_status",
+    "枚举编号": "ENUM-TENDER-STATUS-004",
+    "进入条件": "官方澄清/补遗＋审核"
+  },
+  {
+    "业务含义": "采购方已进入资格或投标评审",
+    "中文名称": "评审",
+    "代码值": "evaluation",
+    "可转向": "awarded/cancelled/closed/unknown",
+    "备注": "不得推断中标方",
+    "对象.字段": "tender.official_status",
+    "枚举编号": "ENUM-TENDER-STATUS-005",
+    "进入条件": "官方状态＋审核"
+  },
+  {
+    "业务含义": "官方已公布授标或中标结果",
+    "中文名称": "已授标",
+    "代码值": "awarded",
+    "可转向": "closed/unknown",
+    "备注": "保留授标公告和结果范围",
+    "对象.字段": "tender.official_status",
+    "枚举编号": "ENUM-TENDER-STATUS-006",
+    "进入条件": "授标公告＋审核"
+  },
+  {
+    "业务含义": "官方明确取消本次招标",
+    "中文名称": "取消",
+    "代码值": "cancelled",
+    "可转向": "announced/open/unknown",
+    "备注": "不得仅由截止日推断",
+    "对象.字段": "tender.official_status",
+    "枚举编号": "ENUM-TENDER-STATUS-007",
+    "进入条件": "官方取消公告＋审核"
+  },
+  {
+    "业务含义": "官方确认流程关闭或归档",
+    "中文名称": "已关闭",
+    "代码值": "closed",
+    "可转向": "unknown",
+    "备注": "不等同项目取消",
+    "对象.字段": "tender.official_status",
+    "枚举编号": "ENUM-TENDER-STATUS-008",
+    "进入条件": "官方状态＋审核"
+  },
+  {
+    "业务含义": "官方状态证据不足或冲突",
+    "中文名称": "未知",
+    "代码值": "unknown",
+    "可转向": "pre_notice/announced/open/clarification/evaluation/awarded/cancelled/closed",
+    "备注": "显示待核实",
+    "对象.字段": "tender.official_status",
+    "枚举编号": "ENUM-TENDER-STATUS-009",
+    "进入条件": "证据不足或来源冲突"
+  },
+  {
+    "业务含义": "招标行动窗口尚未开始",
+    "中文名称": "未开始",
+    "代码值": "not_started",
+    "可转向": "prepare/open/unknown",
+    "备注": "显示时区和依据",
+    "对象.字段": "tender.opportunity_window",
+    "枚举编号": "ENUM-TENDER-WINDOW-001",
+    "进入条件": "日期/官方状态"
+  },
+  {
+    "业务含义": "尚未开放但可开展准备",
+    "中文名称": "可准备",
+    "代码值": "prepare",
+    "可转向": "open/unknown",
+    "备注": "不表示已公告或开放",
+    "对象.字段": "tender.opportunity_window",
+    "枚举编号": "ENUM-TENDER-WINDOW-002",
+    "进入条件": "规则＋审核"
+  },
+  {
+    "业务含义": "当前可报名、资格或投标",
+    "中文名称": "开放",
+    "代码值": "open",
+    "可转向": "closing_soon/closed/result_pending/unknown",
+    "备注": "不自动推断授标",
+    "对象.字段": "tender.opportunity_window",
+    "枚举编号": "ENUM-TENDER-WINDOW-003",
+    "进入条件": "官方状态＋日期"
+  },
+  {
+    "业务含义": "进入配置的临近截止窗口",
+    "中文名称": "即将截止",
+    "代码值": "closing_soon",
+    "可转向": "closed/open/unknown",
+    "备注": "规则阈值版本化",
+    "对象.字段": "tender.opportunity_window",
+    "枚举编号": "ENUM-TENDER-WINDOW-004",
+    "进入条件": "日期规则"
+  },
+  {
+    "业务含义": "已超过截止时间或行动窗口关闭",
+    "中文名称": "已截止",
+    "代码值": "closed",
+    "可转向": "result_pending/terminated/open/unknown",
+    "备注": "不等同招标取消或项目取消",
+    "对象.字段": "tender.opportunity_window",
+    "枚举编号": "ENUM-TENDER-WINDOW-005",
+    "进入条件": "日期＋官方状态"
+  },
+  {
+    "业务含义": "采购窗口结束且结果未发布",
+    "中文名称": "结果待公布",
+    "代码值": "result_pending",
+    "可转向": "terminated/open/unknown",
+    "备注": "不得推断中标方",
+    "对象.字段": "tender.opportunity_window",
+    "枚举编号": "ENUM-TENDER-WINDOW-006",
+    "进入条件": "官方状态/审核"
+  },
+  {
+    "业务含义": "官方确认本次行动窗口终止",
+    "中文名称": "已关闭",
+    "代码值": "terminated",
+    "可转向": "open/unknown",
+    "备注": "保留历史招标记录",
+    "对象.字段": "tender.opportunity_window",
+    "枚举编号": "ENUM-TENDER-WINDOW-007",
+    "进入条件": "官方状态/审核"
+  },
+  {
+    "业务含义": "日期、时区或官方状态不足",
+    "中文名称": "未知",
+    "代码值": "unknown",
+    "可转向": "not_started/prepare/open/closing_soon/closed/result_pending/terminated",
+    "备注": "不得计算确定剩余天数",
+    "对象.字段": "tender.opportunity_window",
+    "枚举编号": "ENUM-TENDER-WINDOW-008",
+    "进入条件": "证据不足或冲突"
+  },
+  {
+    "业务含义": "对指定企业、国家和任务高度匹配且无阻断风险",
+    "中文名称": "高度匹配",
+    "代码值": "R1",
+    "可转向": "R2/R3/R4/N",
+    "备注": "显示主要理由和限制，不表示信用担保",
+    "对象.字段": "partner_recommendation.grade",
+    "枚举编号": "ENUM-PARTNER-GRADE-001",
+    "进入条件": "任务匹配＋证据审核"
+  },
+  {
+    "业务含义": "总体匹配但存在可管理限制",
+    "中文名称": "较匹配",
+    "代码值": "R2",
+    "可转向": "R1/R3/R4/N",
+    "备注": "阻断风险存在时不得使用",
+    "对象.字段": "partner_recommendation.grade",
+    "枚举编号": "ENUM-PARTNER-GRADE-002",
+    "进入条件": "任务匹配＋证据审核"
+  },
+  {
+    "业务含义": "信息或匹配程度一般，需进一步评估",
+    "中文名称": "可评估",
+    "代码值": "R3",
+    "可转向": "R1/R2/R4/N",
+    "备注": "提示待核实因素",
+    "对象.字段": "partner_recommendation.grade",
+    "枚举编号": "ENUM-PARTNER-GRADE-003",
+    "进入条件": "任务匹配＋证据审核"
+  },
+  {
+    "业务含义": "存在明显不利因素或风险，需谨慎推进",
+    "中文名称": "谨慎",
+    "代码值": "R4",
+    "可转向": "R2/R3/N",
+    "备注": "显示风险和限制",
+    "对象.字段": "partner_recommendation.grade",
+    "枚举编号": "ENUM-PARTNER-GRADE-004",
+    "进入条件": "任务匹配＋人工复核"
+  },
+  {
+    "业务含义": "缺少企业画像、任务上下文或可靠证据",
+    "中文名称": "信息不足",
+    "代码值": "N",
+    "可转向": "R1/R2/R3/R4",
+    "备注": "不得默认映射为R4",
+    "对象.字段": "partner_recommendation.grade",
+    "枚举编号": "ENUM-PARTNER-GRADE-005",
+    "进入条件": "上下文或证据不足"
+  },
+  {
+    "业务含义": "申请尚未提交",
+    "中文名称": "草稿",
+    "代码值": "draft",
+    "可转向": "submitted/cancelled",
+    "备注": "不创建CRM线索",
+    "对象.字段": "service_request.status",
+    "枚举编号": "ENUM-REQUEST-001",
+    "进入条件": "用户保存"
+  },
+  {
+    "业务含义": "申请已进入系统",
+    "中文名称": "已提交",
+    "代码值": "submitted",
+    "可转向": "under_review/need_more_info/cancelled",
+    "备注": "创建或关联CRM线索",
+    "对象.字段": "service_request.status",
+    "枚举编号": "ENUM-REQUEST-002",
+    "进入条件": "表单校验通过"
+  },
+  {
+    "业务含义": "审核所需信息不完整",
+    "中文名称": "待补充",
+    "代码值": "need_more_info",
+    "可转向": "submitted/cancelled",
+    "备注": "说明补充项",
+    "对象.字段": "service_request.status",
+    "枚举编号": "ENUM-REQUEST-003",
+    "进入条件": "运营退回"
+  },
+  {
+    "业务含义": "正在核验资格和披露范围",
+    "中文名称": "审核中",
+    "代码值": "under_review",
+    "可转向": "approved/rejected",
+    "备注": "不得提前披露",
+    "对象.字段": "service_request.status",
+    "枚举编号": "ENUM-REQUEST-004",
+    "进入条件": "运营受理"
+  },
+  {
+    "业务含义": "按对象、字段和期限授予访问",
+    "中文名称": "已批准",
+    "代码值": "approved",
+    "可转向": "expired/partner_contacted",
+    "备注": "partner_contacted仅适用于伙伴对接类型",
+    "对象.字段": "service_request.status",
+    "枚举编号": "ENUM-REQUEST-005",
+    "进入条件": "授权审核通过"
+  },
+  {
+    "业务含义": "不满足当前披露条件",
+    "中文名称": "已驳回",
+    "代码值": "rejected",
+    "可转向": "无/新申请",
+    "备注": "原因必填",
+    "对象.字段": "service_request.status",
+    "枚举编号": "ENUM-REQUEST-006",
+    "进入条件": "授权审核驳回"
+  },
+  {
+    "业务含义": "申请人或授权人员取消",
+    "中文名称": "已取消",
+    "代码值": "cancelled",
+    "可转向": "无",
+    "备注": "保留历史",
+    "对象.字段": "service_request.status",
+    "枚举编号": "ENUM-REQUEST-007",
+    "进入条件": "取消动作"
+  },
+  {
+    "业务含义": "批准访问超过有效期",
+    "中文名称": "已到期",
+    "代码值": "expired",
+    "可转向": "无/新申请",
+    "备注": "重新访问需新授权",
+    "对象.字段": "service_request.status",
+    "枚举编号": "ENUM-REQUEST-008",
+    "进入条件": "系统到期任务"
+  },
+  {
+    "业务含义": "平台已向伙伴转达获授权需求",
+    "中文名称": "已联系伙伴",
+    "代码值": "partner_contacted",
+    "可转向": "partner_accepted/partner_declined",
+    "备注": "仅request_type=partner_connection可用；不得提前交换非公开联系方式",
+    "对象.字段": "service_request.status",
+    "枚举编号": "ENUM-PARTNER-REQ-001",
+    "进入条件": "伙伴对接申请已批准并完成联系"
+  },
+  {
+    "业务含义": "伙伴同意在指定范围内对接",
+    "中文名称": "伙伴接受",
+    "代码值": "partner_accepted",
+    "可转向": "introduced",
+    "备注": "仅伙伴对接类型；核对双方披露范围",
+    "对象.字段": "service_request.status",
+    "枚举编号": "ENUM-PARTNER-REQ-002",
+    "进入条件": "授权记录完成"
+  },
+  {
+    "业务含义": "伙伴未同意对接",
+    "中文名称": "伙伴拒绝",
+    "代码值": "partner_declined",
+    "可转向": "无/新申请",
+    "备注": "仅伙伴对接类型；非公开原因不向申请方披露",
+    "对象.字段": "service_request.status",
+    "枚举编号": "ENUM-PARTNER-REQ-003",
+    "进入条件": "伙伴反馈"
+  },
+  {
+    "业务含义": "双方获授权的联系方式或会议已安排",
+    "中文名称": "已完成引荐",
+    "代码值": "introduced",
+    "可转向": "无/后续CRM跟进",
+    "备注": "仅伙伴对接类型；不代表交易成功",
+    "对象.字段": "service_request.status",
+    "枚举编号": "ENUM-PARTNER-REQ-004",
+    "进入条件": "引荐完成"
+  },
+  {
+    "业务含义": "已创建尚未分配",
+    "中文名称": "新线索",
+    "代码值": "new",
+    "可转向": "assigned/closed",
+    "备注": "去重后产生",
+    "对象.字段": "lead.status",
+    "枚举编号": "ENUM-LEAD-001",
+    "进入条件": "规则创建"
+  },
+  {
+    "业务含义": "已指定负责人",
+    "中文名称": "已分配",
+    "代码值": "assigned",
+    "可转向": "contacting/closed",
+    "备注": "记录分配历史",
+    "对象.字段": "lead.status",
+    "枚举编号": "ENUM-LEAD-002",
+    "进入条件": "分配规则/人工"
+  },
+  {
+    "业务含义": "已开始联系或已产生初步沟通",
+    "中文名称": "联系中",
+    "代码值": "contacting",
+    "可转向": "qualified/nurturing/disqualified/closed",
+    "备注": "需下次动作",
+    "对象.字段": "lead.status",
+    "枚举编号": "ENUM-LEAD-003",
+    "进入条件": "跟进记录"
+  },
+  {
+    "业务含义": "需求、主体、服务匹配和下一步动作满足条件",
+    "中文名称": "已验证",
+    "代码值": "qualified",
+    "可转向": "converted/nurturing/disqualified/closed",
+    "备注": "评分不能自动替代",
+    "对象.字段": "lead.status",
+    "枚举编号": "ENUM-LEAD-004",
+    "进入条件": "人工确认"
+  },
+  {
+    "业务含义": "当前不成熟但值得持续维护",
+    "中文名称": "培育中",
+    "代码值": "nurturing",
+    "可转向": "contacting/qualified/disqualified/closed",
+    "备注": "设定下次触达",
+    "对象.字段": "lead.status",
+    "枚举编号": "ENUM-LEAD-005",
+    "进入条件": "人工判断"
+  },
+  {
+    "业务含义": "已形成明确服务/项目机会",
+    "中文名称": "已转商机",
+    "代码值": "converted",
+    "可转向": "无",
+    "备注": "保留来源关系",
+    "对象.字段": "lead.status",
+    "枚举编号": "ENUM-LEAD-006",
+    "进入条件": "创建商机"
+  },
+  {
+    "业务含义": "确认不符合目标或授权已撤回",
+    "中文名称": "无效",
+    "代码值": "disqualified",
+    "可转向": "closed",
+    "备注": "标准原因必填",
+    "对象.字段": "lead.status",
+    "枚举编号": "ENUM-LEAD-007",
+    "进入条件": "人工确认"
+  },
+  {
+    "业务含义": "因合规或业务原因终止处理",
+    "中文名称": "关闭",
+    "代码值": "closed",
+    "可转向": "无",
+    "备注": "必须记录原因",
+    "对象.字段": "lead.status",
+    "枚举编号": "ENUM-LEAD-008",
+    "进入条件": "授权关闭"
+  },
+  {
+    "业务含义": "正在确认需求、主体和范围",
+    "中文名称": "需求确认",
+    "代码值": "discovery",
+    "可转向": "solution/on_hold/lost/cancelled",
+    "备注": "保存来源线索",
+    "对象.字段": "crm_opportunity.stage",
+    "枚举编号": "ENUM-OPP-001",
+    "进入条件": "线索转商机"
+  },
+  {
+    "业务含义": "正在形成服务或项目方案",
+    "中文名称": "方案形成",
+    "代码值": "solution",
+    "可转向": "proposal/on_hold/lost/cancelled",
+    "备注": "记录版本",
+    "对象.字段": "crm_opportunity.stage",
+    "枚举编号": "ENUM-OPP-002",
+    "进入条件": "需求已确认"
+  },
+  {
+    "业务含义": "已向客户提交经批准方案或报价",
+    "中文名称": "方案/报价已提交",
+    "代码值": "proposal",
+    "可转向": "negotiation/on_hold/won/lost/cancelled",
+    "备注": "须有关联文档",
+    "对象.字段": "crm_opportunity.stage",
+    "枚举编号": "ENUM-OPP-003",
+    "进入条件": "准入条件满足"
+  },
+  {
+    "业务含义": "正在确认商务条件",
+    "中文名称": "商务谈判",
+    "代码值": "negotiation",
+    "可转向": "won/lost/on_hold/cancelled",
+    "备注": "记录下一步",
+    "对象.字段": "crm_opportunity.stage",
+    "枚举编号": "ENUM-OPP-004",
+    "进入条件": "客户进入谈判"
+  },
+  {
+    "业务含义": "商机暂时停止推进但未关闭",
+    "中文名称": "暂缓",
+    "代码值": "on_hold",
+    "可转向": "任一开放阶段/lost/cancelled",
+    "备注": "设置复核日期",
+    "对象.字段": "crm_opportunity.stage",
+    "枚举编号": "ENUM-OPP-005",
+    "进入条件": "人工判断"
+  },
+  {
+    "业务含义": "达到产品配置的成交通常里程碑",
+    "中文名称": "成功",
+    "代码值": "won",
+    "可转向": "无",
+    "备注": "金额不回写为项目事实",
+    "对象.字段": "crm_opportunity.stage",
+    "枚举编号": "ENUM-OPP-006",
+    "进入条件": "成交依据完成"
+  },
+  {
+    "业务含义": "确认未成交",
+    "中文名称": "失败",
+    "代码值": "lost",
+    "可转向": "discovery（经主管重开）",
+    "备注": "失败原因必填",
+    "对象.字段": "crm_opportunity.stage",
+    "枚举编号": "ENUM-OPP-007",
+    "进入条件": "关闭原因完成"
+  },
+  {
+    "业务含义": "客户或平台取消商机",
+    "中文名称": "取消",
+    "代码值": "cancelled",
+    "可转向": "discovery（经主管重开）",
+    "备注": "原因必填",
+    "对象.字段": "crm_opportunity.stage",
+    "枚举编号": "ENUM-OPP-008",
+    "进入条件": "取消依据完成"
+  },
+  {
+    "业务含义": "证据和权限满足生成要求",
+    "中文名称": "完整回答",
+    "代码值": "completed",
+    "可转向": "无",
+    "备注": "主要事实带引用",
+    "对象.字段": "ai_message.answer_status",
+    "枚举编号": "ENUM-AI-001",
+    "进入条件": "生成成功"
+  },
+  {
+    "业务含义": "部分信息缺失、过期或冲突",
+    "中文名称": "带警示完成",
+    "代码值": "completed_with_warning",
+    "可转向": "无",
+    "备注": "明确限制和待确认项",
+    "对象.字段": "ai_message.answer_status",
+    "枚举编号": "ENUM-AI-002",
+    "进入条件": "规则触发"
+  },
+  {
+    "业务含义": "任务范围或关键对象不明确",
+    "中文名称": "需要澄清",
+    "代码值": "need_clarification",
+    "可转向": "completed/completed_with_warning/insufficient_evidence/permission_denied/failed",
+    "备注": "只提出最少必要问题",
+    "对象.字段": "ai_message.answer_status",
+    "枚举编号": "ENUM-AI-003",
+    "进入条件": "意图判断"
+  },
+  {
+    "业务含义": "无可靠资料支持主要结论",
+    "中文名称": "证据不足",
+    "代码值": "insufficient_evidence",
+    "可转向": "无",
+    "备注": "不得用模型知识补写动态事实",
+    "对象.字段": "ai_message.answer_status",
+    "枚举编号": "ENUM-AI-004",
+    "进入条件": "检索校验"
+  },
+  {
+    "业务含义": "请求超出用户/企业/字段权限",
+    "中文名称": "权限不足",
+    "代码值": "permission_denied",
+    "可转向": "无",
+    "备注": "不泄露受限内容存在性细节",
+    "对象.字段": "ai_message.answer_status",
+    "枚举编号": "ENUM-AI-005",
+    "进入条件": "权限校验"
+  },
+  {
+    "业务含义": "模型、系统或安全策略导致本次未形成可交付回答",
+    "中文名称": "生成失败",
+    "代码值": "failed",
+    "可转向": "无/重新发起新任务",
+    "备注": "拒答、取消和技术错误写入独立终止原因，不另造答案状态",
+    "对象.字段": "ai_message.answer_status",
+    "枚举编号": "ENUM-AI-006",
+    "进入条件": "系统/规则终止"
+  },
+  {
+    "业务含义": "任务已创建等待执行",
+    "中文名称": "排队中",
+    "代码值": "queued",
+    "可转向": "processing/failed/cancelled",
+    "备注": "支持取消",
+    "对象.字段": "report_task.status",
+    "枚举编号": "ENUM-REPORT-001",
+    "进入条件": "权益校验通过"
+  },
+  {
+    "业务含义": "正在查询、生成或自动校验",
+    "中文名称": "生成中",
+    "代码值": "processing",
+    "可转向": "completed/failed/cancelled",
+    "备注": "人工复核使用报告业务状态，不进入任务状态",
+    "对象.字段": "report_task.status",
+    "枚举编号": "ENUM-REPORT-002",
+    "进入条件": "任务开始"
+  },
+  {
+    "业务含义": "报告任务完成并产生可预览结果",
+    "中文名称": "已完成",
+    "代码值": "completed",
+    "可转向": "expired",
+    "备注": "保存输入和来源快照",
+    "对象.字段": "report_task.status",
+    "枚举编号": "ENUM-REPORT-003",
+    "进入条件": "生成流程完成"
+  },
+  {
+    "业务含义": "任务未完成",
+    "中文名称": "失败",
+    "代码值": "failed",
+    "可转向": "queued（新任务重试）",
+    "备注": "记录错误并按规则释放/返还额度",
+    "对象.字段": "report_task.status",
+    "枚举编号": "ENUM-REPORT-004",
+    "进入条件": "异常/校验失败"
+  },
+  {
+    "业务含义": "用户在可取消阶段终止任务",
+    "中文名称": "已取消",
+    "代码值": "cancelled",
+    "可转向": "无",
+    "备注": "按规则释放额度",
+    "对象.字段": "report_task.status",
+    "枚举编号": "ENUM-REPORT-005",
+    "进入条件": "用户操作"
+  },
+  {
+    "业务含义": "下载文件或受控链接超过有效期",
+    "中文名称": "文件已过期",
+    "代码值": "expired",
+    "可转向": "queued（重新生成）",
+    "备注": "不删除报告元数据和历史快照",
+    "对象.字段": "report_task.status",
+    "枚举编号": "ENUM-REPORT-006",
+    "进入条件": "系统到期任务"
+  },
+  {
+    "业务含义": "报告参数或内容仍在编辑",
+    "中文名称": "草稿",
+    "代码值": "draft",
+    "可转向": "generating/withdrawn/archived",
+    "备注": "与技术任务状态分离",
+    "对象.字段": "report.business_status",
+    "枚举编号": "ENUM-REPORT-BIZ-001",
+    "进入条件": "创建报告"
+  },
+  {
+    "业务含义": "报告业务流程正在生成",
+    "中文名称": "生成中",
+    "代码值": "generating",
+    "可转向": "validating/failed/withdrawn",
+    "备注": "具体队列进度读取report_task.status",
+    "对象.字段": "report.business_status",
+    "枚举编号": "ENUM-REPORT-BIZ-002",
+    "进入条件": "提交生成"
+  },
+  {
+    "业务含义": "正在执行引用、权限和规则校验",
+    "中文名称": "自动校验中",
+    "代码值": "validating",
+    "可转向": "review_pending/completed/revision_required/failed",
+    "备注": "不得作为人工复核状态",
+    "对象.字段": "report.business_status",
+    "枚举编号": "ENUM-REPORT-BIZ-003",
+    "进入条件": "生成任务完成"
+  },
+  {
+    "业务含义": "报告触发专业复核要求",
+    "中文名称": "待人工复核",
+    "代码值": "review_pending",
+    "可转向": "revision_required/completed/withdrawn",
+    "备注": "关联review_task",
+    "对象.字段": "report.business_status",
+    "枚举编号": "ENUM-REPORT-BIZ-004",
+    "进入条件": "规则/校验触发"
+  },
+  {
+    "业务含义": "自动或人工复核要求修订",
+    "中文名称": "退回修改",
+    "代码值": "revision_required",
+    "可转向": "generating/review_pending/withdrawn",
+    "备注": "保留退回原因和版本",
+    "对象.字段": "report.business_status",
+    "枚举编号": "ENUM-REPORT-BIZ-005",
+    "进入条件": "复核退回"
+  },
+  {
+    "业务含义": "报告完成且可按权限预览",
+    "中文名称": "已完成",
+    "代码值": "completed",
+    "可转向": "published/withdrawn/archived",
+    "备注": "不等同已对外发布",
+    "对象.字段": "report.business_status",
+    "枚举编号": "ENUM-REPORT-BIZ-006",
+    "进入条件": "校验/复核通过"
+  },
+  {
+    "业务含义": "报告已在获准企业范围发布",
+    "中文名称": "已发布",
+    "代码值": "published",
+    "可转向": "withdrawn/archived",
+    "备注": "分享和下载仍实时授权",
+    "对象.字段": "report.business_status",
+    "枚举编号": "ENUM-REPORT-BIZ-007",
+    "进入条件": "授权发布"
+  },
+  {
+    "业务含义": "报告业务流程未完成",
+    "中文名称": "生成失败",
+    "代码值": "failed",
+    "可转向": "generating/withdrawn/archived",
+    "备注": "重试创建新任务尝试",
+    "对象.字段": "report.business_status",
+    "枚举编号": "ENUM-REPORT-BIZ-008",
+    "进入条件": "任务/校验失败"
+  },
+  {
+    "业务含义": "创建者或授权人员撤回报告",
+    "中文名称": "已撤回",
+    "代码值": "withdrawn",
+    "可转向": "archived",
+    "备注": "保留审计和历史文件策略",
+    "对象.字段": "report.business_status",
+    "枚举编号": "ENUM-REPORT-BIZ-009",
+    "进入条件": "撤回操作"
+  },
+  {
+    "业务含义": "报告仅保留历史追溯",
+    "中文名称": "已归档",
+    "代码值": "archived",
+    "可转向": "无",
+    "备注": "不可用于新分享",
+    "对象.字段": "report.business_status",
+    "枚举编号": "ENUM-REPORT-BIZ-010",
+    "进入条件": "归档操作"
+  },
+  {
+    "业务含义": "复核任务已创建尚未分配",
+    "中文名称": "待分配",
+    "代码值": "unassigned",
+    "可转向": "in_review/closed",
+    "备注": "按专业领域分配",
+    "对象.字段": "review_task.status",
+    "枚举编号": "ENUM-REVIEW-001",
+    "进入条件": "规则/人工创建"
+  },
+  {
+    "业务含义": "授权复核人正在处理",
+    "中文名称": "审核中",
+    "代码值": "in_review",
+    "可转向": "need_more_info/approved/approved_with_conditions/returned/closed",
+    "备注": "记录处理SLA",
+    "对象.字段": "review_task.status",
+    "枚举编号": "ENUM-REVIEW-002",
+    "进入条件": "接受任务"
+  },
+  {
+    "业务含义": "复核需要补充资料或澄清",
+    "中文名称": "待补充",
+    "代码值": "need_more_info",
+    "可转向": "in_review/returned/closed",
+    "备注": "列明补充项",
+    "对象.字段": "review_task.status",
+    "枚举编号": "ENUM-REVIEW-003",
+    "进入条件": "复核人提出"
+  },
+  {
+    "业务含义": "复核范围内结论通过",
+    "中文名称": "通过",
+    "代码值": "approved",
+    "可转向": "closed",
+    "备注": "不等同法律意见",
+    "对象.字段": "review_task.status",
+    "枚举编号": "ENUM-REVIEW-004",
+    "进入条件": "授权复核人确认"
+  },
+  {
+    "业务含义": "在明确条件和限制下通过",
+    "中文名称": "有条件通过",
+    "代码值": "approved_with_conditions",
+    "可转向": "in_review/closed",
+    "备注": "条件必须随结果展示",
+    "对象.字段": "review_task.status",
+    "枚举编号": "ENUM-REVIEW-005",
+    "进入条件": "授权复核人确认"
+  },
+  {
+    "业务含义": "复核未通过并退回修改",
+    "中文名称": "退回",
+    "代码值": "returned",
+    "可转向": "in_review/closed",
+    "备注": "原因和依据必填",
+    "对象.字段": "review_task.status",
+    "枚举编号": "ENUM-REVIEW-006",
+    "进入条件": "授权复核人退回"
+  },
+  {
+    "业务含义": "复核任务因完成、撤回或作废关闭",
+    "中文名称": "关闭",
+    "代码值": "closed",
+    "可转向": "无",
+    "备注": "保存关闭原因",
+    "对象.字段": "review_task.status",
+    "枚举编号": "ENUM-REVIEW-007",
+    "进入条件": "授权操作"
+  },
+  {
+    "业务含义": "尚未发起异步请求",
+    "中文名称": "待触发",
+    "代码值": "idle",
+    "可转向": "loading",
+    "备注": "仅作为前端统一状态",
+    "对象.字段": "ui.async_state",
+    "枚举编号": "ENUM-UI-001",
+    "进入条件": "页面初始化"
+  },
+  {
+    "业务含义": "请求已发出且尚未得到可展示结果",
+    "中文名称": "加载中",
+    "代码值": "loading",
+    "可转向": "success/empty/partial/error",
+    "备注": "列表优先使用骨架屏",
+    "对象.字段": "ui.async_state",
+    "枚举编号": "ENUM-UI-002",
+    "进入条件": "异步任务开始"
+  },
+  {
+    "业务含义": "完整结果已加载",
+    "中文名称": "加载成功",
+    "代码值": "success",
+    "可转向": "loading",
+    "备注": "不得与业务完成状态混用",
+    "对象.字段": "ui.async_state",
+    "枚举编号": "ENUM-UI-003",
+    "进入条件": "响应校验通过"
+  },
+  {
+    "业务含义": "请求成功但在当前范围内无可展示记录",
+    "中文名称": "无结果",
+    "代码值": "empty",
+    "可转向": "loading",
+    "备注": "区分无数据、无覆盖、筛选无结果",
+    "对象.字段": "ui.async_state",
+    "枚举编号": "ENUM-UI-004",
+    "进入条件": "响应为空"
+  },
+  {
+    "业务含义": "部分模块可用、部分模块失败或受限",
+    "中文名称": "部分成功",
+    "代码值": "partial",
+    "可转向": "loading/success/error",
+    "备注": "显示可用内容与局部重试",
+    "对象.字段": "ui.async_state",
+    "枚举编号": "ENUM-UI-005",
+    "进入条件": "聚合请求局部失败"
+  },
+  {
+    "业务含义": "请求或校验失败",
+    "中文名称": "加载失败",
+    "代码值": "error",
+    "可转向": "loading",
+    "备注": "展示可操作恢复路径和关联ID",
+    "对象.字段": "ui.async_state",
+    "枚举编号": "ENUM-UI-006",
+    "进入条件": "异常映射"
+  },
+  {
+    "业务含义": "用户正在填写或修改表单",
+    "中文名称": "编辑中",
+    "代码值": "editing",
+    "可转向": "submitting",
+    "备注": "可按规则保存草稿",
+    "对象.字段": "ui.form_state",
+    "枚举编号": "ENUM-FORM-001",
+    "进入条件": "字段发生变化"
+  },
+  {
+    "业务含义": "已通过前端校验并提交服务端",
+    "中文名称": "提交中",
+    "代码值": "submitting",
+    "可转向": "succeeded/failed",
+    "备注": "禁用重复提交但允许取消未开始任务",
+    "对象.字段": "ui.form_state",
+    "枚举编号": "ENUM-FORM-002",
+    "进入条件": "用户确认提交"
+  },
+  {
+    "业务含义": "业务记录已创建或更新",
+    "中文名称": "提交成功",
+    "代码值": "succeeded",
+    "可转向": "editing",
+    "备注": "以业务编号而非提示消息为准",
+    "对象.字段": "ui.form_state",
+    "枚举编号": "ENUM-FORM-003",
+    "进入条件": "服务端返回成功及业务编号"
+  },
+  {
+    "业务含义": "校验、权限或系统异常导致未完成",
+    "中文名称": "提交失败",
+    "代码值": "failed",
+    "可转向": "editing/submitting",
+    "备注": "保留可恢复输入并定位错误",
+    "对象.字段": "ui.form_state",
+    "枚举编号": "ENUM-FORM-004",
+    "进入条件": "服务端失败"
+  },
+  {
+    "业务含义": "已进入建设和质量复核范围",
+    "中文名称": "已纳入覆盖",
+    "代码值": "covered",
+    "可转向": "not_covered",
+    "备注": "coverage_level必须为Basic/Standard/Complete",
+    "对象.字段": "country.coverage_status",
+    "枚举编号": "ENUM-COVERAGE-STATUS-001",
+    "进入条件": "范围批准"
+  },
+  {
+    "业务含义": "尚未纳入当前建设范围",
+    "中文名称": "暂未覆盖",
+    "代码值": "not_covered",
+    "可转向": "covered",
+    "备注": "coverage_level必须为空",
+    "对象.字段": "country.coverage_status",
+    "枚举编号": "ENUM-COVERAGE-STATUS-002",
+    "进入条件": "范围确认"
+  },
+  {
+    "业务含义": "综合风险处于低档",
+    "中文名称": "低",
+    "代码值": "low",
+    "可转向": "medium/high/critical",
+    "备注": "仅risk_assessment_status=assessed时写入",
+    "对象.字段": "country.risk_level",
+    "枚举编号": "ENUM-COUNTRY-RISK-001",
+    "进入条件": "评分＋人工审核"
+  },
+  {
+    "业务含义": "需常规缓释和跟踪",
+    "中文名称": "中",
+    "代码值": "medium",
+    "可转向": "low/high/critical",
+    "备注": "与risk.risk_level共用语义",
+    "对象.字段": "country.risk_level",
+    "枚举编号": "ENUM-COUNTRY-RISK-002",
+    "进入条件": "评分＋人工审核"
+  },
+  {
+    "业务含义": "可能显著影响进入或推进",
+    "中文名称": "高",
+    "代码值": "high",
+    "可转向": "low/medium/critical",
+    "备注": "等级变化保留依据",
+    "对象.字段": "country.risk_level",
+    "枚举编号": "ENUM-COUNTRY-RISK-003",
+    "进入条件": "评分＋双人复核"
+  },
+  {
+    "业务含义": "可能导致停止推进或重大损失",
+    "中文名称": "极高",
+    "代码值": "critical",
+    "可转向": "low/medium/high",
+    "备注": "unknown不是第五级；未评估时为空",
+    "对象.字段": "country.risk_level",
+    "枚举编号": "ENUM-COUNTRY-RISK-004",
+    "进入条件": "评分＋双人复核"
+  },
+  {
+    "业务含义": "主体和核心能力有合格证据",
+    "中文名称": "已验证",
+    "代码值": "verified",
+    "可转向": "partly_verified/pending/disputed/invalid",
+    "备注": "不代表履约担保",
+    "对象.字段": "partner.review_status",
+    "枚举编号": "ENUM-PARTNER-REVIEW-001",
+    "进入条件": "审核通过"
+  },
+  {
+    "业务含义": "主体或部分能力已验证",
+    "中文名称": "部分验证",
+    "代码值": "partly_verified",
+    "可转向": "verified/pending/disputed/invalid",
+    "备注": "自动推荐最高R3",
+    "对象.字段": "partner.review_status",
+    "枚举编号": "ENUM-PARTNER-REVIEW-002",
+    "进入条件": "部分证据通过"
+  },
+  {
+    "业务含义": "尚未达到验证门槛",
+    "中文名称": "待验证",
+    "代码值": "pending",
+    "可转向": "verified/partly_verified/disputed/invalid",
+    "备注": "不得生成R1/R2",
+    "对象.字段": "partner.review_status",
+    "枚举编号": "ENUM-PARTNER-REVIEW-003",
+    "进入条件": "候选入库"
+  },
+  {
+    "业务含义": "主体、能力或合规存在可靠争议",
+    "中文名称": "争议中",
+    "代码值": "disputed",
+    "可转向": "verified/partly_verified/pending/invalid",
+    "备注": "暂停自动推荐",
+    "对象.字段": "partner.review_status",
+    "枚举编号": "ENUM-PARTNER-REVIEW-004",
+    "进入条件": "冲突审核"
+  },
+  {
+    "业务含义": "主体注销、资质失效或档案下架",
+    "中文名称": "已失效",
+    "代码值": "invalid",
+    "可转向": "pending",
+    "备注": "保留历史关系与推荐快照",
+    "对象.字段": "partner.review_status",
+    "枚举编号": "ENUM-PARTNER-REVIEW-005",
+    "进入条件": "失效审核"
+  },
+  {
+    "业务含义": "仅编辑可见",
+    "中文名称": "草稿",
+    "代码值": "draft",
+    "可转向": "pending_review/archived",
+    "备注": "不得进入前台、导出或AI生产索引",
+    "对象.字段": "data_record_version.publication_status",
+    "枚举编号": "ENUM-PUB-D4-001",
+    "进入条件": "创建/退回"
+  },
+  {
+    "业务含义": "等待授权审核人处理",
+    "中文名称": "待审核",
+    "代码值": "pending_review",
+    "可转向": "need_revision/approved/archived",
+    "备注": "关键字段职责分离",
+    "对象.字段": "data_record_version.publication_status",
+    "枚举编号": "ENUM-PUB-D4-002",
+    "进入条件": "提交通过"
+  },
+  {
+    "业务含义": "审核发现问题",
+    "中文名称": "退回修改",
+    "代码值": "need_revision",
+    "可转向": "draft/archived",
+    "备注": "原因与字段必填",
+    "对象.字段": "data_record_version.publication_status",
+    "枚举编号": "ENUM-PUB-D4-003",
+    "进入条件": "审核退回"
+  },
+  {
+    "业务含义": "审核通过尚未原子发布",
+    "中文名称": "已批准待发布",
+    "代码值": "approved",
+    "可转向": "published/archived",
+    "备注": "发布前再做权限与质量门禁",
+    "对象.字段": "data_record_version.publication_status",
+    "枚举编号": "ENUM-PUB-D4-004",
+    "进入条件": "审核通过"
+  },
+  {
+    "业务含义": "可被授权消费者读取",
+    "中文名称": "已发布",
+    "代码值": "published",
+    "可转向": "unpublished/archived",
+    "备注": "旧发布版保留历史引用",
+    "对象.字段": "data_record_version.publication_status",
+    "枚举编号": "ENUM-PUB-D4-005",
+    "进入条件": "原子发布成功"
+  },
+  {
+    "业务含义": "停止新展示和检索",
+    "中文名称": "已下架",
+    "代码值": "unpublished",
+    "可转向": "draft/archived",
+    "备注": "按SLA同步索引",
+    "对象.字段": "data_record_version.publication_status",
+    "枚举编号": "ENUM-PUB-D4-006",
+    "进入条件": "下架批准"
+  },
+  {
+    "业务含义": "仅供历史追溯",
+    "中文名称": "已归档",
+    "代码值": "archived",
+    "可转向": "无/新版本",
+    "备注": "默认不物理删除",
+    "对象.字段": "data_record_version.publication_status",
+    "枚举编号": "ENUM-PUB-D4-007",
+    "进入条件": "归档批准"
+  },
+  {
+    "业务含义": "对事实有法定发布职责或主体正式原始文件",
+    "中文名称": "官方",
+    "代码值": "A",
+    "可转向": "B/C/D",
+    "备注": "仍须确认版本、范围和时效",
+    "对象.字段": "source_registry.authority_level",
+    "枚举编号": "ENUM-SOURCE-AUTH-001",
+    "进入条件": "来源准入＋事实适用复核"
+  },
+  {
+    "业务含义": "多边、公共事业或方法透明高可信来源",
+    "中文名称": "权威",
+    "代码值": "B",
+    "可转向": "A/C/D",
+    "备注": "高风险法律结论仍回原文",
+    "对象.字段": "source_registry.authority_level",
+    "枚举编号": "ENUM-SOURCE-AUTH-002",
+    "进入条件": "来源准入＋事实适用复核"
+  },
+  {
+    "业务含义": "协会、专业媒体、研究或企业一般新闻",
+    "中文名称": "行业",
+    "代码值": "C",
+    "可转向": "A/B/D",
+    "备注": "关键事实需交叉验证",
+    "对象.字段": "source_registry.authority_level",
+    "枚举编号": "ENUM-SOURCE-AUTH-003",
+    "进入条件": "来源准入＋事实适用复核"
+  },
+  {
+    "业务含义": "通讯员、展会、用户提交或不完整材料",
+    "中文名称": "线索",
+    "代码值": "D",
+    "可转向": "A/B/C",
+    "备注": "不得作关键事实唯一证据",
+    "对象.字段": "source_registry.authority_level",
+    "枚举编号": "ENUM-SOURCE-AUTH-004",
+    "进入条件": "来源准入＋事实适用复核"
+  },
+  {
+    "业务含义": "来源准入且健康",
+    "中文名称": "正常",
+    "代码值": "active",
+    "可转向": "degraded/blocked/under_review/retired",
+    "备注": "允许按计划运行",
+    "对象.字段": "source_registry.status",
+    "枚举编号": "ENUM-SOURCE-STATUS-001",
+    "进入条件": "准入/恢复"
+  },
+  {
+    "业务含义": "成功率或稳定性下降",
+    "中文名称": "降级",
+    "代码值": "degraded",
+    "可转向": "active/blocked/under_review/retired",
+    "备注": "不得静默换低级来源",
+    "对象.字段": "source_registry.status",
+    "枚举编号": "ENUM-SOURCE-STATUS-002",
+    "进入条件": "监控触发"
+  },
+  {
+    "业务含义": "技术或访问控制不可用",
+    "中文名称": "阻断",
+    "代码值": "blocked",
+    "可转向": "active/under_review/retired",
+    "备注": "停止高频重试",
+    "对象.字段": "source_registry.status",
+    "枚举编号": "ENUM-SOURCE-STATUS-003",
+    "进入条件": "连续失败/拒绝访问"
+  },
+  {
+    "业务含义": "条款、域名、授权或内容异常",
+    "中文名称": "复核中",
+    "代码值": "under_review",
+    "可转向": "active/blocked/retired",
+    "备注": "停止新增采集或转人工",
+    "对象.字段": "source_registry.status",
+    "枚举编号": "ENUM-SOURCE-STATUS-004",
+    "进入条件": "规则/人工触发"
+  },
+  {
+    "业务含义": "不再作为新数据来源",
+    "中文名称": "退役",
+    "代码值": "retired",
+    "可转向": "无",
+    "备注": "保留历史ID和快照",
+    "对象.字段": "source_registry.status",
+    "枚举编号": "ENUM-SOURCE-STATUS-005",
+    "进入条件": "替代/撤权/长期失效"
+  },
+  {
+    "业务含义": "无质量阻断问题",
+    "中文名称": "通过",
+    "代码值": "passed",
+    "可转向": "warning/failed/conflicted",
+    "备注": "仍需人工审核",
+    "对象.字段": "data_record_version.quality_status",
+    "枚举编号": "ENUM-QUALITY-D4-001",
+    "进入条件": "质量校验"
+  },
+  {
+    "业务含义": "存在非阻断质量缺口",
+    "中文名称": "警示",
+    "代码值": "warning",
+    "可转向": "passed/failed/conflicted",
+    "备注": "临近复核用freshness_status",
+    "对象.字段": "data_record_version.quality_status",
+    "枚举编号": "ENUM-QUALITY-D4-002",
+    "进入条件": "命中P2/P3"
+  },
+  {
+    "业务含义": "格式、逻辑或关键质量规则不通过",
+    "中文名称": "不通过",
+    "代码值": "failed",
+    "可转向": "warning/passed/conflicted",
+    "备注": "历史invalid迁移至此",
+    "对象.字段": "data_record_version.quality_status",
+    "枚举编号": "ENUM-QUALITY-D4-003",
+    "进入条件": "命中P0/P1"
+  },
+  {
+    "业务含义": "可靠来源对关键事实实质不一致",
+    "中文名称": "来源冲突",
+    "代码值": "conflicted",
+    "可转向": "passed/warning/failed",
+    "备注": "历史conflict迁移至此",
+    "对象.字段": "data_record_version.quality_status",
+    "枚举编号": "ENUM-QUALITY-D4-004",
+    "进入条件": "冲突检测/人工标记"
+  },
+  {
+    "业务含义": "合规、权限、安全或关键事实问题",
+    "中文名称": "阻断级",
+    "代码值": "P0",
+    "可转向": "P1/P2/P3",
+    "备注": "质量严重度，不等同需求优先级",
+    "对象.字段": "quality_issue.severity",
+    "枚举编号": "ENUM-DQ-SEV-001",
+    "进入条件": "发现问题"
+  },
+  {
+    "业务含义": "显著影响核心结论或多个消费者",
+    "中文名称": "严重",
+    "代码值": "P1",
+    "可转向": "P0/P2/P3",
+    "备注": "可触发下架评估",
+    "对象.字段": "quality_issue.severity",
+    "枚举编号": "ENUM-DQ-SEV-002",
+    "进入条件": "发现问题"
+  },
+  {
+    "业务含义": "非阻断但影响完整、时效或解释",
+    "中文名称": "一般",
+    "代码值": "P2",
+    "可转向": "P0/P1/P3",
+    "备注": "带警示发布需符合规则",
+    "对象.字段": "quality_issue.severity",
+    "枚举编号": "ENUM-DQ-SEV-003",
+    "进入条件": "发现问题"
+  },
+  {
+    "业务含义": "优化性或低影响提示",
+    "中文名称": "提示",
+    "代码值": "P3",
+    "可转向": "P0/P1/P2",
+    "备注": "进入计划整改",
+    "对象.字段": "quality_issue.severity",
+    "枚举编号": "ENUM-DQ-SEV-004",
+    "进入条件": "发现问题"
+  },
+  {
+    "业务含义": "已创建未分配",
+    "中文名称": "开放",
+    "代码值": "open",
+    "可转向": "assigned/resolved/waived",
+    "备注": "责任和SLA可见",
+    "对象.字段": "quality_issue.status",
+    "枚举编号": "ENUM-DQ-STATUS-001",
+    "进入条件": "发现问题"
+  },
+  {
+    "业务含义": "已指定责任人",
+    "中文名称": "已分配",
+    "代码值": "assigned",
+    "可转向": "fixing/open/waived",
+    "备注": "保存分配历史",
+    "对象.字段": "quality_issue.status",
+    "枚举编号": "ENUM-DQ-STATUS-002",
+    "进入条件": "分配"
+  },
+  {
+    "业务含义": "正在补采、修正或隔离",
+    "中文名称": "修复中",
+    "代码值": "fixing",
+    "可转向": "recheck/assigned/waived",
+    "备注": "高风险不得自关",
+    "对象.字段": "quality_issue.status",
+    "枚举编号": "ENUM-DQ-STATUS-003",
+    "进入条件": "开始处理"
+  },
+  {
+    "业务含义": "整改等待独立复核",
+    "中文名称": "待复检",
+    "代码值": "recheck",
+    "可转向": "fixing/resolved/waived",
+    "备注": "职责分离",
+    "对象.字段": "quality_issue.status",
+    "枚举编号": "ENUM-DQ-STATUS-004",
+    "进入条件": "提交整改"
+  },
+  {
+    "业务含义": "复检通过且影响已处理",
+    "中文名称": "已解决",
+    "代码值": "resolved",
+    "可转向": "open",
+    "备注": "保留证据",
+    "对象.字段": "quality_issue.status",
+    "枚举编号": "ENUM-DQ-STATUS-005",
+    "进入条件": "复核通过"
+  },
+  {
+    "业务含义": "明确范围、理由和期限内暂不整改",
+    "中文名称": "临时豁免",
+    "代码值": "waived",
+    "可转向": "open/assigned/resolved",
+    "备注": "到期自动重开",
+    "对象.字段": "quality_issue.status",
+    "枚举编号": "ENUM-DQ-STATUS-006",
+    "进入条件": "授权批准"
+  },
+  {
+    "业务含义": "满足数据、权限和硬门槛",
+    "中文名称": "可推荐",
+    "代码值": "eligible",
+    "可转向": "review_required/blocked/insufficient",
+    "备注": "允许展示等级",
+    "对象.字段": "*.recommendation_status",
+    "枚举编号": "ENUM-RECOMMEND-D4-001",
+    "进入条件": "规则通过"
+  },
+  {
+    "业务含义": "有结果但需专业或人工复核",
+    "中文名称": "需复核",
+    "代码值": "review_required",
+    "可转向": "eligible/blocked/insufficient",
+    "备注": "复核前不得确定表述",
+    "对象.字段": "*.recommendation_status",
+    "枚举编号": "ENUM-RECOMMEND-D4-002",
+    "进入条件": "门槛触发"
+  },
+  {
+    "业务含义": "命中制裁、权限或重大争议门槛",
+    "中文名称": "阻断",
+    "代码值": "blocked",
+    "可转向": "review_required/eligible",
+    "备注": "等级必须为空，不等同N",
+    "对象.字段": "*.recommendation_status",
+    "枚举编号": "ENUM-RECOMMEND-D4-003",
+    "进入条件": "硬门槛触发"
+  },
+  {
+    "业务含义": "覆盖、来源或上下文不足",
+    "中文名称": "信息不足",
+    "代码值": "insufficient",
+    "可转向": "eligible/review_required",
+    "备注": "等级为N或pending",
+    "对象.字段": "*.recommendation_status",
+    "枚举编号": "ENUM-RECOMMEND-D4-004",
+    "进入条件": "门槛未达"
+  },
+  {
+    "业务含义": "不读取特定企业画像",
+    "中文名称": "平台通用",
+    "代码值": "platform_generic",
+    "可转向": "enterprise_personal",
+    "备注": "可缓存项目通用摘要",
+    "对象.字段": "project_opportunity_assessment.context_type",
+    "枚举编号": "ENUM-SCORE-CONTEXT-001",
+    "进入条件": "通用任务"
+  },
+  {
+    "业务含义": "绑定企业、画像和任务快照",
+    "中文名称": "企业个性化",
+    "代码值": "enterprise_personal",
+    "可转向": "platform_generic",
+    "备注": "不得跨企业复用",
+    "对象.字段": "project_opportunity_assessment.context_type",
+    "枚举编号": "ENUM-SCORE-CONTEXT-002",
+    "进入条件": "授权任务"
+  },
+  {
+    "业务含义": "形成结果未完成必要审核",
+    "中文名称": "已计算",
+    "代码值": "calculated",
+    "可转向": "review_pending/published/stale",
+    "备注": "不得默认已发布",
+    "对象.字段": "scoring_result.status",
+    "枚举编号": "ENUM-SCORE-RESULT-001",
+    "进入条件": "运行完成"
+  },
+  {
+    "业务含义": "结果触发人工/专业复核",
+    "中文名称": "待审核",
+    "代码值": "review_pending",
+    "可转向": "published/stale",
+    "备注": "复核前保留限制",
+    "对象.字段": "scoring_result.status",
+    "枚举编号": "ENUM-SCORE-RESULT-002",
+    "进入条件": "门槛触发"
+  },
+  {
+    "业务含义": "通过门禁并可授权读取",
+    "中文名称": "已发布",
+    "代码值": "published",
+    "可转向": "stale",
+    "备注": "多端引用同一result_id",
+    "对象.字段": "scoring_result.status",
+    "枚举编号": "ENUM-SCORE-RESULT-003",
+    "进入条件": "发布通过"
+  },
+  {
+    "业务含义": "输入、模型、权限或有效期变化",
+    "中文名称": "已过期",
+    "代码值": "stale",
+    "可转向": "无/新计算",
+    "备注": "保留历史复现",
+    "对象.字段": "scoring_result.status",
+    "枚举编号": "ENUM-SCORE-RESULT-004",
+    "进入条件": "失效规则"
+  },
+  {
+    "业务含义": "参数正在编辑",
+    "中文名称": "草稿",
+    "代码值": "draft",
+    "可转向": "testing/retired",
+    "备注": "不得生产使用",
+    "对象.字段": "scoring_model_version.status",
+    "枚举编号": "ENUM-MODEL-001",
+    "进入条件": "创建"
+  },
+  {
+    "业务含义": "执行回放、边界、偏差和业务验证",
+    "中文名称": "测试中",
+    "代码值": "testing",
+    "可转向": "draft/approved/retired",
+    "备注": "不得产生生产正式结果",
+    "对象.字段": "scoring_model_version.status",
+    "枚举编号": "ENUM-MODEL-002",
+    "进入条件": "提交测试"
+  },
+  {
+    "业务含义": "测试通过等待生效",
+    "中文名称": "已批准",
+    "代码值": "approved",
+    "可转向": "effective/retired",
+    "备注": "尚未生产生效",
+    "对象.字段": "scoring_model_version.status",
+    "枚举编号": "ENUM-MODEL-003",
+    "进入条件": "批准门禁"
+  },
+  {
+    "业务含义": "当前生产可用版本",
+    "中文名称": "生效",
+    "代码值": "effective",
+    "可转向": "retired/rolled_back",
+    "备注": "同范围仅一个effective",
+    "对象.字段": "scoring_model_version.status",
+    "枚举编号": "ENUM-MODEL-004",
+    "进入条件": "原子发布"
+  },
+  {
+    "业务含义": "停止新计算但保留历史",
+    "中文名称": "退役",
+    "代码值": "retired",
+    "可转向": "无",
+    "备注": "历史继续引用",
+    "对象.字段": "scoring_model_version.status",
+    "枚举编号": "ENUM-MODEL-005",
+    "进入条件": "替代/退役"
+  },
+  {
+    "业务含义": "因缺陷停止并回退",
+    "中文名称": "已回滚",
+    "代码值": "rolled_back",
+    "可转向": "retired",
+    "备注": "保存影响和重算策略",
+    "对象.字段": "scoring_model_version.status",
+    "枚举编号": "ENUM-MODEL-006",
+    "进入条件": "回滚批准"
+  },
+  {
+    "业务含义": "综合优先级80—100且未命中阻断",
+    "中文名称": "优先推进",
+    "代码值": "top",
+    "可转向": "consider/watch/caution/pending",
+    "备注": "平台标准和企业个性化结果均使用",
+    "对象.字段": "scoring_result.grade_code[RECOMMEND_PRIORITY]",
+    "枚举编号": "ENUM-PRIORITY-GRADE-001",
+    "进入条件": "评分发布"
+  },
+  {
+    "业务含义": "综合优先级65—79.99",
+    "中文名称": "建议评估",
+    "代码值": "consider",
+    "可转向": "top/watch/caution/pending",
+    "备注": "不等同项目机会B级",
+    "对象.字段": "scoring_result.grade_code[RECOMMEND_PRIORITY]",
+    "枚举编号": "ENUM-PRIORITY-GRADE-002",
+    "进入条件": "评分发布"
+  },
+  {
+    "业务含义": "综合优先级50—64.99",
+    "中文名称": "持续观察",
+    "代码值": "watch",
+    "可转向": "top/consider/caution/pending",
+    "备注": "需展示关键缺口和风险",
+    "对象.字段": "scoring_result.grade_code[RECOMMEND_PRIORITY]",
+    "枚举编号": "ENUM-PRIORITY-GRADE-003",
+    "进入条件": "评分发布"
+  },
+  {
+    "业务含义": "综合优先级0—49.99或被规则设上限",
+    "中文名称": "谨慎推进",
+    "代码值": "caution",
+    "可转向": "top/consider/watch/pending",
+    "备注": "blocked时等级为空而非caution",
+    "对象.字段": "scoring_result.grade_code[RECOMMEND_PRIORITY]",
+    "枚举编号": "ENUM-PRIORITY-GRADE-004",
+    "进入条件": "评分发布"
+  },
+  {
+    "业务含义": "输入覆盖、置信或上下文未达门槛",
+    "中文名称": "信息不足",
+    "代码值": "pending",
+    "可转向": "top/consider/watch/caution",
+    "备注": "不得把pending映射为低优先级",
+    "对象.字段": "scoring_result.grade_code[RECOMMEND_PRIORITY]",
+    "枚举编号": "ENUM-PRIORITY-GRADE-005",
+    "进入条件": "门槛未达"
+  },
+  {
+    "业务含义": "数据可信度85—100且最低证据门槛满足",
+    "中文名称": "高可信",
+    "代码值": "high",
+    "可转向": "medium/low/pending",
+    "备注": "逻辑枚举data_trust_level；低风险结论仍须独立风险审核",
+    "对象.字段": "scoring_result.grade_code[DATA_TRUST]",
+    "枚举编号": "ENUM-DATA-TRUST-001",
+    "进入条件": "可信度发布"
+  },
+  {
+    "业务含义": "数据可信度70—84.99",
+    "中文名称": "中可信",
+    "代码值": "medium",
+    "可转向": "high/low/pending",
+    "备注": "显示来源、时效和冲突限制",
+    "对象.字段": "scoring_result.grade_code[DATA_TRUST]",
+    "枚举编号": "ENUM-DATA-TRUST-002",
+    "进入条件": "可信度发布"
+  },
+  {
+    "业务含义": "数据可信度0—69.99且仍可计算",
+    "中文名称": "低可信",
+    "代码值": "low",
+    "可转向": "high/medium/pending",
+    "备注": "低可信不等于事实为假",
+    "对象.字段": "scoring_result.grade_code[DATA_TRUST]",
+    "枚举编号": "ENUM-DATA-TRUST-003",
+    "进入条件": "可信度发布"
+  },
+  {
+    "业务含义": "未达到最低证据或适用字段条件",
+    "中文名称": "证据不足",
+    "代码值": "pending",
+    "可转向": "high/medium/low",
+    "备注": "不得以0分代替pending",
+    "对象.字段": "scoring_result.grade_code[DATA_TRUST]",
+    "枚举编号": "ENUM-DATA-TRUST-004",
+    "进入条件": "门槛未达"
+  },
+  {
+    "业务含义": "来源原始语言文本",
+    "中文名称": "原文",
+    "代码值": "source",
+    "可转向": "machine_translated/human_reviewed",
+    "备注": "原文优先保存",
+    "对象.字段": "localized_text.translation_status",
+    "枚举编号": "ENUM-TRANS-D4-001",
+    "进入条件": "入库"
+  },
+  {
+    "业务含义": "自动译文未人工校对",
+    "中文名称": "机器翻译",
+    "代码值": "machine_translated",
+    "可转向": "human_reviewed/stale",
+    "备注": "高风险不得直接权威发布",
+    "对象.字段": "localized_text.translation_status",
+    "枚举编号": "ENUM-TRANS-D4-002",
+    "进入条件": "翻译完成"
+  },
+  {
+    "业务含义": "授权人员已校对",
+    "中文名称": "人工校对",
+    "代码值": "human_reviewed",
+    "可转向": "stale",
+    "备注": "保存校对人和术语表版本",
+    "对象.字段": "localized_text.translation_status",
+    "枚举编号": "ENUM-TRANS-D4-003",
+    "进入条件": "审核通过"
+  },
+  {
+    "业务含义": "源文变化后尚未同步",
+    "中文名称": "译文失效",
+    "代码值": "stale",
+    "可转向": "machine_translated/human_reviewed",
+    "备注": "不得显示为最新译文",
+    "对象.字段": "localized_text.translation_status",
+    "枚举编号": "ENUM-TRANS-D4-004",
+    "进入条件": "源哈希变化"
+  }
+]

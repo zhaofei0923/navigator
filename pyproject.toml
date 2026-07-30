@@ -1,0 +1,54 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "navigator-data-readiness"
+version = "0.1.0"
+description = "D0-D4 baseline extraction, validation, and evidence-gate tooling for Navigator."
+readme = "README.md"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+  "openpyxl>=3.1.5,<4",
+]
+
+[project.scripts]
+navigator-data = "navigator_data_readiness.cli:main"
+
+[dependency-groups]
+dev = [
+  "mypy>=1.15,<2",
+  "pytest>=8.3,<10",
+  "pytest-cov>=6,<8",
+  "ruff>=0.11,<1",
+  "types-openpyxl>=3.1.5,<4",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["services/data-readiness/src/navigator_data_readiness"]
+
+[tool.pytest.ini_options]
+addopts = "-q --strict-config --strict-markers"
+testpaths = ["tests/data_readiness"]
+
+[tool.coverage.run]
+branch = true
+source = ["navigator_data_readiness"]
+
+[tool.coverage.report]
+fail_under = 85
+show_missing = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "C4", "RUF"]
+allowed-confusables = ["：", "；"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+packages = ["navigator_data_readiness"]
+mypy_path = "services/data-readiness/src"
