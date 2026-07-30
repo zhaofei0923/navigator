@@ -1,0 +1,77 @@
+{
+  "mandatory_behavior": {
+    "access_or_legal_signal": "停止自动化、保持水位、登记异常、来源转复核",
+    "forbidden_actions": [
+      "验证码破解",
+      "凭证猜测",
+      "身份伪造",
+      "代理轮换规避封禁",
+      "绕过登录或付费墙"
+    ],
+    "schema_drift": "保存旧新schema与原始证据、暂停映射和发布"
+  },
+  "schema_version": 1,
+  "signals": [
+    {
+      "must_stop": true,
+      "retry_allowed": false,
+      "signal": "auth_required"
+    },
+    {
+      "must_stop": true,
+      "retry_allowed": false,
+      "signal": "captcha"
+    },
+    {
+      "must_stop": true,
+      "retry_allowed": false,
+      "signal": "domain_changed"
+    },
+    {
+      "must_stop": true,
+      "retry_allowed": false,
+      "signal": "forbidden"
+    },
+    {
+      "must_stop": true,
+      "retry_allowed": false,
+      "signal": "geo_restricted"
+    },
+    {
+      "must_stop": true,
+      "retry_allowed": false,
+      "signal": "legal_notice"
+    },
+    {
+      "must_stop": false,
+      "retry_allowed": true,
+      "signal": "none"
+    },
+    {
+      "must_stop": true,
+      "retry_allowed": false,
+      "signal": "paywall"
+    },
+    {
+      "must_stop": true,
+      "retry_allowed": false,
+      "signal": "personal_data_overreach"
+    },
+    {
+      "must_stop": true,
+      "retry_allowed": false,
+      "signal": "robots_blocked"
+    },
+    {
+      "must_stop": true,
+      "retry_allowed": false,
+      "signal": "schema_drift"
+    },
+    {
+      "must_stop": true,
+      "retry_allowed": false,
+      "signal": "terms_changed"
+    }
+  ],
+  "stage": "D2"
+}

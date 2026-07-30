@@ -27,6 +27,7 @@ uv run navigator-data prepare-d0
 uv run navigator-data assess-d0
 uv run navigator-data prepare-d0-review
 uv run navigator-data prepare-d1
+uv run navigator-data prepare-d2
 uv run navigator-data report
 uv run pytest --cov
 ```
@@ -54,6 +55,11 @@ D1候选包位于
 [`data/d1/candidates`](data/d1/candidates/README.md)。它固化印尼20个、四个比较国
 各8个active来源门槛，并要求五国40个“国家×核心数据域”组合分别绑定不同的优先
 来源和替代来源。D0未通过、许可或访问边界未决时，`validate-d1`必须失败。
+
+D2候选包位于
+[`data/d2/candidates`](data/d2/candidates/README.md)。它将6个冻结批次固化为采集任务，
+要求每次运行保存幂等、水位和请求响应证据，每个L0对象保存不可变原件元数据和
+SHA-256，并对403、验证码、付费墙、许可、robots和schema漂移执行停止而非绕过。
 
 完整实施顺序见
 [`docs/development/P0_IMPLEMENTATION_PLAN.md`](docs/development/P0_IMPLEMENTATION_PLAN.md)。

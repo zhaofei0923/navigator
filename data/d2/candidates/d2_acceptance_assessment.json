@@ -1,0 +1,33 @@
+{
+  "automated_assessment_only": true,
+  "checks": [
+    {
+      "check_id": "D2-D1-DEPENDENCY",
+      "finding": "D1准入结论尚未批准",
+      "status": "fail"
+    },
+    {
+      "check_id": "D2-JOB-CONTRACTS",
+      "finding": "6个冻结批次已生成采集任务候选",
+      "status": "candidate_generated"
+    },
+    {
+      "check_id": "D2-RUN-EVIDENCE",
+      "finding": "尚无实际运行、请求响应摘要或水位证据",
+      "status": "fail"
+    },
+    {
+      "check_id": "D2-L0-RAW",
+      "finding": "尚无不可变L0原始对象清单",
+      "status": "fail"
+    },
+    {
+      "check_id": "D2-BATCH-CLOSURE",
+      "finding": "6个批次均未关闭",
+      "status": "fail"
+    }
+  ],
+  "overall_status": "not_ready",
+  "schema_version": 1,
+  "stage": "D2"
+}

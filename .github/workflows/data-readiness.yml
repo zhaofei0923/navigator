@@ -29,4 +29,6 @@ jobs:
       - run: git diff --exit-code -- data/d0/review/d0_review_packet.template.json
       - run: uv run navigator-data prepare-d1
       - run: git diff --exit-code -- data/d1/candidates
+      - run: uv run navigator-data prepare-d2
+      - run: git diff --exit-code -- data/d2/candidates
       - run: uv run pytest --cov --cov-report=term-missing

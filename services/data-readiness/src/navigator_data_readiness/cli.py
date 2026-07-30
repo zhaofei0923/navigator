@@ -10,6 +10,7 @@ from .baseline import write_snapshot
 from .d0_candidates import candidate_payloads, write_candidates
 from .d0_review import load_and_validate_review_packet, write_review_template
 from .d1_sources import load_and_validate_d1_admission, write_d1_candidates
+from .d2_collection import load_and_validate_d2_bundle, write_d2_candidates
 from .models import CheckResult
 from .paths import discover_repository
 from .readiness import build_readiness_report, render_markdown
@@ -58,6 +59,16 @@ def _parser() -> argparse.ArgumentParser:
     )
     d1_validation.add_argument("--registry", type=Path, required=True)
     d1_validation.add_argument("--matrix", type=Path, required=True)
+    commands.add_parser(
+        "prepare-d2",
+        help="Generate D2 collection-job, immutable raw-manifest, and stop-signal templates.",
+    )
+    d2_validation = commands.add_parser(
+        "validate-d2",
+        help="Validate a completed D2 collection bundle against an approved D1 registry.",
+    )
+    d2_validation.add_argument("--bundle", type=Path, required=True)
+    d2_validation.add_argument("--d1-registry", type=Path, required=True)
 
     report = commands.add_parser("report", help="Render the current D0 readiness report.")
     report.add_argument("--format", choices=("markdown", "json"), default="markdown")
@@ -125,6 +136,21 @@ def main(argv: list[str] | None = None) -> int:
         registry_path = args.registry if args.registry.is_absolute() else paths.root / args.registry
         matrix_path = args.matrix if args.matrix.is_absolute() else paths.root / args.matrix
         checks = load_and_validate_d1_admission(paths, registry_path, matrix_path)
+        _print_checks(checks)
+        return 1 if checks else 0
+
+    if args.command == "prepare-d2":
+        written = write_d2_candidates(paths)
+        for path in written:
+            print(path.relative_to(paths.root).as_posix())
+        return 0
+
+    if args.command == "validate-d2":
+        bundle_path = args.bundle if args.bundle.is_absolute() else paths.root / args.bundle
+        d1_registry_path = (
+            args.d1_registry if args.d1_registry.is_absolute() else paths.root / args.d1_registry
+        )
+        checks = load_and_validate_d2_bundle(paths, bundle_path, d1_registry_path)
         _print_checks(checks)
         return 1 if checks else 0
 
