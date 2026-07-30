@@ -57,7 +57,9 @@ uv run navigator-data gate --stage D0
 D1候选包位于
 [`data/d1/candidates`](data/d1/candidates/README.md)。它固化印尼20个、四个比较国
 各8个active来源门槛，并要求五国40个“国家×核心数据域”组合分别绑定不同的优先
-来源和替代来源。D0未通过、许可或访问边界未决时，`validate-d1`必须失败。
+来源和替代来源。当前已登记18个冻结起始来源和41个官方研究候选，五国候选数量
+达到目标，但59个候选全部保持`under_review`，active数量仍为0。D0未通过、许可或
+访问边界未决时，`validate-d1`必须失败。
 
 D2候选包位于
 [`data/d2/candidates`](data/d2/candidates/README.md)。它将6个冻结批次固化为采集任务，

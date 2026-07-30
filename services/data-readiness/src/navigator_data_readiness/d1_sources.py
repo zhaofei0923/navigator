@@ -17,6 +17,8 @@ BOUNDARY_STATES = {"pending", "allowed", "prohibited", "conditional", "not_appli
 FINAL_BOUNDARY_STATES = BOUNDARY_STATES - {"pending"}
 ACCESS_DECISIONS = {"pending", "allowed", "prohibited", "manual_only", "contract_limited"}
 FINAL_ACCESS_DECISIONS = ACCESS_DECISIONS - {"pending"}
+RESEARCH_CATALOG_NAME = "official_source_candidates.json"
+RESEARCH_STATUS = "official_candidate_identified"
 
 USE_BOUNDARIES = (
     "collect_metadata",
@@ -107,7 +109,152 @@ def _seed_source(item: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _baseline(paths: RepositoryPaths, contracts: dict[str, Any]) -> dict[str, Any]:
+def load_official_source_candidates(paths: RepositoryPaths) -> dict[str, Any]:
+    catalog_path = paths.d1_research_dir / RESEARCH_CATALOG_NAME
+    try:
+        payload = json.loads(catalog_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as error:
+        raise ValueError(f"Cannot read D1 official-source research catalog: {error}") from error
+    if not isinstance(payload, dict):
+        raise ValueError("D1 official-source research catalog root must be an object")
+    if (
+        payload.get("schema_version") != 1
+        or payload.get("stage") != "D1"
+        or payload.get("status") != "research_only"
+    ):
+        raise ValueError(
+            "D1 official-source research catalog requires schema_version 1, "
+            "stage D1, and research_only status"
+        )
+    for field in ("captured_on", "warning", "verification_method"):
+        if not str(payload.get(field) or "").strip():
+            raise ValueError(f"D1 official-source research catalog requires {field}")
+    candidates = payload.get("candidates")
+    if not isinstance(candidates, list):
+        raise ValueError("D1 official-source research candidates must be a list")
+
+    required_text = (
+        "source_id",
+        "organization",
+        "country",
+        "entry_url",
+        "source_type",
+        "authority_level",
+        "evidence_scope",
+        "access_method",
+        "suggested_frequency",
+        "business_owner_group",
+        "research_status",
+        "research_notes",
+    )
+    source_ids: set[str] = set()
+    for index, item in enumerate(candidates):
+        if not isinstance(item, dict):
+            raise ValueError(f"D1 research candidate {index} must be an object")
+        missing = [field for field in required_text if not str(item.get(field) or "").strip()]
+        if missing:
+            raise ValueError(
+                f"D1 research candidate {index} missing required fields: {', '.join(missing)}"
+            )
+        source_id = str(item["source_id"]).strip()
+        if source_id in source_ids:
+            raise ValueError(f"Duplicate D1 research source_id: {source_id}")
+        source_ids.add(source_id)
+        country = str(item["country"]).strip()
+        if country not in COUNTRY_SOURCE_TARGETS:
+            raise ValueError(f"{source_id} has unsupported country: {country}")
+        entry_url = urlparse(str(item["entry_url"]).strip())
+        if entry_url.scheme != "https" or not entry_url.hostname:
+            raise ValueError(f"{source_id} requires an HTTPS official entry URL")
+        if item.get("authority_level") not in {"A", "B"}:
+            raise ValueError(f"{source_id} research authority_level must be A or B")
+        languages = item.get("languages")
+        if (
+            not isinstance(languages, list)
+            or not languages
+            or not all(str(value).strip() for value in languages)
+        ):
+            raise ValueError(f"{source_id} requires one or more research languages")
+        if item.get("research_status") != RESEARCH_STATUS:
+            raise ValueError(
+                f"{source_id} research_status must remain {RESEARCH_STATUS} before admission"
+            )
+        if item.get("status") == "active":
+            raise ValueError(f"{source_id} research catalog cannot mark a source active")
+    return payload
+
+
+def _research_source(item: dict[str, Any]) -> dict[str, Any]:
+    entry_url = str(item["entry_url"]).strip()
+    return {
+        "source_id": str(item["source_id"]).strip(),
+        "organization": item["organization"],
+        "canonical_domain": urlparse(entry_url).hostname,
+        "entry_url": entry_url,
+        "scope_codes": [str(item["country"]).strip()],
+        "source_type": item["source_type"],
+        "authority_level": item["authority_level"],
+        "evidence_scope": item["evidence_scope"],
+        "languages": item["languages"],
+        "access_method": item["access_method"],
+        "suggested_frequency": item["suggested_frequency"],
+        "business_owner_group": item["business_owner_group"],
+        "technical_owner": None,
+        "data_owner_reviewer": None,
+        "compliance_reviewer": None,
+        "reviewed_at": None,
+        "next_review_at": None,
+        "terms_snapshot_id": None,
+        "license_snapshot_id": None,
+        "robots_snapshot_id": None,
+        "attribution_requirement": None,
+        "retention_rule": None,
+        "review_notes": item["research_notes"],
+        "research_provenance": {
+            "catalog": f"data/d1/research/{RESEARCH_CATALOG_NAME}",
+            "status": item["research_status"],
+        },
+        "usage_boundaries": dict.fromkeys(USE_BOUNDARIES, "pending"),
+        "boundary_conditions": {},
+        "access_policy": {
+            "automation": "pending",
+            "login_required": None,
+            "paid_access": None,
+            "captcha_observed": None,
+            "geo_restricted": None,
+            "rate_limit": None,
+            "identifiable_user_agent_required": None,
+            "access_control_bypass_prohibited": True,
+        },
+        "approval_evidence_ids": [],
+        "status": "under_review",
+    }
+
+
+def _validate_research_coverage(
+    seed_sources: list[dict[str, Any]],
+    research_sources: list[dict[str, Any]],
+) -> None:
+    seed_counts = _scope_counts(seed_sources, active_only=False)
+    research_counts = _scope_counts(research_sources, active_only=False)
+    findings: list[str] = []
+    for country, target in COUNTRY_SOURCE_TARGETS.items():
+        required_research = max(target - seed_counts[country], 0)
+        if research_counts[country] != required_research:
+            findings.append(
+                f"{country} requires {required_research} researched candidates, "
+                f"found {research_counts[country]}"
+            )
+    if findings:
+        raise ValueError("D1 research coverage mismatch: " + "; ".join(findings))
+
+
+def _baseline(
+    paths: RepositoryPaths,
+    contracts: dict[str, Any],
+    research_catalog: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    catalog = research_catalog or load_official_source_candidates(paths)
     relevant_inputs = {
         key: contracts[key]
         for key in ("countries", "domain_targets", "source_registry_seed", "d0_d4_roadmap")
@@ -123,20 +270,40 @@ def _baseline(paths: RepositoryPaths, contracts: dict[str, Any]) -> dict[str, An
                 "path": paths.technical_workbook.relative_to(paths.root).as_posix(),
                 "sha256": sha256_file(paths.technical_workbook),
             },
+            "official_source_research_catalog": {
+                "path": (paths.d1_research_dir / RESEARCH_CATALOG_NAME)
+                .relative_to(paths.root)
+                .as_posix(),
+                "sha256": sha256_file(paths.d1_research_dir / RESEARCH_CATALOG_NAME),
+            },
         },
-        "d1_input_sha256": _payload_sha256(relevant_inputs),
+        "d1_input_sha256": _payload_sha256(
+            {
+                "frozen_contracts": relevant_inputs,
+                "official_source_research_catalog": catalog,
+            }
+        ),
     }
 
 
 def build_source_registry_template(paths: RepositoryPaths) -> dict[str, Any]:
     contracts = extract_contracts(paths)
+    research_catalog = load_official_source_candidates(paths)
+    seed_sources = [_seed_source(item) for item in contracts["source_registry_seed"]]
+    research_sources = [_research_source(item) for item in research_catalog["candidates"]]
+    seed_ids = {str(item["source_id"]) for item in seed_sources}
+    research_ids = {str(item["source_id"]) for item in research_sources}
+    overlap = sorted(seed_ids & research_ids)
+    if overlap:
+        raise ValueError(f"D1 research source IDs overlap frozen seeds: {', '.join(overlap)}")
+    _validate_research_coverage(seed_sources, research_sources)
     return {
         "schema_version": 1,
         "stage": "D1",
         "template_only": True,
-        "warning": ("起始来源仅为待复核候选；公开可访问不等于允许批量采集、保存、再分发或AI使用"),
-        "baseline": _baseline(paths, contracts),
-        "sources": [_seed_source(item) for item in contracts["source_registry_seed"]],
+        "warning": ("所有来源仅为待复核候选；公开可访问不等于允许批量采集、保存、再分发或AI使用"),
+        "baseline": _baseline(paths, contracts, research_catalog),
+        "sources": [*seed_sources, *research_sources],
     }
 
 
@@ -196,18 +363,29 @@ def _scope_counts(sources: list[dict[str, Any]], *, active_only: bool) -> Counte
 def build_source_coverage_gap_report(paths: RepositoryPaths) -> dict[str, Any]:
     registry = build_source_registry_template(paths)
     sources = registry["sources"]
+    contracts = extract_contracts(paths)
+    frozen_sources = [_seed_source(item) for item in contracts["source_registry_seed"]]
+    research_sources = [
+        _research_source(item) for item in load_official_source_candidates(paths)["candidates"]
+    ]
     candidate_counts = _scope_counts(sources, active_only=False)
+    frozen_counts = _scope_counts(frozen_sources, active_only=False)
+    research_counts = _scope_counts(research_sources, active_only=False)
     return {
         "schema_version": 1,
         "stage": "D1",
         "status": "incomplete",
         "purpose": "D1国家来源数量候选缺口；候选数不等于已准入active来源数",
-        "seed_source_count": len(sources),
+        "candidate_source_count": len(sources),
+        "frozen_seed_source_count": len(frozen_sources),
+        "researched_candidate_count": len(research_sources),
         "countries": [
             {
                 "country": country,
                 "target": target,
-                "seed_candidates": candidate_counts[country],
+                "frozen_seed_candidates": frozen_counts[country],
+                "researched_candidates": research_counts[country],
+                "candidate_sources": candidate_counts[country],
                 "active_sources": 0,
                 "candidate_gap": max(target - candidate_counts[country], 0),
                 "active_gap": target,
@@ -224,6 +402,9 @@ def build_d1_assessment(paths: RepositoryPaths) -> dict[str, Any]:
     registry = build_source_registry_template(paths)
     matrix = build_domain_source_matrix_template(paths)
     gap = build_source_coverage_gap_report(paths)
+    researched_count = gap["researched_candidate_count"]
+    frozen_count = gap["frozen_seed_source_count"]
+    country_candidates_ready = all(item["candidate_gap"] == 0 for item in gap["countries"])
     return {
         "schema_version": 1,
         "stage": "D1",
@@ -234,11 +415,14 @@ def build_d1_assessment(paths: RepositoryPaths) -> dict[str, Any]:
             {
                 "check_id": "D1-SEED-REGISTRY",
                 "status": "candidate_generated",
-                "finding": f"{len(registry['sources'])}个起始候选均为under_review",
+                "finding": (
+                    f"{frozen_count}个冻结起始来源和{researched_count}个官方研究候选"
+                    f"共{len(registry['sources'])}个，均为under_review"
+                ),
             },
             {
                 "check_id": "D1-COUNTRY-THRESHOLDS",
-                "status": "fail",
+                "status": "candidate_generated" if country_candidates_ready else "fail",
                 "finding": gap["countries"],
             },
             {

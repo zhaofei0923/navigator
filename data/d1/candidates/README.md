@@ -1,21 +1,25 @@
 # D1来源准入候选包
 
-本目录由 `navigator-data prepare-d1` 从冻结来源清单、五国范围和数据域目标生成。
-所有起始来源均为 `under_review`，不是已准入来源。D0正式门禁未通过时，不得把任何
-来源改为 `active` 或用于自动批量采集。
+本目录由 `navigator-data prepare-d1` 从冻结来源清单、五国范围、数据域目标和
+[`../research/official_source_candidates.json`](../research/official_source_candidates.json)
+生成。18个冻结起始来源和41个官方研究候选共59个，全部为 `under_review`，不是已
+准入来源。D0正式门禁未通过时，不得把任何来源改为 `active` 或用于自动批量采集。
 
 | 文件 | 用途 | 当前结论 |
 |---|---|---|
-| `source_admission_registry.template.json` | 来源主数据、许可、访问和用途边界模板 | 18个起始来源均待数据/合规复核 |
+| `source_admission_registry.template.json` | 来源主数据、许可、访问和用途边界模板 | 59个候选均待数据/合规复核 |
 | `domain_source_matrix.template.json` | 五国核心数据域的优先与替代来源 | 40个组合均待绑定 |
-| `source_coverage_gap_report.json` | 印尼20个、比较国各8个来源目标差距 | 起始候选远未达到active来源门槛 |
-| `d1_acceptance_assessment.json` | D1机器评估摘要 | D0依赖、数量、替代源和合规均未通过 |
+| `source_coverage_gap_report.json` | 印尼20个、比较国各8个来源目标差距 | 候选数量已补齐，active数量仍为0 |
+| `d1_acceptance_assessment.json` | D1机器评估摘要 | D0依赖、active来源、替代源和合规仍未通过 |
+
+研究目录仅记录官方候选入口和初步用途。它不包含条款、许可、robots或访问限制的
+批准结论，也不允许自动采集、复制、再分发、展示、导出、AI索引或模型训练。
 
 ## 执行流程
 
 1. 先完成D0正式签署和阶段门；
 2. 复制两个 `.template.json`，将 `template_only` 改为 `false`；
-3. 保留18个冻结起始来源，并按国家目标补充候选；
+3. 复核18个冻结起始来源和41个官方研究候选；如替换候选，保留变更理由和证据；
 4. 对每个来源保存当日条款、许可、robots和访问规则快照；
 5. 明确12类用途边界，以及登录、付费、验证码、地区和自动化限制；
 6. 只有数据负责人和合规负责人批准、证据齐全、小样本验证成功后才可转`active`；

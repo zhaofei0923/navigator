@@ -1,50 +1,62 @@
 {
+  "candidate_source_count": 59,
   "countries": [
     {
       "active_gap": 20,
       "active_sources": 0,
-      "candidate_gap": 18,
+      "candidate_gap": 0,
+      "candidate_sources": 20,
       "country": "IDN",
-      "seed_candidates": 2,
+      "frozen_seed_candidates": 2,
+      "researched_candidates": 18,
       "target": 20
     },
     {
       "active_gap": 8,
       "active_sources": 0,
-      "candidate_gap": 6,
+      "candidate_gap": 0,
+      "candidate_sources": 8,
       "country": "VNM",
-      "seed_candidates": 2,
+      "frozen_seed_candidates": 2,
+      "researched_candidates": 6,
       "target": 8
     },
     {
       "active_gap": 8,
       "active_sources": 0,
-      "candidate_gap": 6,
+      "candidate_gap": 0,
+      "candidate_sources": 8,
       "country": "SAU",
-      "seed_candidates": 2,
+      "frozen_seed_candidates": 2,
+      "researched_candidates": 6,
       "target": 8
     },
     {
       "active_gap": 8,
       "active_sources": 0,
-      "candidate_gap": 6,
+      "candidate_gap": 0,
+      "candidate_sources": 8,
       "country": "ZAF",
-      "seed_candidates": 2,
+      "frozen_seed_candidates": 2,
+      "researched_candidates": 6,
       "target": 8
     },
     {
       "active_gap": 8,
       "active_sources": 0,
-      "candidate_gap": 5,
+      "candidate_gap": 0,
+      "candidate_sources": 8,
       "country": "BRA",
-      "seed_candidates": 3,
+      "frozen_seed_candidates": 3,
+      "researched_candidates": 5,
       "target": 8
     }
   ],
+  "frozen_seed_source_count": 18,
   "purpose": "D1国家来源数量候选缺口；候选数不等于已准入active来源数",
   "regional_or_global_seed_count": 7,
+  "researched_candidate_count": 41,
   "schema_version": 1,
-  "seed_source_count": 18,
   "stage": "D1",
   "status": "incomplete"
 }

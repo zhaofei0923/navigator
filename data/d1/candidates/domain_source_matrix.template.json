@@ -442,11 +442,15 @@
     }
   ],
   "baseline": {
-    "d1_input_sha256": "83f3b1c3fb437159d6b2cedfeb8eef7d4ee48336abffbf856cbf0883bb154c49",
+    "d1_input_sha256": "2241b398b288a751e05e46a1275dad97a532c3cd6bc3f89143fee1ef5f47c970",
     "sources": {
       "d0_workbook": {
         "path": "doc/doc/新能源企业出海导航仪_D0数据标准冻结执行台账.xlsx",
         "sha256": "224e9a35bcbb363cf41c007499ba32aa6394cfdbf06331830c02d994e1c7ddff"
+      },
+      "official_source_research_catalog": {
+        "path": "data/d1/research/official_source_candidates.json",
+        "sha256": "b1986a7ff2d0abceea0360c84cd3dd3dd9725d257ff0523dedc8721a2aaae34d"
       },
       "technical_workbook": {
         "path": "doc/doc/新能源企业出海导航仪_V1.0技术附件_BASELINE.xlsx",

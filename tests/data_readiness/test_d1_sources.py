@@ -1,18 +1,23 @@
 from __future__ import annotations
 
 import copy
+import json
+from collections import Counter
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
+import pytest
 from navigator_data_readiness.d1_sources import (
     COUNTRY_SOURCE_TARGETS,
+    RESEARCH_CATALOG_NAME,
     USE_BOUNDARIES,
     build_d1_assessment,
     build_domain_source_matrix_template,
     build_source_coverage_gap_report,
     build_source_registry_template,
     load_and_validate_d1_admission,
+    load_official_source_candidates,
     validate_d1_admission,
     write_d1_candidates,
 )
@@ -114,16 +119,175 @@ def test_d1_templates_expose_frozen_counts_and_country_gaps() -> None:
     gaps = {item["country"]: item for item in gap["countries"]}
 
     assert registry["template_only"] is True
-    assert len(registry["sources"]) == 18
+    assert len(registry["sources"]) == 59
     assert all(item["status"] == "under_review" for item in registry["sources"])
     assert len(matrix["assignments"]) == 40
-    assert gaps["IDN"]["seed_candidates"] == 2
-    assert gaps["IDN"]["candidate_gap"] == 18
-    assert gaps["VNM"]["candidate_gap"] == 6
-    assert gaps["BRA"]["candidate_gap"] == 5
+    assert gap["frozen_seed_source_count"] == 18
+    assert gap["researched_candidate_count"] == 41
+    assert gaps["IDN"]["frozen_seed_candidates"] == 2
+    assert gaps["IDN"]["researched_candidates"] == 18
+    assert gaps["IDN"]["candidate_sources"] == 20
+    assert all(item["candidate_gap"] == 0 for item in gaps.values())
+    assert all(item["active_gap"] == item["target"] for item in gaps.values())
     assert gap["regional_or_global_seed_count"] == 7
     assert assessment["overall_status"] == "not_ready"
     assert assessment["d0_dependency_ready"] is False
+    threshold_check = next(
+        item for item in assessment["checks"] if item["check_id"] == "D1-COUNTRY-THRESHOLDS"
+    )
+    assert threshold_check["status"] == "candidate_generated"
+
+
+def test_official_source_research_catalog_is_bounded_and_never_activates_sources() -> None:
+    paths = discover_repository()
+
+    catalog = load_official_source_candidates(paths)
+    candidates = catalog["candidates"]
+    counts = Counter(str(item["country"]) for item in candidates)
+    registry = build_source_registry_template(paths)
+    researched_sources = [item for item in registry["sources"] if item.get("research_provenance")]
+
+    assert len(candidates) == 41
+    assert counts == Counter({"IDN": 18, "VNM": 6, "SAU": 6, "ZAF": 6, "BRA": 5})
+    assert all(str(item["entry_url"]).startswith("https://") for item in candidates)
+    assert len({str(item["source_id"]) for item in candidates}) == 41
+    assert len(researched_sources) == 41
+    assert all(item["status"] == "under_review" for item in researched_sources)
+    assert all(set(item["usage_boundaries"].values()) == {"pending"} for item in researched_sources)
+    assert all(item["access_policy"]["automation"] == "pending" for item in researched_sources)
+
+
+def _write_research_catalog(
+    tmp_path: Path,
+    payload: Any,
+) -> Path:
+    research_dir = tmp_path / "research"
+    research_dir.mkdir(parents=True)
+    (research_dir / RESEARCH_CATALOG_NAME).write_text(
+        json.dumps(payload, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    return research_dir
+
+
+@pytest.mark.parametrize(
+    ("mutation", "message"),
+    [
+        (lambda payload: [], "root must be an object"),
+        (
+            lambda payload: {**payload, "schema_version": 2},
+            "requires schema_version 1",
+        ),
+        (
+            lambda payload: {**payload, "warning": ""},
+            "requires warning",
+        ),
+        (
+            lambda payload: {**payload, "candidates": "invalid"},
+            "candidates must be a list",
+        ),
+        (
+            lambda payload: {**payload, "candidates": [None]},
+            "candidate 0 must be an object",
+        ),
+        (
+            lambda payload: {
+                **payload,
+                "candidates": [{**payload["candidates"][0], "organization": ""}],
+            },
+            "missing required fields",
+        ),
+        (
+            lambda payload: {
+                **payload,
+                "candidates": [payload["candidates"][0], payload["candidates"][0]],
+            },
+            "Duplicate D1 research source_id",
+        ),
+        (
+            lambda payload: {
+                **payload,
+                "candidates": [{**payload["candidates"][0], "country": "USA"}],
+            },
+            "unsupported country",
+        ),
+        (
+            lambda payload: {
+                **payload,
+                "candidates": [{**payload["candidates"][0], "entry_url": "http://example.com/"}],
+            },
+            "requires an HTTPS",
+        ),
+        (
+            lambda payload: {
+                **payload,
+                "candidates": [{**payload["candidates"][0], "authority_level": "C"}],
+            },
+            "authority_level must be A or B",
+        ),
+        (
+            lambda payload: {
+                **payload,
+                "candidates": [{**payload["candidates"][0], "languages": []}],
+            },
+            "requires one or more research languages",
+        ),
+        (
+            lambda payload: {
+                **payload,
+                "candidates": [{**payload["candidates"][0], "research_status": "verified"}],
+            },
+            "research_status must remain",
+        ),
+        (
+            lambda payload: {
+                **payload,
+                "candidates": [{**payload["candidates"][0], "status": "active"}],
+            },
+            "cannot mark a source active",
+        ),
+    ],
+)
+def test_invalid_research_catalogs_are_rejected(
+    tmp_path: Path,
+    mutation: Any,
+    message: str,
+) -> None:
+    source_paths = discover_repository()
+    payload = load_official_source_candidates(source_paths)
+    research_dir = _write_research_catalog(tmp_path, mutation(copy.deepcopy(payload)))
+    paths = replace(source_paths, d1_research_dir=research_dir)
+
+    with pytest.raises(ValueError, match=message):
+        load_official_source_candidates(paths)
+
+
+def test_missing_malformed_overlapping_and_incomplete_research_catalogs_are_rejected(
+    tmp_path: Path,
+) -> None:
+    source_paths = discover_repository()
+    missing_paths = replace(source_paths, d1_research_dir=tmp_path / "missing")
+    with pytest.raises(ValueError, match="Cannot read"):
+        load_official_source_candidates(missing_paths)
+
+    malformed_dir = tmp_path / "malformed"
+    malformed_dir.mkdir()
+    (malformed_dir / RESEARCH_CATALOG_NAME).write_text("{", encoding="utf-8")
+    with pytest.raises(ValueError, match="Cannot read"):
+        load_official_source_candidates(replace(source_paths, d1_research_dir=malformed_dir))
+
+    payload = load_official_source_candidates(source_paths)
+    overlap = copy.deepcopy(payload)
+    overlap["candidates"][0]["source_id"] = "SRC-IDN-ESDM"
+    overlap_dir = _write_research_catalog(tmp_path / "overlap", overlap)
+    with pytest.raises(ValueError, match="overlap frozen seeds"):
+        build_source_registry_template(replace(source_paths, d1_research_dir=overlap_dir))
+
+    incomplete = copy.deepcopy(payload)
+    incomplete["candidates"].pop()
+    incomplete_dir = _write_research_catalog(tmp_path / "incomplete", incomplete)
+    with pytest.raises(ValueError, match="research coverage mismatch"):
+        build_source_registry_template(replace(source_paths, d1_research_dir=incomplete_dir))
 
 
 def test_unfilled_d1_templates_fail_all_hard_categories() -> None:

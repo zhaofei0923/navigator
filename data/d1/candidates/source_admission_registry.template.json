@@ -1,10 +1,14 @@
 {
   "baseline": {
-    "d1_input_sha256": "83f3b1c3fb437159d6b2cedfeb8eef7d4ee48336abffbf856cbf0883bb154c49",
+    "d1_input_sha256": "2241b398b288a751e05e46a1275dad97a532c3cd6bc3f89143fee1ef5f47c970",
     "sources": {
       "d0_workbook": {
         "path": "doc/doc/新能源企业出海导航仪_D0数据标准冻结执行台账.xlsx",
         "sha256": "224e9a35bcbb363cf41c007499ba32aa6394cfdbf06331830c02d994e1c7ddff"
+      },
+      "official_source_research_catalog": {
+        "path": "data/d1/research/official_source_candidates.json",
+        "sha256": "b1986a7ff2d0abceea0360c84cd3dd3dd9725d257ff0523dedc8721a2aaae34d"
       },
       "technical_workbook": {
         "path": "doc/doc/新能源企业出海导航仪_V1.0技术附件_BASELINE.xlsx",
@@ -986,9 +990,2484 @@
         "summarize": "pending",
         "translate": "pending"
       }
+    },
+    {
+      "access_method": "official_web_portal",
+      "access_policy": {
+        "access_control_bypass_prohibited": true,
+        "automation": "pending",
+        "captcha_observed": null,
+        "geo_restricted": null,
+        "identifiable_user_agent_required": null,
+        "login_required": null,
+        "paid_access": null,
+        "rate_limit": null
+      },
+      "approval_evidence_ids": [],
+      "attribution_requirement": null,
+      "authority_level": "A",
+      "boundary_conditions": {},
+      "business_owner_group": "数据组",
+      "canonical_domain": "www.bps.go.id",
+      "compliance_reviewer": null,
+      "data_owner_reviewer": null,
+      "entry_url": "https://www.bps.go.id/en/statistics-table?subject=558",
+      "evidence_scope": "能源、宏观经济、人口和产业统计",
+      "languages": [
+        "id",
+        "en"
+      ],
+      "license_snapshot_id": null,
+      "next_review_at": null,
+      "organization": "Badan Pusat Statistik (Statistics Indonesia)",
+      "research_provenance": {
+        "catalog": "data/d1/research/official_source_candidates.json",
+        "status": "official_candidate_identified"
+      },
+      "retention_rule": null,
+      "review_notes": "能源主题统计入口；具体表格许可、下载和自动化边界待复核。",
+      "reviewed_at": null,
+      "robots_snapshot_id": null,
+      "scope_codes": [
+        "IDN"
+      ],
+      "source_id": "SRC-IDN-BPS",
+      "source_type": "official_statistics",
+      "status": "under_review",
+      "suggested_frequency": "monthly",
+      "technical_owner": null,
+      "terms_snapshot_id": null,
+      "usage_boundaries": {
+        "ai_index": "pending",
+        "cache_original": "pending",
+        "collect_content": "pending",
+        "collect_metadata": "pending",
+        "display_excerpt": "pending",
+        "display_original": "pending",
+        "download": "pending",
+        "export": "pending",
+        "model_training": "pending",
+        "store_structured": "pending",
+        "summarize": "pending",
+        "translate": "pending"
+      }
+    },
+    {
+      "access_method": "official_web_portal",
+      "access_policy": {
+        "access_control_bypass_prohibited": true,
+        "automation": "pending",
+        "captcha_observed": null,
+        "geo_restricted": null,
+        "identifiable_user_agent_required": null,
+        "login_required": null,
+        "paid_access": null,
+        "rate_limit": null
+      },
+      "approval_evidence_ids": [],
+      "attribution_requirement": null,
+      "authority_level": "A",
+      "boundary_conditions": {},
+      "business_owner_group": "市场研究组",
+      "canonical_domain": "www.investindonesia.go.id",
+      "compliance_reviewer": null,
+      "data_owner_reviewer": null,
+      "entry_url": "https://www.investindonesia.go.id/id/info/realisasi-investasi",
+      "evidence_scope": "投资实现、投资政策和行业机会",
+      "languages": [
+        "id",
+        "en"
+      ],
+      "license_snapshot_id": null,
+      "next_review_at": null,
+      "organization": "Ministry of Investment and Downstream Industry / BKPM",
+      "research_provenance": {
+        "catalog": "data/d1/research/official_source_candidates.json",
+        "status": "official_candidate_identified"
+      },
+      "retention_rule": null,
+      "review_notes": "投资实现入口；附件版权、历史版本和结构化获取方式待复核。",
+      "reviewed_at": null,
+      "robots_snapshot_id": null,
+      "scope_codes": [
+        "IDN"
+      ],
+      "source_id": "SRC-IDN-BKPM-DATA",
+      "source_type": "official_investment_portal",
+      "status": "under_review",
+      "suggested_frequency": "quarterly",
+      "technical_owner": null,
+      "terms_snapshot_id": null,
+      "usage_boundaries": {
+        "ai_index": "pending",
+        "cache_original": "pending",
+        "collect_content": "pending",
+        "collect_metadata": "pending",
+        "display_excerpt": "pending",
+        "display_original": "pending",
+        "download": "pending",
+        "export": "pending",
+        "model_training": "pending",
+        "store_structured": "pending",
+        "summarize": "pending",
+        "translate": "pending"
+      }
+    },
+    {
+      "access_method": "official_transaction_portal",
+      "access_policy": {
+        "access_control_bypass_prohibited": true,
+        "automation": "pending",
+        "captcha_observed": null,
+        "geo_restricted": null,
+        "identifiable_user_agent_required": null,
+        "login_required": null,
+        "paid_access": null,
+        "rate_limit": null
+      },
+      "approval_evidence_ids": [],
+      "attribution_requirement": null,
+      "authority_level": "A",
+      "boundary_conditions": {},
+      "business_owner_group": "合规组",
+      "canonical_domain": "oss.go.id",
+      "compliance_reviewer": null,
+      "data_owner_reviewer": null,
+      "entry_url": "https://oss.go.id/",
+      "evidence_scope": "企业许可、风险分类和经营准入流程",
+      "languages": [
+        "id"
+      ],
+      "license_snapshot_id": null,
+      "next_review_at": null,
+      "organization": "Online Single Submission Indonesia",
+      "research_provenance": {
+        "catalog": "data/d1/research/official_source_candidates.json",
+        "status": "official_candidate_identified"
+      },
+      "retention_rule": null,
+      "review_notes": "业务办理入口可能要求登录；仅允许人工研究，自动化和账户操作待明确批准。",
+      "reviewed_at": null,
+      "robots_snapshot_id": null,
+      "scope_codes": [
+        "IDN"
+      ],
+      "source_id": "SRC-IDN-OSS",
+      "source_type": "official_business_licensing",
+      "status": "under_review",
+      "suggested_frequency": "event_driven",
+      "technical_owner": null,
+      "terms_snapshot_id": null,
+      "usage_boundaries": {
+        "ai_index": "pending",
+        "cache_original": "pending",
+        "collect_content": "pending",
+        "collect_metadata": "pending",
+        "display_excerpt": "pending",
+        "display_original": "pending",
+        "download": "pending",
+        "export": "pending",
+        "model_training": "pending",
+        "store_structured": "pending",
+        "summarize": "pending",
+        "translate": "pending"
+      }
+    },
+    {
+      "access_method": "official_web_portal",
+      "access_policy": {
+        "access_control_bypass_prohibited": true,
+        "automation": "pending",
+        "captcha_observed": null,
+        "geo_restricted": null,
+        "identifiable_user_agent_required": null,
+        "login_required": null,
+        "paid_access": null,
+        "rate_limit": null
+      },
+      "approval_evidence_ids": [],
+      "attribution_requirement": null,
+      "authority_level": "A",
+      "boundary_conditions": {},
+      "business_owner_group": "政策法规组",
+      "canonical_domain": "jdih.esdm.go.id",
+      "compliance_reviewer": null,
+      "data_owner_reviewer": null,
+      "entry_url": "https://jdih.esdm.go.id/",
+      "evidence_scope": "能源法规、部长规章和决定",
+      "languages": [
+        "id"
+      ],
+      "license_snapshot_id": null,
+      "next_review_at": null,
+      "organization": "JDIH Ministry of Energy and Mineral Resources",
+      "research_provenance": {
+        "catalog": "data/d1/research/official_source_candidates.json",
+        "status": "official_candidate_identified"
+      },
+      "retention_rule": null,
+      "review_notes": "能源法律文件入口；文件效力、修订链和下载许可待逐条核验。",
+      "reviewed_at": null,
+      "robots_snapshot_id": null,
+      "scope_codes": [
+        "IDN"
+      ],
+      "source_id": "SRC-IDN-JDIH-ESDM",
+      "source_type": "official_legal_database",
+      "status": "under_review",
+      "suggested_frequency": "daily",
+      "technical_owner": null,
+      "terms_snapshot_id": null,
+      "usage_boundaries": {
+        "ai_index": "pending",
+        "cache_original": "pending",
+        "collect_content": "pending",
+        "collect_metadata": "pending",
+        "display_excerpt": "pending",
+        "display_original": "pending",
+        "download": "pending",
+        "export": "pending",
+        "model_training": "pending",
+        "store_structured": "pending",
+        "summarize": "pending",
+        "translate": "pending"
+      }
+    },
+    {
+      "access_method": "official_web_portal",
+      "access_policy": {
+        "access_control_bypass_prohibited": true,
+        "automation": "pending",
+        "captcha_observed": null,
+        "geo_restricted": null,
+        "identifiable_user_agent_required": null,
+        "login_required": null,
+        "paid_access": null,
+        "rate_limit": null
+      },
+      "approval_evidence_ids": [],
+      "attribution_requirement": null,
+      "authority_level": "A",
+      "boundary_conditions": {},
+      "business_owner_group": "政策法规组",
+      "canonical_domain": "peraturan.bpk.go.id",
+      "compliance_reviewer": null,
+      "data_owner_reviewer": null,
+      "entry_url": "https://peraturan.bpk.go.id/",
+      "evidence_scope": "全国法律、政府规章和地方规则",
+      "languages": [
+        "id"
+      ],
+      "license_snapshot_id": null,
+      "next_review_at": null,
+      "organization": "BPK Regulations Database",
+      "research_provenance": {
+        "catalog": "data/d1/research/official_source_candidates.json",
+        "status": "official_candidate_identified"
+      },
+      "retention_rule": null,
+      "review_notes": "法规检索入口；版本效力、附件来源和批量获取限制待复核。",
+      "reviewed_at": null,
+      "robots_snapshot_id": null,
+      "scope_codes": [
+        "IDN"
+      ],
+      "source_id": "SRC-IDN-BPK-REG",
+      "source_type": "official_legal_database",
+      "status": "under_review",
+      "suggested_frequency": "daily",
+      "technical_owner": null,
+      "terms_snapshot_id": null,
+      "usage_boundaries": {
+        "ai_index": "pending",
+        "cache_original": "pending",
+        "collect_content": "pending",
+        "collect_metadata": "pending",
+        "display_excerpt": "pending",
+        "display_original": "pending",
+        "download": "pending",
+        "export": "pending",
+        "model_training": "pending",
+        "store_structured": "pending",
+        "summarize": "pending",
+        "translate": "pending"
+      }
+    },
+    {
+      "access_method": "official_web_portal",
+      "access_policy": {
+        "access_control_bypass_prohibited": true,
+        "automation": "pending",
+        "captcha_observed": null,
+        "geo_restricted": null,
+        "identifiable_user_agent_required": null,
+        "login_required": null,
+        "paid_access": null,
+        "rate_limit": null
+      },
+      "approval_evidence_ids": [],
+      "attribution_requirement": null,
+      "authority_level": "A",
+      "boundary_conditions": {},
+      "business_owner_group": "市场研究组",
+      "canonical_domain": "www.den.go.id",
+      "compliance_reviewer": null,
+      "data_owner_reviewer": null,
+      "entry_url": "https://www.den.go.id/",
+      "evidence_scope": "国家能源政策、能源规划和能源展望",
+      "languages": [
+        "id"
+      ],
+      "license_snapshot_id": null,
+      "next_review_at": null,
+      "organization": "Dewan Energi Nasional (National Energy Council)",
+      "research_provenance": {
+        "catalog": "data/d1/research/official_source_candidates.json",
+        "status": "official_candidate_identified"
+      },
+      "retention_rule": null,
+      "review_notes": "政策和出版物入口；文档许可与长期可访问性待复核。",
+      "reviewed_at": null,
+      "robots_snapshot_id": null,
+      "scope_codes": [
+        "IDN"
+      ],
+      "source_id": "SRC-IDN-DEN",
+      "source_type": "official_energy_policy",
+      "status": "under_review",
+      "suggested_frequency": "monthly",
+      "technical_owner": null,
+      "terms_snapshot_id": null,
+      "usage_boundaries": {
+        "ai_index": "pending",
+        "cache_original": "pending",
+        "collect_content": "pending",
+        "collect_metadata": "pending",
+        "display_excerpt": "pending",
+        "display_original": "pending",
+        "download": "pending",
+        "export": "pending",
+        "model_training": "pending",
+        "store_structured": "pending",
+        "summarize": "pending",
+        "translate": "pending"
+      }
+    },
+    {
+      "access_method": "official_web_portal",
+      "access_policy": {
+        "access_control_bypass_prohibited": true,
+        "automation": "pending",
+        "captcha_observed": null,
+        "geo_restricted": null,
+        "identifiable_user_agent_required": null,
+        "login_required": null,
+        "paid_access": null,
+        "rate_limit": null
+      },
+      "approval_evidence_ids": [],
+      "attribution_requirement": null,
+      "authority_level": "A",
+      "boundary_conditions": {},
+      "business_owner_group": "市场研究组",
+      "canonical_domain": "www.bi.go.id",
+      "compliance_reviewer": null,
+      "data_owner_reviewer": null,
+      "entry_url": "https://www.bi.go.id/en/statistik/default.aspx",
+      "evidence_scope": "汇率、宏观经济、金融和国际收支统计",
+      "languages": [
+        "id",
+        "en"
+      ],
+      "license_snapshot_id": null,
+      "next_review_at": null,
+      "organization": "Bank Indonesia",
+      "research_provenance": {
+        "catalog": "data/d1/research/official_source_candidates.json",
+        "status": "official_candidate_identified"
+      },
+      "retention_rule": null,
+      "review_notes": "统计入口；时间序列接口、引用要求和再分发限制待复核。",
+      "reviewed_at": null,
+      "robots_snapshot_id": null,
+      "scope_codes": [
+        "IDN"
+      ],
+      "source_id": "SRC-IDN-BI",
+      "source_type": "official_central_bank",
+      "status": "under_review",
+      "suggested_frequency": "monthly",
+      "technical_owner": null,
+      "terms_snapshot_id": null,
+      "usage_boundaries": {
+        "ai_index": "pending",
+        "cache_original": "pending",
+        "collect_content": "pending",
+        "collect_metadata": "pending",
+        "display_excerpt": "pending",
+        "display_original": "pending",
+        "download": "pending",
+        "export": "pending",
+        "model_training": "pending",
+        "store_structured": "pending",
+        "summarize": "pending",
+        "translate": "pending"
+      }
+    },
+    {
+      "access_method": "official_web_portal",
+      "access_policy": {
+        "access_control_bypass_prohibited": true,
+        "automation": "pending",
+        "captcha_observed": null,
+        "geo_restricted": null,
+        "identifiable_user_agent_required": null,
+        "login_required": null,
+        "paid_access": null,
+        "rate_limit": null
+      },
+      "approval_evidence_ids": [],
+      "attribution_requirement": null,
+      "authority_level": "A",
+      "boundary_conditions": {},
+      "business_owner_group": "风险组",
+      "canonical_domain": "www.ojk.go.id",
+      "compliance_reviewer": null,
+      "data_owner_reviewer": null,
+      "entry_url": "https://www.ojk.go.id/en/kanal/iknb/data-dan-statistik/Default.aspx",
+      "evidence_scope": "非银行金融、保险、融资和监管统计",
+      "languages": [
+        "id",
+        "en"
+      ],
+      "license_snapshot_id": null,
+      "next_review_at": null,
+      "organization": "Otoritas Jasa Keuangan",
+      "research_provenance": {
+        "catalog": "data/d1/research/official_source_candidates.json",
+        "status": "official_candidate_identified"
+      },
+      "retention_rule": null,
+      "review_notes": "监管统计入口；附件许可和历史数据抓取边界待复核。",
+      "reviewed_at": null,
+      "robots_snapshot_id": null,
+      "scope_codes": [
+        "IDN"
+      ],
+      "source_id": "SRC-IDN-OJK",
+      "source_type": "official_financial_regulator",
+      "status": "under_review",
+      "suggested_frequency": "monthly",
+      "technical_owner": null,
+      "terms_snapshot_id": null,
+      "usage_boundaries": {
+        "ai_index": "pending",
+        "cache_original": "pending",
+        "collect_content": "pending",
+        "collect_metadata": "pending",
+        "display_excerpt": "pending",
+        "display_original": "pending",
+        "download": "pending",
+        "export": "pending",
+        "model_training": "pending",
+        "store_structured": "pending",
+        "summarize": "pending",
+        "translate": "pending"
+      }
+    },
+    {
+      "access_method": "official_data_portal",
+      "access_policy": {
+        "access_control_bypass_prohibited": true,
+        "automation": "pending",
+        "captcha_observed": null,
+        "geo_restricted": null,
+        "identifiable_user_agent_required": null,
+        "login_required": null,
+        "paid_access": null,
+        "rate_limit": null
+      },
+      "approval_evidence_ids": [],
+      "attribution_requirement": null,
+      "authority_level": "A",
+      "boundary_conditions": {},
+      "business_owner_group": "市场研究组",
+      "canonical_domain": "data-apbn.kemenkeu.go.id",
+      "compliance_reviewer": null,
+      "data_owner_reviewer": null,
+      "entry_url": "https://data-apbn.kemenkeu.go.id/",
+      "evidence_scope": "国家预算、财政支出、税费和激励政策",
+      "languages": [
+        "id"
+      ],
+      "license_snapshot_id": null,
+      "next_review_at": null,
+      "organization": "Ministry of Finance Indonesia",
+      "research_provenance": {
+        "catalog": "data/d1/research/official_source_candidates.json",
+        "status": "official_candidate_identified"
+      },
+      "retention_rule": null,
+      "review_notes": "财政数据入口；数据集许可、接口和引用要求待复核。",
+      "reviewed_at": null,
+      "robots_snapshot_id": null,
+      "scope_codes": [
+        "IDN"
+      ],
+      "source_id": "SRC-IDN-KEMENKEU",
+      "source_type": "official_fiscal_portal",
+      "status": "under_review",
+      "suggested_frequency": "monthly",
+      "technical_owner": null,
+      "terms_snapshot_id": null,
+      "usage_boundaries": {
+        "ai_index": "pending",
+        "cache_original": "pending",
+        "collect_content": "pending",
+        "collect_metadata": "pending",
+        "display_excerpt": "pending",
+        "display_original": "pending",
+        "download": "pending",
+        "export": "pending",
+        "model_training": "pending",
+        "store_structured": "pending",
+        "summarize": "pending",
+        "translate": "pending"
+      }
+    },
+    {
+      "access_method": "official_web_portal",
+      "access_policy": {
+        "access_control_bypass_prohibited": true,
+        "automation": "pending",
+        "captcha_observed": null,
+        "geo_restricted": null,
+        "identifiable_user_agent_required": null,
+        "login_required": null,
+        "paid_access": null,
+        "rate_limit": null
+      },
+      "approval_evidence_ids": [],
+      "attribution_requirement": null,
+      "authority_level": "A",
+      "boundary_conditions": {},
+      "business_owner_group": "政策法规组",
+      "canonical_domain": "www.beacukai.go.id",
+      "compliance_reviewer": null,
+      "data_owner_reviewer": null,
+      "entry_url": "https://www.beacukai.go.id/",
+      "evidence_scope": "关税、进口规则、海关流程和公告",
+      "languages": [
+        "id"
+      ],
+      "license_snapshot_id": null,
+      "next_review_at": null,
+      "organization": "Directorate General of Customs and Excise Indonesia",
+      "research_provenance": {
+        "catalog": "data/d1/research/official_source_candidates.json",
+        "status": "official_candidate_identified"
+      },
+      "retention_rule": null,
+      "review_notes": "海关信息入口；税则版本、附件效力和下载许可待复核。",
+      "reviewed_at": null,
+      "robots_snapshot_id": null,
+      "scope_codes": [
+        "IDN"
+      ],
+      "source_id": "SRC-IDN-BEACUKAI",
+      "source_type": "official_customs",
+      "status": "under_review",
+      "suggested_frequency": "event_driven",
+      "technical_owner": null,
+      "terms_snapshot_id": null,
+      "usage_boundaries": {
+        "ai_index": "pending",
+        "cache_original": "pending",
+        "collect_content": "pending",
+        "collect_metadata": "pending",
+        "display_excerpt": "pending",
+        "display_original": "pending",
+        "download": "pending",
+        "export": "pending",
+        "model_training": "pending",
+        "store_structured": "pending",
+        "summarize": "pending",
+        "translate": "pending"
+      }
+    },
+    {
+      "access_method": "official_web_portal",
+      "access_policy": {
+        "access_control_bypass_prohibited": true,
+        "automation": "pending",
+        "captcha_observed": null,
+        "geo_restricted": null,
+        "identifiable_user_agent_required": null,
+        "login_required": null,
+        "paid_access": null,
+        "rate_limit": null
+      },
+      "approval_evidence_ids": [],
+      "attribution_requirement": null,
+      "authority_level": "A",
+      "boundary_conditions": {},
+      "business_owner_group": "政策法规组",
+      "canonical_domain": "kemenperin.go.id",
+      "compliance_reviewer": null,
+      "data_owner_reviewer": null,
+      "entry_url": "https://kemenperin.go.id/",
+      "evidence_scope": "产业政策、本地化要求和制造业统计",
+      "languages": [
+        "id"
+      ],
+      "license_snapshot_id": null,
+      "next_review_at": null,
+      "organization": "Ministry of Industry Indonesia",
+      "research_provenance": {
+        "catalog": "data/d1/research/official_source_candidates.json",
+        "status": "official_candidate_identified"
+      },
+      "retention_rule": null,
+      "review_notes": "产业政策入口；内容范围、附件许可和结构化获取方式待复核。",
+      "reviewed_at": null,
+      "robots_snapshot_id": null,
+      "scope_codes": [
+        "IDN"
+      ],
+      "source_id": "SRC-IDN-KEMENPERIN",
+      "source_type": "official_industry_policy",
+      "status": "under_review",
+      "suggested_frequency": "weekly",
+      "technical_owner": null,
+      "terms_snapshot_id": null,
+      "usage_boundaries": {
+        "ai_index": "pending",
+        "cache_original": "pending",
+        "collect_content": "pending",
+        "collect_metadata": "pending",
+        "display_excerpt": "pending",
+        "display_original": "pending",
+        "download": "pending",
+        "export": "pending",
+        "model_training": "pending",
+        "store_structured": "pending",
+        "summarize": "pending",
+        "translate": "pending"
+      }
+    },
+    {
+      "access_method": "official_web_portal",
+      "access_policy": {
+        "access_control_bypass_prohibited": true,
+        "automation": "pending",
+        "captcha_observed": null,
+        "geo_restricted": null,
+        "identifiable_user_agent_required": null,
+        "login_required": null,
+        "paid_access": null,
+        "rate_limit": null
+      },
+      "approval_evidence_ids": [],
+      "attribution_requirement": null,
+      "authority_level": "A",
+      "boundary_conditions": {},
+      "business_owner_group": "政策法规组",
+      "canonical_domain": "www.kemendag.go.id",
+      "compliance_reviewer": null,
+      "data_owner_reviewer": null,
+      "entry_url": "https://www.kemendag.go.id/",
+      "evidence_scope": "贸易政策、进出口规则和贸易统计",
+      "languages": [
+        "id"
+      ],
+      "license_snapshot_id": null,
+      "next_review_at": null,
+      "organization": "Ministry of Trade Indonesia",
+      "research_provenance": {
+        "catalog": "data/d1/research/official_source_candidates.json",
+        "status": "official_candidate_identified"
+      },
+      "retention_rule": null,
+      "review_notes": "贸易信息入口；具体数据集、许可和更新频率待复核。",
+      "reviewed_at": null,
+      "robots_snapshot_id": null,
+      "scope_codes": [
+        "IDN"
+      ],
+      "source_id": "SRC-IDN-KEMENDAG",
+      "source_type": "official_trade_policy",
+      "status": "under_review",
+      "suggested_frequency": "weekly",
+      "technical_owner": null,
+      "terms_snapshot_id": null,
+      "usage_boundaries": {
+        "ai_index": "pending",
+        "cache_original": "pending",
+        "collect_content": "pending",
+        "collect_metadata": "pending",
+        "display_excerpt": "pending",
+        "display_original": "pending",
+        "download": "pending",
+        "export": "pending",
+        "model_training": "pending",
+        "store_structured": "pending",
+        "summarize": "pending",
+        "translate": "pending"
+      }
+    },
+    {
+      "access_method": "official_web_portal",
+      "access_policy": {
+        "access_control_bypass_prohibited": true,
+        "automation": "pending",
+        "captcha_observed": null,
+        "geo_restricted": null,
+        "identifiable_user_agent_required": null,
+        "login_required": null,
+        "paid_access": null,
+        "rate_limit": null
+      },
+      "approval_evidence_ids": [],
+      "attribution_requirement": null,
+      "authority_level": "A",
+      "boundary_conditions": {},
+      "business_owner_group": "风险组",
+      "canonical_domain": "kemenlh.go.id",
+      "compliance_reviewer": null,
+      "data_owner_reviewer": null,
+      "entry_url": "https://kemenlh.go.id/",
+      "evidence_scope": "环境政策、审批要求和环境信息",
+      "languages": [
+        "id"
+      ],
+      "license_snapshot_id": null,
+      "next_review_at": null,
+      "organization": "Ministry of Environment Indonesia",
+      "research_provenance": {
+        "catalog": "data/d1/research/official_source_candidates.json",
+        "status": "official_candidate_identified"
+      },
+      "retention_rule": null,
+      "review_notes": "机构和页面迁移风险较高；现行主管关系、URL稳定性和许可待复核。",
+      "reviewed_at": null,
+      "robots_snapshot_id": null,
+      "scope_codes": [
+        "IDN"
+      ],
+      "source_id": "SRC-IDN-KEMENLH",
+      "source_type": "official_environment_policy",
+      "status": "under_review",
+      "suggested_frequency": "weekly",
+      "technical_owner": null,
+      "terms_snapshot_id": null,
+      "usage_boundaries": {
+        "ai_index": "pending",
+        "cache_original": "pending",
+        "collect_content": "pending",
+        "collect_metadata": "pending",
+        "display_excerpt": "pending",
+        "display_original": "pending",
+        "download": "pending",
+        "export": "pending",
+        "model_training": "pending",
+        "store_structured": "pending",
+        "summarize": "pending",
+        "translate": "pending"
+      }
+    },
+    {
+      "access_method": "official_web_portal",
+      "access_policy": {
+        "access_control_bypass_prohibited": true,
+        "automation": "pending",
+        "captcha_observed": null,
+        "geo_restricted": null,
+        "identifiable_user_agent_required": null,
+        "login_required": null,
+        "paid_access": null,
+        "rate_limit": null
+      },
+      "approval_evidence_ids": [],
+      "attribution_requirement": null,
+      "authority_level": "A",
+      "boundary_conditions": {},
+      "business_owner_group": "政策法规组",
+      "canonical_domain": "www.lkpp.go.id",
+      "compliance_reviewer": null,
+      "data_owner_reviewer": null,
+      "entry_url": "https://www.lkpp.go.id/",
+      "evidence_scope": "公共采购政策、标准和制度",
+      "languages": [
+        "id"
+      ],
+      "license_snapshot_id": null,
+      "next_review_at": null,
+      "organization": "National Public Procurement Agency Indonesia",
+      "research_provenance": {
+        "catalog": "data/d1/research/official_source_candidates.json",
+        "status": "official_candidate_identified"
+      },
+      "retention_rule": null,
+      "review_notes": "采购政策入口；公告和交易数据应与INAPROC分别准入。",
+      "reviewed_at": null,
+      "robots_snapshot_id": null,
+      "scope_codes": [
+        "IDN"
+      ],
+      "source_id": "SRC-IDN-LKPP",
+      "source_type": "official_procurement_policy",
+      "status": "under_review",
+      "suggested_frequency": "weekly",
+      "technical_owner": null,
+      "terms_snapshot_id": null,
+      "usage_boundaries": {
+        "ai_index": "pending",
+        "cache_original": "pending",
+        "collect_content": "pending",
+        "collect_metadata": "pending",
+        "display_excerpt": "pending",
+        "display_original": "pending",
+        "download": "pending",
+        "export": "pending",
+        "model_training": "pending",
+        "store_structured": "pending",
+        "summarize": "pending",
+        "translate": "pending"
+      }
+    },
+    {
+      "access_method": "official_transaction_portal",
+      "access_policy": {
+        "access_control_bypass_prohibited": true,
+        "automation": "pending",
+        "captcha_observed": null,
+        "geo_restricted": null,
+        "identifiable_user_agent_required": null,
+        "login_required": null,
+        "paid_access": null,
+        "rate_limit": null
+      },
+      "approval_evidence_ids": [],
+      "attribution_requirement": null,
+      "authority_level": "A",
+      "boundary_conditions": {},
+      "business_owner_group": "机会组",
+      "canonical_domain": "www.inaproc.id",
+      "compliance_reviewer": null,
+      "data_owner_reviewer": null,
+      "entry_url": "https://www.inaproc.id/",
+      "evidence_scope": "公共采购公告、计划、招标和供应商信息",
+      "languages": [
+        "id"
+      ],
+      "license_snapshot_id": null,
+      "next_review_at": null,
+      "organization": "INAPROC Indonesia",
+      "research_provenance": {
+        "catalog": "data/d1/research/official_source_candidates.json",
+        "status": "official_candidate_identified"
+      },
+      "retention_rule": null,
+      "review_notes": "交易型入口可能存在登录、验证码和速率限制；不得自动访问直至书面批准。",
+      "reviewed_at": null,
+      "robots_snapshot_id": null,
+      "scope_codes": [
+        "IDN"
+      ],
+      "source_id": "SRC-IDN-INAPROC",
+      "source_type": "official_procurement_portal",
+      "status": "under_review",
+      "suggested_frequency": "daily",
+      "technical_owner": null,
+      "terms_snapshot_id": null,
+      "usage_boundaries": {
+        "ai_index": "pending",
+        "cache_original": "pending",
+        "collect_content": "pending",
+        "collect_metadata": "pending",
+        "display_excerpt": "pending",
+        "display_original": "pending",
+        "download": "pending",
+        "export": "pending",
+        "model_training": "pending",
+        "store_structured": "pending",
+        "summarize": "pending",
+        "translate": "pending"
+      }
+    },
+    {
+      "access_method": "official_web_portal",
+      "access_policy": {
+        "access_control_bypass_prohibited": true,
+        "automation": "pending",
+        "captcha_observed": null,
+        "geo_restricted": null,
+        "identifiable_user_agent_required": null,
+        "login_required": null,
+        "paid_access": null,
+        "rate_limit": null
+      },
+      "approval_evidence_ids": [],
+      "attribution_requirement": null,
+      "authority_level": "A",
+      "boundary_conditions": {},
+      "business_owner_group": "企业研究组",
+      "canonical_domain": "www.idx.co.id",
+      "compliance_reviewer": null,
+      "data_owner_reviewer": null,
+      "entry_url": "https://www.idx.co.id/en/market-data/statistical-reports/statistics/",
+      "evidence_scope": "上市公司、市场统计和发行人披露",
+      "languages": [
+        "id",
+        "en"
+      ],
+      "license_snapshot_id": null,
+      "next_review_at": null,
+      "organization": "Indonesia Stock Exchange",
+      "research_provenance": {
+        "catalog": "data/d1/research/official_source_candidates.json",
+        "status": "official_candidate_identified"
+      },
+      "retention_rule": null,
+      "review_notes": "交易所统计入口；市场数据使用、下载和再分发条款待复核。",
+      "reviewed_at": null,
+      "robots_snapshot_id": null,
+      "scope_codes": [
+        "IDN"
+      ],
+      "source_id": "SRC-IDN-IDX",
+      "source_type": "official_exchange",
+      "status": "under_review",
+      "suggested_frequency": "daily",
+      "technical_owner": null,
+      "terms_snapshot_id": null,
+      "usage_boundaries": {
+        "ai_index": "pending",
+        "cache_original": "pending",
+        "collect_content": "pending",
+        "collect_metadata": "pending",
+        "display_excerpt": "pending",
+        "display_original": "pending",
+        "download": "pending",
+        "export": "pending",
+        "model_training": "pending",
+        "store_structured": "pending",
+        "summarize": "pending",
+        "translate": "pending"
+      }
+    },
+    {
+      "access_method": "official_data_portal",
+      "access_policy": {
+        "access_control_bypass_prohibited": true,
+        "automation": "pending",
+        "captcha_observed": null,
+        "geo_restricted": null,
+        "identifiable_user_agent_required": null,
+        "login_required": null,
+        "paid_access": null,
+        "rate_limit": null
+      },
+      "approval_evidence_ids": [],
+      "attribution_requirement": null,
+      "authority_level": "A",
+      "boundary_conditions": {},
+      "business_owner_group": "数据组",
+      "canonical_domain": "tanahair.indonesia.go.id",
+      "compliance_reviewer": null,
+      "data_owner_reviewer": null,
+      "entry_url": "https://tanahair.indonesia.go.id/portal-web",
+      "evidence_scope": "行政区、土地、基础设施和环境空间图层",
+      "languages": [
+        "id"
+      ],
+      "license_snapshot_id": null,
+      "next_review_at": null,
+      "organization": "Badan Informasi Geospasial",
+      "research_provenance": {
+        "catalog": "data/d1/research/official_source_candidates.json",
+        "status": "official_candidate_identified"
+      },
+      "retention_rule": null,
+      "review_notes": "空间数据入口；每个图层的许可、坐标系、下载和缓存边界待复核。",
+      "reviewed_at": null,
+      "robots_snapshot_id": null,
+      "scope_codes": [
+        "IDN"
+      ],
+      "source_id": "SRC-IDN-GEOSPATIAL",
+      "source_type": "official_geospatial_portal",
+      "status": "under_review",
+      "suggested_frequency": "monthly",
+      "technical_owner": null,
+      "terms_snapshot_id": null,
+      "usage_boundaries": {
+        "ai_index": "pending",
+        "cache_original": "pending",
+        "collect_content": "pending",
+        "collect_metadata": "pending",
+        "display_excerpt": "pending",
+        "display_original": "pending",
+        "download": "pending",
+        "export": "pending",
+        "model_training": "pending",
+        "store_structured": "pending",
+        "summarize": "pending",
+        "translate": "pending"
+      }
+    },
+    {
+      "access_method": "official_web_portal",
+      "access_policy": {
+        "access_control_bypass_prohibited": true,
+        "automation": "pending",
+        "captcha_observed": null,
+        "geo_restricted": null,
+        "identifiable_user_agent_required": null,
+        "login_required": null,
+        "paid_access": null,
+        "rate_limit": null
+      },
+      "approval_evidence_ids": [],
+      "attribution_requirement": null,
+      "authority_level": "A",
+      "boundary_conditions": {},
+      "business_owner_group": "市场研究组",
+      "canonical_domain": "web.pln.co.id",
+      "compliance_reviewer": null,
+      "data_owner_reviewer": null,
+      "entry_url": "https://web.pln.co.id/stakeholder/laporan-tahunan",
+      "evidence_scope": "电网运营、装机、售电和年度经营披露",
+      "languages": [
+        "id",
+        "en"
+      ],
+      "license_snapshot_id": null,
+      "next_review_at": null,
+      "organization": "PT PLN (Persero)",
+      "research_provenance": {
+        "catalog": "data/d1/research/official_source_candidates.json",
+        "status": "official_candidate_identified"
+      },
+      "retention_rule": null,
+      "review_notes": "年度报告入口；PDF许可、版本和抽取质量待复核。",
+      "reviewed_at": null,
+      "robots_snapshot_id": null,
+      "scope_codes": [
+        "IDN"
+      ],
+      "source_id": "SRC-IDN-PLN-REPORTS",
+      "source_type": "official_utility_publication",
+      "status": "under_review",
+      "suggested_frequency": "annual",
+      "technical_owner": null,
+      "terms_snapshot_id": null,
+      "usage_boundaries": {
+        "ai_index": "pending",
+        "cache_original": "pending",
+        "collect_content": "pending",
+        "collect_metadata": "pending",
+        "display_excerpt": "pending",
+        "display_original": "pending",
+        "download": "pending",
+        "export": "pending",
+        "model_training": "pending",
+        "store_structured": "pending",
+        "summarize": "pending",
+        "translate": "pending"
+      }
+    },
+    {
+      "access_method": "official_web_portal",
+      "access_policy": {
+        "access_control_bypass_prohibited": true,
+        "automation": "pending",
+        "captcha_observed": null,
+        "geo_restricted": null,
+        "identifiable_user_agent_required": null,
+        "login_required": null,
+        "paid_access": null,
+        "rate_limit": null
+      },
+      "approval_evidence_ids": [],
+      "attribution_requirement": null,
+      "authority_level": "A",
+      "boundary_conditions": {},
+      "business_owner_group": "数据组",
+      "canonical_domain": "www.nso.gov.vn",
+      "compliance_reviewer": null,
+      "data_owner_reviewer": null,
+      "entry_url": "https://www.nso.gov.vn/en/statistical-data/",
+      "evidence_scope": "能源平衡、投资、企业、宏观经济和人口统计",
+      "languages": [
+        "vi",
+        "en"
+      ],
+      "license_snapshot_id": null,
+      "next_review_at": null,
+      "organization": "National Statistics Office of Vietnam",
+      "research_provenance": {
+        "catalog": "data/d1/research/official_source_candidates.json",
+        "status": "official_candidate_identified"
+      },
+      "retention_rule": null,
+      "review_notes": "官方统计入口；表格下载、许可和历史版本待复核。",
+      "reviewed_at": null,
+      "robots_snapshot_id": null,
+      "scope_codes": [
+        "VNM"
+      ],
+      "source_id": "SRC-VNM-NSO",
+      "source_type": "official_statistics",
+      "status": "under_review",
+      "suggested_frequency": "monthly",
+      "technical_owner": null,
+      "terms_snapshot_id": null,
+      "usage_boundaries": {
+        "ai_index": "pending",
+        "cache_original": "pending",
+        "collect_content": "pending",
+        "collect_metadata": "pending",
+        "display_excerpt": "pending",
+        "display_original": "pending",
+        "download": "pending",
+        "export": "pending",
+        "model_training": "pending",
+        "store_structured": "pending",
+        "summarize": "pending",
+        "translate": "pending"
+      }
+    },
+    {
+      "access_method": "official_web_portal",
+      "access_policy": {
+        "access_control_bypass_prohibited": true,
+        "automation": "pending",
+        "captcha_observed": null,
+        "geo_restricted": null,
+        "identifiable_user_agent_required": null,
+        "login_required": null,
+        "paid_access": null,
+        "rate_limit": null
+      },
+      "approval_evidence_ids": [],
+      "attribution_requirement": null,
+      "authority_level": "A",
+      "boundary_conditions": {},
+      "business_owner_group": "市场研究组",
+      "canonical_domain": "fia.mpi.gov.vn",
+      "compliance_reviewer": null,
+      "data_owner_reviewer": null,
+      "entry_url": "https://fia.mpi.gov.vn/en/",
+      "evidence_scope": "外商投资、项目和投资环境信息",
+      "languages": [
+        "vi",
+        "en"
+      ],
+      "license_snapshot_id": null,
+      "next_review_at": null,
+      "organization": "Foreign Investment Agency Vietnam",
+      "research_provenance": {
+        "catalog": "data/d1/research/official_source_candidates.json",
+        "status": "official_candidate_identified"
+      },
+      "retention_rule": null,
+      "review_notes": "机构调整和域名迁移风险待核验；内容许可与更新稳定性待复核。",
+      "reviewed_at": null,
+      "robots_snapshot_id": null,
+      "scope_codes": [
+        "VNM"
+      ],
+      "source_id": "SRC-VNM-FIA",
+      "source_type": "official_investment_portal",
+      "status": "under_review",
+      "suggested_frequency": "monthly",
+      "technical_owner": null,
+      "terms_snapshot_id": null,
+      "usage_boundaries": {
+        "ai_index": "pending",
+        "cache_original": "pending",
+        "collect_content": "pending",
+        "collect_metadata": "pending",
+        "display_excerpt": "pending",
+        "display_original": "pending",
+        "download": "pending",
+        "export": "pending",
+        "model_training": "pending",
+        "store_structured": "pending",
+        "summarize": "pending",
+        "translate": "pending"
+      }
+    },
+    {
+      "access_method": "official_web_portal",
+      "access_policy": {
+        "access_control_bypass_prohibited": true,
+        "automation": "pending",
+        "captcha_observed": null,
+        "geo_restricted": null,
+        "identifiable_user_agent_required": null,
+        "login_required": null,
+        "paid_access": null,
+        "rate_limit": null
+      },
+      "approval_evidence_ids": [],
+      "attribution_requirement": null,
+      "authority_level": "A",
+      "boundary_conditions": {},
+      "business_owner_group": "政策法规组",
+      "canonical_domain": "www.erav.vn",
+      "compliance_reviewer": null,
+      "data_owner_reviewer": null,
+      "entry_url": "https://www.erav.vn/",
+      "evidence_scope": "电力监管、市场规则、电价和许可",
+      "languages": [
+        "vi"
+      ],
+      "license_snapshot_id": null,
+      "next_review_at": null,
+      "organization": "Electricity Regulatory Authority of Vietnam",
+      "research_provenance": {
+        "catalog": "data/d1/research/official_source_candidates.json",
+        "status": "official_candidate_identified"
+      },
+      "retention_rule": null,
+      "review_notes": "监管入口；现行机构页面、附件效力和许可待复核。",
+      "reviewed_at": null,
+      "robots_snapshot_id": null,
+      "scope_codes": [
+        "VNM"
+      ],
+      "source_id": "SRC-VNM-ERAV",
+      "source_type": "official_energy_regulator",
+      "status": "under_review",
+      "suggested_frequency": "weekly",
+      "technical_owner": null,
+      "terms_snapshot_id": null,
+      "usage_boundaries": {
+        "ai_index": "pending",
+        "cache_original": "pending",
+        "collect_content": "pending",
+        "collect_metadata": "pending",
+        "display_excerpt": "pending",
+        "display_original": "pending",
+        "download": "pending",
+        "export": "pending",
+        "model_training": "pending",
+        "store_structured": "pending",
+        "summarize": "pending",
+        "translate": "pending"
+      }
+    },
+    {
+      "access_method": "official_web_portal",
+      "access_policy": {
+        "access_control_bypass_prohibited": true,
+        "automation": "pending",
+        "captcha_observed": null,
+        "geo_restricted": null,
+        "identifiable_user_agent_required": null,
+        "login_required": null,
+        "paid_access": null,
+        "rate_limit": null
+      },
+      "approval_evidence_ids": [],
+      "attribution_requirement": null,
+      "authority_level": "A",
+      "boundary_conditions": {},
+      "business_owner_group": "政策法规组",
+      "canonical_domain": "vbpl.vn",
+      "compliance_reviewer": null,
+      "data_owner_reviewer": null,
+      "entry_url": "https://vbpl.vn/Pages/portal.aspx",
+      "evidence_scope": "法律、法令、通告及其效力关系",
+      "languages": [
+        "vi"
+      ],
+      "license_snapshot_id": null,
+      "next_review_at": null,
+      "organization": "Vietnam National Database of Legal Documents",
+      "research_provenance": {
+        "catalog": "data/d1/research/official_source_candidates.json",
+        "status": "official_candidate_identified"
+      },
+      "retention_rule": null,
+      "review_notes": "国家法律数据库入口；英文译本非权威风险和批量获取边界待复核。",
+      "reviewed_at": null,
+      "robots_snapshot_id": null,
+      "scope_codes": [
+        "VNM"
+      ],
+      "source_id": "SRC-VNM-VBPL",
+      "source_type": "official_legal_database",
+      "status": "under_review",
+      "suggested_frequency": "daily",
+      "technical_owner": null,
+      "terms_snapshot_id": null,
+      "usage_boundaries": {
+        "ai_index": "pending",
+        "cache_original": "pending",
+        "collect_content": "pending",
+        "collect_metadata": "pending",
+        "display_excerpt": "pending",
+        "display_original": "pending",
+        "download": "pending",
+        "export": "pending",
+        "model_training": "pending",
+        "store_structured": "pending",
+        "summarize": "pending",
+        "translate": "pending"
+      }
+    },
+    {
+      "access_method": "official_transaction_portal",
+      "access_policy": {
+        "access_control_bypass_prohibited": true,
+        "automation": "pending",
+        "captcha_observed": null,
+        "geo_restricted": null,
+        "identifiable_user_agent_required": null,
+        "login_required": null,
+        "paid_access": null,
+        "rate_limit": null
+      },
+      "approval_evidence_ids": [],
+      "attribution_requirement": null,
+      "authority_level": "A",
+      "boundary_conditions": {},
+      "business_owner_group": "机会组",
+      "canonical_domain": "muasamcong.mpi.gov.vn",
+      "compliance_reviewer": null,
+      "data_owner_reviewer": null,
+      "entry_url": "https://muasamcong.mpi.gov.vn/",
+      "evidence_scope": "公共采购计划、招标公告和中标结果",
+      "languages": [
+        "vi"
+      ],
+      "license_snapshot_id": null,
+      "next_review_at": null,
+      "organization": "Vietnam National E-Procurement System",
+      "research_provenance": {
+        "catalog": "data/d1/research/official_source_candidates.json",
+        "status": "official_candidate_identified"
+      },
+      "retention_rule": null,
+      "review_notes": "交易型入口可能要求登录、验证码或客户端能力；自动化待书面批准。",
+      "reviewed_at": null,
+      "robots_snapshot_id": null,
+      "scope_codes": [
+        "VNM"
+      ],
+      "source_id": "SRC-VNM-MUASAMCONG",
+      "source_type": "official_procurement_portal",
+      "status": "under_review",
+      "suggested_frequency": "daily",
+      "technical_owner": null,
+      "terms_snapshot_id": null,
+      "usage_boundaries": {
+        "ai_index": "pending",
+        "cache_original": "pending",
+        "collect_content": "pending",
+        "collect_metadata": "pending",
+        "display_excerpt": "pending",
+        "display_original": "pending",
+        "download": "pending",
+        "export": "pending",
+        "model_training": "pending",
+        "store_structured": "pending",
+        "summarize": "pending",
+        "translate": "pending"
+      }
+    },
+    {
+      "access_method": "official_web_portal",
+      "access_policy": {
+        "access_control_bypass_prohibited": true,
+        "automation": "pending",
+        "captcha_observed": null,
+        "geo_restricted": null,
+        "identifiable_user_agent_required": null,
+        "login_required": null,
+        "paid_access": null,
+        "rate_limit": null
+      },
+      "approval_evidence_ids": [],
+      "attribution_requirement": null,
+      "authority_level": "A",
+      "boundary_conditions": {},
+      "business_owner_group": "市场研究组",
+      "canonical_domain": "www.sbv.gov.vn",
+      "compliance_reviewer": null,
+      "data_owner_reviewer": null,
+      "entry_url": "https://www.sbv.gov.vn/",
+      "evidence_scope": "汇率、货币、金融机构和宏观金融信息",
+      "languages": [
+        "vi",
+        "en"
+      ],
+      "license_snapshot_id": null,
+      "next_review_at": null,
+      "organization": "State Bank of Vietnam",
+      "research_provenance": {
+        "catalog": "data/d1/research/official_source_candidates.json",
+        "status": "official_candidate_identified"
+      },
+      "retention_rule": null,
+      "review_notes": "央行入口；具体统计页面、许可和数据接口待复核。",
+      "reviewed_at": null,
+      "robots_snapshot_id": null,
+      "scope_codes": [
+        "VNM"
+      ],
+      "source_id": "SRC-VNM-SBV",
+      "source_type": "official_central_bank",
+      "status": "under_review",
+      "suggested_frequency": "monthly",
+      "technical_owner": null,
+      "terms_snapshot_id": null,
+      "usage_boundaries": {
+        "ai_index": "pending",
+        "cache_original": "pending",
+        "collect_content": "pending",
+        "collect_metadata": "pending",
+        "display_excerpt": "pending",
+        "display_original": "pending",
+        "download": "pending",
+        "export": "pending",
+        "model_training": "pending",
+        "store_structured": "pending",
+        "summarize": "pending",
+        "translate": "pending"
+      }
+    },
+    {
+      "access_method": "official_web_portal",
+      "access_policy": {
+        "access_control_bypass_prohibited": true,
+        "automation": "pending",
+        "captcha_observed": null,
+        "geo_restricted": null,
+        "identifiable_user_agent_required": null,
+        "login_required": null,
+        "paid_access": null,
+        "rate_limit": null
+      },
+      "approval_evidence_ids": [],
+      "attribution_requirement": null,
+      "authority_level": "A",
+      "boundary_conditions": {},
+      "business_owner_group": "数据组",
+      "canonical_domain": "stats.gov.sa",
+      "compliance_reviewer": null,
+      "data_owner_reviewer": null,
+      "entry_url": "https://stats.gov.sa/en",
+      "evidence_scope": "能源、经济、人口、产业和贸易统计",
+      "languages": [
+        "ar",
+        "en"
+      ],
+      "license_snapshot_id": null,
+      "next_review_at": null,
+      "organization": "General Authority for Statistics Saudi Arabia",
+      "research_provenance": {
+        "catalog": "data/d1/research/official_source_candidates.json",
+        "status": "official_candidate_identified"
+      },
+      "retention_rule": null,
+      "review_notes": "官方统计入口；数据集许可、下载和API边界待复核。",
+      "reviewed_at": null,
+      "robots_snapshot_id": null,
+      "scope_codes": [
+        "SAU"
+      ],
+      "source_id": "SRC-SAU-GASTAT",
+      "source_type": "official_statistics",
+      "status": "under_review",
+      "suggested_frequency": "monthly",
+      "technical_owner": null,
+      "terms_snapshot_id": null,
+      "usage_boundaries": {
+        "ai_index": "pending",
+        "cache_original": "pending",
+        "collect_content": "pending",
+        "collect_metadata": "pending",
+        "display_excerpt": "pending",
+        "display_original": "pending",
+        "download": "pending",
+        "export": "pending",
+        "model_training": "pending",
+        "store_structured": "pending",
+        "summarize": "pending",
+        "translate": "pending"
+      }
+    },
+    {
+      "access_method": "official_web_portal",
+      "access_policy": {
+        "access_control_bypass_prohibited": true,
+        "automation": "pending",
+        "captcha_observed": null,
+        "geo_restricted": null,
+        "identifiable_user_agent_required": null,
+        "login_required": null,
+        "paid_access": null,
+        "rate_limit": null
+      },
+      "approval_evidence_ids": [],
+      "attribution_requirement": null,
+      "authority_level": "A",
+      "boundary_conditions": {},
+      "business_owner_group": "市场研究组",
+      "canonical_domain": "misa.gov.sa",
+      "compliance_reviewer": null,
+      "data_owner_reviewer": null,
+      "entry_url": "https://misa.gov.sa/resources/investment-statistics/",
+      "evidence_scope": "投资许可、外商投资和投资统计",
+      "languages": [
+        "ar",
+        "en"
+      ],
+      "license_snapshot_id": null,
+      "next_review_at": null,
+      "organization": "Ministry of Investment Saudi Arabia",
+      "research_provenance": {
+        "catalog": "data/d1/research/official_source_candidates.json",
+        "status": "official_candidate_identified"
+      },
+      "retention_rule": null,
+      "review_notes": "投资统计入口；附件许可、历史数据和更新频率待复核。",
+      "reviewed_at": null,
+      "robots_snapshot_id": null,
+      "scope_codes": [
+        "SAU"
+      ],
+      "source_id": "SRC-SAU-MISA",
+      "source_type": "official_investment_portal",
+      "status": "under_review",
+      "suggested_frequency": "quarterly",
+      "technical_owner": null,
+      "terms_snapshot_id": null,
+      "usage_boundaries": {
+        "ai_index": "pending",
+        "cache_original": "pending",
+        "collect_content": "pending",
+        "collect_metadata": "pending",
+        "display_excerpt": "pending",
+        "display_original": "pending",
+        "download": "pending",
+        "export": "pending",
+        "model_training": "pending",
+        "store_structured": "pending",
+        "summarize": "pending",
+        "translate": "pending"
+      }
+    },
+    {
+      "access_method": "official_transaction_portal",
+      "access_policy": {
+        "access_control_bypass_prohibited": true,
+        "automation": "pending",
+        "captcha_observed": null,
+        "geo_restricted": null,
+        "identifiable_user_agent_required": null,
+        "login_required": null,
+        "paid_access": null,
+        "rate_limit": null
+      },
+      "approval_evidence_ids": [],
+      "attribution_requirement": null,
+      "authority_level": "A",
+      "boundary_conditions": {},
+      "business_owner_group": "机会组",
+      "canonical_domain": "portal.etimad.sa",
+      "compliance_reviewer": null,
+      "data_owner_reviewer": null,
+      "entry_url": "https://portal.etimad.sa/en-us/home/gettenderssection",
+      "evidence_scope": "政府采购、招标和供应商机会",
+      "languages": [
+        "ar",
+        "en"
+      ],
+      "license_snapshot_id": null,
+      "next_review_at": null,
+      "organization": "Etimad Government Procurement Platform",
+      "research_provenance": {
+        "catalog": "data/d1/research/official_source_candidates.json",
+        "status": "official_candidate_identified"
+      },
+      "retention_rule": null,
+      "review_notes": "交易型招标入口；登录、验证码、速率限制和再分发边界待复核。",
+      "reviewed_at": null,
+      "robots_snapshot_id": null,
+      "scope_codes": [
+        "SAU"
+      ],
+      "source_id": "SRC-SAU-ETIMAD",
+      "source_type": "official_procurement_portal",
+      "status": "under_review",
+      "suggested_frequency": "daily",
+      "technical_owner": null,
+      "terms_snapshot_id": null,
+      "usage_boundaries": {
+        "ai_index": "pending",
+        "cache_original": "pending",
+        "collect_content": "pending",
+        "collect_metadata": "pending",
+        "display_excerpt": "pending",
+        "display_original": "pending",
+        "download": "pending",
+        "export": "pending",
+        "model_training": "pending",
+        "store_structured": "pending",
+        "summarize": "pending",
+        "translate": "pending"
+      }
+    },
+    {
+      "access_method": "official_web_portal",
+      "access_policy": {
+        "access_control_bypass_prohibited": true,
+        "automation": "pending",
+        "captcha_observed": null,
+        "geo_restricted": null,
+        "identifiable_user_agent_required": null,
+        "login_required": null,
+        "paid_access": null,
+        "rate_limit": null
+      },
+      "approval_evidence_ids": [],
+      "attribution_requirement": null,
+      "authority_level": "A",
+      "boundary_conditions": {},
+      "business_owner_group": "政策法规组",
+      "canonical_domain": "www.wera.gov.sa",
+      "compliance_reviewer": null,
+      "data_owner_reviewer": null,
+      "entry_url": "https://www.wera.gov.sa/en",
+      "evidence_scope": "电力和水务监管、许可、服务标准及费率",
+      "languages": [
+        "ar",
+        "en"
+      ],
+      "license_snapshot_id": null,
+      "next_review_at": null,
+      "organization": "Water and Electricity Regulatory Authority Saudi Arabia",
+      "research_provenance": {
+        "catalog": "data/d1/research/official_source_candidates.json",
+        "status": "official_candidate_identified"
+      },
+      "retention_rule": null,
+      "review_notes": "监管入口；现行页面结构、附件效力和许可待复核。",
+      "reviewed_at": null,
+      "robots_snapshot_id": null,
+      "scope_codes": [
+        "SAU"
+      ],
+      "source_id": "SRC-SAU-WERA",
+      "source_type": "official_energy_regulator",
+      "status": "under_review",
+      "suggested_frequency": "weekly",
+      "technical_owner": null,
+      "terms_snapshot_id": null,
+      "usage_boundaries": {
+        "ai_index": "pending",
+        "cache_original": "pending",
+        "collect_content": "pending",
+        "collect_metadata": "pending",
+        "display_excerpt": "pending",
+        "display_original": "pending",
+        "download": "pending",
+        "export": "pending",
+        "model_training": "pending",
+        "store_structured": "pending",
+        "summarize": "pending",
+        "translate": "pending"
+      }
+    },
+    {
+      "access_method": "official_web_portal",
+      "access_policy": {
+        "access_control_bypass_prohibited": true,
+        "automation": "pending",
+        "captcha_observed": null,
+        "geo_restricted": null,
+        "identifiable_user_agent_required": null,
+        "login_required": null,
+        "paid_access": null,
+        "rate_limit": null
+      },
+      "approval_evidence_ids": [],
+      "attribution_requirement": null,
+      "authority_level": "A",
+      "boundary_conditions": {},
+      "business_owner_group": "政策法规组",
+      "canonical_domain": "zatca.gov.sa",
+      "compliance_reviewer": null,
+      "data_owner_reviewer": null,
+      "entry_url": "https://zatca.gov.sa/en/Pages/default.aspx",
+      "evidence_scope": "税务、增值税、海关和进口要求",
+      "languages": [
+        "ar",
+        "en"
+      ],
+      "license_snapshot_id": null,
+      "next_review_at": null,
+      "organization": "Zakat, Tax and Customs Authority",
+      "research_provenance": {
+        "catalog": "data/d1/research/official_source_candidates.json",
+        "status": "official_candidate_identified"
+      },
+      "retention_rule": null,
+      "review_notes": "税关入口；规则版本、附件许可和业务办理边界待复核。",
+      "reviewed_at": null,
+      "robots_snapshot_id": null,
+      "scope_codes": [
+        "SAU"
+      ],
+      "source_id": "SRC-SAU-ZATCA",
+      "source_type": "official_tax_customs",
+      "status": "under_review",
+      "suggested_frequency": "event_driven",
+      "technical_owner": null,
+      "terms_snapshot_id": null,
+      "usage_boundaries": {
+        "ai_index": "pending",
+        "cache_original": "pending",
+        "collect_content": "pending",
+        "collect_metadata": "pending",
+        "display_excerpt": "pending",
+        "display_original": "pending",
+        "download": "pending",
+        "export": "pending",
+        "model_training": "pending",
+        "store_structured": "pending",
+        "summarize": "pending",
+        "translate": "pending"
+      }
+    },
+    {
+      "access_method": "official_web_portal",
+      "access_policy": {
+        "access_control_bypass_prohibited": true,
+        "automation": "pending",
+        "captcha_observed": null,
+        "geo_restricted": null,
+        "identifiable_user_agent_required": null,
+        "login_required": null,
+        "paid_access": null,
+        "rate_limit": null
+      },
+      "approval_evidence_ids": [],
+      "attribution_requirement": null,
+      "authority_level": "A",
+      "boundary_conditions": {},
+      "business_owner_group": "市场研究组",
+      "canonical_domain": "www.sama.gov.sa",
+      "compliance_reviewer": null,
+      "data_owner_reviewer": null,
+      "entry_url": "https://www.sama.gov.sa/en-US/EconomicReports/Pages/YearlyStatistics.aspx",
+      "evidence_scope": "汇率、金融、宏观经济和年度统计",
+      "languages": [
+        "ar",
+        "en"
+      ],
+      "license_snapshot_id": null,
+      "next_review_at": null,
+      "organization": "Saudi Central Bank",
+      "research_provenance": {
+        "catalog": "data/d1/research/official_source_candidates.json",
+        "status": "official_candidate_identified"
+      },
+      "retention_rule": null,
+      "review_notes": "经济报告入口；具体序列许可、下载和再分发边界待复核。",
+      "reviewed_at": null,
+      "robots_snapshot_id": null,
+      "scope_codes": [
+        "SAU"
+      ],
+      "source_id": "SRC-SAU-SAMA",
+      "source_type": "official_central_bank",
+      "status": "under_review",
+      "suggested_frequency": "monthly",
+      "technical_owner": null,
+      "terms_snapshot_id": null,
+      "usage_boundaries": {
+        "ai_index": "pending",
+        "cache_original": "pending",
+        "collect_content": "pending",
+        "collect_metadata": "pending",
+        "display_excerpt": "pending",
+        "display_original": "pending",
+        "download": "pending",
+        "export": "pending",
+        "model_training": "pending",
+        "store_structured": "pending",
+        "summarize": "pending",
+        "translate": "pending"
+      }
+    },
+    {
+      "access_method": "official_web_portal",
+      "access_policy": {
+        "access_control_bypass_prohibited": true,
+        "automation": "pending",
+        "captcha_observed": null,
+        "geo_restricted": null,
+        "identifiable_user_agent_required": null,
+        "login_required": null,
+        "paid_access": null,
+        "rate_limit": null
+      },
+      "approval_evidence_ids": [],
+      "attribution_requirement": null,
+      "authority_level": "A",
+      "boundary_conditions": {},
+      "business_owner_group": "数据组",
+      "canonical_domain": "www.statssa.gov.za",
+      "compliance_reviewer": null,
+      "data_owner_reviewer": null,
+      "entry_url": "https://www.statssa.gov.za/?PPN=P4141&page_id=1854",
+      "evidence_scope": "电力生产消费、经济、人口和行业统计",
+      "languages": [
+        "en"
+      ],
+      "license_snapshot_id": null,
+      "next_review_at": null,
+      "organization": "Statistics South Africa",
+      "research_provenance": {
+        "catalog": "data/d1/research/official_source_candidates.json",
+        "status": "official_candidate_identified"
+      },
+      "retention_rule": null,
+      "review_notes": "电力统计出版物入口；表格许可、历史版本和下载方式待复核。",
+      "reviewed_at": null,
+      "robots_snapshot_id": null,
+      "scope_codes": [
+        "ZAF"
+      ],
+      "source_id": "SRC-ZAF-STATSSA",
+      "source_type": "official_statistics",
+      "status": "under_review",
+      "suggested_frequency": "monthly",
+      "technical_owner": null,
+      "terms_snapshot_id": null,
+      "usage_boundaries": {
+        "ai_index": "pending",
+        "cache_original": "pending",
+        "collect_content": "pending",
+        "collect_metadata": "pending",
+        "display_excerpt": "pending",
+        "display_original": "pending",
+        "download": "pending",
+        "export": "pending",
+        "model_training": "pending",
+        "store_structured": "pending",
+        "summarize": "pending",
+        "translate": "pending"
+      }
+    },
+    {
+      "access_method": "official_web_portal",
+      "access_policy": {
+        "access_control_bypass_prohibited": true,
+        "automation": "pending",
+        "captcha_observed": null,
+        "geo_restricted": null,
+        "identifiable_user_agent_required": null,
+        "login_required": null,
+        "paid_access": null,
+        "rate_limit": null
+      },
+      "approval_evidence_ids": [],
+      "attribution_requirement": null,
+      "authority_level": "A",
+      "boundary_conditions": {},
+      "business_owner_group": "政策法规组",
+      "canonical_domain": "www.nersa.org.za",
+      "compliance_reviewer": null,
+      "data_owner_reviewer": null,
+      "entry_url": "https://www.nersa.org.za/",
+      "evidence_scope": "电力、管道和燃气监管、许可及价格决定",
+      "languages": [
+        "en"
+      ],
+      "license_snapshot_id": null,
+      "next_review_at": null,
+      "organization": "National Energy Regulator of South Africa",
+      "research_provenance": {
+        "catalog": "data/d1/research/official_source_candidates.json",
+        "status": "official_candidate_identified"
+      },
+      "retention_rule": null,
+      "review_notes": "监管入口；决定文件、许可名录和下载条款待复核。",
+      "reviewed_at": null,
+      "robots_snapshot_id": null,
+      "scope_codes": [
+        "ZAF"
+      ],
+      "source_id": "SRC-ZAF-NERSA",
+      "source_type": "official_energy_regulator",
+      "status": "under_review",
+      "suggested_frequency": "weekly",
+      "technical_owner": null,
+      "terms_snapshot_id": null,
+      "usage_boundaries": {
+        "ai_index": "pending",
+        "cache_original": "pending",
+        "collect_content": "pending",
+        "collect_metadata": "pending",
+        "display_excerpt": "pending",
+        "display_original": "pending",
+        "download": "pending",
+        "export": "pending",
+        "model_training": "pending",
+        "store_structured": "pending",
+        "summarize": "pending",
+        "translate": "pending"
+      }
+    },
+    {
+      "access_method": "official_data_portal",
+      "access_policy": {
+        "access_control_bypass_prohibited": true,
+        "automation": "pending",
+        "captcha_observed": null,
+        "geo_restricted": null,
+        "identifiable_user_agent_required": null,
+        "login_required": null,
+        "paid_access": null,
+        "rate_limit": null
+      },
+      "approval_evidence_ids": [],
+      "attribution_requirement": null,
+      "authority_level": "A",
+      "boundary_conditions": {},
+      "business_owner_group": "数据组",
+      "canonical_domain": "www.eskom.co.za",
+      "compliance_reviewer": null,
+      "data_owner_reviewer": null,
+      "entry_url": "https://www.eskom.co.za/dataportal/",
+      "evidence_scope": "电力系统、供需、发电和运营数据",
+      "languages": [
+        "en"
+      ],
+      "license_snapshot_id": null,
+      "next_review_at": null,
+      "organization": "Eskom",
+      "research_provenance": {
+        "catalog": "data/d1/research/official_source_candidates.json",
+        "status": "official_candidate_identified"
+      },
+      "retention_rule": null,
+      "review_notes": "公用事业数据入口；数据集许可、接口、频率和缓存边界待复核。",
+      "reviewed_at": null,
+      "robots_snapshot_id": null,
+      "scope_codes": [
+        "ZAF"
+      ],
+      "source_id": "SRC-ZAF-ESKOM",
+      "source_type": "official_utility_data_portal",
+      "status": "under_review",
+      "suggested_frequency": "daily",
+      "technical_owner": null,
+      "terms_snapshot_id": null,
+      "usage_boundaries": {
+        "ai_index": "pending",
+        "cache_original": "pending",
+        "collect_content": "pending",
+        "collect_metadata": "pending",
+        "display_excerpt": "pending",
+        "display_original": "pending",
+        "download": "pending",
+        "export": "pending",
+        "model_training": "pending",
+        "store_structured": "pending",
+        "summarize": "pending",
+        "translate": "pending"
+      }
+    },
+    {
+      "access_method": "official_transaction_portal",
+      "access_policy": {
+        "access_control_bypass_prohibited": true,
+        "automation": "pending",
+        "captcha_observed": null,
+        "geo_restricted": null,
+        "identifiable_user_agent_required": null,
+        "login_required": null,
+        "paid_access": null,
+        "rate_limit": null
+      },
+      "approval_evidence_ids": [],
+      "attribution_requirement": null,
+      "authority_level": "A",
+      "boundary_conditions": {},
+      "business_owner_group": "机会组",
+      "canonical_domain": "www.etenders.gov.za",
+      "compliance_reviewer": null,
+      "data_owner_reviewer": null,
+      "entry_url": "https://www.etenders.gov.za/",
+      "evidence_scope": "政府采购公告、招标文件和结果",
+      "languages": [
+        "en"
+      ],
+      "license_snapshot_id": null,
+      "next_review_at": null,
+      "organization": "South Africa eTenders",
+      "research_provenance": {
+        "catalog": "data/d1/research/official_source_candidates.json",
+        "status": "official_candidate_identified"
+      },
+      "retention_rule": null,
+      "review_notes": "采购入口；开放数据接口与网页附件应分别确认许可和技术边界。",
+      "reviewed_at": null,
+      "robots_snapshot_id": null,
+      "scope_codes": [
+        "ZAF"
+      ],
+      "source_id": "SRC-ZAF-ETENDERS",
+      "source_type": "official_procurement_portal",
+      "status": "under_review",
+      "suggested_frequency": "daily",
+      "technical_owner": null,
+      "terms_snapshot_id": null,
+      "usage_boundaries": {
+        "ai_index": "pending",
+        "cache_original": "pending",
+        "collect_content": "pending",
+        "collect_metadata": "pending",
+        "display_excerpt": "pending",
+        "display_original": "pending",
+        "download": "pending",
+        "export": "pending",
+        "model_training": "pending",
+        "store_structured": "pending",
+        "summarize": "pending",
+        "translate": "pending"
+      }
+    },
+    {
+      "access_method": "official_data_portal",
+      "access_policy": {
+        "access_control_bypass_prohibited": true,
+        "automation": "pending",
+        "captcha_observed": null,
+        "geo_restricted": null,
+        "identifiable_user_agent_required": null,
+        "login_required": null,
+        "paid_access": null,
+        "rate_limit": null
+      },
+      "approval_evidence_ids": [],
+      "attribution_requirement": null,
+      "authority_level": "A",
+      "boundary_conditions": {},
+      "business_owner_group": "风险组",
+      "canonical_domain": "www.dffe.gov.za",
+      "compliance_reviewer": null,
+      "data_owner_reviewer": null,
+      "entry_url": "https://www.dffe.gov.za/index.php/egis",
+      "evidence_scope": "环境空间数据、保护区、生态和审批约束",
+      "languages": [
+        "en"
+      ],
+      "license_snapshot_id": null,
+      "next_review_at": null,
+      "organization": "Department of Forestry, Fisheries and the Environment",
+      "research_provenance": {
+        "catalog": "data/d1/research/official_source_candidates.json",
+        "status": "official_candidate_identified"
+      },
+      "retention_rule": null,
+      "review_notes": "环境地理信息入口；每个图层的许可、更新和下载条件待复核。",
+      "reviewed_at": null,
+      "robots_snapshot_id": null,
+      "scope_codes": [
+        "ZAF"
+      ],
+      "source_id": "SRC-ZAF-DFFE-EGIS",
+      "source_type": "official_environment_geospatial",
+      "status": "under_review",
+      "suggested_frequency": "monthly",
+      "technical_owner": null,
+      "terms_snapshot_id": null,
+      "usage_boundaries": {
+        "ai_index": "pending",
+        "cache_original": "pending",
+        "collect_content": "pending",
+        "collect_metadata": "pending",
+        "display_excerpt": "pending",
+        "display_original": "pending",
+        "download": "pending",
+        "export": "pending",
+        "model_training": "pending",
+        "store_structured": "pending",
+        "summarize": "pending",
+        "translate": "pending"
+      }
+    },
+    {
+      "access_method": "official_transaction_portal",
+      "access_policy": {
+        "access_control_bypass_prohibited": true,
+        "automation": "pending",
+        "captcha_observed": null,
+        "geo_restricted": null,
+        "identifiable_user_agent_required": null,
+        "login_required": null,
+        "paid_access": null,
+        "rate_limit": null
+      },
+      "approval_evidence_ids": [],
+      "attribution_requirement": null,
+      "authority_level": "A",
+      "boundary_conditions": {},
+      "business_owner_group": "企业研究组",
+      "canonical_domain": "www.cipc.co.za",
+      "compliance_reviewer": null,
+      "data_owner_reviewer": null,
+      "entry_url": "https://www.cipc.co.za/",
+      "evidence_scope": "企业注册、董事和知识产权基础信息",
+      "languages": [
+        "en"
+      ],
+      "license_snapshot_id": null,
+      "next_review_at": null,
+      "organization": "Companies and Intellectual Property Commission",
+      "research_provenance": {
+        "catalog": "data/d1/research/official_source_candidates.json",
+        "status": "official_candidate_identified"
+      },
+      "retention_rule": null,
+      "review_notes": "企业登记入口可能收费或要求账户；自动化、个人信息和再分发边界待复核。",
+      "reviewed_at": null,
+      "robots_snapshot_id": null,
+      "scope_codes": [
+        "ZAF"
+      ],
+      "source_id": "SRC-ZAF-CIPC",
+      "source_type": "official_company_registry",
+      "status": "under_review",
+      "suggested_frequency": "event_driven",
+      "technical_owner": null,
+      "terms_snapshot_id": null,
+      "usage_boundaries": {
+        "ai_index": "pending",
+        "cache_original": "pending",
+        "collect_content": "pending",
+        "collect_metadata": "pending",
+        "display_excerpt": "pending",
+        "display_original": "pending",
+        "download": "pending",
+        "export": "pending",
+        "model_training": "pending",
+        "store_structured": "pending",
+        "summarize": "pending",
+        "translate": "pending"
+      }
+    },
+    {
+      "access_method": "official_web_portal",
+      "access_policy": {
+        "access_control_bypass_prohibited": true,
+        "automation": "pending",
+        "captcha_observed": null,
+        "geo_restricted": null,
+        "identifiable_user_agent_required": null,
+        "login_required": null,
+        "paid_access": null,
+        "rate_limit": null
+      },
+      "approval_evidence_ids": [],
+      "attribution_requirement": null,
+      "authority_level": "A",
+      "boundary_conditions": {},
+      "business_owner_group": "数据组",
+      "canonical_domain": "anuario.ibge.gov.br",
+      "compliance_reviewer": null,
+      "data_owner_reviewer": null,
+      "entry_url": "https://anuario.ibge.gov.br/2024/industria/energia.html",
+      "evidence_scope": "能源、产业、人口、经济和地理统计",
+      "languages": [
+        "pt"
+      ],
+      "license_snapshot_id": null,
+      "next_review_at": null,
+      "organization": "Instituto Brasileiro de Geografia e Estatistica",
+      "research_provenance": {
+        "catalog": "data/d1/research/official_source_candidates.json",
+        "status": "official_candidate_identified"
+      },
+      "retention_rule": null,
+      "review_notes": "能源统计入口；年度路径迁移、数据集许可和机器接口待复核。",
+      "reviewed_at": null,
+      "robots_snapshot_id": null,
+      "scope_codes": [
+        "BRA"
+      ],
+      "source_id": "SRC-BRA-IBGE",
+      "source_type": "official_statistics",
+      "status": "under_review",
+      "suggested_frequency": "monthly",
+      "technical_owner": null,
+      "terms_snapshot_id": null,
+      "usage_boundaries": {
+        "ai_index": "pending",
+        "cache_original": "pending",
+        "collect_content": "pending",
+        "collect_metadata": "pending",
+        "display_excerpt": "pending",
+        "display_original": "pending",
+        "download": "pending",
+        "export": "pending",
+        "model_training": "pending",
+        "store_structured": "pending",
+        "summarize": "pending",
+        "translate": "pending"
+      }
+    },
+    {
+      "access_method": "official_data_portal",
+      "access_policy": {
+        "access_control_bypass_prohibited": true,
+        "automation": "pending",
+        "captcha_observed": null,
+        "geo_restricted": null,
+        "identifiable_user_agent_required": null,
+        "login_required": null,
+        "paid_access": null,
+        "rate_limit": null
+      },
+      "approval_evidence_ids": [],
+      "attribution_requirement": null,
+      "authority_level": "A",
+      "boundary_conditions": {},
+      "business_owner_group": "数据组",
+      "canonical_domain": "www.ons.org.br",
+      "compliance_reviewer": null,
+      "data_owner_reviewer": null,
+      "entry_url": "https://www.ons.org.br/Paginas/resultados-da-operacao/historico-da-operacao/dados-gerais.aspx",
+      "evidence_scope": "电力系统运行、负荷、发电和输电数据",
+      "languages": [
+        "pt"
+      ],
+      "license_snapshot_id": null,
+      "next_review_at": null,
+      "organization": "Operador Nacional do Sistema Eletrico",
+      "research_provenance": {
+        "catalog": "data/d1/research/official_source_candidates.json",
+        "status": "official_candidate_identified"
+      },
+      "retention_rule": null,
+      "review_notes": "系统运营数据入口；下载、接口、引用和缓存边界待复核。",
+      "reviewed_at": null,
+      "robots_snapshot_id": null,
+      "scope_codes": [
+        "BRA"
+      ],
+      "source_id": "SRC-BRA-ONS",
+      "source_type": "official_system_operator",
+      "status": "under_review",
+      "suggested_frequency": "daily",
+      "technical_owner": null,
+      "terms_snapshot_id": null,
+      "usage_boundaries": {
+        "ai_index": "pending",
+        "cache_original": "pending",
+        "collect_content": "pending",
+        "collect_metadata": "pending",
+        "display_excerpt": "pending",
+        "display_original": "pending",
+        "download": "pending",
+        "export": "pending",
+        "model_training": "pending",
+        "store_structured": "pending",
+        "summarize": "pending",
+        "translate": "pending"
+      }
+    },
+    {
+      "access_method": "official_data_portal",
+      "access_policy": {
+        "access_control_bypass_prohibited": true,
+        "automation": "pending",
+        "captcha_observed": null,
+        "geo_restricted": null,
+        "identifiable_user_agent_required": null,
+        "login_required": null,
+        "paid_access": null,
+        "rate_limit": null
+      },
+      "approval_evidence_ids": [],
+      "attribution_requirement": null,
+      "authority_level": "A",
+      "boundary_conditions": {},
+      "business_owner_group": "市场研究组",
+      "canonical_domain": "www.ccee.org.br",
+      "compliance_reviewer": null,
+      "data_owner_reviewer": null,
+      "entry_url": "https://www.ccee.org.br/dados-e-analises/dados-geracao",
+      "evidence_scope": "电力市场、发电、消费和交易分析",
+      "languages": [
+        "pt"
+      ],
+      "license_snapshot_id": null,
+      "next_review_at": null,
+      "organization": "Camara de Comercializacao de Energia Eletrica",
+      "research_provenance": {
+        "catalog": "data/d1/research/official_source_candidates.json",
+        "status": "official_candidate_identified"
+      },
+      "retention_rule": null,
+      "review_notes": "电力市场数据入口；会员数据、公开数据和再分发条件待区分复核。",
+      "reviewed_at": null,
+      "robots_snapshot_id": null,
+      "scope_codes": [
+        "BRA"
+      ],
+      "source_id": "SRC-BRA-CCEE",
+      "source_type": "official_power_market_operator",
+      "status": "under_review",
+      "suggested_frequency": "monthly",
+      "technical_owner": null,
+      "terms_snapshot_id": null,
+      "usage_boundaries": {
+        "ai_index": "pending",
+        "cache_original": "pending",
+        "collect_content": "pending",
+        "collect_metadata": "pending",
+        "display_excerpt": "pending",
+        "display_original": "pending",
+        "download": "pending",
+        "export": "pending",
+        "model_training": "pending",
+        "store_structured": "pending",
+        "summarize": "pending",
+        "translate": "pending"
+      }
+    },
+    {
+      "access_method": "official_web_portal",
+      "access_policy": {
+        "access_control_bypass_prohibited": true,
+        "automation": "pending",
+        "captcha_observed": null,
+        "geo_restricted": null,
+        "identifiable_user_agent_required": null,
+        "login_required": null,
+        "paid_access": null,
+        "rate_limit": null
+      },
+      "approval_evidence_ids": [],
+      "attribution_requirement": null,
+      "authority_level": "A",
+      "boundary_conditions": {},
+      "business_owner_group": "企业研究组",
+      "canonical_domain": "www.bndes.gov.br",
+      "compliance_reviewer": null,
+      "data_owner_reviewer": null,
+      "entry_url": "https://www.bndes.gov.br/wps/portal/site/home/transparencia/consulta-operacoes-bndes",
+      "evidence_scope": "项目融资、贷款、投资和已披露业务",
+      "languages": [
+        "pt"
+      ],
+      "license_snapshot_id": null,
+      "next_review_at": null,
+      "organization": "Banco Nacional de Desenvolvimento Economico e Social",
+      "research_provenance": {
+        "catalog": "data/d1/research/official_source_candidates.json",
+        "status": "official_candidate_identified"
+      },
+      "retention_rule": null,
+      "review_notes": "融资透明度入口；披露粒度、下载许可和更新规则待复核。",
+      "reviewed_at": null,
+      "robots_snapshot_id": null,
+      "scope_codes": [
+        "BRA"
+      ],
+      "source_id": "SRC-BRA-BNDES",
+      "source_type": "official_development_bank",
+      "status": "under_review",
+      "suggested_frequency": "monthly",
+      "technical_owner": null,
+      "terms_snapshot_id": null,
+      "usage_boundaries": {
+        "ai_index": "pending",
+        "cache_original": "pending",
+        "collect_content": "pending",
+        "collect_metadata": "pending",
+        "display_excerpt": "pending",
+        "display_original": "pending",
+        "download": "pending",
+        "export": "pending",
+        "model_training": "pending",
+        "store_structured": "pending",
+        "summarize": "pending",
+        "translate": "pending"
+      }
+    },
+    {
+      "access_method": "official_transaction_portal",
+      "access_policy": {
+        "access_control_bypass_prohibited": true,
+        "automation": "pending",
+        "captcha_observed": null,
+        "geo_restricted": null,
+        "identifiable_user_agent_required": null,
+        "login_required": null,
+        "paid_access": null,
+        "rate_limit": null
+      },
+      "approval_evidence_ids": [],
+      "attribution_requirement": null,
+      "authority_level": "A",
+      "boundary_conditions": {},
+      "business_owner_group": "机会组",
+      "canonical_domain": "www.gov.br",
+      "compliance_reviewer": null,
+      "data_owner_reviewer": null,
+      "entry_url": "https://www.gov.br/compras/pt-br/",
+      "evidence_scope": "联邦采购、招标、合同和供应商机会",
+      "languages": [
+        "pt"
+      ],
+      "license_snapshot_id": null,
+      "next_review_at": null,
+      "organization": "Compras.gov.br",
+      "research_provenance": {
+        "catalog": "data/d1/research/official_source_candidates.json",
+        "status": "official_candidate_identified"
+      },
+      "retention_rule": null,
+      "review_notes": "采购入口；页面内容许可不自动覆盖附件、交易数据或再分发，须逐项复核。",
+      "reviewed_at": null,
+      "robots_snapshot_id": null,
+      "scope_codes": [
+        "BRA"
+      ],
+      "source_id": "SRC-BRA-COMPRAS",
+      "source_type": "official_procurement_portal",
+      "status": "under_review",
+      "suggested_frequency": "daily",
+      "technical_owner": null,
+      "terms_snapshot_id": null,
+      "usage_boundaries": {
+        "ai_index": "pending",
+        "cache_original": "pending",
+        "collect_content": "pending",
+        "collect_metadata": "pending",
+        "display_excerpt": "pending",
+        "display_original": "pending",
+        "download": "pending",
+        "export": "pending",
+        "model_training": "pending",
+        "store_structured": "pending",
+        "summarize": "pending",
+        "translate": "pending"
+      }
     }
   ],
   "stage": "D1",
   "template_only": true,
-  "warning": "起始来源仅为待复核候选；公开可访问不等于允许批量采集、保存、再分发或AI使用"
+  "warning": "所有来源仅为待复核候选；公开可访问不等于允许批量采集、保存、再分发或AI使用"
 }
