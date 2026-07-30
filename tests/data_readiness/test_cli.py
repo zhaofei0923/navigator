@@ -133,3 +133,45 @@ def test_validate_d0_review_command_reports_blockers(
     assert exit_code == 1
     captured = capsys.readouterr()
     assert "D0_REVIEW_HEADER_INVALID" in captured.err
+
+
+def test_prepare_d1_command_lists_candidates(
+    monkeypatch: MonkeyPatch,
+    capsys: CaptureFixture[str],
+) -> None:
+    paths = discover_repository()
+    candidate = paths.d1_candidates_dir / "candidate.json"
+    monkeypatch.setattr(
+        "navigator_data_readiness.cli.write_d1_candidates",
+        lambda _paths: [candidate],
+    )
+
+    exit_code = main(["prepare-d1"])
+
+    assert exit_code == 0
+    captured = capsys.readouterr()
+    assert "data/d1/candidates/candidate.json" in captured.out
+
+
+def test_validate_d1_command_reports_blockers(
+    tmp_path: Path,
+    capsys: CaptureFixture[str],
+) -> None:
+    registry = tmp_path / "registry.json"
+    matrix = tmp_path / "matrix.json"
+    registry.write_text("{}", encoding="utf-8")
+    matrix.write_text("{}", encoding="utf-8")
+
+    exit_code = main(
+        [
+            "validate-d1",
+            "--registry",
+            str(registry),
+            "--matrix",
+            str(matrix),
+        ]
+    )
+
+    assert exit_code == 1
+    captured = capsys.readouterr()
+    assert "D1_REGISTRY_HEADER_INVALID" in captured.err

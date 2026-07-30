@@ -26,6 +26,7 @@ uv run navigator-data snapshot
 uv run navigator-data prepare-d0
 uv run navigator-data assess-d0
 uv run navigator-data prepare-d0-review
+uv run navigator-data prepare-d1
 uv run navigator-data report
 uv run pytest --cov
 ```
@@ -48,6 +49,11 @@ uv run navigator-data gate --stage D0
 [`data/d0/review`](data/d0/review/README.md)中的流程复制评审模板，填写角色、映射、
 样本、候选规范和D0-AC-001至010的实际决策，再用 `validate-d0-review` 做提交前检查。
 该检查只验证完整性和基线一致性，不能代替授权与签署。
+
+D1候选包位于
+[`data/d1/candidates`](data/d1/candidates/README.md)。它固化印尼20个、四个比较国
+各8个active来源门槛，并要求五国40个“国家×核心数据域”组合分别绑定不同的优先
+来源和替代来源。D0未通过、许可或访问边界未决时，`validate-d1`必须失败。
 
 完整实施顺序见
 [`docs/development/P0_IMPLEMENTATION_PLAN.md`](docs/development/P0_IMPLEMENTATION_PLAN.md)。

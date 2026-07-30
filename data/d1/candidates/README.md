@@ -1,0 +1,37 @@
+# D1来源准入候选包
+
+本目录由 `navigator-data prepare-d1` 从冻结来源清单、五国范围和数据域目标生成。
+所有起始来源均为 `under_review`，不是已准入来源。D0正式门禁未通过时，不得把任何
+来源改为 `active` 或用于自动批量采集。
+
+| 文件 | 用途 | 当前结论 |
+|---|---|---|
+| `source_admission_registry.template.json` | 来源主数据、许可、访问和用途边界模板 | 18个起始来源均待数据/合规复核 |
+| `domain_source_matrix.template.json` | 五国核心数据域的优先与替代来源 | 40个组合均待绑定 |
+| `source_coverage_gap_report.json` | 印尼20个、比较国各8个来源目标差距 | 起始候选远未达到active来源门槛 |
+| `d1_acceptance_assessment.json` | D1机器评估摘要 | D0依赖、数量、替代源和合规均未通过 |
+
+## 执行流程
+
+1. 先完成D0正式签署和阶段门；
+2. 复制两个 `.template.json`，将 `template_only` 改为 `false`；
+3. 保留18个冻结起始来源，并按国家目标补充候选；
+4. 对每个来源保存当日条款、许可、robots和访问规则快照；
+5. 明确12类用途边界，以及登录、付费、验证码、地区和自动化限制；
+6. 只有数据负责人和合规负责人批准、证据齐全、小样本验证成功后才可转`active`；
+7. 为五国每个核心数据域绑定不同的active优先来源和替代来源；
+8. 执行：
+
+   ```bash
+   uv run navigator-data validate-d1 \
+     --registry data/d1/source_admission_registry.json \
+     --matrix data/d1/domain_source_matrix.json
+   ```
+
+## 禁止事项
+
+- 不得把“公开可访问”解释为允许批量复制、再分发、下载或AI索引；
+- 不得绕过登录、验证码、付费墙、地区限制、robots、速率限制或技术封禁；
+- 不得把`under_review`、`blocked`或`retired`来源用于自动采集；
+- 不得用同一个来源同时充当某国家/数据域的优先源和替代源；
+- 不得在许可撤回后继续采集、展示、导出或保留AI索引。

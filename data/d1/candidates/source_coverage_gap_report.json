@@ -1,0 +1,50 @@
+{
+  "countries": [
+    {
+      "active_gap": 20,
+      "active_sources": 0,
+      "candidate_gap": 18,
+      "country": "IDN",
+      "seed_candidates": 2,
+      "target": 20
+    },
+    {
+      "active_gap": 8,
+      "active_sources": 0,
+      "candidate_gap": 6,
+      "country": "VNM",
+      "seed_candidates": 2,
+      "target": 8
+    },
+    {
+      "active_gap": 8,
+      "active_sources": 0,
+      "candidate_gap": 6,
+      "country": "SAU",
+      "seed_candidates": 2,
+      "target": 8
+    },
+    {
+      "active_gap": 8,
+      "active_sources": 0,
+      "candidate_gap": 6,
+      "country": "ZAF",
+      "seed_candidates": 2,
+      "target": 8
+    },
+    {
+      "active_gap": 8,
+      "active_sources": 0,
+      "candidate_gap": 5,
+      "country": "BRA",
+      "seed_candidates": 3,
+      "target": 8
+    }
+  ],
+  "purpose": "D1国家来源数量候选缺口；候选数不等于已准入active来源数",
+  "regional_or_global_seed_count": 7,
+  "schema_version": 1,
+  "seed_source_count": 18,
+  "stage": "D1",
+  "status": "incomplete"
+}

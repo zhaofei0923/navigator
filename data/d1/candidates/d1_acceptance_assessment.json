@@ -1,0 +1,70 @@
+{
+  "automated_assessment_only": true,
+  "checks": [
+    {
+      "check_id": "D1-SEED-REGISTRY",
+      "finding": "18个起始候选均为under_review",
+      "status": "candidate_generated"
+    },
+    {
+      "check_id": "D1-COUNTRY-THRESHOLDS",
+      "finding": [
+        {
+          "active_gap": 20,
+          "active_sources": 0,
+          "candidate_gap": 18,
+          "country": "IDN",
+          "seed_candidates": 2,
+          "target": 20
+        },
+        {
+          "active_gap": 8,
+          "active_sources": 0,
+          "candidate_gap": 6,
+          "country": "VNM",
+          "seed_candidates": 2,
+          "target": 8
+        },
+        {
+          "active_gap": 8,
+          "active_sources": 0,
+          "candidate_gap": 6,
+          "country": "SAU",
+          "seed_candidates": 2,
+          "target": 8
+        },
+        {
+          "active_gap": 8,
+          "active_sources": 0,
+          "candidate_gap": 6,
+          "country": "ZAF",
+          "seed_candidates": 2,
+          "target": 8
+        },
+        {
+          "active_gap": 8,
+          "active_sources": 0,
+          "candidate_gap": 5,
+          "country": "BRA",
+          "seed_candidates": 3,
+          "target": 8
+        }
+      ],
+      "status": "fail"
+    },
+    {
+      "check_id": "D1-DOMAIN-ALTERNATIVES",
+      "finding": "40个国家/数据域组合尚未绑定优先和替代来源",
+      "status": "fail"
+    },
+    {
+      "check_id": "D1-COMPLIANCE-APPROVAL",
+      "finding": "所有候选仍缺条款、许可、robots、用途边界和数据/合规批准",
+      "status": "fail"
+    }
+  ],
+  "d0_dependency_ready": false,
+  "overall_status": "not_ready",
+  "schema_version": 1,
+  "stage": "D1"
+}

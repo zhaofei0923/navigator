@@ -22,12 +22,15 @@
   `data/contracts/current`; machine-generated D0 candidates belong in `data/d0/candidates`.
 - Generated reviewer templates belong in `data/d0/review`; only actual authorized reviewers may
   fill a review copy, and completed copies must not contain private contact details or secrets.
+- Generated D1 source-onboarding templates belong in `data/d1/candidates`; no source may become
+  `active` before D0 passes and all access, license, usage-boundary, evidence, and owner fields pass.
 - Candidate reports and machine checks never authorize changing workbook task, acceptance, or
   signature states. Only actual named reviewers may do that.
 - Any new behavior must include tests and update the implementation plan or operating
   documentation when its contract changes.
 - Run `uv run ruff format --check .`, `uv run ruff check .`, `uv run mypy`,
   `uv run navigator-data validate`, `uv run navigator-data prepare-d0`,
-  `uv run navigator-data prepare-d0-review`, and `uv run pytest --cov` before committing.
+  `uv run navigator-data prepare-d0-review`, `uv run navigator-data prepare-d1`, and
+  `uv run pytest --cov` before committing.
 - Never commit secrets, private contact details, restricted source material, or unredacted
   evidence.

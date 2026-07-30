@@ -1,0 +1,472 @@
+{
+  "assignments": [
+    {
+      "alternative_source_id": null,
+      "approved_at": null,
+      "approved_by": null,
+      "country": "IDN",
+      "domain_id": "DOM-COUNTRY",
+      "domain_name": "国家画像",
+      "evidence_ids": [],
+      "primary_source_id": null,
+      "status": "pending"
+    },
+    {
+      "alternative_source_id": null,
+      "approved_at": null,
+      "approved_by": null,
+      "country": "IDN",
+      "domain_id": "DOM-POLICY",
+      "domain_name": "政策法规规划",
+      "evidence_ids": [],
+      "primary_source_id": null,
+      "status": "pending"
+    },
+    {
+      "alternative_source_id": null,
+      "approved_at": null,
+      "approved_by": null,
+      "country": "IDN",
+      "domain_id": "DOM-MARKET",
+      "domain_name": "市场指标",
+      "evidence_ids": [],
+      "primary_source_id": null,
+      "status": "pending"
+    },
+    {
+      "alternative_source_id": null,
+      "approved_at": null,
+      "approved_by": null,
+      "country": "IDN",
+      "domain_id": "DOM-RISK",
+      "domain_name": "风险事实事件",
+      "evidence_ids": [],
+      "primary_source_id": null,
+      "status": "pending"
+    },
+    {
+      "alternative_source_id": null,
+      "approved_at": null,
+      "approved_by": null,
+      "country": "IDN",
+      "domain_id": "DOM-PROJECT",
+      "domain_name": "项目机会",
+      "evidence_ids": [],
+      "primary_source_id": null,
+      "status": "pending"
+    },
+    {
+      "alternative_source_id": null,
+      "approved_at": null,
+      "approved_by": null,
+      "country": "IDN",
+      "domain_id": "DOM-TENDER",
+      "domain_name": "招标采购",
+      "evidence_ids": [],
+      "primary_source_id": null,
+      "status": "pending"
+    },
+    {
+      "alternative_source_id": null,
+      "approved_at": null,
+      "approved_by": null,
+      "country": "IDN",
+      "domain_id": "DOM-PARTNER",
+      "domain_name": "伙伴服务资源",
+      "evidence_ids": [],
+      "primary_source_id": null,
+      "status": "pending"
+    },
+    {
+      "alternative_source_id": null,
+      "approved_at": null,
+      "approved_by": null,
+      "country": "IDN",
+      "domain_id": "DOM-RAG",
+      "domain_name": "RAG发布文档",
+      "evidence_ids": [],
+      "primary_source_id": null,
+      "status": "pending"
+    },
+    {
+      "alternative_source_id": null,
+      "approved_at": null,
+      "approved_by": null,
+      "country": "VNM",
+      "domain_id": "DOM-COUNTRY",
+      "domain_name": "国家画像",
+      "evidence_ids": [],
+      "primary_source_id": null,
+      "status": "pending"
+    },
+    {
+      "alternative_source_id": null,
+      "approved_at": null,
+      "approved_by": null,
+      "country": "VNM",
+      "domain_id": "DOM-POLICY",
+      "domain_name": "政策法规规划",
+      "evidence_ids": [],
+      "primary_source_id": null,
+      "status": "pending"
+    },
+    {
+      "alternative_source_id": null,
+      "approved_at": null,
+      "approved_by": null,
+      "country": "VNM",
+      "domain_id": "DOM-MARKET",
+      "domain_name": "市场指标",
+      "evidence_ids": [],
+      "primary_source_id": null,
+      "status": "pending"
+    },
+    {
+      "alternative_source_id": null,
+      "approved_at": null,
+      "approved_by": null,
+      "country": "VNM",
+      "domain_id": "DOM-RISK",
+      "domain_name": "风险事实事件",
+      "evidence_ids": [],
+      "primary_source_id": null,
+      "status": "pending"
+    },
+    {
+      "alternative_source_id": null,
+      "approved_at": null,
+      "approved_by": null,
+      "country": "VNM",
+      "domain_id": "DOM-PROJECT",
+      "domain_name": "项目机会",
+      "evidence_ids": [],
+      "primary_source_id": null,
+      "status": "pending"
+    },
+    {
+      "alternative_source_id": null,
+      "approved_at": null,
+      "approved_by": null,
+      "country": "VNM",
+      "domain_id": "DOM-TENDER",
+      "domain_name": "招标采购",
+      "evidence_ids": [],
+      "primary_source_id": null,
+      "status": "pending"
+    },
+    {
+      "alternative_source_id": null,
+      "approved_at": null,
+      "approved_by": null,
+      "country": "VNM",
+      "domain_id": "DOM-PARTNER",
+      "domain_name": "伙伴服务资源",
+      "evidence_ids": [],
+      "primary_source_id": null,
+      "status": "pending"
+    },
+    {
+      "alternative_source_id": null,
+      "approved_at": null,
+      "approved_by": null,
+      "country": "VNM",
+      "domain_id": "DOM-RAG",
+      "domain_name": "RAG发布文档",
+      "evidence_ids": [],
+      "primary_source_id": null,
+      "status": "pending"
+    },
+    {
+      "alternative_source_id": null,
+      "approved_at": null,
+      "approved_by": null,
+      "country": "SAU",
+      "domain_id": "DOM-COUNTRY",
+      "domain_name": "国家画像",
+      "evidence_ids": [],
+      "primary_source_id": null,
+      "status": "pending"
+    },
+    {
+      "alternative_source_id": null,
+      "approved_at": null,
+      "approved_by": null,
+      "country": "SAU",
+      "domain_id": "DOM-POLICY",
+      "domain_name": "政策法规规划",
+      "evidence_ids": [],
+      "primary_source_id": null,
+      "status": "pending"
+    },
+    {
+      "alternative_source_id": null,
+      "approved_at": null,
+      "approved_by": null,
+      "country": "SAU",
+      "domain_id": "DOM-MARKET",
+      "domain_name": "市场指标",
+      "evidence_ids": [],
+      "primary_source_id": null,
+      "status": "pending"
+    },
+    {
+      "alternative_source_id": null,
+      "approved_at": null,
+      "approved_by": null,
+      "country": "SAU",
+      "domain_id": "DOM-RISK",
+      "domain_name": "风险事实事件",
+      "evidence_ids": [],
+      "primary_source_id": null,
+      "status": "pending"
+    },
+    {
+      "alternative_source_id": null,
+      "approved_at": null,
+      "approved_by": null,
+      "country": "SAU",
+      "domain_id": "DOM-PROJECT",
+      "domain_name": "项目机会",
+      "evidence_ids": [],
+      "primary_source_id": null,
+      "status": "pending"
+    },
+    {
+      "alternative_source_id": null,
+      "approved_at": null,
+      "approved_by": null,
+      "country": "SAU",
+      "domain_id": "DOM-TENDER",
+      "domain_name": "招标采购",
+      "evidence_ids": [],
+      "primary_source_id": null,
+      "status": "pending"
+    },
+    {
+      "alternative_source_id": null,
+      "approved_at": null,
+      "approved_by": null,
+      "country": "SAU",
+      "domain_id": "DOM-PARTNER",
+      "domain_name": "伙伴服务资源",
+      "evidence_ids": [],
+      "primary_source_id": null,
+      "status": "pending"
+    },
+    {
+      "alternative_source_id": null,
+      "approved_at": null,
+      "approved_by": null,
+      "country": "SAU",
+      "domain_id": "DOM-RAG",
+      "domain_name": "RAG发布文档",
+      "evidence_ids": [],
+      "primary_source_id": null,
+      "status": "pending"
+    },
+    {
+      "alternative_source_id": null,
+      "approved_at": null,
+      "approved_by": null,
+      "country": "ZAF",
+      "domain_id": "DOM-COUNTRY",
+      "domain_name": "国家画像",
+      "evidence_ids": [],
+      "primary_source_id": null,
+      "status": "pending"
+    },
+    {
+      "alternative_source_id": null,
+      "approved_at": null,
+      "approved_by": null,
+      "country": "ZAF",
+      "domain_id": "DOM-POLICY",
+      "domain_name": "政策法规规划",
+      "evidence_ids": [],
+      "primary_source_id": null,
+      "status": "pending"
+    },
+    {
+      "alternative_source_id": null,
+      "approved_at": null,
+      "approved_by": null,
+      "country": "ZAF",
+      "domain_id": "DOM-MARKET",
+      "domain_name": "市场指标",
+      "evidence_ids": [],
+      "primary_source_id": null,
+      "status": "pending"
+    },
+    {
+      "alternative_source_id": null,
+      "approved_at": null,
+      "approved_by": null,
+      "country": "ZAF",
+      "domain_id": "DOM-RISK",
+      "domain_name": "风险事实事件",
+      "evidence_ids": [],
+      "primary_source_id": null,
+      "status": "pending"
+    },
+    {
+      "alternative_source_id": null,
+      "approved_at": null,
+      "approved_by": null,
+      "country": "ZAF",
+      "domain_id": "DOM-PROJECT",
+      "domain_name": "项目机会",
+      "evidence_ids": [],
+      "primary_source_id": null,
+      "status": "pending"
+    },
+    {
+      "alternative_source_id": null,
+      "approved_at": null,
+      "approved_by": null,
+      "country": "ZAF",
+      "domain_id": "DOM-TENDER",
+      "domain_name": "招标采购",
+      "evidence_ids": [],
+      "primary_source_id": null,
+      "status": "pending"
+    },
+    {
+      "alternative_source_id": null,
+      "approved_at": null,
+      "approved_by": null,
+      "country": "ZAF",
+      "domain_id": "DOM-PARTNER",
+      "domain_name": "伙伴服务资源",
+      "evidence_ids": [],
+      "primary_source_id": null,
+      "status": "pending"
+    },
+    {
+      "alternative_source_id": null,
+      "approved_at": null,
+      "approved_by": null,
+      "country": "ZAF",
+      "domain_id": "DOM-RAG",
+      "domain_name": "RAG发布文档",
+      "evidence_ids": [],
+      "primary_source_id": null,
+      "status": "pending"
+    },
+    {
+      "alternative_source_id": null,
+      "approved_at": null,
+      "approved_by": null,
+      "country": "BRA",
+      "domain_id": "DOM-COUNTRY",
+      "domain_name": "国家画像",
+      "evidence_ids": [],
+      "primary_source_id": null,
+      "status": "pending"
+    },
+    {
+      "alternative_source_id": null,
+      "approved_at": null,
+      "approved_by": null,
+      "country": "BRA",
+      "domain_id": "DOM-POLICY",
+      "domain_name": "政策法规规划",
+      "evidence_ids": [],
+      "primary_source_id": null,
+      "status": "pending"
+    },
+    {
+      "alternative_source_id": null,
+      "approved_at": null,
+      "approved_by": null,
+      "country": "BRA",
+      "domain_id": "DOM-MARKET",
+      "domain_name": "市场指标",
+      "evidence_ids": [],
+      "primary_source_id": null,
+      "status": "pending"
+    },
+    {
+      "alternative_source_id": null,
+      "approved_at": null,
+      "approved_by": null,
+      "country": "BRA",
+      "domain_id": "DOM-RISK",
+      "domain_name": "风险事实事件",
+      "evidence_ids": [],
+      "primary_source_id": null,
+      "status": "pending"
+    },
+    {
+      "alternative_source_id": null,
+      "approved_at": null,
+      "approved_by": null,
+      "country": "BRA",
+      "domain_id": "DOM-PROJECT",
+      "domain_name": "项目机会",
+      "evidence_ids": [],
+      "primary_source_id": null,
+      "status": "pending"
+    },
+    {
+      "alternative_source_id": null,
+      "approved_at": null,
+      "approved_by": null,
+      "country": "BRA",
+      "domain_id": "DOM-TENDER",
+      "domain_name": "招标采购",
+      "evidence_ids": [],
+      "primary_source_id": null,
+      "status": "pending"
+    },
+    {
+      "alternative_source_id": null,
+      "approved_at": null,
+      "approved_by": null,
+      "country": "BRA",
+      "domain_id": "DOM-PARTNER",
+      "domain_name": "伙伴服务资源",
+      "evidence_ids": [],
+      "primary_source_id": null,
+      "status": "pending"
+    },
+    {
+      "alternative_source_id": null,
+      "approved_at": null,
+      "approved_by": null,
+      "country": "BRA",
+      "domain_id": "DOM-RAG",
+      "domain_name": "RAG发布文档",
+      "evidence_ids": [],
+      "primary_source_id": null,
+      "status": "pending"
+    }
+  ],
+  "baseline": {
+    "d1_input_sha256": "83f3b1c3fb437159d6b2cedfeb8eef7d4ee48336abffbf856cbf0883bb154c49",
+    "sources": {
+      "d0_workbook": {
+        "path": "doc/doc/新能源企业出海导航仪_D0数据标准冻结执行台账.xlsx",
+        "sha256": "224e9a35bcbb363cf41c007499ba32aa6394cfdbf06331830c02d994e1c7ddff"
+      },
+      "technical_workbook": {
+        "path": "doc/doc/新能源企业出海导航仪_V1.0技术附件_BASELINE.xlsx",
+        "sha256": "8b36f7cad337d72713f09c2b36d7eaf6ebe0bc2cd13f2bf0c05c45edbd065fb8"
+      }
+    },
+    "version": "V1.0-BASELINE"
+  },
+  "requirements": {
+    "country_source_targets": {
+      "BRA": 8,
+      "IDN": 20,
+      "SAU": 8,
+      "VNM": 8,
+      "ZAF": 8
+    },
+    "domain_count": 8,
+    "rule": "每个国家和核心数据域必须绑定一个active优先来源和一个不同的active替代来源"
+  },
+  "schema_version": 1,
+  "stage": "D1",
+  "template_only": true
+}
