@@ -1,5 +1,56 @@
 {
   "schema_version": 1,
   "stage": "D0",
-  "evidence": []
+  "evidence": [
+    {
+      "evidence_id": "EVD-D0-ROLE-ASSIGNMENTS-20260731",
+      "acceptance_id": "D0-AC-007",
+      "path": "data/d0/evidence/kevin_review_decisions_20260731.md",
+      "sha256": "4a85783d2d594bc008de3aca3b9abd18565bd9f287cfcfef90c159613c4447f6",
+      "recorded_by": "codex (authorized transcription)",
+      "recorded_at": "2026-07-31T12:16:57+08:00",
+      "reviewer": "kevin",
+      "status": "已批准"
+    },
+    {
+      "evidence_id": "EVD-D0-MAPPING-DECISIONS-20260731",
+      "acceptance_id": "D0-AC-005",
+      "path": "data/d0/evidence/kevin_review_decisions_20260731.md",
+      "sha256": "4a85783d2d594bc008de3aca3b9abd18565bd9f287cfcfef90c159613c4447f6",
+      "recorded_by": "codex (authorized transcription)",
+      "recorded_at": "2026-07-31T12:16:57+08:00",
+      "reviewer": "kevin",
+      "status": "已批准"
+    },
+    {
+      "evidence_id": "EVD-D0-CONVENTIONS-APPROVAL-20260731",
+      "acceptance_id": "D0-AC-004",
+      "path": "data/d0/evidence/kevin_review_decisions_20260731.md",
+      "sha256": "4a85783d2d594bc008de3aca3b9abd18565bd9f287cfcfef90c159613c4447f6",
+      "recorded_by": "codex (authorized transcription)",
+      "recorded_at": "2026-07-31T12:16:57+08:00",
+      "reviewer": "kevin",
+      "status": "已批准"
+    },
+    {
+      "evidence_id": "EVD-D0-FILE-RULES-APPROVAL-20260731",
+      "acceptance_id": "D0-AC-008",
+      "path": "data/d0/evidence/kevin_review_decisions_20260731.md",
+      "sha256": "4a85783d2d594bc008de3aca3b9abd18565bd9f287cfcfef90c159613c4447f6",
+      "recorded_by": "codex (authorized transcription)",
+      "recorded_at": "2026-07-31T12:16:57+08:00",
+      "reviewer": "kevin",
+      "status": "已批准"
+    },
+    {
+      "evidence_id": "EVD-D0-TERMINOLOGY-APPROVAL-20260731",
+      "acceptance_id": "D0-AC-006",
+      "path": "data/d0/evidence/kevin_review_decisions_20260731.md",
+      "sha256": "4a85783d2d594bc008de3aca3b9abd18565bd9f287cfcfef90c159613c4447f6",
+      "recorded_by": "codex (authorized transcription)",
+      "recorded_at": "2026-07-31T12:16:57+08:00",
+      "reviewer": "kevin",
+      "status": "已批准"
+    }
+  ]
 }

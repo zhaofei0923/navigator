@@ -177,7 +177,6 @@ def test_unfilled_review_template_reports_all_pending_categories() -> None:
         "D0_REVIEW_TEMPLATE_UNCOPIED",
         "D0_REVIEW_ROLE_PENDING",
         "D0_REVIEW_MAPPING_PENDING",
-        "D0_REVIEW_RAW_CAPTURE_INCOMPLETE",
         "D0_REVIEW_LICENSE_PENDING",
         "D0_REVIEW_PROFESSIONAL_PENDING",
         "D0_REVIEW_RAW_EVIDENCE_MISSING",
@@ -185,6 +184,7 @@ def test_unfilled_review_template_reports_all_pending_categories() -> None:
         "D0_REVIEW_ACCEPTANCE_PENDING",
         "D0_REVIEW_FINAL_PENDING",
     } <= codes
+    assert "D0_REVIEW_RAW_CAPTURE_INCOMPLETE" not in codes
 
 
 def test_structurally_completed_review_packet_passes(tmp_path: Path) -> None:

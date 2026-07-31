@@ -68,16 +68,25 @@ def test_verified_capture_only_resolves_observed_metadata() -> None:
     assert first["unresolved"] == ["许可快照", "行类型仍为示例"]
 
 
-def test_repository_research_captures_cover_verified_indonesia_and_vietnam_samples() -> None:
+def test_repository_research_captures_cover_all_verified_gold_standard_samples() -> None:
     paths = discover_repository()
 
     captures = load_research_captures(paths)
     captures_by_raw_id = {item["raw_id"]: item for item in captures}
 
-    assert set(captures_by_raw_id) == {"RAW-EXAMPLE-001", "RAW-EXAMPLE-002"}
+    assert set(captures_by_raw_id) == {
+        "RAW-EXAMPLE-001",
+        "RAW-EXAMPLE-002",
+        "RAW-EXAMPLE-003",
+    }
     assert all(len(item["sha256"]) == 64 for item in captures)
     assert all(item["license_status"] == "pending_compliance_review" for item in captures)
     assert all(item["local_file_committed"] is False for item in captures)
+    assert (
+        captures_by_raw_id["RAW-EXAMPLE-003"]["record_id"]
+        == "D0-CAPTURE-SAU-PB-ROUND7-QUALIFIED-DEVELOPERS-2025"
+    )
+    assert captures_by_raw_id["RAW-EXAMPLE-003"]["pdf"]["pages"] == 2
 
 
 def test_terminology_and_conventions_are_review_candidates() -> None:
