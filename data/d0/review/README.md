@@ -20,7 +20,17 @@
      --input data/d0/candidates/core_contract_resolution.review.json
    ```
 
-   该命令通过只说明整改提案可进入正式基线变更评审，不会更新本评审包的机器状态。
+   该命令通过后，只在权威Excel之外建立候选D0工作簿，再执行：
+
+   ```bash
+   uv run navigator-data validate-d0-baseline-change \
+     --resolution data/d0/candidates/core_contract_resolution.review.json \
+     --workbook /path/to/d0-candidate.xlsx \
+     --output /path/to/d0-change-assessment.json
+   ```
+
+   两个命令通过都只说明提案和候选工作簿可进入正式基线变更评审，不会更新本评审包
+   的机器状态，也不会替换权威Excel。
 
 2. 复制模板，文件名必须明确包含实际评审批次，例如：
 

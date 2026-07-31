@@ -7,6 +7,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from .baseline import write_snapshot
+from .d0_baseline_change import load_and_assess_d0_baseline_change
 from .d0_candidates import candidate_payloads, write_candidates
 from .d0_contract_resolution import load_and_validate_d0_contract_resolution
 from .d0_review import load_and_validate_review_packet, write_review_template
@@ -70,6 +71,16 @@ def _parser() -> argparse.ArgumentParser:
         ),
     )
     contract_resolution_validation.add_argument("--input", type=Path, required=True)
+    d0_change_validation = commands.add_parser(
+        "validate-d0-baseline-change",
+        help=(
+            "Verify that a separate candidate D0 workbook exactly applies a completed "
+            "AC-001/002 resolution without activating it."
+        ),
+    )
+    d0_change_validation.add_argument("--resolution", type=Path, required=True)
+    d0_change_validation.add_argument("--workbook", type=Path, required=True)
+    d0_change_validation.add_argument("--output", type=Path)
     commands.add_parser(
         "prepare-d1",
         help="Generate D1 source-admission, country-coverage, and domain-alternative templates.",
@@ -227,6 +238,30 @@ def main(argv: list[str] | None = None) -> int:
         checks = load_and_validate_d0_contract_resolution(paths, packet_path)
         _print_checks(checks)
         return 1 if checks else 0
+
+    if args.command == "validate-d0-baseline-change":
+        resolution_path = (
+            args.resolution if args.resolution.is_absolute() else paths.root / args.resolution
+        )
+        workbook_path = args.workbook if args.workbook.is_absolute() else paths.root / args.workbook
+        assessment = load_and_assess_d0_baseline_change(
+            paths,
+            resolution_path,
+            workbook_path,
+        )
+        output = json.dumps(assessment, ensure_ascii=False, indent=2) + "\n"
+        if args.output:
+            destination = args.output if args.output.is_absolute() else paths.root / args.output
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_text(output, encoding="utf-8")
+            try:
+                display_path = destination.relative_to(paths.root).as_posix()
+            except ValueError:
+                display_path = str(destination)
+            print(display_path)
+        else:
+            print(output, end="")
+        return 0 if assessment.get("candidate_ready_for_formal_baseline_review") else 1
 
     if args.command == "prepare-d1":
         written = write_d1_candidates(paths)

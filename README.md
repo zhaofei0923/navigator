@@ -12,6 +12,7 @@ D0 数据标准冻结；D4 数据就绪评审正式通过之前，只建设数�
 - 输出 D0 就绪报告，并对缺少签署、任务、验收和证据给出明确阻断原因；
 - 校验验收证据文件的哈希和关联关系；
 - 生成并校验AC-001/002的29个主键合同和92个字段单位/不适用逐项整改提案；
+- 对独立候选D0工作簿执行整改包精确应用、全单元格越权差异和AC-001/002重算验证；
 - 生成并校验 D1 来源准入、哈希证据、D2 不可变采集和 D3 可重放处理候选合同；
 - 只读提取103项需求、166个页面、70个API、29条角色权限、109个产品/工程测试和
   11项MVP验收，并生成P0需求追踪预检矩阵；
@@ -36,6 +37,10 @@ uv run navigator-data assess-d0
 uv run navigator-data prepare-d0-review
 uv run navigator-data validate-d0-contract-resolution \
   --input data/d0/candidates/core_contract_resolution.review.json
+uv run navigator-data validate-d0-baseline-change \
+  --resolution data/d0/candidates/core_contract_resolution.review.json \
+  --workbook /path/to/d0-candidate.xlsx \
+  --output /path/to/d0-change-assessment.json
 uv run navigator-data prepare-d1
 uv run navigator-data prepare-d2
 uv run navigator-data prepare-d3
@@ -86,6 +91,9 @@ AC-001和AC-002机器状态现为`fail`，不得仅靠人工签名覆盖。AC-00
 92个字段单位决策。整改副本必须绑定当前工作簿与机器证据哈希、Kevin所签九角色中的
 指定实名、ISO时间、变更单和证据；`validate-d0-contract-resolution`通过只表示提案
 可进入正式基线变更评审，不会改写冻结Excel、批准D0或授权用户侧开发。
+在授权人员形成完整整改副本后，`validate-d0-baseline-change`可验证独立候选D0
+工作簿是否精确应用全部决定。它保持原字段顺序，只允许追加已评审主键字段和`单位`
+列，逐单元格拒绝其他值或公式改动，并重算AC-001/002。验证成功仍不替换权威文件。
 
 正式责任人可按
 [`data/d0/review`](data/d0/review/README.md)中的流程复制评审模板，填写角色、映射、

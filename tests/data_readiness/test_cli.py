@@ -149,6 +149,42 @@ def test_validate_d0_contract_resolution_command_reports_blockers(
     assert "D0_CONTRACT_RESOLUTION_HEADER_INVALID" in captured.err
 
 
+def test_validate_d0_baseline_change_command_writes_assessment(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: CaptureFixture[str],
+) -> None:
+    resolution = tmp_path / "resolution.json"
+    workbook = tmp_path / "candidate.xlsx"
+    output = tmp_path / "assessment.json"
+    resolution.write_text("{}", encoding="utf-8")
+    workbook.write_bytes(b"candidate")
+    monkeypatch.setattr(
+        "navigator_data_readiness.cli.load_and_assess_d0_baseline_change",
+        lambda *_args: {
+            "candidate_ready_for_formal_baseline_review": False,
+            "checks": [{"code": "D0_CHANGE_TEST_BLOCKER"}],
+        },
+    )
+
+    exit_code = main(
+        [
+            "validate-d0-baseline-change",
+            "--resolution",
+            str(resolution),
+            "--workbook",
+            str(workbook),
+            "--output",
+            str(output),
+        ]
+    )
+
+    assert exit_code == 1
+    assert "D0_CHANGE_TEST_BLOCKER" in output.read_text(encoding="utf-8")
+    captured = capsys.readouterr()
+    assert str(output) in captured.out
+
+
 def test_prepare_d1_command_lists_candidates(
     monkeypatch: MonkeyPatch,
     capsys: CaptureFixture[str],
