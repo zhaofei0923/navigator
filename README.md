@@ -15,7 +15,9 @@ D0 数据标准冻结；D4 数据就绪评审正式通过之前，只建设数�
 - 只读提取103项需求、166个页面、70个API、29条角色权限、109个产品/工程测试和
   11项MVP验收，并生成P0需求追踪预检矩阵；
 - 对独立的候选技术附件执行提案一致性、越权差异和P0追踪归零验证，不修改或激活
-  权威工作簿。
+  权威工作簿；
+- 生成并校验P0实现、测试、ACC验收、发布指标及构建/部署/回滚/恢复/移交证据包，
+  校验时重放完整D4上游链。
 
 ## 本地运行
 
@@ -38,6 +40,7 @@ uv run navigator-data prepare-d4
 uv run navigator-data prepare-p0-traceability
 uv run navigator-data assess-p0-traceability
 uv run navigator-data prepare-p0-resolution
+uv run navigator-data prepare-p0-delivery
 uv run navigator-data report
 uv run pytest --cov
 ```
@@ -106,6 +109,12 @@ P0追踪预检候选包位于
 `validate-p0-baseline-change`检查一份独立候选技术附件是否精确实现提案、未删除
 原记录或夹带未评审字段，并在候选附件上重算P0追踪阻断是否归零；通过仍只表示
 候选附件可以进入正式基线评审，D4继续使用`doc/doc`中的权威附件。
+
+P0交付证据模板进一步逐项冻结90项需求、125个页面、56个API、89项产品测试、
+17项工程测试和ACC-001至ACC-011，并固化缺陷、关键任务、泄漏、AI引用、性能、
+容量、RPO/RTO、构建、部署、回滚、恢复和移交硬门。`validate-p0-delivery`必须重放
+完整D4→D3→D2→D1→D0链、验证Git提交存在性和仓库内非限制性证据哈希；模板、
+自报状态或孤立证据编号都不能构成P0完成结论。
 
 完整实施顺序见
 [`docs/development/P0_IMPLEMENTATION_PLAN.md`](docs/development/P0_IMPLEMENTATION_PLAN.md)。

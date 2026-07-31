@@ -15,6 +15,10 @@ from .d3_processing import load_and_validate_d3_bundle, write_d3_candidates
 from .d4_acceptance import load_and_validate_d4_bundle, write_d4_candidates
 from .models import CheckResult
 from .p0_baseline_change import load_and_assess_p0_baseline_change
+from .p0_delivery import (
+    load_and_validate_p0_delivery_bundle,
+    write_p0_delivery_template,
+)
 from .p0_resolution import (
     load_and_validate_p0_resolution_packet,
     write_p0_resolution_template,
@@ -135,6 +139,23 @@ def _parser() -> argparse.ArgumentParser:
     p0_change_validation.add_argument("--resolution", type=Path, required=True)
     p0_change_validation.add_argument("--workbook", type=Path, required=True)
     p0_change_validation.add_argument("--output", type=Path)
+    commands.add_parser(
+        "prepare-p0-delivery",
+        help=(
+            "Generate a P0 implementation, test, acceptance, metric, and release evidence template."
+        ),
+    )
+    p0_delivery_validation = commands.add_parser(
+        "validate-p0-delivery",
+        help="Validate completed P0 delivery evidence and replay the full D4 dependency chain.",
+    )
+    p0_delivery_validation.add_argument("--bundle", type=Path, required=True)
+    p0_delivery_validation.add_argument("--d4-bundle", type=Path, required=True)
+    p0_delivery_validation.add_argument("--d3-bundle", type=Path, required=True)
+    p0_delivery_validation.add_argument("--d2-bundle", type=Path, required=True)
+    p0_delivery_validation.add_argument("--d1-registry", type=Path, required=True)
+    p0_delivery_validation.add_argument("--d1-matrix", type=Path, required=True)
+    p0_delivery_validation.add_argument("--d1-evidence", type=Path, required=True)
 
     report = commands.add_parser("report", help="Render the current D0 readiness report.")
     report.add_argument("--format", choices=("markdown", "json"), default="markdown")
@@ -349,6 +370,37 @@ def main(argv: list[str] | None = None) -> int:
         else:
             print(output, end="")
         return 0 if assessment.get("candidate_ready_for_formal_baseline_review") else 1
+
+    if args.command == "prepare-p0-delivery":
+        path = write_p0_delivery_template(paths)
+        print(path.relative_to(paths.root).as_posix())
+        return 0
+
+    if args.command == "validate-p0-delivery":
+        input_paths = {
+            name: value if value.is_absolute() else paths.root / value
+            for name, value in (
+                ("bundle", args.bundle),
+                ("d4_bundle", args.d4_bundle),
+                ("d3_bundle", args.d3_bundle),
+                ("d2_bundle", args.d2_bundle),
+                ("d1_registry", args.d1_registry),
+                ("d1_matrix", args.d1_matrix),
+                ("d1_evidence", args.d1_evidence),
+            )
+        }
+        checks = load_and_validate_p0_delivery_bundle(
+            paths,
+            input_paths["bundle"],
+            input_paths["d4_bundle"],
+            input_paths["d3_bundle"],
+            input_paths["d2_bundle"],
+            input_paths["d1_registry"],
+            input_paths["d1_matrix"],
+            input_paths["d1_evidence"],
+        )
+        _print_checks(checks)
+        return 1 if checks else 0
 
     report = build_readiness_report(paths)
     output = (

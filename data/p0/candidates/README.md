@@ -10,6 +10,8 @@ V1.0-BASELINE技术附件生成，用于在D4正式通过前盘点P0开发准入
   主权限代码、测试用例和MVP验收项。
 - `p0_traceability_resolution.template.json`：逐项列出27个需求测试缺口、98个页面映射
   整改项和105种权限代码，供实际评审人提出带变更请求和证据的基线修订方案。
+- `p0_delivery_evidence.template.json`：逐项列出90项P0需求、125个P0页面、56个P0
+  API、89项产品测试、17项工程测试、11项ACC验收及最终发布硬门。
 
 权限矩阵使用`PERM-*`编号，而页面表使用权限代码；当前基线没有直接的
 “权限代码→PERM编号”列，因此报告只保留两侧原始合同并明确提示，不能猜测映射；
@@ -27,6 +29,7 @@ uv run navigator-data assess-p0-traceability --format json
 uv run navigator-data snapshot
 uv run navigator-data prepare-p0-traceability
 uv run navigator-data prepare-p0-resolution
+uv run navigator-data prepare-p0-delivery
 ```
 
 填写副本后可执行：
@@ -54,3 +57,8 @@ uv run navigator-data validate-p0-baseline-change \
 精确落地且追踪阻断为0时才返回成功。
 
 机器报告不能修改工作簿状态、代替D0—D4正式签署，也不能授权启动V0.1/P0用户侧开发。
+
+正式开发、测试和验收发生后，按
+[`../delivery/README.md`](../delivery/README.md)复制并填写P0交付证据包。只有完整
+D4上游链、当前P0追踪、全部实现/测试/验收、发布指标、Git提交和证据哈希同时通过，
+`validate-p0-delivery`才返回成功。

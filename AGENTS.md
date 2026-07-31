@@ -23,6 +23,9 @@
 - P0 baseline-change verification must target a separate candidate workbook, compare formula
   contracts as well as displayed values, reject unreviewed deltas, and never activate the
   candidate or overwrite the authoritative workbook.
+- Generated P0 delivery templates belong in `data/p0/candidates`; completed delivery packets must
+  replay the full D4 chain, reference only hashed non-restricted evidence, and prove every P0
+  requirement, route, API, test, acceptance item, release metric, and recovery capability.
 - Generated reviewer templates belong in `data/d0/review`; only actual authorized reviewers may
   fill a review copy, and completed copies must not contain private contact details or secrets.
 - Generated D1 source-onboarding templates belong in `data/d1/candidates`; no source may become
@@ -45,6 +48,7 @@
   `uv run navigator-data prepare-d0-review`, `uv run navigator-data prepare-d1`,
   `uv run navigator-data prepare-d2`, `uv run navigator-data prepare-d3`,
   `uv run navigator-data prepare-d4`, `uv run navigator-data prepare-p0-traceability`,
-  `uv run navigator-data prepare-p0-resolution`, and `uv run pytest --cov` before committing.
+  `uv run navigator-data prepare-p0-resolution`, `uv run navigator-data prepare-p0-delivery`,
+  and `uv run pytest --cov` before committing.
 - Never commit secrets, private contact details, restricted source material, or unredacted
   evidence.

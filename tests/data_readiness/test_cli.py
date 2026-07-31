@@ -400,6 +400,62 @@ def test_validate_p0_baseline_change_command_writes_assessment(
     assert str(output) in captured.out
 
 
+def test_prepare_p0_delivery_command_lists_template(
+    monkeypatch: MonkeyPatch,
+    capsys: CaptureFixture[str],
+) -> None:
+    paths = discover_repository()
+    template = paths.p0_candidates_dir / "p0_delivery_evidence.template.json"
+    monkeypatch.setattr(
+        "navigator_data_readiness.cli.write_p0_delivery_template",
+        lambda _paths: template,
+    )
+
+    exit_code = main(["prepare-p0-delivery"])
+
+    assert exit_code == 0
+    captured = capsys.readouterr()
+    assert "data/p0/candidates/p0_delivery_evidence.template.json" in captured.out
+
+
+def test_validate_p0_delivery_command_reports_blockers(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: CaptureFixture[str],
+) -> None:
+    inputs = [tmp_path / f"input-{index}.json" for index in range(7)]
+    for path in inputs:
+        path.write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(
+        "navigator_data_readiness.cli.load_and_validate_p0_delivery_bundle",
+        lambda *_args: [CheckResult(code="P0_DELIVERY_TEST_BLOCKER", message="failed")],
+    )
+
+    exit_code = main(
+        [
+            "validate-p0-delivery",
+            "--bundle",
+            str(inputs[0]),
+            "--d4-bundle",
+            str(inputs[1]),
+            "--d3-bundle",
+            str(inputs[2]),
+            "--d2-bundle",
+            str(inputs[3]),
+            "--d1-registry",
+            str(inputs[4]),
+            "--d1-matrix",
+            str(inputs[5]),
+            "--d1-evidence",
+            str(inputs[6]),
+        ]
+    )
+
+    assert exit_code == 1
+    captured = capsys.readouterr()
+    assert "P0_DELIVERY_TEST_BLOCKER" in captured.err
+
+
 def test_validate_d4_command_reports_blockers(
     tmp_path: Path,
     capsys: CaptureFixture[str],

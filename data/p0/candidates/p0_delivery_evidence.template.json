@@ -1,0 +1,4363 @@
+{
+  "acceptance_items": [
+    {
+      "acceptance_id": "ACC-001",
+      "accountable_role": "项目经理",
+      "domain": "总体",
+      "evidence_ids": [],
+      "required_reviewer_role": "项目委员会",
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "reviewer_role": null,
+      "status": "pending",
+      "threshold": "P0 100%；S0/S1=0"
+    },
+    {
+      "acceptance_id": "ACC-002",
+      "accountable_role": "产品负责人",
+      "domain": "产品功能",
+      "evidence_ids": [],
+      "required_reviewer_role": "业务代表",
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "reviewer_role": null,
+      "status": "pending",
+      "threshold": "P0用例100%通过"
+    },
+    {
+      "acceptance_id": "ACC-003",
+      "accountable_role": "产品负责人",
+      "domain": "页面交互",
+      "evidence_ids": [],
+      "required_reviewer_role": "种子用户",
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "reviewer_role": null,
+      "status": "pending",
+      "threshold": "规定终端全部可完成"
+    },
+    {
+      "acceptance_id": "ACC-004",
+      "accountable_role": "数据负责人",
+      "domain": "数据数量",
+      "evidence_ids": [],
+      "required_reviewer_role": "业务/产品",
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "reviewer_role": null,
+      "status": "pending",
+      "threshold": "印尼≥90%；其余达到D0清单"
+    },
+    {
+      "acceptance_id": "ACC-005",
+      "accountable_role": "数据负责人",
+      "domain": "数据质量",
+      "evidence_ids": [],
+      "required_reviewer_role": "业务/法务",
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "reviewer_role": null,
+      "status": "pending",
+      "threshold": "已发布关键事实100%"
+    },
+    {
+      "acceptance_id": "ACC-006",
+      "accountable_role": "AI负责人",
+      "domain": "AI效果",
+      "evidence_ids": [],
+      "required_reviewer_role": "产品/业务",
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "reviewer_role": null,
+      "status": "pending",
+      "threshold": "引用≥95%；高风险无来源0；泄漏0"
+    },
+    {
+      "acceptance_id": "ACC-007",
+      "accountable_role": "安全负责人",
+      "domain": "权限安全",
+      "evidence_ids": [],
+      "required_reviewer_role": "项目委员会",
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "reviewer_role": null,
+      "status": "pending",
+      "threshold": "跨企业泄漏0；高危未关闭0"
+    },
+    {
+      "acceptance_id": "ACC-008",
+      "accountable_role": "运维负责人",
+      "domain": "性能稳定",
+      "evidence_ids": [],
+      "required_reviewer_role": "技术负责人",
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "reviewer_role": null,
+      "status": "pending",
+      "threshold": "达到第35章全部门槛"
+    },
+    {
+      "acceptance_id": "ACC-009",
+      "accountable_role": "运营负责人",
+      "domain": "CRM闭环",
+      "evidence_ids": [],
+      "required_reviewer_role": "商务代表",
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "reviewer_role": null,
+      "status": "pending",
+      "threshold": "P0链路100%通过"
+    },
+    {
+      "acceptance_id": "ACC-010",
+      "accountable_role": "产品负责人",
+      "domain": "种子用户",
+      "evidence_ids": [],
+      "required_reviewer_role": "种子用户",
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "reviewer_role": null,
+      "status": "pending",
+      "threshold": "关键任务≥95%；阻断问题0"
+    },
+    {
+      "acceptance_id": "ACC-011",
+      "accountable_role": "项目经理",
+      "domain": "验收整改",
+      "evidence_ids": [],
+      "required_reviewer_role": "项目委员会",
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "reviewer_role": null,
+      "status": "pending",
+      "threshold": "100%有责任、期限和证据"
+    }
+  ],
+  "apis": [
+    {
+      "api_id": "API-AUTH-001",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "POST",
+      "module": "认证",
+      "path": "/api/v1/auth/login",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-ORG-001",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "POST",
+      "module": "企业",
+      "path": "/api/v1/enterprises/verification",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-PROFILE-001",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "PUT",
+      "module": "画像",
+      "path": "/api/v1/enterprise-profile",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-WORKSPACE-001",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "GET",
+      "module": "工作台",
+      "path": "/api/v1/workspace",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-COUNTRY-001",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "GET",
+      "module": "国家",
+      "path": "/api/v1/countries",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-COUNTRY-002",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "GET",
+      "module": "国家",
+      "path": "/api/v1/countries/{code}",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-COUNTRY-003",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "POST",
+      "module": "国家",
+      "path": "/api/v1/countries/{code}/follow",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-COMPARE-001",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "POST",
+      "module": "对比",
+      "path": "/api/v1/country-comparisons",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-POLICY-001",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "GET",
+      "module": "政策",
+      "path": "/api/v1/policies",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-POLICY-002",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "GET",
+      "module": "政策",
+      "path": "/api/v1/policies/{id}",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-RISK-001",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "GET",
+      "module": "风险",
+      "path": "/api/v1/risks",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-RISK-002",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "GET",
+      "module": "风险",
+      "path": "/api/v1/risks/{id}",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-PROJECT-001",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "GET",
+      "module": "项目",
+      "path": "/api/v1/opportunities",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-PROJECT-002",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "GET",
+      "module": "项目",
+      "path": "/api/v1/opportunities/{id}",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-TENDER-001",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "POST",
+      "module": "招标",
+      "path": "/api/v1/tender-documents",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-TENDER-002",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "GET",
+      "module": "招标",
+      "path": "/api/v1/tender-documents/{id}/extraction",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-TENDER-003",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "GET",
+      "module": "招标",
+      "path": "/api/v1/tenders",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-TENDER-004",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "GET",
+      "module": "招标",
+      "path": "/api/v1/tenders/{id}",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-PARTNER-001",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "GET",
+      "module": "伙伴",
+      "path": "/api/v1/partners",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-PARTNER-002",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "GET",
+      "module": "伙伴",
+      "path": "/api/v1/partners/{id}",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-AI-001",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "POST",
+      "module": "AI",
+      "path": "/api/v1/ai/chat",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-AI-002",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "POST",
+      "module": "AI",
+      "path": "/api/v1/ai/messages/{id}/feedback",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-REPORT-001",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "POST",
+      "module": "报告",
+      "path": "/api/v1/reports",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-REPORT-002",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "GET",
+      "module": "报告",
+      "path": "/api/v1/reports/{id}",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-REPORT-003",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "POST",
+      "module": "报告",
+      "path": "/api/v1/reports/{id}/download",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-REPORT-004",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "GET",
+      "module": "报告",
+      "path": "/api/v1/reports",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-MEMBER-001",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "GET",
+      "module": "会员",
+      "path": "/api/v1/entitlements",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-REQUEST-001",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "POST",
+      "module": "申请",
+      "path": "/api/v1/requests",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-REQUEST-002",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "GET",
+      "module": "申请",
+      "path": "/api/v1/requests",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-REQUEST-003",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "GET",
+      "module": "申请",
+      "path": "/api/v1/requests/{id}",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-CRM-001",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "GET",
+      "module": "CRM",
+      "path": "/api/v1/admin/leads",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-CRM-002",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "POST",
+      "module": "CRM",
+      "path": "/api/v1/admin/leads/{id}/assign",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-CRM-003",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "POST",
+      "module": "CRM",
+      "path": "/api/v1/admin/leads/{id}/activities",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-CRM-004",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "GET",
+      "module": "CRM申请",
+      "path": "/api/v1/admin/requests/{id}",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-CRM-005",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "POST",
+      "module": "CRM申请",
+      "path": "/api/v1/admin/requests/{id}/transitions",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-CRM-006",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "PUT",
+      "module": "CRM申请",
+      "path": "/api/v1/admin/requests/{id}/grant",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-CRM-007",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "POST",
+      "module": "CRM申请",
+      "path": "/api/v1/admin/requests/{id}/grant/revoke",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-ADMIN-001",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "POST",
+      "module": "后台数据",
+      "path": "/api/v1/admin/data/{entity}",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-ADMIN-002",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "POST",
+      "module": "后台审核",
+      "path": "/api/v1/admin/reviews/{id}/approve",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-ADMIN-003",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "POST",
+      "module": "后台审核",
+      "path": "/api/v1/admin/reviews/{id}/return",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-ADMIN-004",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "PUT",
+      "module": "后台配置",
+      "path": "/api/v1/admin/config/{key}",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-ADMIN-005",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "POST",
+      "module": "后台AI",
+      "path": "/api/v1/admin/ai/releases",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-AUDIT-001",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "GET",
+      "module": "审计",
+      "path": "/api/v1/admin/audit-logs",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-UI-001",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "GET",
+      "module": "界面能力",
+      "path": "/api/v1/ui/navigation",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-UI-002",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "GET",
+      "module": "用户偏好",
+      "path": "/api/v1/me/preferences",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-UI-003",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "PUT",
+      "module": "用户偏好",
+      "path": "/api/v1/me/preferences",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-DRAFT-001",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "PUT",
+      "module": "表单草稿",
+      "path": "/api/v1/form-drafts/{formCode}",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-DRAFT-002",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "GET",
+      "module": "表单草稿",
+      "path": "/api/v1/form-drafts/{formCode}",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-EVENT-001",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "POST",
+      "module": "行为分析",
+      "path": "/api/v1/events",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-DATA-SOURCE-001",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "GET",
+      "module": "来源治理",
+      "path": "/api/v1/admin/data-sources",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-DATA-SOURCE-002",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "POST",
+      "module": "来源治理",
+      "path": "/api/v1/admin/data-sources/{id}/transitions",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-COLLECT-001",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "POST",
+      "module": "采集编排",
+      "path": "/api/v1/admin/collection-jobs/{id}/runs",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-QUALITY-001",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "GET",
+      "module": "质量治理",
+      "path": "/api/v1/admin/data-quality/issues",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-QUALITY-002",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "POST",
+      "module": "质量治理",
+      "path": "/api/v1/admin/data-quality/issues/{id}/transitions",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-SCORE-001",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "POST",
+      "module": "评分引擎",
+      "path": "/api/v1/scoring/evaluations",
+      "status": "pending"
+    },
+    {
+      "api_id": "API-SCORE-002",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "method": "POST",
+      "module": "评分模型",
+      "path": "/api/v1/admin/scoring-models/{id}/transitions",
+      "status": "pending"
+    }
+  ],
+  "append_only": true,
+  "baseline": {
+    "p0_traceability_assessment_sha256": "966ee223b73c060bcb376623d215e2f8b378e703c5ba9ef30e28ee96ca49999a",
+    "sources": {
+      "d0_workbook": {
+        "path": "doc/doc/新能源企业出海导航仪_D0数据标准冻结执行台账.xlsx",
+        "sha256": "224e9a35bcbb363cf41c007499ba32aa6394cfdbf06331830c02d994e1c7ddff"
+      },
+      "technical_workbook": {
+        "path": "doc/doc/新能源企业出海导航仪_V1.0技术附件_BASELINE.xlsx",
+        "sha256": "8b36f7cad337d72713f09c2b36d7eaf6ebe0bc2cd13f2bf0c05c45edbd065fb8"
+      }
+    },
+    "version": "V1.0-BASELINE"
+  },
+  "dependencies": {
+    "d4_bundle_sha256": null,
+    "d4_gate_evidence_id": null,
+    "d4_gate_status": "pending"
+  },
+  "engineering_tests": [
+    {
+      "domain": "架构",
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "requirement_ids": [
+        "FR-ARCH-004",
+        "FR-ARCH-007"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-ENG-ARCH-001"
+    },
+    {
+      "domain": "架构",
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "requirement_ids": [
+        "FR-ARCH-010"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-ENG-ARCH-002"
+    },
+    {
+      "domain": "API",
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "requirement_ids": [
+        "FR-API-011",
+        "FR-API-015"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-ENG-API-001"
+    },
+    {
+      "domain": "API",
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "requirement_ids": [
+        "FR-API-012"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-ENG-API-002"
+    },
+    {
+      "domain": "并发",
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "requirement_ids": [
+        "FR-API-014"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-ENG-API-003"
+    },
+    {
+      "domain": "并发",
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "requirement_ids": [
+        "FR-API-014"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-ENG-API-004"
+    },
+    {
+      "domain": "错误",
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "requirement_ids": [
+        "FR-API-013"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-ENG-API-005"
+    },
+    {
+      "domain": "前端",
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "requirement_ids": [
+        "FR-FE-007"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-ENG-FE-001"
+    },
+    {
+      "domain": "安全",
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "requirement_ids": [
+        "FR-SEC-001",
+        "FR-SEC-003"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-ENG-SEC-001"
+    },
+    {
+      "domain": "安全",
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "requirement_ids": [
+        "FR-SEC-002"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-ENG-SEC-002"
+    },
+    {
+      "domain": "安全",
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "requirement_ids": [
+        "FR-SEC-004",
+        "FR-SEC-006"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-ENG-SEC-003"
+    },
+    {
+      "domain": "文件",
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "requirement_ids": [
+        "FR-SEC-004"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-ENG-SEC-004"
+    },
+    {
+      "domain": "安全",
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "requirement_ids": [
+        "FR-SEC-007"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-ENG-SEC-005"
+    },
+    {
+      "domain": "供应链",
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "requirement_ids": [
+        "FR-SEC-010"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-ENG-SEC-006"
+    },
+    {
+      "domain": "性能",
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "requirement_ids": [],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-ENG-NFR-001"
+    },
+    {
+      "domain": "韧性",
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "requirement_ids": [],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-ENG-NFR-002"
+    },
+    {
+      "domain": "恢复",
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "requirement_ids": [],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-ENG-NFR-003"
+    }
+  ],
+  "evidence": [],
+  "final_release": {
+    "approved_at": null,
+    "approved_by": null,
+    "build_status": "pending",
+    "commit_sha": null,
+    "deployment_status": "pending",
+    "evidence_ids": [],
+    "handover_status": "pending",
+    "restore_status": "pending",
+    "rollback_status": "pending",
+    "status": "pending"
+  },
+  "product_tests": [
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "认证",
+      "requirement_ids": [
+        "FR-AUTH-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-AUTH-001"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "企业",
+      "requirement_ids": [
+        "FR-ENT-001",
+        "FR-PERM-ORG-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-ORG-001"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "画像",
+      "requirement_ids": [
+        "FR-PROFILE-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-PROFILE-001"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "国家详情",
+      "requirement_ids": [
+        "FR-COUNTRY-002"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-COUNTRY-001"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "国家导航",
+      "requirement_ids": [
+        "FR-COUNTRY-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-COUNTRY-002"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "国家对比",
+      "requirement_ids": [
+        "FR-COMPARE-001",
+        "FR-COMPARE-003"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-COMPARE-001"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "匿名访问",
+      "requirement_ids": [
+        "FR-COUNTRY-005",
+        "FR-OPP-007",
+        "FR-PAR-007",
+        "FR-IA-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-ANON-001"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "政策",
+      "requirement_ids": [
+        "FR-PR-002",
+        "FR-PR-003"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-POLICY-001"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "风险",
+      "requirement_ids": [
+        "FR-PR-004"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-RISK-001"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "项目",
+      "requirement_ids": [
+        "FR-OPP-003"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-PROJECT-001"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "项目",
+      "requirement_ids": [
+        "FR-OPP-006"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-PROJECT-002"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "伙伴",
+      "requirement_ids": [
+        "FR-PAR-007"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-PARTNER-001"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "招标浏览",
+      "requirement_ids": [
+        "FR-OPP-004"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-TENDER-BROWSE-001"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "AI顾问",
+      "requirement_ids": [
+        "FR-AI-003"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-AI-001"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "AI顾问",
+      "requirement_ids": [
+        "FR-AI-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-AI-002"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "AI顾问",
+      "requirement_ids": [
+        "FR-AI-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-AI-003"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "AI顾问",
+      "requirement_ids": [
+        "FR-AI-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-AI-004"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "报告",
+      "requirement_ids": [
+        "FR-AI-005"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-REPORT-001"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "报告",
+      "requirement_ids": [
+        "FR-AI-005"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-REPORT-002"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "会员",
+      "requirement_ids": [
+        "FR-MEMBER-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-MEMBER-001"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "会员",
+      "requirement_ids": [
+        "FR-MEMBER-002"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-MEMBER-002"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "CRM",
+      "requirement_ids": [
+        "FR-CRM-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-CRM-001"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "CRM",
+      "requirement_ids": [
+        "FR-CRM-002"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-CRM-002"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "CRM申请",
+      "requirement_ids": [
+        "FR-OPP-006",
+        "FR-PAR-005",
+        "FR-CONSULT-001",
+        "FR-CRM-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-CRM-REQUEST-001"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "渠道",
+      "requirement_ids": [
+        "FR-CHANNEL-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-CHANNEL-001"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "运营后台",
+      "requirement_ids": [
+        "FR-ADMIN-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-DATA-001"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "运营后台",
+      "requirement_ids": [
+        "FR-ADMIN-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-DATA-002"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "运营后台",
+      "requirement_ids": [
+        "FR-ADMIN-003"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-CONFIG-001"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "AI后台",
+      "requirement_ids": [
+        "FR-ADMIN-004"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-ADMIN-AI-001"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "审计",
+      "requirement_ids": [
+        "FR-ADMIN-005"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-AUDIT-001"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "信息架构",
+      "requirement_ids": [
+        "FR-IA-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-IA-001"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "路由",
+      "requirement_ids": [
+        "FR-IA-002"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-IA-002"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "路由",
+      "requirement_ids": [
+        "FR-UX-003"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-IA-003"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "通用状态",
+      "requirement_ids": [
+        "FR-UX-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-UX-001"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "通用状态",
+      "requirement_ids": [
+        "FR-UX-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-UX-002"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "表单",
+      "requirement_ids": [
+        "FR-UX-002"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-FORM-001"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "表单",
+      "requirement_ids": [
+        "FR-UX-002"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-FORM-002"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "表单",
+      "requirement_ids": [
+        "FR-UX-002"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-FORM-003"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "设计系统",
+      "requirement_ids": [
+        "FR-UI-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-UI-001"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "响应式",
+      "requirement_ids": [
+        "FR-UI-002"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-RESP-001"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "可访问性",
+      "requirement_ids": [
+        "FR-A11Y-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-A11Y-001"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "可访问性",
+      "requirement_ids": [
+        "FR-A11Y-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-A11Y-002"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "国际化",
+      "requirement_ids": [
+        "FR-I18N-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-I18N-001"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "行为分析",
+      "requirement_ids": [
+        "FR-ANALYTICS-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-EVENT-001"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "AI交互",
+      "requirement_ids": [
+        "FR-AI-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-AI-005"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "后台",
+      "requirement_ids": [
+        "FR-IA-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-ADMIN-ROUTE-001"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "CRM",
+      "requirement_ids": [
+        "FR-CRM-002"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-CRM-003"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "数据架构",
+      "requirement_ids": [
+        "FR-DATA-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-DATA-ARCH-001"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "数据血缘",
+      "requirement_ids": [
+        "FR-DATA-001",
+        "FR-DATA-002",
+        "FR-COLLECT-002"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-DATA-LINEAGE-001"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "质量闭环",
+      "requirement_ids": [
+        "FR-DATA-003",
+        "FR-QUALITY-008"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-DATA-QUALITY-001"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "来源准入",
+      "requirement_ids": [
+        "FR-COLLECT-001",
+        "FR-COLLECT-007"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-COLLECT-001"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "证据链",
+      "requirement_ids": [
+        "FR-COLLECT-002"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-COLLECT-002"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "API采集",
+      "requirement_ids": [
+        "FR-COLLECT-003"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-COLLECT-003"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "网页采集",
+      "requirement_ids": [
+        "FR-COLLECT-003",
+        "FR-COLLECT-006"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-COLLECT-004"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "文件导入",
+      "requirement_ids": [
+        "FR-COLLECT-004"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-COLLECT-005"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "更新频率",
+      "requirement_ids": [
+        "FR-COLLECT-005"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-COLLECT-006"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "模式漂移",
+      "requirement_ids": [
+        "FR-COLLECT-003",
+        "FR-COLLECT-006"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-COLLECT-007"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "来源退役",
+      "requirement_ids": [
+        "FR-DATA-006",
+        "FR-COLLECT-001",
+        "FR-COLLECT-007"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-COLLECT-008"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "原始保护",
+      "requirement_ids": [
+        "FR-QUALITY-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-QUALITY-001"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "标准化",
+      "requirement_ids": [
+        "FR-QUALITY-002"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-QUALITY-002"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "实体解析",
+      "requirement_ids": [
+        "FR-QUALITY-003"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-QUALITY-003"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "翻译",
+      "requirement_ids": [
+        "FR-QUALITY-004"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-QUALITY-004"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "审核发布",
+      "requirement_ids": [
+        "FR-QUALITY-006"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-QUALITY-005"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "失效同步",
+      "requirement_ids": [
+        "FR-QUALITY-007",
+        "FR-DATA-006"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-QUALITY-006"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "豁免治理",
+      "requirement_ids": [
+        "FR-QUALITY-008"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-QUALITY-007"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "评分",
+      "requirement_ids": [
+        "FR-SCORE-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-SCORE-001"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "评分",
+      "requirement_ids": [
+        "FR-SCORE-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-SCORE-002"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "评分",
+      "requirement_ids": [
+        "FR-SCORE-001",
+        "FR-DATA-004"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-SCORE-003"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "国家机会",
+      "requirement_ids": [
+        "FR-SCORE-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-SCORE-004"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "评分",
+      "requirement_ids": [
+        "FR-SCORE-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-SCORE-005"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "国家风险",
+      "requirement_ids": [
+        "FR-SCORE-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-SCORE-006"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "国家风险",
+      "requirement_ids": [
+        "FR-SCORE-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-SCORE-007"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "国家风险",
+      "requirement_ids": [
+        "FR-SCORE-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-SCORE-008"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "项目机会",
+      "requirement_ids": [
+        "FR-SCORE-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-SCORE-009"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "项目真实性",
+      "requirement_ids": [
+        "FR-SCORE-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-SCORE-010"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "伙伴推荐",
+      "requirement_ids": [
+        "FR-SCORE-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-SCORE-011"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "推荐中立",
+      "requirement_ids": [
+        "FR-SCORE-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-SCORE-012"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "可信度",
+      "requirement_ids": [
+        "FR-SCORE-001",
+        "FR-QUALITY-005"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-SCORE-013"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "覆盖等级",
+      "requirement_ids": [
+        "FR-SCORE-001",
+        "FR-DATA-005"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-SCORE-014"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "覆盖等级",
+      "requirement_ids": [
+        "FR-SCORE-001",
+        "FR-DATA-005"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-SCORE-015"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "人工调整",
+      "requirement_ids": [
+        "FR-SCORE-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-SCORE-016"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "人工调整",
+      "requirement_ids": [
+        "FR-SCORE-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-SCORE-017"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "模型版本",
+      "requirement_ids": [
+        "FR-SCORE-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-SCORE-018"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "模型版本",
+      "requirement_ids": [
+        "FR-SCORE-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-SCORE-019"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "项目评分迁移",
+      "requirement_ids": [
+        "FR-SCORE-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-SCORE-020"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "评分幂等",
+      "requirement_ids": [
+        "FR-SCORE-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-SCORE-021"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "历史复现",
+      "requirement_ids": [
+        "FR-SCORE-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-SCORE-022"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "评分阈值",
+      "requirement_ids": [
+        "FR-SCORE-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-SCORE-023"
+    },
+    {
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "module": "评分读取",
+      "requirement_ids": [
+        "FR-SCORE-001"
+      ],
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pending",
+      "test_id": "TC-SCORE-024"
+    }
+  ],
+  "release_metrics": {
+    "ai_citation_coverage_pct": null,
+    "critical_task_success_rate_pct": null,
+    "evidence_ids": [],
+    "leak_counts": {
+      "ai": null,
+      "cache": null,
+      "file": null,
+      "report": null,
+      "search": null,
+      "tenant": null
+    },
+    "open_s0_defects": null,
+    "open_s1_defects": null,
+    "performance_capacity_rpo_rto_status": "pending"
+  },
+  "requirements": [
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "注册、登录与会话管理",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "账号与企业",
+      "requirement_id": "FR-AUTH-001",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "企业能力与出海需求画像",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "企业画像",
+      "requirement_id": "FR-PROFILE-001",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "关注、推荐、更新和待办聚合",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "工作台",
+      "requirement_id": "FR-HOME-001",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "全球地图、国家列表与筛选",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "国家数据库",
+      "requirement_id": "FR-COUNTRY-001",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "统一国家详情页",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "国家数据库",
+      "requirement_id": "FR-COUNTRY-002",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "国家筛选与排序",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "国家数据库",
+      "requirement_id": "FR-COUNTRY-003",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "机会、风险与政策友好度评价展示",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "国家数据库",
+      "requirement_id": "FR-COUNTRY-004",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "创建2—4国对比",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "国家对比",
+      "requirement_id": "FR-COMPARE-001",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "标准指标矩阵",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "国家对比",
+      "requirement_id": "FR-COMPARE-002",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "缺失与可比性控制",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "国家对比",
+      "requirement_id": "FR-COMPARE-003",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "统一问答工作流",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "AI顾问",
+      "requirement_id": "FR-AI-001",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "七类决策场景",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "AI顾问",
+      "requirement_id": "FR-AI-002",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "引用与时效",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "AI顾问",
+      "requirement_id": "FR-AI-003",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "产品、权益和额度配置",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "会员权益",
+      "requirement_id": "FR-MEMBER-001",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "后台开通、续期、暂停和到期",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "会员权益",
+      "requirement_id": "FR-MEMBER-002",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "咨询与撮合申请",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "商业服务",
+      "requirement_id": "FR-CONSULT-001",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "多来源线索自动创建与去重",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "CRM",
+      "requirement_id": "FR-CRM-001",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "分级、分配、跟进与商机阶段",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "CRM",
+      "requirement_id": "FR-CRM-002",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "渠道参数与归因",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "H5与渠道",
+      "requirement_id": "FR-CHANNEL-001",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "结构化数据采编审发",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "运营后台",
+      "requirement_id": "FR-ADMIN-001",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "内容、会员、用户和CRM管理",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "运营后台",
+      "requirement_id": "FR-ADMIN-002",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "来源、标签、枚举与质量看板",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "运营后台",
+      "requirement_id": "FR-ADMIN-003",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "AI知识库、Prompt和模型配置",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "运营后台",
+      "requirement_id": "FR-ADMIN-004",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "操作日志与审计检索",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "运营后台",
+      "requirement_id": "FR-ADMIN-005",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "身份绑定与账号合并",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "账号与企业",
+      "requirement_id": "FR-AUTH-002",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "创建或加入企业",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "账号与企业",
+      "requirement_id": "FR-ENT-001",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "企业认证完整流程",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "账号与企业",
+      "requirement_id": "FR-ENT-002",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "标签来源与行为控制",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "企业画像",
+      "requirement_id": "FR-PROFILE-003",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "企业与后台角色隔离",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "组织权限",
+      "requirement_id": "FR-PERM-ORG-001",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "协议、授权与撤回",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "隐私授权",
+      "requirement_id": "FR-CONSENT-001",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "缺失值与权限一致性",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "国家数据库",
+      "requirement_id": "FR-COUNTRY-005",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "来源与时效展示",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "国家数据库",
+      "requirement_id": "FR-COUNTRY-006",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "收藏关注完整流程",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "国家数据库",
+      "requirement_id": "FR-COUNTRY-007",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "覆盖等级计算与验收",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "国家数据库",
+      "requirement_id": "FR-COVERAGE-001",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "专项维度对比",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "国家对比",
+      "requirement_id": "FR-COMPARE-004",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "规则化基础结论",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "国家对比",
+      "requirement_id": "FR-COMPARE-005",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "AI解释当前快照",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "国家对比",
+      "requirement_id": "FR-COMPARE-006",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "政策检索与详情",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "政策风险",
+      "requirement_id": "FR-PR-001",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "政策版本与条款",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "政策风险",
+      "requirement_id": "FR-PR-002",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "法律、内容与时效三状态",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "政策风险",
+      "requirement_id": "FR-PR-003",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "风险库与四级评级",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "政策风险",
+      "requirement_id": "FR-PR-004",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "关联与影响清单",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "政策风险",
+      "requirement_id": "FR-PR-006",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "权限与高风险提示",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "政策风险",
+      "requirement_id": "FR-PR-007",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "项目库、列表与详情",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "项目机会",
+      "requirement_id": "FR-OPP-001",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "生命周期与事件",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "项目机会",
+      "requirement_id": "FR-OPP-002",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "机会等级与推荐解释",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "项目机会",
+      "requirement_id": "FR-OPP-003",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "项目与招标关联",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "招投标",
+      "requirement_id": "FR-OPP-004",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "详情申请与跟进",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "项目机会",
+      "requirement_id": "FR-OPP-006",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "企业隔离与脱敏",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "项目机会",
+      "requirement_id": "FR-OPP-007",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "伙伴主数据建模",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "伙伴资源",
+      "requirement_id": "FR-PAR-001",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "能力与服务区域证据",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "伙伴资源",
+      "requirement_id": "FR-PAR-002",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "任务型伙伴匹配",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "伙伴资源",
+      "requirement_id": "FR-PAR-003",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "风险与审核",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "伙伴资源",
+      "requirement_id": "FR-PAR-004",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "双向授权对接",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "伙伴资源",
+      "requirement_id": "FR-PAR-005",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "敏感联系人保护",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "伙伴资源",
+      "requirement_id": "FR-PAR-007",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "高风险复核",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "AI顾问",
+      "requirement_id": "FR-AI-004",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "报告中心完整链路",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "AI顾问",
+      "requirement_id": "FR-AI-005",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "全链路权限与审计",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "AI顾问",
+      "requirement_id": "FR-AI-007",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "任务型全局导航与菜单权限",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "信息架构",
+      "requirement_id": "FR-IA-001",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "稳定路由、深链与上下文恢复",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "信息架构",
+      "requirement_id": "FR-IA-002",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "统一加载、空、错误、部分成功状态",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "交互规范",
+      "requirement_id": "FR-UX-001",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "表单校验、草稿与幂等提交",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "交互规范",
+      "requirement_id": "FR-UX-002",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "筛选、分页、排序与URL同步",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "交互规范",
+      "requirement_id": "FR-UX-003",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "设计令牌与核心组件库",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "设计系统",
+      "requirement_id": "FR-UI-001",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "PC Web响应式与H5共用框架预留",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "设计系统",
+      "requirement_id": "FR-UI-002",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "键盘、焦点、语义与对比度",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "可访问性",
+      "requirement_id": "FR-A11Y-001",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "中英文扩展与本地化字段预留",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "国际化预留",
+      "requirement_id": "FR-I18N-001",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "受控埋点与隐私同意",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "行为分析",
+      "requirement_id": "FR-ANALYTICS-001",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "统一主数据、版本、血缘与多语言模型",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "数据架构",
+      "requirement_id": "FR-DATA-001",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "来源准入、采集编排与原始证据保存",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "数据采集",
+      "requirement_id": "FR-DATA-002",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "质量规则、审核发布与问题闭环",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "数据质量",
+      "requirement_id": "FR-DATA-003",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "版本化评分、硬门槛、置信度与解释治理",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "评分推荐",
+      "requirement_id": "FR-DATA-004",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "Basic/Standard/Complete规则化验收",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "数据覆盖",
+      "requirement_id": "FR-DATA-005",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "失效、下架、删除与下游同步",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "数据生命周期",
+      "requirement_id": "FR-DATA-006",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "统一评分服务与模型版本运行",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "评分推荐",
+      "requirement_id": "FR-SCORE-001",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "来源主数据与准入",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "数据采集",
+      "requirement_id": "FR-COLLECT-001",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "原始证据与字段链路",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "数据采集",
+      "requirement_id": "FR-COLLECT-002",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "API与网页合规采集",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "数据采集",
+      "requirement_id": "FR-COLLECT-003",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "文件导入与人工录入",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "数据采集",
+      "requirement_id": "FR-COLLECT-004",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "动态频率与复核计划",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "数据采集",
+      "requirement_id": "FR-COLLECT-005",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "失败、降级与恢复",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "数据采集",
+      "requirement_id": "FR-COLLECT-006",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "合法采集与权限边界",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "数据采集",
+      "requirement_id": "FR-COLLECT-007",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "分层与原始证据保护",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "数据质量",
+      "requirement_id": "FR-QUALITY-001",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "清洗、映射与标准化",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "数据质量",
+      "requirement_id": "FR-QUALITY-002",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "去重与实体解析",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "数据质量",
+      "requirement_id": "FR-QUALITY-003",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "翻译与原文定位",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "数据质量",
+      "requirement_id": "FR-QUALITY-004",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "可信度与完整度",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "数据质量",
+      "requirement_id": "FR-QUALITY-005",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "审核发布与原子切换",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "数据质量",
+      "requirement_id": "FR-QUALITY-006",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "过期、纠错与下架联动",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "数据质量",
+      "requirement_id": "FR-QUALITY-007",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "function": "指标、SLA与质量看板",
+      "implemented_at": null,
+      "implemented_by": null,
+      "module": "数据质量",
+      "requirement_id": "FR-QUALITY-008",
+      "status": "pending"
+    }
+  ],
+  "routes": [
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "PC-PUB-001",
+      "page_name": "平台首页",
+      "route": "/",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "PC-AUTH-001",
+      "page_name": "登录",
+      "route": "/auth/login",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "PC-AUTH-002",
+      "page_name": "注册",
+      "route": "/auth/register",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "PC-AUTH-003",
+      "page_name": "找回与重置凭证",
+      "route": "/auth/recovery",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "PC-AUTH-004",
+      "page_name": "企业创建/加入引导",
+      "route": "/onboarding/enterprise",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "PC-WRK-001",
+      "page_name": "工作台首页",
+      "route": "/workspace",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "PC-WRK-002",
+      "page_name": "收藏与关注",
+      "route": "/workspace/favorites",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "PC-WRK-003",
+      "page_name": "我的申请",
+      "route": "/workspace/requests",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "PC-WRK-004",
+      "page_name": "申请详情",
+      "route": "/workspace/requests/:id",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "PC-WRK-005",
+      "page_name": "我的文件",
+      "route": "/workspace/files",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "PC-ENT-001",
+      "page_name": "企业资料",
+      "route": "/workspace/enterprise",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "PC-ENT-002",
+      "page_name": "企业成员",
+      "route": "/workspace/enterprise/members",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "PC-ENT-003",
+      "page_name": "会员与额度",
+      "route": "/workspace/enterprise/entitlements",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "PC-USR-001",
+      "page_name": "个人账号与安全",
+      "route": "/workspace/account",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "PC-USR-002",
+      "page_name": "授权与通知偏好",
+      "route": "/workspace/preferences",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "PC-CTY-001",
+      "page_name": "全球地图与国家列表",
+      "route": "/countries",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "PC-CTY-002",
+      "page_name": "国家详情",
+      "route": "/countries/:countryCode",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "PC-CTY-003",
+      "page_name": "国家对比选择",
+      "route": "/compare",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "PC-CTY-004",
+      "page_name": "国家对比结果",
+      "route": "/compare/results",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "PC-POL-001",
+      "page_name": "政策库",
+      "route": "/policies",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "PC-POL-002",
+      "page_name": "政策详情",
+      "route": "/policies/:id",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "PC-RSK-001",
+      "page_name": "国家风险库",
+      "route": "/risks",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "PC-RSK-002",
+      "page_name": "风险详情",
+      "route": "/risks/:id",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "PC-OPP-001",
+      "page_name": "市场机会与项目列表",
+      "route": "/opportunities",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "PC-OPP-002",
+      "page_name": "项目/机会详情",
+      "route": "/opportunities/:id",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "PC-OPP-003",
+      "page_name": "招投标列表",
+      "route": "/tenders",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "PC-OPP-004",
+      "page_name": "招投标详情",
+      "route": "/tenders/:id",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "PC-REQ-001",
+      "page_name": "项目详情申请",
+      "route": "/opportunities/:id/apply",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "PC-PAR-001",
+      "page_name": "本地伙伴列表",
+      "route": "/partners",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "PC-PAR-002",
+      "page_name": "伙伴详情",
+      "route": "/partners/:id",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "PC-REQ-002",
+      "page_name": "伙伴对接申请",
+      "route": "/partners/:id/connect",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "PC-REQ-003",
+      "page_name": "咨询服务申请",
+      "route": "/services/consulting/apply",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "PC-REQ-004",
+      "page_name": "项目撮合申请",
+      "route": "/opportunities/:id/matchmaking",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "PC-AI-001",
+      "page_name": "AI出海顾问",
+      "route": "/ai",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "PC-AI-002",
+      "page_name": "AI对话详情",
+      "route": "/ai/conversations/:id",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "PC-AI-003",
+      "page_name": "AI对话历史",
+      "route": "/workspace/ai-conversations",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "PC-RPT-001",
+      "page_name": "报告中心",
+      "route": "/reports",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "PC-RPT-002",
+      "page_name": "创建报告",
+      "route": "/reports/create",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "PC-RPT-003",
+      "page_name": "报告任务详情",
+      "route": "/workspace/reports/:id",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "PC-RPT-004",
+      "page_name": "报告在线预览",
+      "route": "/workspace/reports/:id/preview",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "PC-RPT-006",
+      "page_name": "我的报告",
+      "route": "/workspace/reports",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-HOME-001",
+      "page_name": "后台工作台",
+      "route": "/admin",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-HOME-002",
+      "page_name": "待办中心",
+      "route": "/admin/tasks",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-CTY-001",
+      "page_name": "国家列表",
+      "route": "/admin/countries",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-CTY-002",
+      "page_name": "国家编辑",
+      "route": "/admin/countries/:id/edit",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-CTY-003",
+      "page_name": "国家审核",
+      "route": "/admin/countries/:id/review",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-CTY-004",
+      "page_name": "国家版本与发布",
+      "route": "/admin/countries/:id/versions",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-CTY-005",
+      "page_name": "国家覆盖等级",
+      "route": "/admin/countries/:id/coverage",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-POL-001",
+      "page_name": "政策列表",
+      "route": "/admin/policies",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-POL-002",
+      "page_name": "政策编辑",
+      "route": "/admin/policies/:id/edit",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-POL-003",
+      "page_name": "政策审核与发布",
+      "route": "/admin/policies/:id/review",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-RSK-001",
+      "page_name": "风险列表",
+      "route": "/admin/risks",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-RSK-002",
+      "page_name": "风险编辑",
+      "route": "/admin/risks/:id/edit",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-RSK-003",
+      "page_name": "风险审核与发布",
+      "route": "/admin/risks/:id/review",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-OPP-001",
+      "page_name": "项目与招标列表",
+      "route": "/admin/opportunities",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-OPP-002",
+      "page_name": "项目/招标编辑",
+      "route": "/admin/opportunities/:id/edit",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-OPP-003",
+      "page_name": "项目审核发布",
+      "route": "/admin/opportunities/:id/review",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-OPP-004",
+      "page_name": "重复候选核查",
+      "route": "/admin/opportunities/duplicates",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-OPP-005",
+      "page_name": "项目批量导入",
+      "route": "/admin/opportunities/imports",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-ORG-001",
+      "page_name": "企业列表",
+      "route": "/admin/organizations",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-ORG-002",
+      "page_name": "企业详情",
+      "route": "/admin/organizations/:id",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-ORG-003",
+      "page_name": "企业认证审核",
+      "route": "/admin/organizations/:id/verification",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-PAR-001",
+      "page_name": "伙伴列表",
+      "route": "/admin/partners",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-PAR-002",
+      "page_name": "伙伴编辑",
+      "route": "/admin/partners/:id/edit",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-PAR-003",
+      "page_name": "伙伴审核",
+      "route": "/admin/partners/:id/review",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-PAR-004",
+      "page_name": "联系方式披露记录",
+      "route": "/admin/partners/:id/disclosures",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-RPT-001",
+      "page_name": "报告模板列表",
+      "route": "/admin/report-templates",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-RPT-002",
+      "page_name": "报告模板编辑",
+      "route": "/admin/report-templates/:id/edit",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-RPT-003",
+      "page_name": "模板测试与审核",
+      "route": "/admin/report-templates/:id/test",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-CNT-001",
+      "page_name": "内容列表",
+      "route": "/admin/content",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-CNT-002",
+      "page_name": "内容编辑",
+      "route": "/admin/content/:id/edit",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-CNT-003",
+      "page_name": "内容审核发布",
+      "route": "/admin/content/:id/publish",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-EVT-001",
+      "page_name": "活动管理",
+      "route": "/admin/events",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-FRM-001",
+      "page_name": "表单管理",
+      "route": "/admin/forms",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-CHN-001",
+      "page_name": "渠道与二维码",
+      "route": "/admin/channels",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-CHN-002",
+      "page_name": "渠道转化分析",
+      "route": "/admin/channels/analytics",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-USR-001",
+      "page_name": "用户列表",
+      "route": "/admin/users",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-USR-002",
+      "page_name": "用户详情",
+      "route": "/admin/users/:id",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-USR-003",
+      "page_name": "用户关系变更",
+      "route": "/admin/users/:id/relations",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-MEM-001",
+      "page_name": "会员产品",
+      "route": "/admin/membership/products",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-MEM-002",
+      "page_name": "会员开通单",
+      "route": "/admin/membership/activations",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-MEM-003",
+      "page_name": "开通与变更审批",
+      "route": "/admin/membership/approvals",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-MEM-004",
+      "page_name": "会员实例详情",
+      "route": "/admin/membership/accounts/:id",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-MEM-005",
+      "page_name": "额度账本",
+      "route": "/admin/membership/ledgers",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-MEM-006",
+      "page_name": "到期与续费队列",
+      "route": "/admin/membership/renewals",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-KB-001",
+      "page_name": "知识文档列表",
+      "route": "/admin/knowledge/documents",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-KB-002",
+      "page_name": "知识文档详情",
+      "route": "/admin/knowledge/documents/:id",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-KB-003",
+      "page_name": "解析与分块检查",
+      "route": "/admin/knowledge/documents/:id/chunks",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-KB-004",
+      "page_name": "索引状态与异常",
+      "route": "/admin/knowledge/index-health",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-AI-001",
+      "page_name": "Prompt列表",
+      "route": "/admin/ai/prompts",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-AI-002",
+      "page_name": "Prompt编辑与测试",
+      "route": "/admin/ai/prompts/:id/edit",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-AI-003",
+      "page_name": "Prompt审批启用",
+      "route": "/admin/ai/prompts/:id/approve",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-AI-004",
+      "page_name": "模型与路由配置",
+      "route": "/admin/ai/models",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-AI-005",
+      "page_name": "AI运行监控",
+      "route": "/admin/ai/operations",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-SRC-001",
+      "page_name": "数据来源列表",
+      "route": "/admin/sources",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-SRC-002",
+      "page_name": "来源详情与配置",
+      "route": "/admin/sources/:id",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-SRC-003",
+      "page_name": "采集任务",
+      "route": "/admin/collection-jobs",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-SRC-004",
+      "page_name": "采集异常队列",
+      "route": "/admin/collection-jobs/failures",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-DIC-001",
+      "page_name": "标签与枚举",
+      "route": "/admin/dictionaries",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-DIC-002",
+      "page_name": "枚举影响分析",
+      "route": "/admin/dictionaries/:id/impact",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-QLT-001",
+      "page_name": "数据质量看板",
+      "route": "/admin/quality",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-QLT-002",
+      "page_name": "质量问题队列",
+      "route": "/admin/quality/issues",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-AUD-001",
+      "page_name": "操作日志查询",
+      "route": "/admin/audit/logs",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-AUD-002",
+      "page_name": "审计事件详情",
+      "route": "/admin/audit/logs/:id",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-AUD-003",
+      "page_name": "审计导出",
+      "route": "/admin/audit/exports",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-SEC-001",
+      "page_name": "角色与权限",
+      "route": "/admin/security/roles",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "ADM-SEC-002",
+      "page_name": "系统技术配置",
+      "route": "/admin/settings",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "CRM-HOME-001",
+      "page_name": "商务工作台",
+      "route": "/admin/crm",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "CRM-LED-001",
+      "page_name": "线索列表",
+      "route": "/admin/crm/leads",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "CRM-LED-002",
+      "page_name": "线索详情",
+      "route": "/admin/crm/leads/:id",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "CRM-LED-003",
+      "page_name": "线索合并",
+      "route": "/admin/crm/leads/duplicates",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "CRM-REQ-001",
+      "page_name": "业务申请列表",
+      "route": "/admin/crm/requests",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "CRM-REQ-002",
+      "page_name": "业务申请详情",
+      "route": "/admin/crm/requests/:id",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "CRM-REQ-003",
+      "page_name": "申请审核与字段披露",
+      "route": "/admin/crm/requests/:id/review",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "CRM-CON-001",
+      "page_name": "联系人列表",
+      "route": "/admin/crm/contacts",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "CRM-CON-002",
+      "page_name": "联系人详情",
+      "route": "/admin/crm/contacts/:id",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "CRM-ACC-001",
+      "page_name": "企业客户列表",
+      "route": "/admin/crm/accounts",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "CRM-ACC-002",
+      "page_name": "企业客户详情",
+      "route": "/admin/crm/accounts/:id",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "CRM-OPP-001",
+      "page_name": "商机列表",
+      "route": "/admin/crm/opportunities",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "CRM-OPP-002",
+      "page_name": "商机详情",
+      "route": "/admin/crm/opportunities/:id",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "CRM-TSK-001",
+      "page_name": "任务中心",
+      "route": "/admin/crm/tasks",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "CRM-ACT-001",
+      "page_name": "跟进记录",
+      "route": "/admin/crm/activities",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "CRM-QUE-001",
+      "page_name": "异常与SLA队列",
+      "route": "/admin/crm/exceptions",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "CRM-CFG-001",
+      "page_name": "分配规则",
+      "route": "/admin/crm/settings/assignment",
+      "status": "pending"
+    },
+    {
+      "commit_sha": null,
+      "evidence_ids": [],
+      "implemented_at": null,
+      "implemented_by": null,
+      "page_id": "CRM-CFG-003",
+      "page_name": "状态与失败原因",
+      "route": "/admin/crm/settings/dictionaries",
+      "status": "pending"
+    }
+  ],
+  "schema_version": 1,
+  "stage": "P0-DELIVERY",
+  "template_only": true,
+  "warning": "This template cannot replace D4 approval, implementation, test execution, UAT, or release authorization. It records evidence only after those events occur."
+}
