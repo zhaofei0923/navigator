@@ -83,6 +83,7 @@
     "duplicate_effective_record_max_pct": 1,
     "high_risk_sample_accuracy_pct": 100,
     "open_p0_issues": 0,
+    "p0_traceability_ready": true,
     "permission_leaks": 0,
     "production_source_license_metadata_pct": 100,
     "published_key_fact_traceability_pct": 100,

@@ -11,6 +11,7 @@ from typing import Any, TypeGuard
 from .baseline import extract_contracts, sha256_file
 from .d3_processing import load_and_validate_d3_bundle
 from .models import CheckResult
+from .p0_traceability import build_p0_traceability_report
 from .paths import RepositoryPaths
 
 SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
@@ -88,6 +89,20 @@ def _payload_sha256(payload: Any) -> str:
     return hashlib.sha256(serialized).hexdigest()
 
 
+def _p0_traceability_blocker_count(report: dict[str, Any]) -> int:
+    blockers = report.get("traceability_blockers")
+    if not isinstance(blockers, list):
+        return 0
+    return sum(
+        int(blocker["count"])
+        for blocker in blockers
+        if isinstance(blocker, dict)
+        and isinstance(blocker.get("count"), int)
+        and not isinstance(blocker.get("count"), bool)
+        and blocker["count"] > 0
+    )
+
+
 def _baseline(paths: RepositoryPaths, contracts: dict[str, Any]) -> dict[str, Any]:
     relevant = {
         key: contracts[key]
@@ -97,6 +112,14 @@ def _baseline(paths: RepositoryPaths, contracts: dict[str, Any]) -> dict[str, An
             "quality_rules",
             "review_checklist",
             "d0_d4_roadmap",
+            "feature_requirements",
+            "identifier_migrations",
+            "role_permissions",
+            "page_routes",
+            "api_catalog",
+            "test_cases",
+            "engineering_acceptance_tests",
+            "mvp_acceptance",
         )
     }
     return {
@@ -219,8 +242,13 @@ def _domain_coverage_template() -> list[dict[str, Any]]:
     ]
 
 
-def build_d4_bundle_template(paths: RepositoryPaths) -> dict[str, Any]:
+def build_d4_bundle_template(
+    paths: RepositoryPaths,
+    *,
+    p0_traceability_report: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     contracts = extract_contracts(paths)
+    p0_report = p0_traceability_report or build_p0_traceability_report(paths)
     return {
         "schema_version": 1,
         "stage": "D4",
@@ -231,6 +259,9 @@ def build_d4_bundle_template(paths: RepositoryPaths) -> dict[str, Any]:
         "dependencies": {
             "d3_gate_status": "pending",
             "d3_gate_evidence_id": None,
+            "p0_traceability_gate_status": "pending",
+            "p0_traceability_gate_evidence_id": None,
+            "p0_traceability_assessment_sha256": _payload_sha256(p0_report),
         },
         "production_sources": [],
         "publication_records": [],
@@ -342,6 +373,7 @@ def build_d4_scorecard() -> dict[str, Any]:
         "overall_minimum": 85,
         "hard_gates": {
             "open_p0_issues": 0,
+            "p0_traceability_ready": True,
             "IDN_core_field_completeness_min_pct": 90,
             "comparison_country_core_field_completeness_min_pct": 70,
             "published_key_fact_traceability_pct": 100,
@@ -363,7 +395,9 @@ def build_d4_scorecard() -> dict[str, Any]:
 
 
 def build_d4_assessment(paths: RepositoryPaths) -> dict[str, Any]:
-    bundle = build_d4_bundle_template(paths)
+    p0_report = build_p0_traceability_report(paths)
+    bundle = build_d4_bundle_template(paths, p0_traceability_report=p0_report)
+    p0_blocker_count = _p0_traceability_blocker_count(p0_report)
     return {
         "schema_version": 1,
         "stage": "D4",
@@ -379,6 +413,15 @@ def build_d4_assessment(paths: RepositoryPaths) -> dict[str, Any]:
                 "check_id": "D4-PUBLICATION",
                 "status": "fail",
                 "finding": "尚无经职责分离审核的发布记录或生产来源",
+            },
+            {
+                "check_id": "D4-P0-TRACEABILITY",
+                "status": ("pass" if p0_report.get("traceability_ready") is True else "fail"),
+                "finding": (
+                    "P0需求、页面、API、权限和测试追踪已通过"
+                    if p0_report.get("traceability_ready") is True
+                    else f"P0追踪仍有{p0_blocker_count}个按缺口项计数的阻断"
+                ),
             },
             {
                 "check_id": "D4-QUANTITATIVE",
@@ -1682,13 +1725,51 @@ def _validate_acceptance(
         )
 
 
+def _validate_p0_traceability_dependency(
+    checks: list[CheckResult],
+    dependencies: Any,
+    report: dict[str, Any],
+) -> None:
+    expected_hash = _payload_sha256(report)
+    if not isinstance(dependencies, dict) or (
+        dependencies.get("p0_traceability_gate_status") != "approved"
+        or not dependencies.get("p0_traceability_gate_evidence_id")
+        or dependencies.get("p0_traceability_assessment_sha256") != expected_hash
+    ):
+        checks.append(
+            CheckResult(
+                code="D4_P0_TRACEABILITY_DEPENDENCY_PENDING",
+                message=(
+                    "Current P0 traceability assessment hash, approval, and evidence are required"
+                ),
+                location="dependencies",
+            )
+        )
+    if report.get("traceability_ready") is not True:
+        blocker_count = _p0_traceability_blocker_count(report)
+        checks.append(
+            CheckResult(
+                code="D4_P0_TRACEABILITY_HARD_GATE_FAILED",
+                message=(
+                    "P0 requirement, route, API, permission, and test traceability "
+                    f"has {blocker_count} open blocker item(s)"
+                ),
+                location="dependencies",
+            )
+        )
+
+
 def validate_d4_bundle(
     paths: RepositoryPaths,
     bundle: dict[str, Any],
     d3_bundle: dict[str, Any],
 ) -> list[CheckResult]:
     checks: list[CheckResult] = []
-    current = build_d4_bundle_template(paths)
+    p0_traceability_report = build_p0_traceability_report(paths)
+    current = build_d4_bundle_template(
+        paths,
+        p0_traceability_report=p0_traceability_report,
+    )
     if bundle.get("schema_version") != 1 or bundle.get("stage") != "D4":
         checks.append(
             CheckResult(
@@ -1733,6 +1814,11 @@ def validate_d4_bundle(
                 location="dependencies",
             )
         )
+    _validate_p0_traceability_dependency(
+        checks,
+        dependencies,
+        p0_traceability_report,
+    )
 
     d3_records = _validate_d3_input(checks, d3_bundle)
     sources = _index(checks, bundle, "production_sources", "source_id")

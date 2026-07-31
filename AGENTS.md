@@ -31,7 +31,8 @@
   entity matches or conflicts require review. D3 outputs are never publishable or AI-indexable.
 - Generated D4 acceptance templates belong in `data/d4/candidates`; score totals must be
   recalculated from evidence, P0/traceability/license/permission gates cannot be waived by an
-  average score, and only actual authorized people may sign the final approval.
+  average score, the current P0 traceability report and hash must be recomputed independently,
+  and only actual authorized people may sign the final approval.
 - Candidate reports and machine checks never authorize changing workbook task, acceptance, or
   signature states. Only actual named reviewers may do that.
 - Any new behavior must include tests and update the implementation plan or operating

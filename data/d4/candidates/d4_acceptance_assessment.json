@@ -12,6 +12,11 @@
       "status": "fail"
     },
     {
+      "check_id": "D4-P0-TRACEABILITY",
+      "finding": "P0追踪仍有318个按缺口项计数的阻断",
+      "status": "fail"
+    },
+    {
       "check_id": "D4-QUANTITATIVE",
       "finding": "7个维度和硬门已生成",
       "status": "candidate_generated"

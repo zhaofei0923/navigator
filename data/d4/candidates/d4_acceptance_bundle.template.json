@@ -30,7 +30,7 @@
   },
   "append_only": true,
   "baseline": {
-    "d4_input_sha256": "37b8ec086ed8cddf94df23ed35c937b3401a65be2079754b18b59defde1a3f69",
+    "d4_input_sha256": "f3a1de9285967004cb208ba67045eeee26014404c6b8d0a154dc843084c18c41",
     "sources": {
       "d0_workbook": {
         "path": "doc/doc/新能源企业出海导航仪_D0数据标准冻结执行台账.xlsx",
@@ -87,7 +87,10 @@
   ],
   "dependencies": {
     "d3_gate_evidence_id": null,
-    "d3_gate_status": "pending"
+    "d3_gate_status": "pending",
+    "p0_traceability_assessment_sha256": "966ee223b73c060bcb376623d215e2f8b378e703c5ba9ef30e28ee96ca49999a",
+    "p0_traceability_gate_evidence_id": null,
+    "p0_traceability_gate_status": "pending"
   },
   "dimension_scores": [
     {

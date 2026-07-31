@@ -28,15 +28,27 @@ from navigator_data_readiness.d4_acceptance import (
 from navigator_data_readiness.paths import RepositoryPaths, discover_repository
 
 
+def _ready_p0_traceability_report() -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "traceability_ready": True,
+        "traceability_blockers": [],
+    }
+
+
 def _completed_d4_payloads(
     paths: RepositoryPaths,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     bundle = build_d4_bundle_template(paths)
     bundle["template_only"] = False
-    bundle["dependencies"] = {
-        "d3_gate_status": "approved",
-        "d3_gate_evidence_id": "EVD-D3-FINAL",
-    }
+    bundle["dependencies"].update(
+        {
+            "d3_gate_status": "approved",
+            "d3_gate_evidence_id": "EVD-D3-FINAL",
+            "p0_traceability_gate_status": "approved",
+            "p0_traceability_gate_evidence_id": "EVD-P0-TRACEABILITY-FINAL",
+        }
+    )
     d3_bundle: dict[str, Any] = {
         "schema_version": 1,
         "stage": "D3",
@@ -334,8 +346,12 @@ def test_d4_templates_freeze_score_sampling_domains_and_handover() -> None:
     assert len(bundle["domain_coverage"]) == len(COUNTRIES) * len(DOMAIN_TARGETS)
     assert len(bundle["rehearsals"]) == len(REHEARSALS)
     assert len(bundle["handover_items"]) == len(HANDOVER_ITEMS)
+    assert bundle["dependencies"]["p0_traceability_gate_status"] == "pending"
+    assert len(bundle["dependencies"]["p0_traceability_assessment_sha256"]) == 64
     assert scorecard["overall_minimum"] == 85
+    assert scorecard["hard_gates"]["p0_traceability_ready"] is True
     assert assessment["overall_status"] == "not_ready"
+    assert any(item["check_id"] == "D4-P0-TRACEABILITY" for item in assessment["checks"])
     assert set(payloads) == {
         "d4_acceptance_assessment.json",
         "d4_acceptance_bundle.template.json",
@@ -364,11 +380,25 @@ def test_unfilled_d4_template_is_blocked() -> None:
     } <= codes
 
 
-def test_completed_d4_acceptance_bundle_passes() -> None:
+def test_completed_d4_acceptance_bundle_passes(monkeypatch: pytest.MonkeyPatch) -> None:
     paths = discover_repository()
+    monkeypatch.setattr(
+        "navigator_data_readiness.d4_acceptance.build_p0_traceability_report",
+        lambda _paths: _ready_p0_traceability_report(),
+    )
     bundle, d3_bundle = _completed_d4_payloads(paths)
 
     assert validate_d4_bundle(paths, bundle, d3_bundle) == []
+
+
+def test_current_p0_traceability_gate_cannot_be_self_reported() -> None:
+    paths = discover_repository()
+    bundle, d3_bundle = _completed_d4_payloads(paths)
+
+    codes = _codes(paths, bundle, d3_bundle)
+
+    assert "D4_P0_TRACEABILITY_DEPENDENCY_PENDING" not in codes
+    assert "D4_P0_TRACEABILITY_HARD_GATE_FAILED" in codes
 
 
 def test_header_dependency_and_d3_lineage_cannot_be_bypassed() -> None:
@@ -787,6 +817,10 @@ def test_load_and_validate_d4_bundle_handles_valid_and_invalid_files(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     paths = discover_repository()
+    monkeypatch.setattr(
+        "navigator_data_readiness.d4_acceptance.build_p0_traceability_report",
+        lambda _paths: _ready_p0_traceability_report(),
+    )
     bundle, d3_bundle = _completed_d4_payloads(paths)
     bundle_path = tmp_path / "d4.json"
     d3_path = tmp_path / "d3.json"

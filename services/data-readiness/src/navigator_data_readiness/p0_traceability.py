@@ -63,6 +63,10 @@ def _identifier_set(records: list[dict[str, Any]], column: str) -> set[str]:
     return {_text(record, column) for record in records if _text(record, column)}
 
 
+def _separated_values(value: Any) -> list[str]:
+    return [item.strip() for item in _REFERENCE_SEPARATOR.split(str(value or "")) if item.strip()]
+
+
 def _issue(code: str, count: int, ids: list[str] | None = None) -> dict[str, Any]:
     payload: dict[str, Any] = {"code": code, "count": count}
     if ids is not None:
@@ -104,6 +108,7 @@ def _build_payloads(contracts: dict[str, Any]) -> dict[str, Any]:
     route_requirement_refs: set[str] = set()
     route_api_refs: set[str] = set()
     route_test_refs: set[str] = set()
+    route_permission_codes: set[str] = set()
 
     for route in p0_routes:
         route_id = _text(route, "页面编号")
@@ -121,6 +126,7 @@ def _build_payloads(contracts: dict[str, Any]) -> dict[str, Any]:
             pending_route_tests.append(route_id)
 
         permission_code = _text(route, "主权限")
+        route_permission_codes.update(_separated_values(permission_code))
         for requirement_id in requirement_refs:
             if requirement_id not in p0_requirement_ids:
                 continue
@@ -170,6 +176,12 @@ def _build_payloads(contracts: dict[str, Any]) -> dict[str, Any]:
     unknown_route_api_refs = sorted(route_api_refs - api_ids)
     unknown_route_test_refs = sorted(route_test_refs - test_ids)
     unknown_test_requirement_refs = sorted(test_requirement_refs - requirement_ids)
+    declared_permission_codes = {
+        permission_code
+        for record in permissions
+        for permission_code in _separated_values(record.get("权限代码"))
+    }
+    unmapped_permission_codes = sorted(route_permission_codes - declared_permission_codes)
     actual_acceptance_ids = _identifier_set(acceptance, "验收编号")
     missing_acceptance_ids = sorted(EXPECTED_MVP_ACCEPTANCE_IDS - actual_acceptance_ids)
     unexpected_acceptance_ids = sorted(actual_acceptance_ids - EXPECTED_MVP_ACCEPTANCE_IDS)
@@ -193,6 +205,7 @@ def _build_payloads(contracts: dict[str, Any]) -> dict[str, Any]:
         ("P0_ROUTE_API_REFERENCE_UNKNOWN", unknown_route_api_refs),
         ("P0_ROUTE_TEST_REFERENCE_UNKNOWN", unknown_route_test_refs),
         ("P0_TEST_REQUIREMENT_REFERENCE_UNKNOWN", unknown_test_requirement_refs),
+        ("P0_PERMISSION_CODE_MAPPING_MISSING", unmapped_permission_codes),
         ("P0_MVP_ACCEPTANCE_MISSING", missing_acceptance_ids),
         ("P0_MVP_ACCEPTANCE_UNEXPECTED", unexpected_acceptance_ids),
     ):
@@ -271,6 +284,10 @@ def _build_payloads(contracts: dict[str, Any]) -> dict[str, Any]:
             "p0_routes_with_permission_code": sum(
                 bool(_text(record, "主权限")) for record in p0_routes
             ),
+            "p0_permission_codes_total": len(route_permission_codes),
+            "p0_permission_codes_mapped": (
+                len(route_permission_codes) - len(unmapped_permission_codes)
+            ),
         },
         "implementation_evidence": {
             "p0_routes_development_ready": p0_routes_ready,
@@ -286,7 +303,7 @@ def _build_payloads(contracts: dict[str, Any]) -> dict[str, Any]:
                 "code": "P0_PERMISSION_ID_DIRECT_LINK_UNAVAILABLE",
                 "message": (
                     "Page routes contain permission codes while the role matrix contains PERM-* "
-                    "identifiers; the baseline has no direct code-to-PERM mapping column."
+                    "identifiers; unmapped permission codes remain a traceability hard blocker."
                 ),
             }
         ],

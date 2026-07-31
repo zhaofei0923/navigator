@@ -39,6 +39,8 @@ def test_p0_traceability_report_exposes_baseline_counts_and_gaps() -> None:
     }
     assert report["coverage"]["p0_requirements_with_p0_tests"] == 63
     assert report["coverage"]["p0_requirements_without_p0_tests"] == 27
+    assert report["coverage"]["p0_permission_codes_total"] == 105
+    assert report["coverage"]["p0_permission_codes_mapped"] == 0
     assert report["implementation_evidence"] == {
         "p0_routes_development_ready": 0,
         "p0_apis_implemented": 0,
@@ -54,6 +56,7 @@ def test_p0_traceability_report_exposes_baseline_counts_and_gaps() -> None:
     assert blockers["P0_ROUTE_REQUIREMENT_MAPPING_PENDING"]["count"] == 17
     assert blockers["P0_ROUTE_API_MAPPING_PENDING"]["count"] == 93
     assert blockers["P0_ROUTE_TEST_MAPPING_PENDING"]["count"] == 76
+    assert blockers["P0_PERMISSION_CODE_MAPPING_MISSING"]["count"] == 105
 
 
 def test_p0_matrix_has_one_row_per_p0_requirement() -> None:
