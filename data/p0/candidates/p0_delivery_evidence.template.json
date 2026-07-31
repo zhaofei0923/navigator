@@ -1031,13 +1031,8 @@
     "approved_at": null,
     "approved_by": null,
     "approver_role": "项目委员会",
-    "build_status": "pending",
     "commit_sha": null,
-    "deployment_status": "pending",
     "evidence_ids": [],
-    "handover_status": "pending",
-    "restore_status": "pending",
-    "rollback_status": "pending",
     "status": "pending"
   },
   "product_tests": [
@@ -2397,6 +2392,73 @@
       "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-SCORE-024"
+    }
+  ],
+  "release_capabilities": [
+    {
+      "capability_id": "build",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "name": "Clean-environment build and immutable artifact reproduction",
+      "required_reviewer_role": "技术负责人",
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "reviewer_role": null,
+      "status": "pending"
+    },
+    {
+      "capability_id": "deployment",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "name": "Pre-production deployment through the release pipeline",
+      "required_reviewer_role": "运维负责人",
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "reviewer_role": null,
+      "status": "pending"
+    },
+    {
+      "capability_id": "rollback",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "name": "Rollback or forward-recovery rehearsal",
+      "required_reviewer_role": "运维负责人",
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "reviewer_role": null,
+      "status": "pending"
+    },
+    {
+      "capability_id": "restore",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "name": "Backup restore and recovery rehearsal",
+      "required_reviewer_role": "运维负责人",
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "reviewer_role": null,
+      "status": "pending"
+    },
+    {
+      "capability_id": "handover",
+      "commit_sha": null,
+      "evidence_ids": [],
+      "executed_at": null,
+      "executed_by": null,
+      "name": "Independent recipient operation and final handover sign-off",
+      "required_reviewer_role": "项目委员会",
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "reviewer_role": null,
+      "status": "pending"
     }
   ],
   "release_metrics": {
@@ -4572,7 +4634,7 @@
       "status": "pending"
     }
   ],
-  "schema_version": 5,
+  "schema_version": 6,
   "signer_authorizations": [
     {
       "authorized_at": null,
@@ -4637,6 +4699,14 @@
       "evidence_ids": [],
       "person_name": null,
       "role": "种子用户"
+    },
+    {
+      "authorized_at": null,
+      "authorized_by": null,
+      "authorizer_role": "项目委员会",
+      "evidence_ids": [],
+      "person_name": null,
+      "role": "运维负责人"
     }
   ],
   "stage": "P0-DELIVERY",

@@ -21,6 +21,33 @@ _IMPLEMENTED_STATUS = "implemented"
 _APPROVED_STATUS = "approved"
 _COMMITTEE_ROLE = "项目委员会"
 _TEST_REVIEWER_ROLE = "测试负责人"
+_RELEASE_CAPABILITIES = (
+    (
+        "build",
+        "Clean-environment build and immutable artifact reproduction",
+        "技术负责人",
+    ),
+    (
+        "deployment",
+        "Pre-production deployment through the release pipeline",
+        "运维负责人",
+    ),
+    (
+        "rollback",
+        "Rollback or forward-recovery rehearsal",
+        "运维负责人",
+    ),
+    (
+        "restore",
+        "Backup restore and recovery rehearsal",
+        "运维负责人",
+    ),
+    (
+        "handover",
+        "Independent recipient operation and final handover sign-off",
+        _COMMITTEE_ROLE,
+    ),
+)
 _Temporal = tuple[datetime, date, bool]
 
 
@@ -80,6 +107,26 @@ def _test_item(
     }
 
 
+def _release_capability_item(
+    capability_id: str,
+    name: str,
+    required_reviewer_role: str,
+) -> dict[str, Any]:
+    return {
+        "capability_id": capability_id,
+        "name": name,
+        "required_reviewer_role": required_reviewer_role,
+        "status": "pending",
+        "commit_sha": None,
+        "executed_by": None,
+        "executed_at": None,
+        "reviewed_by": None,
+        "reviewer_role": None,
+        "reviewed_at": None,
+        "evidence_ids": [],
+    }
+
+
 def build_p0_delivery_template(paths: RepositoryPaths) -> dict[str, Any]:
     contracts = extract_contracts(paths)
     traceability = build_p0_traceability_report(paths)
@@ -96,10 +143,15 @@ def build_p0_delivery_template(paths: RepositoryPaths) -> dict[str, Any]:
             for record in acceptance
             if _text(record, "验收角色") != _COMMITTEE_ROLE
         }
+        | {
+            reviewer_role
+            for _, _, reviewer_role in _RELEASE_CAPABILITIES
+            if reviewer_role != _COMMITTEE_ROLE
+        }
         | {_TEST_REVIEWER_ROLE}
     )
     return {
-        "schema_version": 5,
+        "schema_version": 6,
         "stage": "P0-DELIVERY",
         "template_only": True,
         "append_only": True,
@@ -203,14 +255,13 @@ def build_p0_delivery_template(paths: RepositoryPaths) -> dict[str, Any]:
             "performance_capacity_rpo_rto_status": "pending",
             "evidence_ids": [],
         },
+        "release_capabilities": [
+            _release_capability_item(capability_id, name, required_reviewer_role)
+            for capability_id, name, required_reviewer_role in _RELEASE_CAPABILITIES
+        ],
         "final_release": {
             "status": "pending",
             "commit_sha": None,
-            "build_status": "pending",
-            "deployment_status": "pending",
-            "rollback_status": "pending",
-            "restore_status": "pending",
-            "handover_status": "pending",
             "approver_role": _COMMITTEE_ROLE,
             "approved_by": None,
             "approved_at": None,
@@ -536,6 +587,8 @@ def _validate_final_release_after_events(
         ("product_tests", "reviewed_at"),
         ("engineering_tests", "reviewed_at"),
         ("acceptance_items", "reviewed_at"),
+        ("release_capabilities", "executed_at"),
+        ("release_capabilities", "reviewed_at"),
         ("evidence", "approved_at"),
     )
     for section, field in event_specs:
@@ -957,6 +1010,117 @@ def _validate_acceptance(
     return evidence_ids
 
 
+def _validate_release_capability(
+    checks: list[CheckResult],
+    item: dict[str, Any],
+    *,
+    location: str,
+    final_release_commit: str,
+    commit_shas: set[str],
+    authorized_signers: dict[str, set[str]],
+    signer_authorized_at: dict[tuple[str, str], _Temporal],
+    committee_approver: str,
+) -> set[str]:
+    if item.get("status") != _PASS_STATUS:
+        checks.append(
+            CheckResult(
+                code="P0_DELIVERY_RELEASE_CAPABILITY_NOT_PASSED",
+                message="Release capability status must be passed",
+                location=location,
+            )
+        )
+    _required_fields(
+        checks,
+        item,
+        (
+            "commit_sha",
+            "executed_by",
+            "executed_at",
+            "reviewed_by",
+            "reviewer_role",
+            "reviewed_at",
+        ),
+        code="P0_DELIVERY_RELEASE_CAPABILITY_METADATA_INCOMPLETE",
+        location=location,
+    )
+    executed_at = _iso_temporal(checks, item, "executed_at", location=location)
+    reviewed_at = _iso_temporal(checks, item, "reviewed_at", location=location)
+    _validate_temporal_order(
+        checks,
+        executed_at,
+        reviewed_at,
+        code="P0_DELIVERY_RELEASE_CAPABILITY_REVIEW_BEFORE_EXECUTION",
+        message="Release capability review cannot occur before execution",
+        location=location,
+    )
+    reviewer_role = _text(item, "reviewer_role")
+    reviewed_by = _text(item, "reviewed_by")
+    _validate_signer_effective_at(
+        checks,
+        reviewer_role,
+        reviewed_by,
+        reviewed_at,
+        signer_authorized_at,
+        code="P0_DELIVERY_RELEASE_CAPABILITY_REVIEW_BEFORE_AUTHORIZATION",
+        message="Release capability review cannot predate the reviewer's authorization",
+        location=location,
+    )
+    if reviewer_role != _text(item, "required_reviewer_role"):
+        checks.append(
+            CheckResult(
+                code="P0_DELIVERY_RELEASE_CAPABILITY_REVIEWER_ROLE_INVALID",
+                message="reviewer_role must match the frozen required_reviewer_role",
+                location=location,
+            )
+        )
+    if not _is_authorized_signer(
+        reviewer_role,
+        reviewed_by,
+        authorized_signers,
+        committee_approver,
+    ):
+        checks.append(
+            CheckResult(
+                code="P0_DELIVERY_RELEASE_CAPABILITY_REVIEWER_UNAUTHORIZED",
+                message=(
+                    f"Release capability reviewer is not authorized for "
+                    f"{reviewer_role or 'the role'}"
+                ),
+                location=location,
+            )
+        )
+    commit_sha = _text(item, "commit_sha").lower()
+    commit_valid = bool(_COMMIT_PATTERN.fullmatch(commit_sha))
+    if commit_sha and not commit_valid:
+        checks.append(
+            CheckResult(
+                code="P0_DELIVERY_RELEASE_CAPABILITY_COMMIT_SHA_INVALID",
+                message=f"Invalid release capability commit SHA: {commit_sha}",
+                location=location,
+            )
+        )
+    if commit_valid:
+        commit_shas.add(commit_sha)
+        if _COMMIT_PATTERN.fullmatch(final_release_commit) and commit_sha != final_release_commit:
+            checks.append(
+                CheckResult(
+                    code="P0_DELIVERY_RELEASE_CAPABILITY_COMMIT_MISMATCH",
+                    message="Release capability must evaluate the exact final release commit",
+                    location=location,
+                )
+            )
+    evidence_ids = set(_string_ids(checks, item, location=location))
+    if not evidence_ids:
+        checks.append(
+            CheckResult(
+                code="P0_DELIVERY_RELEASE_CAPABILITY_EVIDENCE_MISSING",
+                message="Passed release capabilities require evidence IDs",
+                location=location,
+            )
+        )
+    return evidence_ids
+
+
 def _validate_evidence(
     checks: list[CheckResult],
     paths: RepositoryPaths,
@@ -1322,21 +1486,6 @@ def _validate_final_release(
                 location="final_release",
             )
         )
-    for field in (
-        "build_status",
-        "deployment_status",
-        "rollback_status",
-        "restore_status",
-        "handover_status",
-    ):
-        if final_release.get(field) != _PASS_STATUS:
-            checks.append(
-                CheckResult(
-                    code="P0_DELIVERY_RELEASE_CAPABILITY_FAILED",
-                    message=f"{field} must be passed",
-                    location=f"final_release.{field}",
-                )
-            )
     _required_fields(
         checks,
         final_release,
@@ -1619,11 +1768,11 @@ def validate_p0_delivery_bundle(
 ) -> list[CheckResult]:
     checks: list[CheckResult] = []
     current = build_p0_delivery_template(paths)
-    if bundle.get("schema_version") != 5 or bundle.get("stage") != "P0-DELIVERY":
+    if bundle.get("schema_version") != 6 or bundle.get("stage") != "P0-DELIVERY":
         checks.append(
             CheckResult(
                 code="P0_DELIVERY_HEADER_INVALID",
-                message="Bundle requires schema_version 5 and stage P0-DELIVERY",
+                message="Bundle requires schema_version 6 and stage P0-DELIVERY",
                 location="bundle",
             )
         )
@@ -1728,6 +1877,10 @@ def validate_p0_delivery_bundle(
         evidence_subject_requirements.setdefault(evidence_id, set()).update(subject_refs)
     known_subject_refs.update(authorization_subject_refs)
     commit_shas: set[str] = set()
+    final_release = bundle.get("final_release")
+    final_release_commit = (
+        _text(final_release, "commit_sha").lower() if isinstance(final_release, dict) else ""
+    )
     section_specs = (
         (
             "requirements",
@@ -1771,6 +1924,12 @@ def validate_p0_delivery_bundle(
             ),
             _validate_acceptance,
         ),
+        (
+            "release_capabilities",
+            "capability_id",
+            ("capability_id", "name", "required_reviewer_role"),
+            _validate_release_capability,
+        ),
     )
     for section, identifier_field, immutable_fields, validator in section_specs:
         actual = _indexed_section(checks, bundle, section, identifier_field)
@@ -1804,6 +1963,17 @@ def validate_p0_delivery_bundle(
                     signer_authorized_at=signer_authorized_at,
                     committee_approver=committee_approver,
                 )
+            elif validator is _validate_release_capability:
+                item_evidence_ids = _validate_release_capability(
+                    checks,
+                    item,
+                    location=location,
+                    final_release_commit=final_release_commit,
+                    commit_shas=commit_shas,
+                    authorized_signers=authorized_signers,
+                    signer_authorized_at=signer_authorized_at,
+                    committee_approver=committee_approver,
+                )
             else:
                 item_evidence_ids = _validate_acceptance(
                     checks,
@@ -1820,10 +1990,6 @@ def validate_p0_delivery_bundle(
                 f"{section}:{identifier}",
             )
 
-    final_release = bundle.get("final_release")
-    final_release_commit = (
-        _text(final_release, "commit_sha").lower() if isinstance(final_release, dict) else ""
-    )
     metric_evidence_ids = _validate_metrics(
         checks,
         bundle.get("release_metrics"),

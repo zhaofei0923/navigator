@@ -149,14 +149,22 @@ def _completed_bundle() -> tuple[dict[str, Any], dict[str, Any]]:
         "performance_capacity_rpo_rto_status": "passed",
         "evidence_ids": [evidence_id],
     }
+    for item in bundle["release_capabilities"]:
+        item.update(
+            {
+                "status": "passed",
+                "commit_sha": commit_sha,
+                "executed_by": "kevin",
+                "executed_at": "2026-07-31",
+                "reviewed_by": "kevin",
+                "reviewer_role": item["required_reviewer_role"],
+                "reviewed_at": "2026-07-31",
+                "evidence_ids": [evidence_id],
+            }
+        )
     bundle["final_release"] = {
         "status": "approved",
         "commit_sha": commit_sha,
-        "build_status": "passed",
-        "deployment_status": "passed",
-        "rollback_status": "passed",
-        "restore_status": "passed",
-        "handover_status": "passed",
         "approver_role": "项目委员会",
         "approved_by": "kevin",
         "approved_at": "2026-07-31",
@@ -178,6 +186,7 @@ def _completed_bundle() -> tuple[dict[str, Any], dict[str, Any]]:
         ("product_tests", "test_id"),
         ("engineering_tests", "test_id"),
         ("acceptance_items", "acceptance_id"),
+        ("release_capabilities", "capability_id"),
     ):
         subject_refs.update(f"{section}:{item[identifier_field]}" for item in bundle[section])
     bundle["evidence"][0]["subject_refs"] = sorted(subject_refs)
@@ -193,13 +202,20 @@ def test_delivery_template_freezes_complete_p0_scope() -> None:
 
     assert bundle["template_only"] is True
     assert bundle["append_only"] is True
-    assert bundle["schema_version"] == 5
+    assert bundle["schema_version"] == 6
     assert len(bundle["requirements"]) == 90
     assert len(bundle["routes"]) == 125
     assert len(bundle["apis"]) == 56
     assert len(bundle["product_tests"]) == 89
     assert len(bundle["engineering_tests"]) == 17
     assert len(bundle["acceptance_items"]) == 11
+    assert {item["capability_id"] for item in bundle["release_capabilities"]} == {
+        "build",
+        "deployment",
+        "rollback",
+        "restore",
+        "handover",
+    }
     assert {item["role"] for item in bundle["signer_authorizations"]} == {
         "产品/业务",
         "技术负责人",
@@ -209,6 +225,7 @@ def test_delivery_template_freezes_complete_p0_scope() -> None:
         "业务代表",
         "测试负责人",
         "种子用户",
+        "运维负责人",
     }
     assert len(bundle["baseline"]["p0_traceability_assessment_sha256"]) == 64
 
@@ -523,6 +540,8 @@ def test_final_release_must_follow_every_delivery_event(monkeypatch: Any) -> Non
     for section in ("product_tests", "engineering_tests"):
         bundle[section][0]["reviewed_at"] = "2026-08-02"
     bundle["acceptance_items"][0]["reviewed_at"] = "2026-08-02"
+    bundle["release_capabilities"][0]["executed_at"] = "2026-08-02"
+    bundle["release_capabilities"][0]["reviewed_at"] = "2026-08-02"
     bundle["evidence"][0]["approved_at"] = "2026-08-02"
     bundle["release_metrics"]["measured_at"] = "2026-08-02"
 
@@ -544,6 +563,8 @@ def test_final_release_must_follow_every_delivery_event(monkeypatch: Any) -> Non
         "product_tests[0].reviewed_at",
         "engineering_tests[0].reviewed_at",
         "acceptance_items[0].reviewed_at",
+        "release_capabilities[0].executed_at",
+        "release_capabilities[0].reviewed_at",
         "evidence[0].approved_at",
         "release_metrics.measured_at",
     }
@@ -588,6 +609,86 @@ def test_release_metric_provenance_metadata_is_required(monkeypatch: Any) -> Non
     assert "P0_DELIVERY_METRIC_METADATA_INCOMPLETE" in codes
     assert "P0_DELIVERY_TEMPORAL_INVALID" in codes
     assert "P0_DELIVERY_METRIC_COMMIT_SHA_INVALID" in codes
+
+
+def test_release_capability_must_pass_on_final_commit_with_evidence(
+    monkeypatch: Any,
+) -> None:
+    monkeypatch.setattr(
+        "navigator_data_readiness.p0_delivery.build_p0_traceability_report",
+        lambda _paths: _ready_traceability(),
+    )
+    bundle, d4_bundle = _completed_bundle()
+    capability = bundle["release_capabilities"][0]
+    capability["status"] = "pending"
+    capability["commit_sha"] = _parent_commit()
+    capability["evidence_ids"] = []
+
+    checks = validate_p0_delivery_bundle(
+        discover_repository(),
+        bundle,
+        d4_bundle,
+        d4_chain_checks=[],
+    )
+    codes = _codes(checks)
+
+    assert "P0_DELIVERY_RELEASE_CAPABILITY_NOT_PASSED" in codes
+    assert "P0_DELIVERY_RELEASE_CAPABILITY_COMMIT_MISMATCH" in codes
+    assert "P0_DELIVERY_RELEASE_CAPABILITY_EVIDENCE_MISSING" in codes
+
+
+def test_release_capability_contract_and_commit_shape_are_frozen(
+    monkeypatch: Any,
+) -> None:
+    monkeypatch.setattr(
+        "navigator_data_readiness.p0_delivery.build_p0_traceability_report",
+        lambda _paths: _ready_traceability(),
+    )
+    bundle, d4_bundle = _completed_bundle()
+    bundle["release_capabilities"][0]["name"] = "self-reported build"
+    bundle["release_capabilities"][1]["commit_sha"] = "not-a-commit"
+    bundle["release_capabilities"].pop()
+
+    checks = validate_p0_delivery_bundle(
+        discover_repository(),
+        bundle,
+        d4_bundle,
+        d4_chain_checks=[],
+    )
+    codes = _codes(checks)
+
+    assert "P0_DELIVERY_SET_INVALID" in codes
+    assert "P0_DELIVERY_FROZEN_INPUT_CHANGED" in codes
+    assert "P0_DELIVERY_RELEASE_CAPABILITY_COMMIT_SHA_INVALID" in codes
+
+
+def test_release_capability_requires_ordered_authorized_review(
+    monkeypatch: Any,
+) -> None:
+    monkeypatch.setattr(
+        "navigator_data_readiness.p0_delivery.build_p0_traceability_report",
+        lambda _paths: _ready_traceability(),
+    )
+    bundle, d4_bundle = _completed_bundle()
+    capability = bundle["release_capabilities"][0]
+    capability["executed_at"] = "2026-08-02"
+    capability["reviewed_at"] = "2026-07-30"
+    unauthorized_capability = bundle["release_capabilities"][1]
+    unauthorized_capability["reviewed_by"] = "mallory"
+    unauthorized_capability["reviewer_role"] = "技术负责人"
+
+    checks = validate_p0_delivery_bundle(
+        discover_repository(),
+        bundle,
+        d4_bundle,
+        d4_chain_checks=[],
+    )
+    codes = _codes(checks)
+
+    assert "P0_DELIVERY_RELEASE_CAPABILITY_REVIEW_BEFORE_EXECUTION" in codes
+    assert "P0_DELIVERY_RELEASE_CAPABILITY_REVIEW_BEFORE_AUTHORIZATION" in codes
+    assert "P0_DELIVERY_RELEASE_CAPABILITY_REVIEWER_ROLE_INVALID" in codes
+    assert "P0_DELIVERY_RELEASE_CAPABILITY_REVIEWER_UNAUTHORIZED" in codes
 
 
 def test_d4_chain_cannot_be_self_reported(monkeypatch: Any) -> None:
