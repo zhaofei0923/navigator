@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "snapshot_id": "LIC-VNM-EVN-ANNUAL-REPORT-2024-2025-20260731",
+  "raw_id": "RAW-EXAMPLE-002",
+  "source_id": "SRC-VNM-EVN",
+  "captured_at": "2026-07-31T12:37:23+08:00",
+  "publication_page_snapshot": {
+    "url": "https://en.evn.com.vn/en-US/bao-cao-thuong-nien/Annual-Report-60-13",
+    "byte_size": 58048,
+    "sha256": "c29d7a3fd2b2e15d954d0cc9c4e370c12636b61293e52f2e79e880bb24923e4c"
+  },
+  "document_snapshot": {
+    "url": "https://en.evn.com.vn/userfile/files/2026/4/AnnualRepot2025_V23-20260408155435105.pdf",
+    "byte_size": 4940283,
+    "sha256": "304153ae8bbf9b980f36ef474d187aef887a506b70c165de5f02f9bdacb00e26",
+    "pages": 19,
+    "rights_term_scan": "No document-level reuse, redistribution, Creative Commons, or AI-indexing grant identified."
+  },
+  "observations": {
+    "rights_notice": "Copyright by Vietnam Electricity",
+    "citation_notice": "Information cited from this website is required clearly stated from source www.evn.com.vn",
+    "explicit_public_reuse_license_found": false,
+    "explicit_redistribution_permission_found": false,
+    "explicit_ai_index_permission_found": false,
+    "attribution_requirement_found": true
+  },
+  "interim_controls": {
+    "license_decision": "pending",
+    "redistribution_allowed": false,
+    "ai_index_allowed": false,
+    "local_document_committed": false,
+    "permitted_until_review": "metadata, hash, official link, and attributed short factual citation only"
+  },
+  "review": {
+    "compliance_reviewer": null,
+    "reviewed_at": null,
+    "decision": "pending"
+  }
+}

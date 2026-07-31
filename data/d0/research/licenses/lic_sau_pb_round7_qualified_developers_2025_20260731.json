@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "snapshot_id": "LIC-SAU-PB-ROUND7-QUALIFIED-DEVELOPERS-2025-20260731",
+  "raw_id": "RAW-EXAMPLE-003",
+  "source_id": "SRC-SAU-PB",
+  "captured_at": "2026-07-31T12:37:23+08:00",
+  "publication_page_snapshot": {
+    "url": "https://www.pb.com.sa/media-center/news/qualified-developers-for-round-7-solar-pv-and-wind-ipp-projects-2/",
+    "byte_size": 50605,
+    "sha256": "612c31add1e79802d99138874b547e58c73920cd5b888cb090b5bf200094a257"
+  },
+  "document_snapshot": {
+    "url": "https://www.pb.com.sa/media/xjhdaccp/251124-pb-%D9%82%D8%A7%D8%A6%D9%85%D8%A9-%D8%A7%D9%84%D8%B4%D8%B1%D9%83%D8%A7%D8%AA-%D8%A7%D9%84%D9%85%D8%A4%D9%87%D9%84%D8%A9-%D9%84%D9%84%D9%85%D8%B1%D8%AD%D9%84%D8%A9-%D8%A7%D9%84%D8%B3%D8%A7%D8%A8%D8%B9%D8%A9-en-_pdf.pdf",
+    "byte_size": 122049,
+    "sha256": "fa2ef7886adce70c393c64d7f6b8021ee1bfac9c8b1381f4893c861b0c72b7d5",
+    "pages": 2,
+    "rights_term_scan": "No document-level reuse, redistribution, Creative Commons, or AI-indexing grant identified."
+  },
+  "observations": {
+    "rights_notice": "Copyright @2026, All rights reserved",
+    "explicit_public_reuse_license_found": false,
+    "explicit_redistribution_permission_found": false,
+    "explicit_ai_index_permission_found": false,
+    "attribution_requirement_found": false
+  },
+  "interim_controls": {
+    "license_decision": "pending",
+    "redistribution_allowed": false,
+    "ai_index_allowed": false,
+    "local_document_committed": false,
+    "permitted_until_review": "metadata, hash, official link, and short factual citation only"
+  },
+  "review": {
+    "compliance_reviewer": null,
+    "reviewed_at": null,
+    "decision": "pending"
+  }
+}

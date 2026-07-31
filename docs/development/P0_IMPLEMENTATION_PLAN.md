@@ -12,8 +12,9 @@
 
 - D0-01“冻结核心实体和字段集”进行中；
 - D0-02、D0-03、D0-04未开始；
-- 9个责任角色均待实名签署；
-- 10个D0硬门均未验收；
+- 正式评审副本已记录9个责任角色均由`kevin`承担、`peter`替补、`bob`升级，
+  并已登记可复核证据；
+- D0-AC-007已批准，其余9个D0硬门仍待验收；
 - D1—D4任务均未开始，D4量化得分为0。
 
 机器可验证部分已经建立并执行。当前新增发现：
@@ -22,11 +23,13 @@
 - 92个冻结字段的唯一标识和基础元数据检查通过；
 - 251条枚举的对象内代码唯一性检查通过，迁移语义仍待业务复核；
 - 批次、国家、来源及原始资料示例的引用关系检查通过；
-- 6条字段映射模板均引用冻结字段清单中不存在的目标，因此D0-03模板试填不通过；
-- 印尼 ESDM HEESI 2024 和越南 EVN Annual Report 2024-2025 已完成官方来源、
-  发布日期、采集时间、SHA-256、PDF安全属性和封面核验；
-- 上述两份原件仍缺获批许可快照和专业复核，且模板行仍为示例；沙特样例尚未绑定
-  具体原件，因此3条样例均不能作为正式金标准。
+- 6条字段映射已由数据负责人批准；门禁会在不改写只读工作簿的前提下使用正式
+  评审副本中的最终目标执行模板试填，旧目标错误已消除；
+- 印尼 ESDM HEESI 2024、越南 EVN Annual Report 2024-2025 和沙特 Principal
+  Buyer Round 7 合格开发商名单均已完成官方来源、发布日期、采集时间、SHA-256、
+  PDF安全属性和视觉核验；
+- 三份样本均已形成官网页面与原件哈希绑定的许可观察快照。当前只缺合规负责人
+  对许可/再分发/AI边界的明确结论，以及国家研究负责人的专业通过/不通过结论；
 - D0正式评审模板已经建立，可一次性收集9个责任角色、6条字段映射、3条样本、
   3份候选规范、10项硬门和最终D0结论，并在提交前校验基线哈希与字段完整性。
 - D1来源准入候选包已经建立：在18个冻结起始来源之外，已登记41个五国官方研究
@@ -46,16 +49,16 @@
   九项移交和五类实名批准均可机器复算；当前无真实D3发布记录、演练证据或D4签署，
   因此D4仍未通过，V0.1继续阻断。
 
-字段映射差异如下，任何修正都必须同步更新正式附件并取得批准：
+字段映射决定如下；这些决定已记录到正式评审副本，后续技术实现不得改变语义：
 
-| 映射编号 | 当前目标 | 处理边界 |
+| 映射编号 | 原目标 | 已批准决定 |
 |---|---|---|
-| MAP-COUNTRY-NAME | `country.name_zh` | 冻结字段不存在；应由数据负责人决定进入本地化名称实体还是补充字段 |
-| MAP-ISO3 | `country.iso3` | 权威冻结字段为`country.iso_code`，仍需正式更正记录 |
-| MAP-POLICY-DATE | `policy.published_at` | 冻结字段仅有`effective_date`；发布日期与生效日语义不同，禁止直接替换 |
-| MAP-PROJECT-CAP | `project.capacity_mw` | 冻结字段不存在；需确认容量所属实体、原值和标准单位字段 |
-| MAP-AMOUNT | `tender.budget_original` | 冻结字段不存在；需确认原币、原值、汇率及换算字段 |
-| MAP-ENTITY | `partner.legal_name` | 冻结字段不存在；需确认伙伴与法律主体主数据边界 |
+| MAP-COUNTRY-NAME | `country.name_zh` | `model_entity → localized_text` |
+| MAP-ISO3 | `country.iso3` | `replace_target → country.iso_code` |
+| MAP-POLICY-DATE | `policy.published_at` | `add_field → policy_version.published_at`，与生效日分离 |
+| MAP-PROJECT-CAP | `project.capacity_mw` | `add_field → project_version.capacity_value`，保留原值、单位、AC/DC侧和精度 |
+| MAP-AMOUNT | `tender.budget_original` | `add_field → tender.budget_original_value`，保留币种、区间、汇率来源和基准日 |
+| MAP-ENTITY | `partner.legal_name` | `model_entity → legal_entity_name` |
 
 因此，当前不能诚实地开始 V0.1 用户侧功能，也不能把文档确认等同于 D0、D4或P0
 验收。开发将严格按照下列阶段门推进。

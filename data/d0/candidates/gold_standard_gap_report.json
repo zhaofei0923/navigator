@@ -3,36 +3,42 @@
     {
       "capture_record": "D0-CAPTURE-IDN-HEESI-2024",
       "country": "IDN",
+      "license_snapshot_id": "LIC-IDN-ESDM-HEESI-2024-20260731",
+      "license_snapshot_verified": true,
       "raw_id": "RAW-EXAMPLE-001",
       "source_id": "SRC-IDN-ESDM",
       "status": "candidate_incomplete",
       "unresolved": [
-        "许可快照",
-        "行类型仍为示例"
+        "行类型仍为示例",
+        "许可结论待审"
       ],
       "verified_capture": true
     },
     {
       "capture_record": "D0-CAPTURE-VNM-EVN-2024-2025",
       "country": "VNM",
+      "license_snapshot_id": "LIC-VNM-EVN-ANNUAL-REPORT-2024-2025-20260731",
+      "license_snapshot_verified": true,
       "raw_id": "RAW-EXAMPLE-002",
       "source_id": "SRC-VNM-EVN",
       "status": "candidate_incomplete",
       "unresolved": [
-        "许可快照",
-        "行类型仍为示例"
+        "行类型仍为示例",
+        "许可结论待审"
       ],
       "verified_capture": true
     },
     {
       "capture_record": "D0-CAPTURE-SAU-PB-ROUND7-QUALIFIED-DEVELOPERS-2025",
       "country": "SAU",
+      "license_snapshot_id": "LIC-SAU-PB-ROUND7-QUALIFIED-DEVELOPERS-2025-20260731",
+      "license_snapshot_verified": true,
       "raw_id": "RAW-EXAMPLE-003",
       "source_id": "SRC-SAU-PB",
       "status": "candidate_incomplete",
       "unresolved": [
-        "许可快照",
-        "行类型仍为示例"
+        "行类型仍为示例",
+        "许可结论待审"
       ],
       "verified_capture": true
     }

@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "snapshot_id": "LIC-IDN-ESDM-HEESI-2024-20260731",
+  "raw_id": "RAW-EXAMPLE-001",
+  "source_id": "SRC-IDN-ESDM",
+  "captured_at": "2026-07-31T12:37:23+08:00",
+  "publication_page_snapshot": {
+    "url": "https://www.esdm.go.id/en/publication/handbook-of-energy-economic-statistics-of-indonesia-heesi",
+    "byte_size": 65604,
+    "sha256": "3ef33eff6bf8fc2852b4eafa4bab9adf2942d101d48da97063ad5e3a6d84f9cb"
+  },
+  "document_snapshot": {
+    "url": "https://www.esdm.go.id/assets/media/content/content-handbook-of-energy-and-economic-statistics-of-indonesia-2024.pdf",
+    "byte_size": 15477022,
+    "sha256": "fd4ca2f12d6d93296c3c26fab5ba4eeba0532f4dfb5a25d370e6816b6c2fec47",
+    "pages": 152,
+    "rights_term_scan": "No document-level reuse, redistribution, Creative Commons, or AI-indexing grant identified. The occurrence of 'License' on page 102 refers to an electricity supply business license, not a copyright license."
+  },
+  "observations": {
+    "rights_notice": "Copy Right © 2026 The Ministry of Energy and Mineral Resources",
+    "explicit_public_reuse_license_found": false,
+    "explicit_redistribution_permission_found": false,
+    "explicit_ai_index_permission_found": false,
+    "attribution_requirement_found": false
+  },
+  "interim_controls": {
+    "license_decision": "pending",
+    "redistribution_allowed": false,
+    "ai_index_allowed": false,
+    "local_document_committed": false,
+    "permitted_until_review": "metadata, hash, official link, and short factual citation only"
+  },
+  "review": {
+    "compliance_reviewer": null,
+    "reviewed_at": null,
+    "decision": "pending"
+  }
+}

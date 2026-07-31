@@ -12,6 +12,7 @@ from navigator_data_readiness.d0_candidates import (
     build_mapping_resolution_proposal,
     build_template_trial,
     build_terminology_review_queue,
+    load_license_snapshots,
     load_research_captures,
     write_candidates,
 )
@@ -37,6 +38,21 @@ def test_template_trial_finds_all_unfrozen_mapping_targets() -> None:
         "tender.budget_original",
         "partner.legal_name",
     }
+
+
+def test_template_trial_applies_approved_mapping_decisions() -> None:
+    paths = discover_repository()
+    contracts = extract_contracts(paths)
+    packet = json.loads(
+        (paths.d0_review_dir / "d0_review_packet.2026-07-31.json").read_text(encoding="utf-8")
+    )
+
+    report = build_template_trial(contracts, packet["mapping_decisions"])
+    checks = {item["check_id"]: item for item in report["checks"]}
+
+    assert report["status"] == "pass"
+    assert checks["TRIAL-MAPPING-TARGET"]["failures"] == []
+    assert len(report["resolved_mappings"]) == 6
 
 
 def test_gold_standard_gap_report_does_not_promote_examples() -> None:
@@ -66,6 +82,7 @@ def test_verified_capture_only_resolves_observed_metadata() -> None:
     assert first["verified_capture"] is True
     assert first["capture_record"] == "CAPTURE-1"
     assert first["unresolved"] == ["许可快照", "行类型仍为示例"]
+    assert first["license_snapshot_verified"] is False
 
 
 def test_repository_research_captures_cover_all_verified_gold_standard_samples() -> None:
@@ -87,6 +104,50 @@ def test_repository_research_captures_cover_all_verified_gold_standard_samples()
         == "D0-CAPTURE-SAU-PB-ROUND7-QUALIFIED-DEVELOPERS-2025"
     )
     assert captures_by_raw_id["RAW-EXAMPLE-003"]["pdf"]["pages"] == 2
+
+
+def test_repository_license_snapshots_match_captured_documents() -> None:
+    paths = discover_repository()
+    contracts = extract_contracts(paths)
+    captures = load_research_captures(paths)
+    snapshots = load_license_snapshots(paths)
+
+    report = build_gold_standard_gap_report(
+        contracts,
+        captures,
+        license_snapshots=snapshots,
+    )
+
+    assert len(snapshots) == 3
+    assert all(item["license_snapshot_verified"] is True for item in report["candidates"])
+    assert all("许可快照" not in item["unresolved"] for item in report["candidates"])
+    assert all("许可结论待审" in item["unresolved"] for item in report["candidates"])
+
+
+def test_gold_standard_requires_review_to_reference_verified_license_snapshot() -> None:
+    paths = discover_repository()
+    contracts = extract_contracts(paths)
+    capture = next(
+        item for item in load_research_captures(paths) if item["raw_id"] == "RAW-EXAMPLE-001"
+    )
+    snapshot = next(
+        item
+        for item in load_license_snapshots(paths)
+        if item["snapshot_id"] == capture["license_snapshot_id"]
+    )
+    review = {
+        "raw_id": capture["raw_id"],
+        "license_decision": "limited",
+        "license_snapshot_id": "LIC-TAMPERED",
+        "compliance_reviewer": "kevin",
+        "compliance_reviewed_at": "2026-07-31",
+    }
+
+    report = build_gold_standard_gap_report(contracts, [capture], [review], [snapshot])
+    first = report["candidates"][0]
+
+    assert first["license_snapshot_verified"] is True
+    assert "许可结论待审" in first["unresolved"]
 
 
 def test_terminology_and_conventions_are_review_candidates() -> None:

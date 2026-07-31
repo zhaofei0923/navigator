@@ -7,7 +7,7 @@
 - Recorded at: `2026-07-31T12:16:57+08:00`
 - Recording basis: explicit written decisions supplied by `kevin` in the project review conversation
 - Repository recording authorization: granted
-- Scope: role assignments, mapping decisions, three candidate artifact reviews, and approval to select an official Saudi Principal Buyer source for `RAW-EXAMPLE-003`
+- Scope: role assignments, `D0-AC-007`, mapping decisions, three candidate artifact reviews, and approval to select an official Saudi Principal Buyer source for `RAW-EXAMPLE-003`
 
 This file is an authorized transcription of written review decisions. It is not a
 qualified electronic signature and does not convert unresolved sample or stage
@@ -31,6 +31,10 @@ as alternate and `bob` as escalation person.
 | 后端/数据架构负责人 | kevin | peter | bob |
 
 Evidence ID: `EVD-D0-ROLE-ASSIGNMENTS-20260731`
+
+The explicit assignment of all nine role holders, alternates, and escalation
+persons approves `D0-AC-007` ("责任人、替补、升级链和审批权限已签署"). No other
+D0 acceptance item is inferred from the role assignment.
 
 ## Mapping decisions
 
@@ -79,7 +83,8 @@ The following choices were not supplied and remain pending:
 - `RAW-EXAMPLE-001`: license decision, redistribution, AI indexing, and professional review;
 - `RAW-EXAMPLE-002`: license decision, redistribution, AI indexing, and professional review;
 - `RAW-EXAMPLE-003`: license decision, redistribution, AI indexing, and professional review;
-- `D0-AC-001` through `D0-AC-010`: acceptance-item decisions;
+- `D0-AC-001` through `D0-AC-006`, plus `D0-AC-008` through `D0-AC-010`:
+  acceptance-item decisions;
 - final D0 stage approval.
 
 No pending choice is inferred from this record.

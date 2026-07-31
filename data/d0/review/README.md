@@ -35,8 +35,19 @@
      --input data/d0/review/d0_review_packet.2026-08-01.json
    ```
 
-5. 将证据登记到 `data/d0/evidence/manifest.json`，再更新正式工作簿并重新运行
-   `snapshot`、`prepare-d0`、`validate`和`gate --stage D0`。
+5. 将证据登记到 `data/d0/evidence/manifest.json`，通过正式评审副本或版本化变更
+   覆盖层记录批准结论，再重新运行 `snapshot`、`prepare-d0`、`validate`和
+   `gate --stage D0`。源工作簿始终保持只读。
+
+## 部分评审进度
+
+`report`和`gate`会读取本目录中按文件名排序的最新
+`d0_review_packet.<批次>.json`。只有基线与候选哈希匹配、证据编号可解析且对应条目
+自身通过结构检查的角色、映射和验收决定才会计入进度。部分评审包可以减少已完成
+事项的误报，但任何待审样本、缺失验收或最终结论仍会阻断D0。
+
+若同目录存在多个正式副本，工具会给出提醒并使用文件名排序后的最新副本；归档旧
+副本前应确认其证据仍可追溯。
 
 ## 安全与审计边界
 

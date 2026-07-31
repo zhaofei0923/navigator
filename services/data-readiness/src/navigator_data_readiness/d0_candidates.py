@@ -20,7 +20,20 @@ def load_research_captures(paths: RepositoryPaths) -> list[dict[str, Any]]:
     return captures
 
 
-def build_template_trial(contracts: dict[str, Any]) -> dict[str, Any]:
+def load_license_snapshots(paths: RepositoryPaths) -> list[dict[str, Any]]:
+    license_dir = paths.d0_research_dir / "licenses"
+    if not license_dir.exists():
+        return []
+    snapshots: list[dict[str, Any]] = []
+    for path in sorted(license_dir.glob("*.json")):
+        snapshots.append(json.loads(path.read_text(encoding="utf-8")))
+    return snapshots
+
+
+def build_template_trial(
+    contracts: dict[str, Any],
+    mapping_decisions: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     countries = {str(item["ISO3"]) for item in contracts["countries"]}
     sources = {str(item["来源编号"]) for item in contracts["source_registry_seed"]}
     batches = {
@@ -82,63 +95,137 @@ def build_template_trial(contracts: dict[str, Any]) -> dict[str, Any]:
         }
     )
 
-    mapping_failures = sorted(
-        (
-            {
-                "mapping_id": str(item.get("映射编号", "")),
-                "target": str(item.get("目标实体.字段", "")),
-            }
-            for item in contracts["field_mapping_template"]
-            if str(item.get("目标实体.字段", "")) not in fields
-        ),
-        key=lambda item: item["mapping_id"],
-    )
+    decisions_by_id = {
+        str(item.get("mapping_id", "")): item
+        for item in (mapping_decisions or [])
+        if item.get("mapping_id")
+    }
+    mapping_failures: list[dict[str, str]] = []
+    resolved_mappings: list[dict[str, str | None]] = []
+    for item in contracts["field_mapping_template"]:
+        mapping_id = str(item.get("映射编号", ""))
+        original_target = str(item.get("目标实体.字段", ""))
+        decision = decisions_by_id.get(mapping_id)
+        if decision and decision.get("review_status") == "approved":
+            action = str(decision.get("decision", ""))
+            final_target = str(decision.get("final_target") or "")
+            resolved_mappings.append(
+                {
+                    "mapping_id": mapping_id,
+                    "decision": action,
+                    "original_target": original_target,
+                    "effective_target": final_target or None,
+                }
+            )
+            if action == "retire_mapping":
+                continue
+            if action == "replace_target" and final_target in fields:
+                continue
+            if action in {"add_field", "model_entity"} and final_target:
+                continue
+            mapping_failures.append(
+                {
+                    "mapping_id": mapping_id,
+                    "target": final_target or original_target,
+                    "reason": "approved decision has no implementable final target",
+                }
+            )
+            continue
+        if original_target not in fields:
+            mapping_failures.append({"mapping_id": mapping_id, "target": original_target})
+    mapping_failures.sort(key=lambda failure: failure["mapping_id"])
     checks.append(
         {
             "check_id": "TRIAL-MAPPING-TARGET",
-            "description": "字段映射目标必须存在于冻结字段清单",
+            "description": (
+                "字段映射目标必须存在于冻结字段清单"
+                if mapping_decisions is None
+                else "字段映射目标必须存在于冻结字段清单或具有已批准的新增字段/实体建模决定"
+            ),
             "status": "pass" if not mapping_failures else "fail",
             "failures": mapping_failures,
         }
     )
 
-    return {
+    report = {
         "schema_version": 1,
         "status": "pass" if all(item["status"] == "pass" for item in checks) else "fail",
         "purpose": "D0模板交叉试填；不进入正式库，不代表来源准入或数据发布",
         "checks": checks,
     }
+    if mapping_decisions is not None:
+        report["resolved_mappings"] = resolved_mappings
+    return report
 
 
 def build_gold_standard_gap_report(
     contracts: dict[str, Any],
     captures: list[dict[str, Any]] | None = None,
+    raw_sample_reviews: list[dict[str, Any]] | None = None,
+    license_snapshots: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     required_fields = ("SHA-256", "发布日期", "采集时间", "许可快照")
     captures_by_raw_id = {
         str(item.get("raw_id", "")): item for item in (captures or []) if item.get("raw_id")
     }
+    reviews_by_raw_id = {
+        str(item.get("raw_id", "")): item
+        for item in (raw_sample_reviews or [])
+        if item.get("raw_id")
+    }
+    snapshots_by_id = {
+        str(item.get("snapshot_id", "")): item
+        for item in (license_snapshots or [])
+        if item.get("snapshot_id")
+    }
     candidates: list[dict[str, Any]] = []
     for item in contracts["raw_asset_template"]:
         raw_id = str(item.get("原始编号", ""))
         capture = captures_by_raw_id.get(raw_id, {})
+        review = reviews_by_raw_id.get(raw_id, {})
+        snapshot_id = str(capture.get("license_snapshot_id") or "")
+        snapshot = snapshots_by_id.get(snapshot_id, {})
+        document_snapshot = snapshot.get("document_snapshot")
+        license_snapshot_verified = bool(
+            snapshot_id
+            and snapshot
+            and snapshot.get("raw_id") == raw_id
+            and snapshot.get("source_id") == item.get("来源编号")
+            and isinstance(document_snapshot, dict)
+            and document_snapshot.get("sha256") == capture.get("sha256")
+            and document_snapshot.get("url") == capture.get("final_url")
+        )
+        license_review_complete = (
+            license_snapshot_verified
+            and review.get("license_snapshot_id") == snapshot_id
+            and review.get("license_decision") in {"approved", "limited"}
+            and bool(review.get("compliance_reviewer"))
+            and bool(review.get("compliance_reviewed_at"))
+        )
+        professional_review_complete = (
+            review.get("professional_review_status") == "approved"
+            and bool(review.get("professional_reviewer"))
+            and bool(review.get("professional_reviewed_at"))
+        )
         resolved_values = {
             "SHA-256": capture.get("sha256"),
             "发布日期": capture.get("published_at"),
             "采集时间": capture.get("captured_at"),
-            "许可快照": (
-                capture.get("license_snapshot_id")
-                if capture.get("license_status") == "approved"
-                else None
-            ),
+            "许可快照": snapshot_id if license_snapshot_verified else None,
         }
         unresolved = [
             field
             for field in required_fields
             if not resolved_values[field] and str(item.get(field, "")).strip() in PLACEHOLDER_VALUES
         ]
-        if str(item.get("行类型", "")).strip() == "示例":
+        if str(item.get("行类型", "")).strip() == "示例" and not professional_review_complete:
             unresolved.append("行类型仍为示例")
+        if (
+            license_snapshot_verified
+            and capture.get("license_status") != "approved"
+            and not license_review_complete
+        ):
+            unresolved.append("许可结论待审")
         candidates.append(
             {
                 "raw_id": raw_id,
@@ -146,6 +233,8 @@ def build_gold_standard_gap_report(
                 "source_id": item.get("来源编号"),
                 "verified_capture": bool(capture),
                 "capture_record": capture.get("record_id"),
+                "license_snapshot_id": snapshot_id or None,
+                "license_snapshot_verified": license_snapshot_verified,
                 "status": "candidate_incomplete" if unresolved else "candidate_ready_for_review",
                 "unresolved": unresolved,
             }
@@ -484,7 +573,11 @@ def build_acceptance_assessment(
 def candidate_payloads(paths: RepositoryPaths) -> dict[str, dict[str, Any]]:
     contracts = extract_contracts(paths)
     template_trial = build_template_trial(contracts)
-    gold_gap = build_gold_standard_gap_report(contracts, load_research_captures(paths))
+    gold_gap = build_gold_standard_gap_report(
+        contracts,
+        load_research_captures(paths),
+        license_snapshots=load_license_snapshots(paths),
+    )
     return {
         "acceptance_assessment.json": build_acceptance_assessment(
             contracts,

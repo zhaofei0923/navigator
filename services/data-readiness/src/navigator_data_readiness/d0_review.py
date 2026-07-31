@@ -84,6 +84,10 @@ def build_review_packet(paths: RepositoryPaths) -> dict[str, Any]:
         for item in candidates["acceptance_assessment.json"]["assessments"]
     }
     proposals = candidates["mapping_resolution_proposal.json"]["proposals"]
+    gold_candidates = {
+        str(item["raw_id"]): item
+        for item in candidates["gold_standard_gap_report.json"]["candidates"]
+    }
 
     return {
         "schema_version": 1,
@@ -142,7 +146,13 @@ def build_review_packet(paths: RepositoryPaths) -> dict[str, Any]:
                 "capture_record": captures.get(str(item["原始编号"]), {}).get("record_id"),
                 "capture_metadata_complete": bool(captures.get(str(item["原始编号"]))),
                 "license_decision": "pending",
-                "license_snapshot_id": None,
+                "license_snapshot_id": (
+                    gold_candidates.get(str(item["原始编号"]), {}).get("license_snapshot_id")
+                    if gold_candidates.get(str(item["原始编号"]), {}).get(
+                        "license_snapshot_verified"
+                    )
+                    else None
+                ),
                 "redistribution_allowed": False,
                 "ai_index_allowed": False,
                 "compliance_reviewer": None,
@@ -468,6 +478,7 @@ def validate_review_packet(paths: RepositoryPaths, payload: dict[str, Any]) -> l
                 "source_id",
                 "capture_record",
                 "capture_metadata_complete",
+                "license_snapshot_id",
             )
         ):
             checks.append(

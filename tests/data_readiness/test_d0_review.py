@@ -51,7 +51,6 @@ def _completed_packet(paths: RepositoryPaths) -> dict[str, Any]:
                 "capture_record": item["capture_record"] or f"CAPTURE-{item['raw_id']}",
                 "capture_metadata_complete": True,
                 "license_decision": "approved",
-                "license_snapshot_id": f"LIC-{item['raw_id']}",
                 "compliance_reviewer": "合规负责人姓名",
                 "compliance_reviewed_at": "2026-08-01T11:00:00+08:00",
                 "professional_review_status": "approved",
@@ -131,19 +130,47 @@ def _paths_with_complete_research(tmp_path: Path) -> RepositoryPaths:
     paths = discover_repository()
     research_dir = tmp_path / "research"
     research_dir.mkdir()
-    for index, raw_id in enumerate(
-        ("RAW-EXAMPLE-001", "RAW-EXAMPLE-002", "RAW-EXAMPLE-003"),
+    license_dir = research_dir / "licenses"
+    license_dir.mkdir()
+    samples = (
+        ("RAW-EXAMPLE-001", "SRC-IDN-ESDM"),
+        ("RAW-EXAMPLE-002", "SRC-VNM-EVN"),
+        ("RAW-EXAMPLE-003", "SRC-SAU-PB"),
+    )
+    for index, (raw_id, source_id) in enumerate(
+        samples,
         start=1,
     ):
+        document_url = f"https://example.test/{index}.pdf"
+        document_hash = f"{index}" * 64
+        snapshot_id = f"LIC-{raw_id}"
         (research_dir / f"{index}_capture.json").write_text(
             json.dumps(
                 {
                     "record_id": f"CAPTURE-{index}",
                     "raw_id": raw_id,
-                    "sha256": f"{index}" * 64,
+                    "source_id": source_id,
+                    "final_url": document_url,
+                    "sha256": document_hash,
                     "published_at": "2026-01-01",
                     "captured_at": "2026-08-01T08:00:00+08:00",
                     "license_status": "pending_compliance_review",
+                    "license_snapshot_id": snapshot_id,
+                }
+            ),
+            encoding="utf-8",
+        )
+        (license_dir / f"{index}_license.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "snapshot_id": snapshot_id,
+                    "raw_id": raw_id,
+                    "source_id": source_id,
+                    "document_snapshot": {
+                        "url": document_url,
+                        "sha256": document_hash,
+                    },
                 }
             ),
             encoding="utf-8",
@@ -215,6 +242,20 @@ def test_review_validation_detects_tampered_immutable_inputs() -> None:
         "D0_REVIEW_ACCEPTANCE_INPUT_CHANGED",
         "D0_REVIEW_ARTIFACT_REVIEWERS_INCOMPLETE",
     } <= codes
+
+
+def test_review_validation_rejects_unverified_license_snapshot_substitution() -> None:
+    paths = discover_repository()
+    packet = _completed_packet(paths)
+    packet["raw_sample_reviews"][0]["license_snapshot_id"] = "LIC-TAMPERED"
+
+    checks = validate_review_packet(paths, packet)
+
+    assert any(
+        item.code == "D0_REVIEW_RAW_INPUT_CHANGED"
+        and item.location == "raw_sample_reviews.RAW-EXAMPLE-001"
+        for item in checks
+    )
 
 
 def test_review_validation_detects_stale_rejected_and_incomplete_approvals() -> None:
