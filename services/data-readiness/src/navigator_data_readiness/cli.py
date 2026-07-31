@@ -14,6 +14,7 @@ from .d2_collection import load_and_validate_d2_bundle, write_d2_candidates
 from .d3_processing import load_and_validate_d3_bundle, write_d3_candidates
 from .d4_acceptance import load_and_validate_d4_bundle, write_d4_candidates
 from .models import CheckResult
+from .p0_baseline_change import load_and_assess_p0_baseline_change
 from .p0_resolution import (
     load_and_validate_p0_resolution_packet,
     write_p0_resolution_template,
@@ -124,6 +125,16 @@ def _parser() -> argparse.ArgumentParser:
         help="Validate a proposed P0 traceability change packet against the frozen baseline.",
     )
     p0_resolution_validation.add_argument("--input", type=Path, required=True)
+    p0_change_validation = commands.add_parser(
+        "validate-p0-baseline-change",
+        help=(
+            "Verify that a separate candidate technical workbook exactly applies a completed "
+            "P0 resolution without activating it."
+        ),
+    )
+    p0_change_validation.add_argument("--resolution", type=Path, required=True)
+    p0_change_validation.add_argument("--workbook", type=Path, required=True)
+    p0_change_validation.add_argument("--output", type=Path)
 
     report = commands.add_parser("report", help="Render the current D0 readiness report.")
     report.add_argument("--format", choices=("markdown", "json"), default="markdown")
@@ -314,6 +325,30 @@ def main(argv: list[str] | None = None) -> int:
         checks = load_and_validate_p0_resolution_packet(paths, packet_path)
         _print_checks(checks)
         return 1 if checks else 0
+
+    if args.command == "validate-p0-baseline-change":
+        resolution_path = (
+            args.resolution if args.resolution.is_absolute() else paths.root / args.resolution
+        )
+        workbook_path = args.workbook if args.workbook.is_absolute() else paths.root / args.workbook
+        assessment = load_and_assess_p0_baseline_change(
+            paths,
+            resolution_path,
+            workbook_path,
+        )
+        output = json.dumps(assessment, ensure_ascii=False, indent=2) + "\n"
+        if args.output:
+            destination = args.output if args.output.is_absolute() else paths.root / args.output
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_text(output, encoding="utf-8")
+            try:
+                display_path = destination.relative_to(paths.root).as_posix()
+            except ValueError:
+                display_path = str(destination)
+            print(display_path)
+        else:
+            print(output, end="")
+        return 0 if assessment.get("candidate_ready_for_formal_baseline_review") else 1
 
     report = build_readiness_report(paths)
     output = (

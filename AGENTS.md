@@ -20,6 +20,9 @@
 - Target Python 3.13 for D0-D4 tooling.
 - Treat the source workbooks as read-only. Generated contracts belong in
   `data/contracts/current`; machine-generated D0 candidates belong in `data/d0/candidates`.
+- P0 baseline-change verification must target a separate candidate workbook, compare formula
+  contracts as well as displayed values, reject unreviewed deltas, and never activate the
+  candidate or overwrite the authoritative workbook.
 - Generated reviewer templates belong in `data/d0/review`; only actual authorized reviewers may
   fill a review copy, and completed copies must not contain private contact details or secrets.
 - Generated D1 source-onboarding templates belong in `data/d1/candidates`; no source may become

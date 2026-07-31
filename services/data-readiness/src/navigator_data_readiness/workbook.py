@@ -13,8 +13,8 @@ CellValue = str | int | float | bool | None
 RowRecord = dict[str, CellValue]
 
 
-def load_read_only(path: Path) -> Any:
-    return load_workbook(path, read_only=True, data_only=True)
+def load_read_only(path: Path, *, data_only: bool = True) -> Any:
+    return load_workbook(path, read_only=True, data_only=data_only)
 
 
 def normalized_headers(values: Sequence[Any]) -> list[str]:

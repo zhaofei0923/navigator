@@ -14,3 +14,15 @@
 
 机器校验只证明提案结构与当前基线一致。技术附件仍是只读权威源，提案必须经过
 正式基线变更评审后才能生效。
+
+若评审人员制作了独立候选技术附件，继续执行：
+
+```bash
+uv run navigator-data validate-p0-baseline-change \
+  --resolution data/p0/review/p0_traceability_resolution.<date>.json \
+  --workbook /安全的评审工作区/新能源企业出海导航仪_V1.0技术附件_CANDIDATE.xlsx \
+  --output /安全的评审工作区/p0_baseline_change_assessment.json
+```
+
+成功仅证明候选附件与提案一致且其P0追踪阻断为0；它不会复制、覆盖或激活候选附件。
+只有经授权完成正式基线替换后，`assess-p0-traceability`和D4才会读取新权威基线。

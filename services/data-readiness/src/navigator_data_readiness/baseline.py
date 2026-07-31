@@ -49,13 +49,17 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def extract_contracts(paths: RepositoryPaths) -> dict[str, Any]:
+def extract_contracts(
+    paths: RepositoryPaths,
+    *,
+    data_only: bool = True,
+) -> dict[str, Any]:
     contracts: dict[str, Any] = {}
     for workbook_path, sheet_map in (
         (paths.d0_workbook, D0_SHEETS),
         (paths.technical_workbook, TECH_SHEETS),
     ):
-        workbook = load_read_only(workbook_path)
+        workbook = load_read_only(workbook_path, data_only=data_only)
         try:
             for sheet_name, contract_name in sheet_map.items():
                 contracts[contract_name] = table_records(workbook[sheet_name])
