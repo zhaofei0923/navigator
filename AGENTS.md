@@ -60,6 +60,13 @@
   SHA-256 after it is produced.
 - Generated reviewer templates belong in `data/d0/review`; only actual authorized reviewers may
   fill a review copy, and completed copies must not contain private contact details or secrets.
+  D0 role holders must be distinct from their own alternates and escalation people. Mapping,
+  compliance, professional, artifact, acceptance, and final decisions must bind the frozen
+  required role to that role's signed holder, an ISO date or timezone-aware datetime, and
+  registered evidence; role labels without the matching person are not approvals.
+  Final sample license decisions are `approved`, `limited`, or `rejected`; final professional
+  decisions are `approved` or `rejected`. Rejected licenses require zero redistribution and AI
+  permissions, and every final outcome still requires its authorized named reviewer.
 - Generated D1 source-onboarding templates belong in `data/d1/candidates`; no source may become
   `active` before D0 passes and all access, license, usage-boundary, evidence, and owner fields pass.
 - Generated D2 collection templates belong in `data/d2/candidates`; L0 objects are append-only,

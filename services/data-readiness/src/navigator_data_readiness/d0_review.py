@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -61,6 +62,7 @@ FINAL_MAPPING_DECISIONS = {
 }
 FINAL_REVIEW_STATES = {"approved", "rejected"}
 FINAL_LICENSE_DECISIONS = {"approved", "limited", "rejected"}
+FINAL_PROFESSIONAL_REVIEW_STATES = {"approved", "rejected"}
 
 
 def _payload_sha256(payload: Any) -> str:
@@ -90,7 +92,7 @@ def build_review_packet(paths: RepositoryPaths) -> dict[str, Any]:
     }
 
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "stage": "D0",
         "template_only": True,
         "warning": "复制本模板后由实际责任人填写；机器不得代签、代批或把待审状态改为通过",
@@ -117,7 +119,7 @@ def build_review_packet(paths: RepositoryPaths) -> dict[str, Any]:
                 "approval_scope": ROLE_APPROVAL_SCOPES.get(str(item["角色"])),
                 "role_holder": None,
                 "alternate": None,
-                "escalation_role": None,
+                "escalation_person": None,
                 "signature_evidence_id": None,
                 "signed_at": None,
                 "status": "pending",
@@ -131,6 +133,7 @@ def build_review_packet(paths: RepositoryPaths) -> dict[str, Any]:
                 "final_target": None,
                 "rationale": None,
                 "change_request_id": None,
+                "decider_role": "数据负责人",
                 "decided_by": None,
                 "decided_at": None,
                 "evidence_ids": [],
@@ -155,9 +158,11 @@ def build_review_packet(paths: RepositoryPaths) -> dict[str, Any]:
                 ),
                 "redistribution_allowed": False,
                 "ai_index_allowed": False,
+                "compliance_reviewer_role": "合规负责人",
                 "compliance_reviewer": None,
                 "compliance_reviewed_at": None,
                 "professional_review_status": "pending",
+                "professional_reviewer_role": "国家研究负责人",
                 "professional_reviewer": None,
                 "professional_reviewed_at": None,
                 "evidence_ids": [],
@@ -168,9 +173,15 @@ def build_review_packet(paths: RepositoryPaths) -> dict[str, Any]:
             {
                 **artifact,
                 "candidate_sha256": _payload_sha256(candidates[str(artifact["candidate"])]),
-                "reviewers": [],
-                "reviewed_at": None,
-                "evidence_ids": [],
+                "reviewer_signatures": [
+                    {
+                        "role": role,
+                        "person_name": None,
+                        "signed_at": None,
+                        "evidence_ids": [],
+                    }
+                    for role in artifact["required_roles"]
+                ],
                 "review_status": "pending",
             }
             for artifact in REVIEW_ARTIFACTS
@@ -182,9 +193,15 @@ def build_review_packet(paths: RepositoryPaths) -> dict[str, Any]:
                 "hard_gate": item.get("硬门") == "是",
                 "machine_status": assessments[str(item["验收编号"])]["machine_status"],
                 "required_roles": ACCEPTANCE_REVIEWERS[str(item["验收编号"])],
-                "reviewers": [],
-                "reviewed_at": None,
-                "evidence_ids": [],
+                "reviewer_signatures": [
+                    {
+                        "role": role,
+                        "person_name": None,
+                        "signed_at": None,
+                        "evidence_ids": [],
+                    }
+                    for role in ACCEPTANCE_REVIEWERS[str(item["验收编号"])]
+                ],
                 "comments": None,
                 "review_status": "pending",
             }
@@ -192,6 +209,7 @@ def build_review_packet(paths: RepositoryPaths) -> dict[str, Any]:
         ],
         "final_decision": {
             "status": "pending",
+            "approver_role": "项目批准人",
             "approved_by": None,
             "approved_at": None,
             "evidence_ids": [],
@@ -227,6 +245,151 @@ def _required_text(
                 location=location,
             )
         )
+
+
+def _temporal_value(
+    checks: list[CheckResult],
+    item: dict[str, Any],
+    field: str,
+    *,
+    location: str,
+) -> None:
+    value = str(item.get(field) or "").strip()
+    if not value:
+        return
+    valid = False
+    if len(value) == 10:
+        try:
+            date.fromisoformat(value)
+            valid = True
+        except ValueError:
+            pass
+    else:
+        normalized = f"{value[:-1]}+00:00" if value.endswith("Z") else value
+        try:
+            parsed = datetime.fromisoformat(normalized)
+            valid = "T" in value and parsed.tzinfo is not None and parsed.utcoffset() is not None
+        except ValueError:
+            pass
+    if not valid:
+        checks.append(
+            CheckResult(
+                code="D0_REVIEW_TEMPORAL_INVALID",
+                message=f"{field} must be YYYY-MM-DD or an ISO-8601 datetime with a timezone",
+                location=f"{location}.{field}",
+            )
+        )
+
+
+def _reviewer_signature_evidence(
+    checks: list[CheckResult],
+    item: dict[str, Any],
+    *,
+    expected_roles: set[str],
+    role_holders: dict[str, str],
+    require_complete: bool,
+    location: str,
+) -> set[str]:
+    raw_signatures = item.get("reviewer_signatures")
+    if not isinstance(raw_signatures, list):
+        checks.append(
+            CheckResult(
+                code="D0_REVIEW_SIGNATURES_INVALID",
+                message="reviewer_signatures must be a list",
+                location=location,
+            )
+        )
+        return set()
+    signatures: dict[str, dict[str, Any]] = {}
+    for index, signature in enumerate(raw_signatures):
+        signature_location = f"{location}.reviewer_signatures[{index}]"
+        if not isinstance(signature, dict):
+            checks.append(
+                CheckResult(
+                    code="D0_REVIEW_SIGNATURE_INVALID",
+                    message="Reviewer signature must be an object",
+                    location=signature_location,
+                )
+            )
+            continue
+        role = str(signature.get("role") or "").strip()
+        if not role:
+            checks.append(
+                CheckResult(
+                    code="D0_REVIEW_SIGNATURE_INVALID",
+                    message="Reviewer signature requires role",
+                    location=signature_location,
+                )
+            )
+            continue
+        if role in signatures:
+            checks.append(
+                CheckResult(
+                    code="D0_REVIEW_SIGNATURE_DUPLICATE",
+                    message=f"Duplicate reviewer signature role: {role}",
+                    location=location,
+                )
+            )
+            continue
+        signatures[role] = signature
+    actual_roles = set(signatures)
+    if actual_roles != expected_roles:
+        checks.append(
+            CheckResult(
+                code="D0_REVIEW_SIGNATURE_ROLE_SET_INVALID",
+                message=(
+                    f"Reviewer signature roles differ; "
+                    f"missing={sorted(expected_roles - actual_roles)}, "
+                    f"unexpected={sorted(actual_roles - expected_roles)}"
+                ),
+                location=location,
+            )
+        )
+    evidence_ids: set[str] = set()
+    if not require_complete:
+        return evidence_ids
+    for role in sorted(actual_roles & expected_roles):
+        signature = signatures[role]
+        signature_location = f"{location}.reviewer_signatures.{role}"
+        _required_text(
+            checks,
+            signature,
+            ("person_name", "signed_at"),
+            code="D0_REVIEW_SIGNATURE_INCOMPLETE",
+            location=signature_location,
+        )
+        _temporal_value(
+            checks,
+            signature,
+            "signed_at",
+            location=signature_location,
+        )
+        person_name = str(signature.get("person_name") or "").strip()
+        expected_holder = role_holders.get(role, "")
+        if not expected_holder or person_name != expected_holder:
+            checks.append(
+                CheckResult(
+                    code="D0_REVIEW_SIGNER_UNAUTHORIZED",
+                    message=f"{person_name or 'Missing signer'} is not the signed holder of {role}",
+                    location=signature_location,
+                )
+            )
+        raw_evidence_ids = signature.get("evidence_ids")
+        if (
+            not isinstance(raw_evidence_ids, list)
+            or not raw_evidence_ids
+            or any(not str(value).strip() for value in raw_evidence_ids)
+        ):
+            checks.append(
+                CheckResult(
+                    code="D0_REVIEW_SIGNATURE_EVIDENCE_MISSING",
+                    message=f"{role} signature requires evidence IDs",
+                    location=signature_location,
+                )
+            )
+            continue
+        evidence_ids.update(str(value).strip() for value in raw_evidence_ids)
+    return evidence_ids
 
 
 def _indexed_items(
@@ -298,11 +461,11 @@ def _check_expected_ids(
 
 def validate_review_packet(paths: RepositoryPaths, payload: dict[str, Any]) -> list[CheckResult]:
     checks: list[CheckResult] = []
-    if payload.get("schema_version") != 1 or payload.get("stage") != "D0":
+    if payload.get("schema_version") != 2 or payload.get("stage") != "D0":
         checks.append(
             CheckResult(
                 code="D0_REVIEW_HEADER_INVALID",
-                message="Review packet requires schema_version 1 and stage D0",
+                message="Review packet requires schema_version 2 and stage D0",
                 location="review_packet",
             )
         )
@@ -370,6 +533,7 @@ def validate_review_packet(paths: RepositoryPaths, payload: dict[str, Any]) -> l
         code="D0_REVIEW_ROLE_SET_INVALID",
         location="role_assignments",
     )
+    role_holders: dict[str, str] = {}
     for role, item in roles.items():
         location = f"role_assignments.{role}"
         if item.get("status") != "signed":
@@ -387,13 +551,27 @@ def validate_review_packet(paths: RepositoryPaths, payload: dict[str, Any]) -> l
             (
                 "role_holder",
                 "alternate",
-                "escalation_role",
+                "escalation_person",
                 "signature_evidence_id",
                 "signed_at",
             ),
             code="D0_REVIEW_ROLE_INCOMPLETE",
             location=location,
         )
+        _temporal_value(checks, item, "signed_at", location=location)
+        role_holder = str(item.get("role_holder") or "").strip()
+        alternate = str(item.get("alternate") or "").strip()
+        escalation_person = str(item.get("escalation_person") or "").strip()
+        if role_holder and role_holder in (alternate, escalation_person):
+            checks.append(
+                CheckResult(
+                    code="D0_REVIEW_ROLE_SEPARATION_INVALID",
+                    message=f"{role} holder cannot be their own alternate or escalation person",
+                    location=location,
+                )
+            )
+        if role_holder:
+            role_holders[role] = role_holder
 
     mappings = _indexed_items(checks, payload, "mapping_decisions", "mapping_id")
     template_mappings = {str(item["mapping_id"]): item for item in template["mapping_decisions"]}
@@ -415,6 +593,7 @@ def validate_review_packet(paths: RepositoryPaths, payload: dict[str, Any]) -> l
                 "proposed_action",
                 "proposed_target",
                 "confidence",
+                "decider_role",
             )
         ):
             checks.append(
@@ -449,6 +628,20 @@ def validate_review_packet(paths: RepositoryPaths, payload: dict[str, Any]) -> l
             code="D0_REVIEW_MAPPING_INCOMPLETE",
             location=location,
         )
+        _temporal_value(checks, item, "decided_at", location=location)
+        decider_role = str(item.get("decider_role") or "").strip()
+        decided_by = str(item.get("decided_by") or "").strip()
+        if not decider_role or decided_by != role_holders.get(decider_role):
+            checks.append(
+                CheckResult(
+                    code="D0_REVIEW_MAPPING_DECIDER_UNAUTHORIZED",
+                    message=(
+                        f"{decided_by or 'Missing decider'} is not the signed holder "
+                        f"of {decider_role or 'the required role'}"
+                    ),
+                    location=location,
+                )
+            )
         if not item.get("evidence_ids"):
             checks.append(
                 CheckResult(
@@ -479,6 +672,8 @@ def validate_review_packet(paths: RepositoryPaths, payload: dict[str, Any]) -> l
                 "capture_record",
                 "capture_metadata_complete",
                 "license_snapshot_id",
+                "compliance_reviewer_role",
+                "professional_reviewer_role",
             )
         ):
             checks.append(
@@ -505,14 +700,6 @@ def validate_review_packet(paths: RepositoryPaths, payload: dict[str, Any]) -> l
                     location=location,
                 )
             )
-        elif license_decision == "rejected":
-            checks.append(
-                CheckResult(
-                    code="D0_REVIEW_LICENSE_REJECTED",
-                    message=f"{raw_id} must be replaced with an admissible sample",
-                    location=location,
-                )
-            )
         else:
             _required_text(
                 checks,
@@ -525,7 +712,52 @@ def validate_review_packet(paths: RepositoryPaths, payload: dict[str, Any]) -> l
                 code="D0_REVIEW_LICENSE_INCOMPLETE",
                 location=location,
             )
-        if item.get("professional_review_status") != "approved":
+            _temporal_value(
+                checks,
+                item,
+                "compliance_reviewed_at",
+                location=location,
+            )
+            compliance_role = str(item.get("compliance_reviewer_role") or "").strip()
+            compliance_reviewer = str(item.get("compliance_reviewer") or "").strip()
+            if not compliance_role or compliance_reviewer != role_holders.get(compliance_role):
+                checks.append(
+                    CheckResult(
+                        code="D0_REVIEW_COMPLIANCE_REVIEWER_UNAUTHORIZED",
+                        message=(
+                            f"{compliance_reviewer or 'Missing reviewer'} is not the signed "
+                            f"holder of {compliance_role or 'the compliance role'}"
+                        ),
+                        location=location,
+                    )
+                )
+            if license_decision == "rejected":
+                checks.append(
+                    CheckResult(
+                        code="D0_REVIEW_LICENSE_REJECTED",
+                        message=f"{raw_id} must be replaced with an admissible sample",
+                        location=location,
+                    )
+                )
+        redistribution_allowed = item.get("redistribution_allowed")
+        ai_index_allowed = item.get("ai_index_allowed")
+        if (
+            not isinstance(redistribution_allowed, bool)
+            or not isinstance(ai_index_allowed, bool)
+            or (license_decision == "rejected" and (redistribution_allowed or ai_index_allowed))
+        ):
+            checks.append(
+                CheckResult(
+                    code="D0_REVIEW_USAGE_BOUNDARY_INVALID",
+                    message=(
+                        f"{raw_id} requires boolean redistribution/AI boundaries, "
+                        "both false when the license is rejected"
+                    ),
+                    location=location,
+                )
+            )
+        professional_status = item.get("professional_review_status")
+        if professional_status not in FINAL_PROFESSIONAL_REVIEW_STATES:
             checks.append(
                 CheckResult(
                     code="D0_REVIEW_PROFESSIONAL_PENDING",
@@ -541,6 +773,37 @@ def validate_review_packet(paths: RepositoryPaths, payload: dict[str, Any]) -> l
                 code="D0_REVIEW_PROFESSIONAL_INCOMPLETE",
                 location=location,
             )
+            _temporal_value(
+                checks,
+                item,
+                "professional_reviewed_at",
+                location=location,
+            )
+            professional_role = str(item.get("professional_reviewer_role") or "").strip()
+            professional_reviewer = str(item.get("professional_reviewer") or "").strip()
+            if not professional_role or professional_reviewer != role_holders.get(
+                professional_role
+            ):
+                checks.append(
+                    CheckResult(
+                        code="D0_REVIEW_PROFESSIONAL_REVIEWER_UNAUTHORIZED",
+                        message=(
+                            f"{professional_reviewer or 'Missing reviewer'} is not the signed "
+                            f"holder of {professional_role or 'the professional role'}"
+                        ),
+                        location=location,
+                    )
+                )
+            if professional_status == "rejected":
+                checks.append(
+                    CheckResult(
+                        code="D0_REVIEW_PROFESSIONAL_REJECTED",
+                        message=(
+                            f"{raw_id} failed professional review and must be replaced or fixed"
+                        ),
+                        location=location,
+                    )
+                )
         if not item.get("evidence_ids"):
             checks.append(
                 CheckResult(
@@ -595,31 +858,14 @@ def validate_review_packet(paths: RepositoryPaths, payload: dict[str, Any]) -> l
         expected_reviewers = set(
             expected_artifact.get("required_roles", []) if expected_artifact else []
         )
-        if set(item.get("reviewers", [])) != expected_reviewers:
-            checks.append(
-                CheckResult(
-                    code="D0_REVIEW_ARTIFACT_REVIEWERS_INCOMPLETE",
-                    message=(
-                        f"{artifact_id} requires reviewers: {', '.join(sorted(expected_reviewers))}"
-                    ),
-                    location=location,
-                )
-            )
-        _required_text(
+        _reviewer_signature_evidence(
             checks,
             item,
-            ("reviewed_at",),
-            code="D0_REVIEW_ARTIFACT_INCOMPLETE",
+            expected_roles=expected_reviewers,
+            role_holders=role_holders,
+            require_complete=True,
             location=location,
         )
-        if not item.get("evidence_ids"):
-            checks.append(
-                CheckResult(
-                    code="D0_REVIEW_ARTIFACT_EVIDENCE_MISSING",
-                    message=f"{artifact_id} requires evidence IDs",
-                    location=location,
-                )
-            )
 
     acceptance = _indexed_items(checks, payload, "acceptance_items", "acceptance_id")
     template_acceptance = {
@@ -664,32 +910,14 @@ def validate_review_packet(paths: RepositoryPaths, payload: dict[str, Any]) -> l
         expected_reviewers = set(
             expected_acceptance_item.get("required_roles", []) if expected_acceptance_item else []
         )
-        if set(item.get("reviewers", [])) != expected_reviewers:
-            checks.append(
-                CheckResult(
-                    code="D0_REVIEW_ACCEPTANCE_REVIEWERS_INCOMPLETE",
-                    message=(
-                        f"{acceptance_id} requires reviewers: "
-                        f"{', '.join(sorted(expected_reviewers))}"
-                    ),
-                    location=location,
-                )
-            )
-        _required_text(
+        _reviewer_signature_evidence(
             checks,
             item,
-            ("reviewed_at",),
-            code="D0_REVIEW_ACCEPTANCE_INCOMPLETE",
+            expected_roles=expected_reviewers,
+            role_holders=role_holders,
+            require_complete=True,
             location=location,
         )
-        if not item.get("evidence_ids"):
-            checks.append(
-                CheckResult(
-                    code="D0_REVIEW_ACCEPTANCE_EVIDENCE_MISSING",
-                    message=f"{acceptance_id} requires evidence IDs",
-                    location=location,
-                )
-            )
 
     final_decision = payload.get("final_decision")
     if not isinstance(final_decision, dict) or final_decision.get("status") != "approved":
@@ -701,6 +929,14 @@ def validate_review_packet(paths: RepositoryPaths, payload: dict[str, Any]) -> l
             )
         )
     else:
+        if final_decision.get("approver_role") != "项目批准人":
+            checks.append(
+                CheckResult(
+                    code="D0_REVIEW_FINAL_ROLE_INVALID",
+                    message="Final D0 approval requires the 项目批准人 role",
+                    location="final_decision",
+                )
+            )
         _required_text(
             checks,
             final_decision,
@@ -708,6 +944,21 @@ def validate_review_packet(paths: RepositoryPaths, payload: dict[str, Any]) -> l
             code="D0_REVIEW_FINAL_INCOMPLETE",
             location="final_decision",
         )
+        _temporal_value(
+            checks,
+            final_decision,
+            "approved_at",
+            location="final_decision",
+        )
+        approved_by = str(final_decision.get("approved_by") or "").strip()
+        if approved_by != role_holders.get("项目批准人"):
+            checks.append(
+                CheckResult(
+                    code="D0_REVIEW_FINAL_APPROVER_UNAUTHORIZED",
+                    message=(f"{approved_by or 'Missing approver'} is not the signed 项目批准人"),
+                    location="final_decision",
+                )
+            )
         if not final_decision.get("evidence_ids"):
             checks.append(
                 CheckResult(
@@ -743,13 +994,26 @@ def validate_review_packet(paths: RepositoryPaths, payload: dict[str, Any]) -> l
         for item in roles.values()
         if item.get("signature_evidence_id")
     )
-    for section in (mappings, raw_reviews, artifacts, acceptance):
+    for section in (mappings, raw_reviews):
         for item in section.values():
             references = item.get("evidence_ids")
             if isinstance(references, list):
                 referenced_evidence_ids.update(
                     str(reference).strip() for reference in references if str(reference).strip()
                 )
+    for section in (artifacts, acceptance):
+        for item in section.values():
+            signatures = item.get("reviewer_signatures")
+            if not isinstance(signatures, list):
+                continue
+            for signature in signatures:
+                if not isinstance(signature, dict):
+                    continue
+                references = signature.get("evidence_ids")
+                if isinstance(references, list):
+                    referenced_evidence_ids.update(
+                        str(reference).strip() for reference in references if str(reference).strip()
+                    )
     if isinstance(final_decision, dict):
         references = final_decision.get("evidence_ids")
         if isinstance(references, list):

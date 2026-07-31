@@ -24,7 +24,7 @@ def _completed_packet(paths: RepositoryPaths) -> dict[str, Any]:
             {
                 "role_holder": f"{role}姓名",
                 "alternate": f"{role}替补",
-                "escalation_role": "项目批准人",
+                "escalation_person": f"{role}升级人",
                 "signature_evidence_id": f"EVD-ROLE-{len(role)}",
                 "signed_at": "2026-08-01T09:00:00+08:00",
                 "status": "signed",
@@ -61,25 +61,31 @@ def _completed_packet(paths: RepositoryPaths) -> dict[str, Any]:
         )
 
     for item in packet["artifact_reviews"]:
-        item.update(
-            {
-                "reviewers": item["required_roles"],
-                "reviewed_at": "2026-08-01T13:00:00+08:00",
-                "evidence_ids": [f"EVD-{item['artifact_id']}"],
-                "review_status": "approved",
-            }
-        )
+        item["review_status"] = "approved"
+        for signature in item["reviewer_signatures"]:
+            signature.update(
+                {
+                    "person_name": f"{signature['role']}姓名",
+                    "signed_at": "2026-08-01T13:00:00+08:00",
+                    "evidence_ids": [f"EVD-{item['artifact_id']}"],
+                }
+            )
 
     for item in packet["acceptance_items"]:
         item.update(
             {
-                "reviewers": item["required_roles"],
-                "reviewed_at": "2026-08-01T14:00:00+08:00",
-                "evidence_ids": [f"EVD-{item['acceptance_id']}"],
                 "comments": "已依据证据完成验收",
                 "review_status": "approved",
             }
         )
+        for signature in item["reviewer_signatures"]:
+            signature.update(
+                {
+                    "person_name": f"{signature['role']}姓名",
+                    "signed_at": "2026-08-01T14:00:00+08:00",
+                    "evidence_ids": [f"EVD-{item['acceptance_id']}"],
+                }
+            )
 
     packet["final_decision"].update(
         {
@@ -106,11 +112,13 @@ def _paths_with_referenced_evidence(
     for section in (
         packet["mapping_decisions"],
         packet["raw_sample_reviews"],
-        packet["artifact_reviews"],
-        packet["acceptance_items"],
     ):
         for item in section:
             evidence_ids.update(item.get("evidence_ids", []))
+    for section in (packet["artifact_reviews"], packet["acceptance_items"]):
+        for item in section:
+            for signature in item["reviewer_signatures"]:
+                evidence_ids.update(signature.get("evidence_ids", []))
     evidence_ids.update(packet["final_decision"].get("evidence_ids", []))
     manifest = tmp_path / "manifest.json"
     manifest.write_text(
@@ -182,6 +190,7 @@ def test_review_template_covers_every_hard_gate_and_open_decision() -> None:
     packet = build_review_packet(discover_repository())
 
     assert packet["template_only"] is True
+    assert packet["schema_version"] == 2
     assert len(packet["role_assignments"]) == 9
     assert len(packet["mapping_decisions"]) == 6
     assert len(packet["raw_sample_reviews"]) == 3
@@ -230,7 +239,7 @@ def test_review_validation_detects_tampered_immutable_inputs() -> None:
     packet["mapping_decisions"][0]["current_target"] = "tampered.field"
     packet["raw_sample_reviews"][0]["source_id"] = "SRC-TAMPERED"
     packet["artifact_reviews"][0]["required_roles"] = []
-    packet["artifact_reviews"][0]["reviewers"] = []
+    packet["artifact_reviews"][0]["reviewer_signatures"] = []
     packet["acceptance_items"][0]["machine_status"] = "fail"
 
     codes = {item.code for item in validate_review_packet(paths, packet)}
@@ -240,7 +249,7 @@ def test_review_validation_detects_tampered_immutable_inputs() -> None:
         "D0_REVIEW_RAW_INPUT_CHANGED",
         "D0_REVIEW_ARTIFACT_INPUT_CHANGED",
         "D0_REVIEW_ACCEPTANCE_INPUT_CHANGED",
-        "D0_REVIEW_ARTIFACT_REVIEWERS_INCOMPLETE",
+        "D0_REVIEW_SIGNATURE_ROLE_SET_INVALID",
     } <= codes
 
 
@@ -264,14 +273,16 @@ def test_review_validation_detects_stale_rejected_and_incomplete_approvals() -> 
     packet["baseline"]["sources"]["d0_workbook"]["sha256"] = "0" * 64
     packet["baseline"]["candidate_hashes"] = {}
     packet["raw_sample_reviews"][0]["license_decision"] = "rejected"
+    packet["raw_sample_reviews"][0]["ai_index_allowed"] = True
+    packet["raw_sample_reviews"][1]["professional_review_status"] = "rejected"
     packet["mapping_decisions"][0]["final_target"] = None
     packet["mapping_decisions"][0]["evidence_ids"] = []
-    packet["artifact_reviews"][0]["reviewers"] = []
-    packet["artifact_reviews"][0]["reviewed_at"] = None
-    packet["artifact_reviews"][0]["evidence_ids"] = []
-    packet["acceptance_items"][0]["reviewers"] = []
-    packet["acceptance_items"][0]["reviewed_at"] = None
-    packet["acceptance_items"][0]["evidence_ids"] = []
+    packet["artifact_reviews"][0]["reviewer_signatures"][0]["person_name"] = None
+    packet["artifact_reviews"][0]["reviewer_signatures"][0]["signed_at"] = None
+    packet["artifact_reviews"][0]["reviewer_signatures"][0]["evidence_ids"] = []
+    packet["acceptance_items"][0]["reviewer_signatures"][0]["person_name"] = None
+    packet["acceptance_items"][0]["reviewer_signatures"][0]["signed_at"] = None
+    packet["acceptance_items"][0]["reviewer_signatures"][0]["evidence_ids"] = []
     packet["final_decision"]["approved_by"] = None
     packet["final_decision"]["evidence_ids"] = []
 
@@ -281,14 +292,12 @@ def test_review_validation_detects_stale_rejected_and_incomplete_approvals() -> 
         "D0_REVIEW_BASELINE_STALE",
         "D0_REVIEW_CANDIDATES_STALE",
         "D0_REVIEW_LICENSE_REJECTED",
+        "D0_REVIEW_USAGE_BOUNDARY_INVALID",
+        "D0_REVIEW_PROFESSIONAL_REJECTED",
         "D0_REVIEW_MAPPING_INCOMPLETE",
         "D0_REVIEW_MAPPING_EVIDENCE_MISSING",
-        "D0_REVIEW_ARTIFACT_REVIEWERS_INCOMPLETE",
-        "D0_REVIEW_ARTIFACT_INCOMPLETE",
-        "D0_REVIEW_ARTIFACT_EVIDENCE_MISSING",
-        "D0_REVIEW_ACCEPTANCE_REVIEWERS_INCOMPLETE",
-        "D0_REVIEW_ACCEPTANCE_INCOMPLETE",
-        "D0_REVIEW_ACCEPTANCE_EVIDENCE_MISSING",
+        "D0_REVIEW_SIGNATURE_INCOMPLETE",
+        "D0_REVIEW_SIGNATURE_EVIDENCE_MISSING",
         "D0_REVIEW_FINAL_INCOMPLETE",
         "D0_REVIEW_FINAL_EVIDENCE_MISSING",
         "D0_REVIEW_EVIDENCE_REFERENCE_UNKNOWN",
@@ -313,10 +322,37 @@ def test_review_validation_detects_incomplete_signed_role_and_approved_reviews()
     } <= codes
 
 
+def test_review_validation_binds_every_decision_to_signed_role_holders() -> None:
+    paths = discover_repository()
+    packet = _completed_packet(paths)
+    packet["role_assignments"][0]["alternate"] = packet["role_assignments"][0]["role_holder"]
+    packet["role_assignments"][0]["signed_at"] = "2026-08-01T09:00:00"
+    packet["mapping_decisions"][0]["decided_by"] = "mallory"
+    packet["raw_sample_reviews"][0]["compliance_reviewer"] = "mallory"
+    packet["raw_sample_reviews"][0]["professional_reviewer"] = "mallory"
+    packet["artifact_reviews"][0]["reviewer_signatures"][0]["person_name"] = "mallory"
+    packet["acceptance_items"][0]["reviewer_signatures"][0]["person_name"] = "mallory"
+    packet["final_decision"]["approver_role"] = "合规负责人"
+    packet["final_decision"]["approved_by"] = "mallory"
+
+    codes = {item.code for item in validate_review_packet(paths, packet)}
+
+    assert {
+        "D0_REVIEW_ROLE_SEPARATION_INVALID",
+        "D0_REVIEW_TEMPORAL_INVALID",
+        "D0_REVIEW_MAPPING_DECIDER_UNAUTHORIZED",
+        "D0_REVIEW_COMPLIANCE_REVIEWER_UNAUTHORIZED",
+        "D0_REVIEW_PROFESSIONAL_REVIEWER_UNAUTHORIZED",
+        "D0_REVIEW_SIGNER_UNAUTHORIZED",
+        "D0_REVIEW_FINAL_ROLE_INVALID",
+        "D0_REVIEW_FINAL_APPROVER_UNAUTHORIZED",
+    } <= codes
+
+
 def test_review_validation_rejects_invalid_sections_and_sets() -> None:
     paths = discover_repository()
     packet = build_review_packet(paths)
-    packet["schema_version"] = 2
+    packet["schema_version"] = 1
     packet["baseline"] = []
     packet["role_assignments"] = "invalid"
     packet["mapping_decisions"] = [{"mapping_id": "UNKNOWN"}, {"mapping_id": "UNKNOWN"}, {}]
