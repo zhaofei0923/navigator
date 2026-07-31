@@ -10,6 +10,7 @@ from .baseline import extract_contracts, sha256_file
 from .d0_candidates import candidate_payloads, load_research_captures
 from .models import CheckResult
 from .paths import RepositoryPaths
+from .validation import APPROVED_EVIDENCE_STATES
 
 ROLE_APPROVAL_SCOPES: dict[str, str] = {
     "项目批准人": "批准D0阶段结论、例外和升级事项",
@@ -53,6 +54,11 @@ REVIEW_ARTIFACTS: tuple[dict[str, Any], ...] = (
         "required_roles": ["国家研究负责人", "语言审校负责人"],
     },
 )
+ARTIFACT_ACCEPTANCE_IDS = {
+    "D0-ART-CONVENTIONS": "D0-AC-004",
+    "D0-ART-FILE-RULES": "D0-AC-008",
+    "D0-ART-TERMINOLOGY": "D0-AC-006",
+}
 
 FINAL_MAPPING_DECISIONS = {
     "replace_target",
@@ -92,7 +98,7 @@ def build_review_packet(paths: RepositoryPaths) -> dict[str, Any]:
     }
 
     return {
-        "schema_version": 2,
+        "schema_version": 3,
         "stage": "D0",
         "template_only": True,
         "warning": "复制本模板后由实际责任人填写；机器不得代签、代批或把待审状态改为通过",
@@ -165,7 +171,8 @@ def build_review_packet(paths: RepositoryPaths) -> dict[str, Any]:
                 "professional_reviewer_role": "国家研究负责人",
                 "professional_reviewer": None,
                 "professional_reviewed_at": None,
-                "evidence_ids": [],
+                "compliance_evidence_ids": [],
+                "professional_evidence_ids": [],
             }
             for item in contracts["raw_asset_template"]
         ],
@@ -287,6 +294,8 @@ def _reviewer_signature_evidence(
     *,
     expected_roles: set[str],
     role_holders: dict[str, str],
+    evidence_binding_requirements: dict[str, list[tuple[str, str, str]]],
+    acceptance_id: str,
     require_complete: bool,
     location: str,
 ) -> set[str]:
@@ -388,8 +397,28 @@ def _reviewer_signature_evidence(
                 )
             )
             continue
-        evidence_ids.update(str(value).strip() for value in raw_evidence_ids)
+        signature_evidence_ids = {str(value).strip() for value in raw_evidence_ids}
+        evidence_ids.update(signature_evidence_ids)
+        _register_evidence_bindings(
+            evidence_binding_requirements,
+            signature_evidence_ids,
+            acceptance_id=acceptance_id,
+            reviewer=person_name,
+            location=signature_location,
+        )
     return evidence_ids
+
+
+def _register_evidence_bindings(
+    requirements: dict[str, list[tuple[str, str, str]]],
+    evidence_ids: set[str],
+    *,
+    acceptance_id: str,
+    reviewer: str,
+    location: str,
+) -> None:
+    for evidence_id in evidence_ids:
+        requirements.setdefault(evidence_id, []).append((acceptance_id, reviewer, location))
 
 
 def _indexed_items(
@@ -461,11 +490,12 @@ def _check_expected_ids(
 
 def validate_review_packet(paths: RepositoryPaths, payload: dict[str, Any]) -> list[CheckResult]:
     checks: list[CheckResult] = []
-    if payload.get("schema_version") != 2 or payload.get("stage") != "D0":
+    evidence_binding_requirements: dict[str, list[tuple[str, str, str]]] = {}
+    if payload.get("schema_version") != 3 or payload.get("stage") != "D0":
         checks.append(
             CheckResult(
                 code="D0_REVIEW_HEADER_INVALID",
-                message="Review packet requires schema_version 2 and stage D0",
+                message="Review packet requires schema_version 3 and stage D0",
                 location="review_packet",
             )
         )
@@ -572,6 +602,15 @@ def validate_review_packet(paths: RepositoryPaths, payload: dict[str, Any]) -> l
             )
         if role_holder:
             role_holders[role] = role_holder
+            signature_evidence_id = str(item.get("signature_evidence_id") or "").strip()
+            if signature_evidence_id:
+                _register_evidence_bindings(
+                    evidence_binding_requirements,
+                    {signature_evidence_id},
+                    acceptance_id="D0-AC-007",
+                    reviewer=role_holder,
+                    location=location,
+                )
 
     mappings = _indexed_items(checks, payload, "mapping_decisions", "mapping_id")
     template_mappings = {str(item["mapping_id"]): item for item in template["mapping_decisions"]}
@@ -642,13 +681,26 @@ def validate_review_packet(paths: RepositoryPaths, payload: dict[str, Any]) -> l
                     location=location,
                 )
             )
-        if not item.get("evidence_ids"):
+        mapping_evidence = item.get("evidence_ids")
+        if (
+            not isinstance(mapping_evidence, list)
+            or not mapping_evidence
+            or any(not str(value).strip() for value in mapping_evidence)
+        ):
             checks.append(
                 CheckResult(
                     code="D0_REVIEW_MAPPING_EVIDENCE_MISSING",
                     message=f"{mapping_id} requires at least one evidence ID",
                     location=location,
                 )
+            )
+        else:
+            _register_evidence_bindings(
+                evidence_binding_requirements,
+                {str(value).strip() for value in mapping_evidence},
+                acceptance_id="D0-AC-005",
+                reviewer=decided_by,
+                location=location,
             )
 
     raw_reviews = _indexed_items(checks, payload, "raw_sample_reviews", "raw_id")
@@ -731,6 +783,27 @@ def validate_review_packet(paths: RepositoryPaths, payload: dict[str, Any]) -> l
                         location=location,
                     )
                 )
+            compliance_evidence = item.get("compliance_evidence_ids")
+            if (
+                not isinstance(compliance_evidence, list)
+                or not compliance_evidence
+                or any(not str(value).strip() for value in compliance_evidence)
+            ):
+                checks.append(
+                    CheckResult(
+                        code="D0_REVIEW_COMPLIANCE_EVIDENCE_MISSING",
+                        message=f"{raw_id} compliance decision requires evidence IDs",
+                        location=location,
+                    )
+                )
+            else:
+                _register_evidence_bindings(
+                    evidence_binding_requirements,
+                    {str(value).strip() for value in compliance_evidence},
+                    acceptance_id="D0-AC-005",
+                    reviewer=compliance_reviewer,
+                    location=location,
+                )
             if license_decision == "rejected":
                 checks.append(
                     CheckResult(
@@ -794,6 +867,27 @@ def validate_review_packet(paths: RepositoryPaths, payload: dict[str, Any]) -> l
                         location=location,
                     )
                 )
+            professional_evidence = item.get("professional_evidence_ids")
+            if (
+                not isinstance(professional_evidence, list)
+                or not professional_evidence
+                or any(not str(value).strip() for value in professional_evidence)
+            ):
+                checks.append(
+                    CheckResult(
+                        code="D0_REVIEW_PROFESSIONAL_EVIDENCE_MISSING",
+                        message=f"{raw_id} professional decision requires evidence IDs",
+                        location=location,
+                    )
+                )
+            else:
+                _register_evidence_bindings(
+                    evidence_binding_requirements,
+                    {str(value).strip() for value in professional_evidence},
+                    acceptance_id="D0-AC-006",
+                    reviewer=professional_reviewer,
+                    location=location,
+                )
             if professional_status == "rejected":
                 checks.append(
                     CheckResult(
@@ -804,15 +898,6 @@ def validate_review_packet(paths: RepositoryPaths, payload: dict[str, Any]) -> l
                         location=location,
                     )
                 )
-        if not item.get("evidence_ids"):
-            checks.append(
-                CheckResult(
-                    code="D0_REVIEW_RAW_EVIDENCE_MISSING",
-                    message=f"{raw_id} requires evidence IDs",
-                    location=location,
-                )
-            )
-
     artifacts = _indexed_items(checks, payload, "artifact_reviews", "artifact_id")
     template_artifacts = {str(item["artifact_id"]): item for item in template["artifact_reviews"]}
     expected_artifacts = {str(item["artifact_id"]) for item in template["artifact_reviews"]}
@@ -863,6 +948,8 @@ def validate_review_packet(paths: RepositoryPaths, payload: dict[str, Any]) -> l
             item,
             expected_roles=expected_reviewers,
             role_holders=role_holders,
+            evidence_binding_requirements=evidence_binding_requirements,
+            acceptance_id=ARTIFACT_ACCEPTANCE_IDS.get(artifact_id, ""),
             require_complete=True,
             location=location,
         )
@@ -915,6 +1002,8 @@ def validate_review_packet(paths: RepositoryPaths, payload: dict[str, Any]) -> l
             item,
             expected_roles=expected_reviewers,
             role_holders=role_holders,
+            evidence_binding_requirements=evidence_binding_requirements,
+            acceptance_id=acceptance_id,
             require_complete=True,
             location=location,
         )
@@ -959,7 +1048,12 @@ def validate_review_packet(paths: RepositoryPaths, payload: dict[str, Any]) -> l
                     location="final_decision",
                 )
             )
-        if not final_decision.get("evidence_ids"):
+        final_evidence = final_decision.get("evidence_ids")
+        if (
+            not isinstance(final_evidence, list)
+            or not final_evidence
+            or any(not str(value).strip() for value in final_evidence)
+        ):
             checks.append(
                 CheckResult(
                     code="D0_REVIEW_FINAL_EVIDENCE_MISSING",
@@ -967,18 +1061,36 @@ def validate_review_packet(paths: RepositoryPaths, payload: dict[str, Any]) -> l
                     location="final_decision",
                 )
             )
+        else:
+            _register_evidence_bindings(
+                evidence_binding_requirements,
+                {str(value).strip() for value in final_evidence},
+                acceptance_id="D0-AC-010",
+                reviewer=approved_by,
+                location="final_decision",
+            )
 
-    evidence_ids: set[str] | None = None
+    evidence_by_id: dict[str, dict[str, Any]] | None = None
     try:
         evidence_payload = json.loads(paths.evidence_manifest.read_text(encoding="utf-8"))
         evidence_entries = evidence_payload.get("evidence")
         if not isinstance(evidence_entries, list):
             raise ValueError("evidence must be a list")
-        evidence_ids = {
-            str(item["evidence_id"]).strip()
-            for item in evidence_entries
-            if isinstance(item, dict) and item.get("evidence_id")
-        }
+        evidence_by_id = {}
+        for item in evidence_entries:
+            if not isinstance(item, dict) or not item.get("evidence_id"):
+                continue
+            evidence_id = str(item["evidence_id"]).strip()
+            if evidence_id in evidence_by_id:
+                checks.append(
+                    CheckResult(
+                        code="D0_REVIEW_EVIDENCE_ID_DUPLICATE",
+                        message=f"Evidence ID is duplicated: {evidence_id}",
+                        location=str(paths.evidence_manifest),
+                    )
+                )
+                continue
+            evidence_by_id[evidence_id] = item
     except (json.JSONDecodeError, OSError, ValueError) as error:
         checks.append(
             CheckResult(
@@ -994,9 +1106,15 @@ def validate_review_packet(paths: RepositoryPaths, payload: dict[str, Any]) -> l
         for item in roles.values()
         if item.get("signature_evidence_id")
     )
-    for section in (mappings, raw_reviews):
-        for item in section.values():
-            references = item.get("evidence_ids")
+    for item in mappings.values():
+        references = item.get("evidence_ids")
+        if isinstance(references, list):
+            referenced_evidence_ids.update(
+                str(reference).strip() for reference in references if str(reference).strip()
+            )
+    for item in raw_reviews.values():
+        for field in ("compliance_evidence_ids", "professional_evidence_ids"):
+            references = item.get(field)
             if isinstance(references, list):
                 referenced_evidence_ids.update(
                     str(reference).strip() for reference in references if str(reference).strip()
@@ -1020,8 +1138,8 @@ def validate_review_packet(paths: RepositoryPaths, payload: dict[str, Any]) -> l
             referenced_evidence_ids.update(
                 str(reference).strip() for reference in references if str(reference).strip()
             )
-    if evidence_ids is not None:
-        unknown_evidence_ids = sorted(referenced_evidence_ids - evidence_ids)
+    if evidence_by_id is not None:
+        unknown_evidence_ids = sorted(referenced_evidence_ids - set(evidence_by_id))
         if unknown_evidence_ids:
             checks.append(
                 CheckResult(
@@ -1030,6 +1148,45 @@ def validate_review_packet(paths: RepositoryPaths, payload: dict[str, Any]) -> l
                     location=str(paths.evidence_manifest),
                 )
             )
+        for evidence_id, requirements in evidence_binding_requirements.items():
+            evidence = evidence_by_id.get(evidence_id)
+            if evidence is None:
+                continue
+            actual_acceptance_id = str(evidence.get("acceptance_id") or "").strip()
+            actual_reviewer = str(evidence.get("reviewer") or "").strip()
+            actual_status = str(evidence.get("status") or "").strip()
+            for expected_acceptance_id, expected_reviewer, location in requirements:
+                if actual_acceptance_id != expected_acceptance_id:
+                    checks.append(
+                        CheckResult(
+                            code="D0_REVIEW_EVIDENCE_ACCEPTANCE_MISMATCH",
+                            message=(
+                                f"{evidence_id} belongs to "
+                                f"{actual_acceptance_id or 'no acceptance'}; "
+                                f"expected {expected_acceptance_id}"
+                            ),
+                            location=location,
+                        )
+                    )
+                if actual_reviewer != expected_reviewer:
+                    checks.append(
+                        CheckResult(
+                            code="D0_REVIEW_EVIDENCE_REVIEWER_MISMATCH",
+                            message=(
+                                f"{evidence_id} reviewer is {actual_reviewer or 'missing'}; "
+                                f"expected {expected_reviewer or 'missing'}"
+                            ),
+                            location=location,
+                        )
+                    )
+                if actual_status not in APPROVED_EVIDENCE_STATES:
+                    checks.append(
+                        CheckResult(
+                            code="D0_REVIEW_EVIDENCE_NOT_APPROVED",
+                            message=f"{evidence_id} is not approved: {actual_status or 'missing'}",
+                            location=location,
+                        )
+                    )
     return checks
 
 

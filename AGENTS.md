@@ -67,6 +67,9 @@
   Final sample license decisions are `approved`, `limited`, or `rejected`; final professional
   decisions are `approved` or `rejected`. Rejected licenses require zero redistribution and AI
   permissions, and every final outcome still requires its authorized named reviewer.
+  Every D0 review evidence ID must resolve to the correct acceptance item, the same named
+  reviewer, and an approved manifest state. Compliance and professional sample decisions use
+  separate evidence-ID lists so different role holders cannot share an ambiguous approval.
 - Generated D1 source-onboarding templates belong in `data/d1/candidates`; no source may become
   `active` before D0 passes and all access, license, usage-boundary, evidence, and owner fields pass.
 - Generated D2 collection templates belong in `data/d2/candidates`; L0 objects are append-only,

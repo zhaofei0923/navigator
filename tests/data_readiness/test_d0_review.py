@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from navigator_data_readiness.d0_review import (
+    ARTIFACT_ACCEPTANCE_IDS,
     build_review_packet,
     load_and_validate_review_packet,
     validate_review_packet,
@@ -25,7 +26,7 @@ def _completed_packet(paths: RepositoryPaths) -> dict[str, Any]:
                 "role_holder": f"{role}姓名",
                 "alternate": f"{role}替补",
                 "escalation_person": f"{role}升级人",
-                "signature_evidence_id": f"EVD-ROLE-{len(role)}",
+                "signature_evidence_id": f"EVD-ROLE-{role}",
                 "signed_at": "2026-08-01T09:00:00+08:00",
                 "status": "signed",
             }
@@ -56,7 +57,8 @@ def _completed_packet(paths: RepositoryPaths) -> dict[str, Any]:
                 "professional_review_status": "approved",
                 "professional_reviewer": "国家研究负责人姓名",
                 "professional_reviewed_at": "2026-08-01T12:00:00+08:00",
-                "evidence_ids": [f"EVD-{item['raw_id']}"],
+                "compliance_evidence_ids": [f"EVD-{item['raw_id']}-COMPLIANCE"],
+                "professional_evidence_ids": [f"EVD-{item['raw_id']}-PROFESSIONAL"],
             }
         )
 
@@ -67,7 +69,7 @@ def _completed_packet(paths: RepositoryPaths) -> dict[str, Any]:
                 {
                     "person_name": f"{signature['role']}姓名",
                     "signed_at": "2026-08-01T13:00:00+08:00",
-                    "evidence_ids": [f"EVD-{item['artifact_id']}"],
+                    "evidence_ids": [f"EVD-{item['artifact_id']}-{signature['role']}"],
                 }
             )
 
@@ -83,7 +85,7 @@ def _completed_packet(paths: RepositoryPaths) -> dict[str, Any]:
                 {
                     "person_name": f"{signature['role']}姓名",
                     "signed_at": "2026-08-01T14:00:00+08:00",
-                    "evidence_ids": [f"EVD-{item['acceptance_id']}"],
+                    "evidence_ids": [f"EVD-{item['acceptance_id']}-{signature['role']}"],
                 }
             )
 
@@ -104,29 +106,62 @@ def _paths_with_referenced_evidence(
     paths: RepositoryPaths,
     packet: dict[str, Any],
 ) -> RepositoryPaths:
-    evidence_ids = {
-        item["signature_evidence_id"]
-        for item in packet["role_assignments"]
-        if item.get("signature_evidence_id")
-    }
-    for section in (
-        packet["mapping_decisions"],
-        packet["raw_sample_reviews"],
-    ):
-        for item in section:
-            evidence_ids.update(item.get("evidence_ids", []))
+    evidence: dict[str, dict[str, str]] = {}
+
+    def register(evidence_ids: list[str], acceptance_id: str, reviewer: str) -> None:
+        for evidence_id in evidence_ids:
+            entry = {
+                "evidence_id": evidence_id,
+                "acceptance_id": acceptance_id,
+                "reviewer": reviewer,
+                "status": "已批准",
+            }
+            assert evidence_id not in evidence or evidence[evidence_id] == entry
+            evidence[evidence_id] = entry
+
+    for item in packet["role_assignments"]:
+        if item.get("signature_evidence_id"):
+            register(
+                [item["signature_evidence_id"]],
+                "D0-AC-007",
+                item["role_holder"],
+            )
+    for item in packet["mapping_decisions"]:
+        register(item.get("evidence_ids", []), "D0-AC-005", item["decided_by"])
+    for item in packet["raw_sample_reviews"]:
+        register(
+            item.get("compliance_evidence_ids", []),
+            "D0-AC-005",
+            item["compliance_reviewer"],
+        )
+        register(
+            item.get("professional_evidence_ids", []),
+            "D0-AC-006",
+            item["professional_reviewer"],
+        )
     for section in (packet["artifact_reviews"], packet["acceptance_items"]):
         for item in section:
+            acceptance_id = (
+                item.get("acceptance_id") or ARTIFACT_ACCEPTANCE_IDS[item["artifact_id"]]
+            )
             for signature in item["reviewer_signatures"]:
-                evidence_ids.update(signature.get("evidence_ids", []))
-    evidence_ids.update(packet["final_decision"].get("evidence_ids", []))
+                register(
+                    signature.get("evidence_ids", []),
+                    acceptance_id,
+                    signature["person_name"],
+                )
+    register(
+        packet["final_decision"].get("evidence_ids", []),
+        "D0-AC-010",
+        packet["final_decision"]["approved_by"],
+    )
     manifest = tmp_path / "manifest.json"
     manifest.write_text(
         json.dumps(
             {
                 "schema_version": 1,
                 "stage": "D0",
-                "evidence": [{"evidence_id": evidence_id} for evidence_id in sorted(evidence_ids)],
+                "evidence": [evidence[evidence_id] for evidence_id in sorted(evidence)],
             }
         ),
         encoding="utf-8",
@@ -190,7 +225,7 @@ def test_review_template_covers_every_hard_gate_and_open_decision() -> None:
     packet = build_review_packet(discover_repository())
 
     assert packet["template_only"] is True
-    assert packet["schema_version"] == 2
+    assert packet["schema_version"] == 3
     assert len(packet["role_assignments"]) == 9
     assert len(packet["mapping_decisions"]) == 6
     assert len(packet["raw_sample_reviews"]) == 3
@@ -215,7 +250,6 @@ def test_unfilled_review_template_reports_all_pending_categories() -> None:
         "D0_REVIEW_MAPPING_PENDING",
         "D0_REVIEW_LICENSE_PENDING",
         "D0_REVIEW_PROFESSIONAL_PENDING",
-        "D0_REVIEW_RAW_EVIDENCE_MISSING",
         "D0_REVIEW_ARTIFACT_PENDING",
         "D0_REVIEW_ACCEPTANCE_PENDING",
         "D0_REVIEW_FINAL_PENDING",
@@ -231,6 +265,30 @@ def test_structurally_completed_review_packet_passes(tmp_path: Path) -> None:
     checks = validate_review_packet(paths, packet)
 
     assert checks == []
+
+
+def test_review_validation_binds_evidence_to_subject_reviewer_and_status(
+    tmp_path: Path,
+) -> None:
+    source_paths = _paths_with_complete_research(tmp_path)
+    packet = _completed_packet(source_paths)
+    paths = _paths_with_referenced_evidence(tmp_path, source_paths, packet)
+    manifest = json.loads(paths.evidence_manifest.read_text(encoding="utf-8"))
+    evidence = {item["evidence_id"]: item for item in manifest["evidence"]}
+    evidence["EVD-MAP-ISO3"]["acceptance_id"] = "D0-AC-004"
+    evidence["EVD-D0-ART-CONVENTIONS-产品负责人"]["reviewer"] = "mallory"
+    evidence["EVD-D0-FINAL"]["status"] = "pending"
+    manifest["evidence"].append(dict(manifest["evidence"][0]))
+    paths.evidence_manifest.write_text(json.dumps(manifest), encoding="utf-8")
+
+    codes = {item.code for item in validate_review_packet(paths, packet)}
+
+    assert {
+        "D0_REVIEW_EVIDENCE_ID_DUPLICATE",
+        "D0_REVIEW_EVIDENCE_ACCEPTANCE_MISMATCH",
+        "D0_REVIEW_EVIDENCE_REVIEWER_MISMATCH",
+        "D0_REVIEW_EVIDENCE_NOT_APPROVED",
+    } <= codes
 
 
 def test_review_validation_detects_tampered_immutable_inputs() -> None:
@@ -310,6 +368,8 @@ def test_review_validation_detects_incomplete_signed_role_and_approved_reviews()
     packet["role_assignments"][0]["alternate"] = None
     packet["raw_sample_reviews"][0]["license_snapshot_id"] = None
     packet["raw_sample_reviews"][0]["professional_reviewer"] = None
+    packet["raw_sample_reviews"][0]["compliance_evidence_ids"] = []
+    packet["raw_sample_reviews"][0]["professional_evidence_ids"] = []
     packet["artifact_reviews"][0]["review_status"] = "rejected"
 
     codes = {item.code for item in validate_review_packet(paths, packet)}
@@ -318,6 +378,8 @@ def test_review_validation_detects_incomplete_signed_role_and_approved_reviews()
         "D0_REVIEW_ROLE_INCOMPLETE",
         "D0_REVIEW_LICENSE_INCOMPLETE",
         "D0_REVIEW_PROFESSIONAL_INCOMPLETE",
+        "D0_REVIEW_COMPLIANCE_EVIDENCE_MISSING",
+        "D0_REVIEW_PROFESSIONAL_EVIDENCE_MISSING",
         "D0_REVIEW_ARTIFACT_REJECTED",
     } <= codes
 
