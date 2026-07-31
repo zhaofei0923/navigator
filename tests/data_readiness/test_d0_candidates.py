@@ -271,8 +271,16 @@ def test_write_candidates_exports_review_package(tmp_path: Path) -> None:
         (paths.d0_candidates_dir / "machine_evidence_review_queue.json").read_text(encoding="utf-8")
     )
 
-    assert len(written) == 11
+    resolution = json.loads(
+        (paths.d0_candidates_dir / "core_contract_resolution.template.json").read_text(
+            encoding="utf-8"
+        )
+    )
+
+    assert len(written) == 12
     assert assessment["automated_assessment_only"] is True
+    assert len(resolution["entity_primary_key_resolutions"]) == 29
+    assert len(resolution["field_unit_resolutions"]) == 92
     assert len(queue["items"]) == 3
     assert {item["machine_status"] for item in queue["items"]} == {"fail", "pass"}
     for item in queue["items"]:

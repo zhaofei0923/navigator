@@ -358,6 +358,7 @@
     "candidate_hashes": {
       "acceptance_assessment.json": "14b88413ab73834b70fd02451fcef8a7213d52011251a721f8a83a30383d570b",
       "conventions.json": "1cf742b3bdc0b47e1648b9dab84ababf912a601fc3485b6c73af61eb32a5ca32",
+      "core_contract_resolution.template.json": "ae0ef66c846c59c3a80bdcb813f84e94e084c3af04de69d505cd9c543b2c7da6",
       "core_entity_evidence.json": "9ff89d13dd829d1d7022d777eba2630c9257165a28d386be94054750f6cc162b",
       "core_field_evidence.json": "77e5b77c6fa5f5e2ae62e4b726b529b87debf91526fff81fcdc618197f5d5d79",
       "enum_migration_evidence.json": "124bef79891f4d1d18037ae0f4463190a65b4e782f41faa62a346974691fd0d0",

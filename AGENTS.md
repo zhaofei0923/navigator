@@ -72,6 +72,9 @@
   separate evidence-ID lists so different role holders cannot share an ambiguous approval.
   Candidate machine evidence for D0-AC-001/002/003 must remain outside the approved manifest
   until its machine status passes and the required named roles explicitly approve its exact hash.
+  A passing D0 core-contract resolution validates only a complete AC-001/002 proposal for formal
+  baseline-change review. It never authorizes mutating the frozen workbooks, marking D0 approved,
+  or starting user-facing development.
 - Generated D1 source-onboarding templates belong in `data/d1/candidates`; no source may become
   `active` before D0 passes and all access, license, usage-boundary, evidence, and owner fields pass.
 - Generated D2 collection templates belong in `data/d2/candidates`; L0 objects are append-only,

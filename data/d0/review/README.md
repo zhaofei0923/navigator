@@ -12,6 +12,16 @@
    uv run navigator-data prepare-d0-review
    ```
 
+   若先整改AC-001/002，复制候选目录中的核心合同整改模板，填写完121个逐项决定后
+   执行：
+
+   ```bash
+   uv run navigator-data validate-d0-contract-resolution \
+     --input data/d0/candidates/core_contract_resolution.review.json
+   ```
+
+   该命令通过只说明整改提案可进入正式基线变更评审，不会更新本评审包的机器状态。
+
 2. 复制模板，文件名必须明确包含实际评审批次，例如：
 
    ```bash

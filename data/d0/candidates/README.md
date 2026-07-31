@@ -8,6 +8,7 @@
 | `acceptance_assessment.json` | D0-AC-001至010逐项机器评估 | `human_status`全部保持`pending` |
 | `core_entity_evidence.json` | AC-001实体代码、主键、关系与权威记录证据 | 34个关系实体中29个缺显式主键合同，机器失败 |
 | `core_field_evidence.json` | AC-002字段代码、类型、单位、空值和来源证据 | 92个字段缺独立单位/不适用元数据，机器失败 |
+| `core_contract_resolution.template.json` | AC-001/002逐项整改提案模板 | 固定29个主键决策和92个单位/不适用决策；通过仅表示可进入基线变更评审 |
 | `enum_migration_evidence.json` | AC-003枚举互斥与迁移记录证据 | 251条枚举和13条迁移结构通过，语义待人工复核 |
 | `machine_evidence_review_queue.json` | 三份机器证据的路径、哈希与待审登记模板 | 失败项不得批准，模板不得直接复制成已批准证据 |
 | `conventions.json` | 单位、货币、时区、精度和多语言规则候选 | 待产品、数据和语言审校批准 |
@@ -20,12 +21,14 @@
 处理原则：
 
 1. 6条映射已有正式决定；基线变更仍须按批准目标更新字段/实体合同和版本记录；
-2. 先解决AC-001的29个主键合同缺口和AC-002的单位元数据缺口，再重新生成机器证据；
-3. 正式变更必须同步更新Markdown、技术附件、D0台账和版本记录；
-4. 真实金标准必须由合规和专业负责人补齐最终结论及各自证据；
-5. 机器状态为`fail`时不得批准；`pass`也只表示可进入实名人工复核；
-6. 审批证据登记到 `data/d0/evidence/manifest.json`，不得直接编辑机器结论伪造通过；
-7. 更新正式基线后重新运行 `snapshot`、`prepare-d0`、`validate`和`gate --stage D0`。
+2. 复制`core_contract_resolution.template.json`，逐项填写实名提案人与复核人、变更单、
+   时间和证据，再运行`validate-d0-contract-resolution --input <副本>`；不得删减项目；
+3. 校验通过后仍须在独立候选基线中实施并接受正式变更评审，再重新生成机器证据；
+4. 正式变更必须同步更新Markdown、技术附件、D0台账和版本记录；
+5. 真实金标准必须由合规和专业负责人补齐最终结论及各自证据；
+6. 机器状态为`fail`时不得批准；`pass`也只表示可进入实名人工复核；
+7. 审批证据登记到 `data/d0/evidence/manifest.json`，不得直接编辑机器结论伪造通过；
+8. 更新正式基线后重新运行 `snapshot`、`prepare-d0`、`validate`和`gate --stage D0`。
 
 `data/d0/research`可以保存公开来源的元数据和哈希。原件、受限内容和许可未明确的
 文件不进入Git；研究记录也不能代替来源准入和专业复核。

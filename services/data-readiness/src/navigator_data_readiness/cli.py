@@ -8,6 +8,7 @@ from pathlib import Path
 
 from .baseline import write_snapshot
 from .d0_candidates import candidate_payloads, write_candidates
+from .d0_contract_resolution import load_and_validate_d0_contract_resolution
 from .d0_review import load_and_validate_review_packet, write_review_template
 from .d1_sources import load_and_validate_d1_admission, write_d1_candidates
 from .d2_collection import load_and_validate_d2_bundle, write_d2_candidates
@@ -61,6 +62,14 @@ def _parser() -> argparse.ArgumentParser:
         help="Validate a completed D0 review packet without changing the frozen workbooks.",
     )
     review_validation.add_argument("--input", type=Path, required=True)
+    contract_resolution_validation = commands.add_parser(
+        "validate-d0-contract-resolution",
+        help=(
+            "Validate proposed AC-001/002 contract remediation against the frozen baseline "
+            "and signed role assignments."
+        ),
+    )
+    contract_resolution_validation.add_argument("--input", type=Path, required=True)
     commands.add_parser(
         "prepare-d1",
         help="Generate D1 source-admission, country-coverage, and domain-alternative templates.",
@@ -210,6 +219,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "validate-d0-review":
         packet_path = args.input if args.input.is_absolute() else paths.root / args.input
         checks = load_and_validate_review_packet(paths, packet_path)
+        _print_checks(checks)
+        return 1 if checks else 0
+
+    if args.command == "validate-d0-contract-resolution":
+        packet_path = args.input if args.input.is_absolute() else paths.root / args.input
+        checks = load_and_validate_d0_contract_resolution(paths, packet_path)
         _print_checks(checks)
         return 1 if checks else 0
 

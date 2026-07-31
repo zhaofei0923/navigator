@@ -364,6 +364,121 @@ def _candidate_json_bytes(payload: dict[str, Any]) -> bytes:
     return (json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode()
 
 
+def build_core_contract_resolution_template(
+    contracts: dict[str, Any],
+    *,
+    source_binding: dict[str, Any],
+    core_entity_evidence: dict[str, Any],
+    core_field_evidence: dict[str, Any],
+) -> dict[str, Any]:
+    """Build a reviewer-fillable proposal for the current AC-001/002 gaps."""
+    fields = contracts["fields"]
+    fields_by_entity: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for field in fields:
+        entity_code = str(field.get("实体") or "").strip()
+        if entity_code:
+            fields_by_entity[entity_code].append(field)
+
+    entity_check = next(
+        check
+        for check in core_entity_evidence["checks"]
+        if check["check_id"] == "ENTITY-PRIMARY-KEY-COVERAGE"
+    )
+    field_columns = sorted({key for field in fields for key in field} | {"单位"})
+    required_field_columns = sorted({key for field in fields for key in field} | {"单位"})
+    evidence_hashes = {
+        "core_entity_evidence.json": hashlib.sha256(
+            _candidate_json_bytes(core_entity_evidence)
+        ).hexdigest(),
+        "core_field_evidence.json": hashlib.sha256(
+            _candidate_json_bytes(core_field_evidence)
+        ).hexdigest(),
+    }
+    return {
+        "schema_version": 1,
+        "stage": "D0",
+        "template_only": True,
+        "warning": (
+            "本包仅用于提出AC-001/002基线整改；校验通过只表示可进入正式基线变更评审，"
+            "不批准D0、不修改冻结Excel，也不授权用户侧开发"
+        ),
+        "baseline": {
+            "version": source_binding["baseline_version"],
+            "sources": {
+                "d0_workbook": source_binding["d0_workbook"],
+                "technical_workbook": source_binding["technical_workbook"],
+            },
+            "evidence_candidate_hashes": evidence_hashes,
+        },
+        "allowed_entity_actions": [
+            "promote_existing_field",
+            "model_composite_key",
+            "add_primary_key_field",
+        ],
+        "proposed_field_contract_schema": {
+            "allowed_fields": field_columns,
+            "required_fields": required_field_columns,
+        },
+        "entity_primary_key_resolutions": [
+            {
+                "entity_code": entity_code,
+                "current_field_ids": sorted(
+                    str(field.get("字段编号") or "").strip()
+                    for field in fields_by_entity.get(entity_code, [])
+                    if str(field.get("字段编号") or "").strip()
+                ),
+                "action": None,
+                "primary_key_field_ids": [],
+                "proposed_field_contract": None,
+                "change_request_id": None,
+                "rationale": None,
+                "proposed_by_role": "后端/数据架构负责人",
+                "proposed_by": None,
+                "proposed_at": None,
+                "reviewed_by_role": "数据负责人",
+                "reviewed_by": None,
+                "reviewed_at": None,
+                "evidence_ids": [],
+                "status": "pending",
+            }
+            for entity_code in sorted(str(item) for item in entity_check["findings"])
+        ],
+        "field_unit_resolutions": [
+            {
+                "field_id": str(field.get("字段编号") or "").strip(),
+                "entity_code": str(field.get("实体") or "").strip(),
+                "field_name": str(field.get("字段名") or "").strip(),
+                "data_type": str(field.get("类型") or "").strip(),
+                "required": str(field.get("必填") or "").strip(),
+                "current_unit": str(field.get("单位") or "").strip() or None,
+                "unit_applicability": "pending",
+                "unit_code": None,
+                "unit_dimension": None,
+                "unit_registry_reference": None,
+                "change_request_id": None,
+                "rationale": None,
+                "proposed_by_role": "数据负责人",
+                "proposed_by": None,
+                "proposed_at": None,
+                "reviewed_by_role": "数据质量负责人",
+                "reviewed_by": None,
+                "reviewed_at": None,
+                "evidence_ids": [],
+                "status": "pending",
+            }
+            for field in sorted(fields, key=lambda item: str(item.get("字段编号") or ""))
+        ],
+        "final_review": {
+            "status": "pending",
+            "change_set_id": None,
+            "reviewed_by_role": "项目批准人",
+            "reviewed_by": None,
+            "reviewed_at": None,
+            "evidence_ids": [],
+        },
+    }
+
+
 def build_machine_evidence_review_queue(
     evidence_payloads: dict[str, dict[str, Any]],
 ) -> dict[str, Any]:
@@ -979,6 +1094,12 @@ def candidate_payloads(paths: RepositoryPaths) -> dict[str, dict[str, Any]]:
             source_binding=source_binding,
         ),
     }
+    contract_resolution = build_core_contract_resolution_template(
+        contracts,
+        source_binding=source_binding,
+        core_entity_evidence=core_evidence_payloads["core_entity_evidence.json"],
+        core_field_evidence=core_evidence_payloads["core_field_evidence.json"],
+    )
     payloads = {
         "acceptance_assessment.json": build_acceptance_assessment(
             contracts,
@@ -990,6 +1111,7 @@ def candidate_payloads(paths: RepositoryPaths) -> dict[str, dict[str, Any]]:
         ),
         "conventions.json": build_conventions_candidate(),
         **core_evidence_payloads,
+        "core_contract_resolution.template.json": contract_resolution,
         "machine_evidence_review_queue.json": build_machine_evidence_review_queue(
             core_evidence_payloads
         ),

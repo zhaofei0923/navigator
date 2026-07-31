@@ -135,6 +135,20 @@ def test_validate_d0_review_command_reports_blockers(
     assert "D0_REVIEW_HEADER_INVALID" in captured.err
 
 
+def test_validate_d0_contract_resolution_command_reports_blockers(
+    tmp_path: Path,
+    capsys: CaptureFixture[str],
+) -> None:
+    packet = tmp_path / "resolution.json"
+    packet.write_text("{}", encoding="utf-8")
+
+    exit_code = main(["validate-d0-contract-resolution", "--input", str(packet)])
+
+    assert exit_code == 1
+    captured = capsys.readouterr()
+    assert "D0_CONTRACT_RESOLUTION_HEADER_INVALID" in captured.err
+
+
 def test_prepare_d1_command_lists_candidates(
     monkeypatch: MonkeyPatch,
     capsys: CaptureFixture[str],
