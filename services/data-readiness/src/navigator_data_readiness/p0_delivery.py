@@ -18,6 +18,8 @@ _SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 _PASS_STATUS = "passed"
 _IMPLEMENTED_STATUS = "implemented"
 _APPROVED_STATUS = "approved"
+_COMMITTEE_ROLE = "项目委员会"
+_TEST_REVIEWER_ROLE = "测试负责人"
 
 
 def payload_sha256(payload: Any) -> str:
@@ -31,7 +33,8 @@ def payload_sha256(payload: Any) -> str:
 
 
 def _text(record: dict[str, Any], field: str) -> str:
-    return str(record.get(field, "")).strip()
+    value = record.get(field)
+    return "" if value is None else str(value).strip()
 
 
 def _p0_records(contracts: dict[str, Any], name: str) -> list[dict[str, Any]]:
@@ -64,10 +67,12 @@ def _test_item(
     return {
         "test_id": identifier,
         **immutable,
+        "required_reviewer_role": _TEST_REVIEWER_ROLE,
         "status": "pending",
         "executed_by": None,
         "executed_at": None,
         "reviewed_by": None,
+        "reviewer_role": None,
         "reviewed_at": None,
         "evidence_ids": [],
     }
@@ -83,8 +88,16 @@ def build_p0_delivery_template(paths: RepositoryPaths) -> dict[str, Any]:
     tests = _p0_records(contracts, "test_cases")
     engineering_tests = _p0_records(contracts, "engineering_acceptance_tests")
     acceptance = cast(list[dict[str, Any]], contracts["mvp_acceptance"])
+    signer_roles = sorted(
+        {
+            _text(record, "验收角色")
+            for record in acceptance
+            if _text(record, "验收角色") != _COMMITTEE_ROLE
+        }
+        | {_TEST_REVIEWER_ROLE}
+    )
     return {
-        "schema_version": 2,
+        "schema_version": 3,
         "stage": "P0-DELIVERY",
         "template_only": True,
         "append_only": True,
@@ -99,6 +112,17 @@ def build_p0_delivery_template(paths: RepositoryPaths) -> dict[str, Any]:
             "d4_bundle_sha256": None,
         },
         "evidence": [],
+        "signer_authorizations": [
+            {
+                "role": role,
+                "person_name": None,
+                "authorizer_role": _COMMITTEE_ROLE,
+                "authorized_by": None,
+                "authorized_at": None,
+                "evidence_ids": [],
+            }
+            for role in signer_roles
+        ],
         "requirements": [
             _implementation_item(
                 "requirement_id",
@@ -182,6 +206,7 @@ def build_p0_delivery_template(paths: RepositoryPaths) -> dict[str, Any]:
             "rollback_status": "pending",
             "restore_status": "pending",
             "handover_status": "pending",
+            "approver_role": _COMMITTEE_ROLE,
             "approved_by": None,
             "approved_at": None,
             "evidence_ids": [],
@@ -343,6 +368,150 @@ def _required_fields(
         )
 
 
+def _d4_committee_approver(
+    checks: list[CheckResult],
+    d4_bundle: dict[str, Any],
+) -> str:
+    acceptance = d4_bundle.get("acceptance")
+    approvals = acceptance.get("committee_approvals") if isinstance(acceptance, dict) else None
+    committee_approvals = (
+        [
+            item
+            for item in approvals
+            if isinstance(item, dict)
+            and _text(item, "role") == _COMMITTEE_ROLE
+            and item.get("decision") == _APPROVED_STATUS
+            and _text(item, "person_name")
+        ]
+        if isinstance(approvals, list)
+        else []
+    )
+    if len(committee_approvals) != 1:
+        checks.append(
+            CheckResult(
+                code="P0_DELIVERY_COMMITTEE_APPROVER_INVALID",
+                message="D4 must contain exactly one approved project committee signer",
+                location="d4_bundle.acceptance.committee_approvals",
+            )
+        )
+        return ""
+    return _text(committee_approvals[0], "person_name")
+
+
+def _is_authorized_signer(
+    role: str,
+    person_name: str,
+    authorized_signers: dict[str, set[str]],
+    committee_approver: str,
+) -> bool:
+    if role == _COMMITTEE_ROLE:
+        return bool(committee_approver) and person_name == committee_approver
+    return person_name in authorized_signers.get(role, set())
+
+
+def _validate_signer_authorizations(
+    checks: list[CheckResult],
+    payload: dict[str, Any],
+    required_roles: set[str],
+    committee_approver: str,
+) -> tuple[dict[str, set[str]], set[str]]:
+    entries = payload.get("signer_authorizations")
+    if not isinstance(entries, list):
+        checks.append(
+            CheckResult(
+                code="P0_DELIVERY_SIGNER_AUTHORIZATIONS_INVALID",
+                message="signer_authorizations must be a list",
+                location="signer_authorizations",
+            )
+        )
+        return {}, set()
+    authorized_signers: dict[str, set[str]] = {}
+    evidence_ids: set[str] = set()
+    seen_pairs: set[tuple[str, str]] = set()
+    for index, entry in enumerate(entries):
+        location = f"signer_authorizations[{index}]"
+        if not isinstance(entry, dict):
+            checks.append(
+                CheckResult(
+                    code="P0_DELIVERY_SIGNER_AUTHORIZATION_INVALID",
+                    message="Signer authorization entry must be an object",
+                    location=location,
+                )
+            )
+            continue
+        _required_fields(
+            checks,
+            entry,
+            (
+                "role",
+                "person_name",
+                "authorizer_role",
+                "authorized_by",
+                "authorized_at",
+            ),
+            code="P0_DELIVERY_SIGNER_AUTHORIZATION_INCOMPLETE",
+            location=location,
+        )
+        role = _text(entry, "role")
+        person_name = _text(entry, "person_name")
+        if role == _COMMITTEE_ROLE:
+            checks.append(
+                CheckResult(
+                    code="P0_DELIVERY_SIGNER_AUTHORIZATION_ROLE_INVALID",
+                    message="Project committee authority must come directly from the D4 approval",
+                    location=location,
+                )
+            )
+        pair = (role, person_name)
+        if all(pair):
+            if pair in seen_pairs:
+                checks.append(
+                    CheckResult(
+                        code="P0_DELIVERY_SIGNER_AUTHORIZATION_DUPLICATE",
+                        message=f"Duplicate signer authorization: {role}/{person_name}",
+                        location=location,
+                    )
+                )
+            else:
+                seen_pairs.add(pair)
+                authorized_signers.setdefault(role, set()).add(person_name)
+        if (
+            not committee_approver
+            or _text(entry, "authorizer_role") != _COMMITTEE_ROLE
+            or _text(entry, "authorized_by") != committee_approver
+        ):
+            checks.append(
+                CheckResult(
+                    code="P0_DELIVERY_SIGNER_AUTHORIZER_INVALID",
+                    message=(
+                        "Every P0 signer must be authorized by the approved D4 committee signer"
+                    ),
+                    location=location,
+                )
+            )
+        entry_evidence_ids = set(_string_ids(checks, entry, location=location))
+        if not entry_evidence_ids:
+            checks.append(
+                CheckResult(
+                    code="P0_DELIVERY_SIGNER_AUTHORIZATION_EVIDENCE_MISSING",
+                    message="Signer authorization requires evidence IDs",
+                    location=location,
+                )
+            )
+        evidence_ids.update(entry_evidence_ids)
+
+    missing_roles = sorted(required_roles - set(authorized_signers))
+    if missing_roles:
+        checks.append(
+            CheckResult(
+                code="P0_DELIVERY_SIGNER_ROLE_COVERAGE_INCOMPLETE",
+                message=f"Missing authorized P0 signer roles: {', '.join(missing_roles)}",
+                location="signer_authorizations",
+            )
+        )
+    return authorized_signers, evidence_ids
+
+
 def _validate_implementation(
     checks: list[CheckResult],
     item: dict[str, Any],
@@ -394,6 +563,8 @@ def _validate_test_execution(
     item: dict[str, Any],
     *,
     location: str,
+    authorized_signers: dict[str, set[str]],
+    committee_approver: str,
 ) -> set[str]:
     if item.get("status") != _PASS_STATUS:
         checks.append(
@@ -406,10 +577,33 @@ def _validate_test_execution(
     _required_fields(
         checks,
         item,
-        ("executed_by", "executed_at", "reviewed_by", "reviewed_at"),
+        ("executed_by", "executed_at", "reviewed_by", "reviewer_role", "reviewed_at"),
         code="P0_DELIVERY_TEST_METADATA_INCOMPLETE",
         location=location,
     )
+    reviewer_role = _text(item, "reviewer_role")
+    reviewed_by = _text(item, "reviewed_by")
+    if reviewer_role != _text(item, "required_reviewer_role"):
+        checks.append(
+            CheckResult(
+                code="P0_DELIVERY_TEST_REVIEWER_ROLE_INVALID",
+                message="reviewer_role must match the frozen required_reviewer_role",
+                location=location,
+            )
+        )
+    if not _is_authorized_signer(
+        reviewer_role,
+        reviewed_by,
+        authorized_signers,
+        committee_approver,
+    ):
+        checks.append(
+            CheckResult(
+                code="P0_DELIVERY_TEST_REVIEWER_UNAUTHORIZED",
+                message=f"Test reviewer is not authorized for {reviewer_role or 'the role'}",
+                location=location,
+            )
+        )
     evidence_ids = set(_string_ids(checks, item, location=location))
     if not evidence_ids:
         checks.append(
@@ -427,6 +621,8 @@ def _validate_acceptance(
     item: dict[str, Any],
     *,
     location: str,
+    authorized_signers: dict[str, set[str]],
+    committee_approver: str,
 ) -> set[str]:
     if item.get("status") != _APPROVED_STATUS:
         checks.append(
@@ -443,11 +639,26 @@ def _validate_acceptance(
         code="P0_DELIVERY_ACCEPTANCE_METADATA_INCOMPLETE",
         location=location,
     )
-    if _text(item, "reviewer_role") != _text(item, "required_reviewer_role"):
+    reviewer_role = _text(item, "reviewer_role")
+    reviewed_by = _text(item, "reviewed_by")
+    if reviewer_role != _text(item, "required_reviewer_role"):
         checks.append(
             CheckResult(
                 code="P0_DELIVERY_ACCEPTANCE_ROLE_INVALID",
                 message="reviewer_role must match the frozen required_reviewer_role",
+                location=location,
+            )
+        )
+    if not _is_authorized_signer(
+        reviewer_role,
+        reviewed_by,
+        authorized_signers,
+        committee_approver,
+    ):
+        checks.append(
+            CheckResult(
+                code="P0_DELIVERY_ACCEPTANCE_REVIEWER_UNAUTHORIZED",
+                message=f"Acceptance reviewer is not authorized for {reviewer_role or 'the role'}",
                 location=location,
             )
         )
@@ -467,7 +678,13 @@ def _validate_evidence(
     checks: list[CheckResult],
     paths: RepositoryPaths,
     payload: dict[str, Any],
-) -> tuple[set[str], list[tuple[str, str, str, str]]]:
+    authorized_signers: dict[str, set[str]],
+    committee_approver: str,
+) -> tuple[
+    set[str],
+    list[tuple[str, str, str, str]],
+    dict[str, tuple[str, str]],
+]:
     entries = payload.get("evidence")
     if not isinstance(entries, list):
         checks.append(
@@ -477,9 +694,10 @@ def _validate_evidence(
                 location="evidence",
             )
         )
-        return set(), []
+        return set(), [], {}
     identifiers: set[str] = set()
     bindings: list[tuple[str, str, str, str]] = []
+    approvals: dict[str, tuple[str, str]] = {}
     for index, entry in enumerate(entries):
         location = f"evidence[{index}]"
         if not isinstance(entry, dict):
@@ -502,6 +720,9 @@ def _validate_evidence(
                 "commit_sha",
                 "generated_by",
                 "generated_at",
+                "approved_by",
+                "approval_role",
+                "approved_at",
             ),
             code="P0_DELIVERY_EVIDENCE_METADATA_INCOMPLETE",
             location=location,
@@ -517,6 +738,26 @@ def _validate_evidence(
             )
         if evidence_id:
             identifiers.add(evidence_id)
+        approval_role = _text(entry, "approval_role")
+        approved_by = _text(entry, "approved_by")
+        if evidence_id and approval_role and approved_by:
+            approvals[evidence_id] = (approval_role, approved_by)
+        if not _is_authorized_signer(
+            approval_role,
+            approved_by,
+            authorized_signers,
+            committee_approver,
+        ):
+            checks.append(
+                CheckResult(
+                    code="P0_DELIVERY_EVIDENCE_APPROVER_UNAUTHORIZED",
+                    message=(
+                        f"{evidence_id or location} approver is not authorized for "
+                        f"{approval_role or 'the role'}"
+                    ),
+                    location=location,
+                )
+            )
         if entry.get("status") != _APPROVED_STATUS:
             checks.append(
                 CheckResult(
@@ -586,7 +827,7 @@ def _validate_evidence(
         if commit_valid and _SHA256_PATTERN.fullmatch(declared_sha256):
             normalized_path = evidence_path.relative_to(paths.root).as_posix()
             bindings.append((evidence_id, normalized_path, declared_sha256, commit_sha))
-    return identifiers, bindings
+    return identifiers, bindings, approvals
 
 
 def _number(value: Any) -> float | None:
@@ -680,6 +921,7 @@ def _validate_final_release(
     checks: list[CheckResult],
     final_release: Any,
     commit_shas: set[str],
+    committee_approver: str,
 ) -> set[str]:
     if not isinstance(final_release, dict):
         checks.append(
@@ -716,10 +958,22 @@ def _validate_final_release(
     _required_fields(
         checks,
         final_release,
-        ("commit_sha", "approved_by", "approved_at"),
+        ("commit_sha", "approver_role", "approved_by", "approved_at"),
         code="P0_DELIVERY_FINAL_RELEASE_METADATA_INCOMPLETE",
         location="final_release",
     )
+    if (
+        not committee_approver
+        or _text(final_release, "approver_role") != _COMMITTEE_ROLE
+        or _text(final_release, "approved_by") != committee_approver
+    ):
+        checks.append(
+            CheckResult(
+                code="P0_DELIVERY_FINAL_RELEASE_APPROVER_UNAUTHORIZED",
+                message="Final release must be approved by the approved D4 committee signer",
+                location="final_release",
+            )
+        )
     commit_sha = _text(final_release, "commit_sha").lower()
     if commit_sha:
         if not _COMMIT_PATTERN.fullmatch(commit_sha):
@@ -965,11 +1219,11 @@ def validate_p0_delivery_bundle(
 ) -> list[CheckResult]:
     checks: list[CheckResult] = []
     current = build_p0_delivery_template(paths)
-    if bundle.get("schema_version") != 2 or bundle.get("stage") != "P0-DELIVERY":
+    if bundle.get("schema_version") != 3 or bundle.get("stage") != "P0-DELIVERY":
         checks.append(
             CheckResult(
                 code="P0_DELIVERY_HEADER_INVALID",
-                message="Bundle requires schema_version 2 and stage P0-DELIVERY",
+                message="Bundle requires schema_version 3 and stage P0-DELIVERY",
                 location="bundle",
             )
         )
@@ -1044,7 +1298,18 @@ def validate_p0_delivery_bundle(
             )
         )
 
+    committee_approver = _d4_committee_approver(checks, d4_bundle)
     referenced_evidence_ids: set[str] = set()
+    required_signer_roles = {
+        _text(item, "role") for item in cast(list[dict[str, Any]], current["signer_authorizations"])
+    }
+    authorized_signers, authorization_evidence_ids = _validate_signer_authorizations(
+        checks,
+        bundle,
+        required_signer_roles,
+        committee_approver,
+    )
+    referenced_evidence_ids.update(authorization_evidence_ids)
     commit_shas: set[str] = set()
     section_specs = (
         (
@@ -1068,13 +1333,13 @@ def validate_p0_delivery_bundle(
         (
             "product_tests",
             "test_id",
-            ("test_id", "module", "requirement_ids"),
+            ("test_id", "module", "requirement_ids", "required_reviewer_role"),
             _validate_test_execution,
         ),
         (
             "engineering_tests",
             "test_id",
-            ("test_id", "domain", "requirement_ids"),
+            ("test_id", "domain", "requirement_ids", "required_reviewer_role"),
             _validate_test_execution,
         ),
         (
@@ -1116,18 +1381,41 @@ def validate_p0_delivery_bundle(
                 )
             elif validator is _validate_test_execution:
                 referenced_evidence_ids.update(
-                    _validate_test_execution(checks, item, location=location)
+                    _validate_test_execution(
+                        checks,
+                        item,
+                        location=location,
+                        authorized_signers=authorized_signers,
+                        committee_approver=committee_approver,
+                    )
                 )
             else:
                 referenced_evidence_ids.update(
-                    _validate_acceptance(checks, item, location=location)
+                    _validate_acceptance(
+                        checks,
+                        item,
+                        location=location,
+                        authorized_signers=authorized_signers,
+                        committee_approver=committee_approver,
+                    )
                 )
 
     referenced_evidence_ids.update(_validate_metrics(checks, bundle.get("release_metrics")))
     referenced_evidence_ids.update(
-        _validate_final_release(checks, bundle.get("final_release"), commit_shas)
+        _validate_final_release(
+            checks,
+            bundle.get("final_release"),
+            commit_shas,
+            committee_approver,
+        )
     )
-    evidence_ids, evidence_bindings = _validate_evidence(checks, paths, bundle)
+    evidence_ids, evidence_bindings, evidence_approvals = _validate_evidence(
+        checks,
+        paths,
+        bundle,
+        authorized_signers,
+        committee_approver,
+    )
     commit_shas.update(binding[3] for binding in evidence_bindings)
     unknown_evidence = sorted(referenced_evidence_ids - evidence_ids)
     if unknown_evidence:
@@ -1136,6 +1424,22 @@ def validate_p0_delivery_bundle(
                 code="P0_DELIVERY_EVIDENCE_REFERENCE_UNKNOWN",
                 message=f"Unknown evidence IDs: {', '.join(unknown_evidence)}",
                 location="evidence",
+            )
+        )
+    invalid_authorization_evidence = sorted(
+        evidence_id
+        for evidence_id in authorization_evidence_ids & evidence_ids
+        if evidence_approvals.get(evidence_id) != (_COMMITTEE_ROLE, committee_approver)
+    )
+    if invalid_authorization_evidence:
+        checks.append(
+            CheckResult(
+                code="P0_DELIVERY_SIGNER_AUTHORIZATION_EVIDENCE_INVALID",
+                message=(
+                    "Signer authorization evidence must be approved by the D4 committee signer: "
+                    f"{', '.join(invalid_authorization_evidence)}"
+                ),
+                location="signer_authorizations",
             )
         )
     final_release = bundle.get("final_release")

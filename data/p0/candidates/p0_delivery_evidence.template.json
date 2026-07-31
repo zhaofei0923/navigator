@@ -777,12 +777,14 @@
       "evidence_ids": [],
       "executed_at": null,
       "executed_by": null,
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-ARCH-004",
         "FR-ARCH-007"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-ENG-ARCH-001"
     },
@@ -791,11 +793,13 @@
       "evidence_ids": [],
       "executed_at": null,
       "executed_by": null,
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-ARCH-010"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-ENG-ARCH-002"
     },
@@ -804,12 +808,14 @@
       "evidence_ids": [],
       "executed_at": null,
       "executed_by": null,
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-API-011",
         "FR-API-015"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-ENG-API-001"
     },
@@ -818,11 +824,13 @@
       "evidence_ids": [],
       "executed_at": null,
       "executed_by": null,
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-API-012"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-ENG-API-002"
     },
@@ -831,11 +839,13 @@
       "evidence_ids": [],
       "executed_at": null,
       "executed_by": null,
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-API-014"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-ENG-API-003"
     },
@@ -844,11 +854,13 @@
       "evidence_ids": [],
       "executed_at": null,
       "executed_by": null,
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-API-014"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-ENG-API-004"
     },
@@ -857,11 +869,13 @@
       "evidence_ids": [],
       "executed_at": null,
       "executed_by": null,
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-API-013"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-ENG-API-005"
     },
@@ -870,11 +884,13 @@
       "evidence_ids": [],
       "executed_at": null,
       "executed_by": null,
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-FE-007"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-ENG-FE-001"
     },
@@ -883,12 +899,14 @@
       "evidence_ids": [],
       "executed_at": null,
       "executed_by": null,
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-SEC-001",
         "FR-SEC-003"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-ENG-SEC-001"
     },
@@ -897,11 +915,13 @@
       "evidence_ids": [],
       "executed_at": null,
       "executed_by": null,
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-SEC-002"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-ENG-SEC-002"
     },
@@ -910,12 +930,14 @@
       "evidence_ids": [],
       "executed_at": null,
       "executed_by": null,
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-SEC-004",
         "FR-SEC-006"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-ENG-SEC-003"
     },
@@ -924,11 +946,13 @@
       "evidence_ids": [],
       "executed_at": null,
       "executed_by": null,
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-SEC-004"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-ENG-SEC-004"
     },
@@ -937,11 +961,13 @@
       "evidence_ids": [],
       "executed_at": null,
       "executed_by": null,
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-SEC-007"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-ENG-SEC-005"
     },
@@ -950,11 +976,13 @@
       "evidence_ids": [],
       "executed_at": null,
       "executed_by": null,
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-SEC-010"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-ENG-SEC-006"
     },
@@ -963,9 +991,11 @@
       "evidence_ids": [],
       "executed_at": null,
       "executed_by": null,
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-ENG-NFR-001"
     },
@@ -974,9 +1004,11 @@
       "evidence_ids": [],
       "executed_at": null,
       "executed_by": null,
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-ENG-NFR-002"
     },
@@ -985,9 +1017,11 @@
       "evidence_ids": [],
       "executed_at": null,
       "executed_by": null,
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-ENG-NFR-003"
     }
@@ -996,6 +1030,7 @@
   "final_release": {
     "approved_at": null,
     "approved_by": null,
+    "approver_role": "项目委员会",
     "build_status": "pending",
     "commit_sha": null,
     "deployment_status": "pending",
@@ -1011,11 +1046,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "认证",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-AUTH-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-AUTH-001"
     },
@@ -1024,12 +1061,14 @@
       "executed_at": null,
       "executed_by": null,
       "module": "企业",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-ENT-001",
         "FR-PERM-ORG-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-ORG-001"
     },
@@ -1038,11 +1077,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "画像",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-PROFILE-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-PROFILE-001"
     },
@@ -1051,11 +1092,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "国家详情",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-COUNTRY-002"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-COUNTRY-001"
     },
@@ -1064,11 +1107,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "国家导航",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-COUNTRY-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-COUNTRY-002"
     },
@@ -1077,12 +1122,14 @@
       "executed_at": null,
       "executed_by": null,
       "module": "国家对比",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-COMPARE-001",
         "FR-COMPARE-003"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-COMPARE-001"
     },
@@ -1091,6 +1138,7 @@
       "executed_at": null,
       "executed_by": null,
       "module": "匿名访问",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-COUNTRY-005",
         "FR-OPP-007",
@@ -1099,6 +1147,7 @@
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-ANON-001"
     },
@@ -1107,12 +1156,14 @@
       "executed_at": null,
       "executed_by": null,
       "module": "政策",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-PR-002",
         "FR-PR-003"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-POLICY-001"
     },
@@ -1121,11 +1172,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "风险",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-PR-004"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-RISK-001"
     },
@@ -1134,11 +1187,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "项目",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-OPP-003"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-PROJECT-001"
     },
@@ -1147,11 +1202,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "项目",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-OPP-006"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-PROJECT-002"
     },
@@ -1160,11 +1217,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "伙伴",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-PAR-007"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-PARTNER-001"
     },
@@ -1173,11 +1232,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "招标浏览",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-OPP-004"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-TENDER-BROWSE-001"
     },
@@ -1186,11 +1247,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "AI顾问",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-AI-003"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-AI-001"
     },
@@ -1199,11 +1262,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "AI顾问",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-AI-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-AI-002"
     },
@@ -1212,11 +1277,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "AI顾问",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-AI-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-AI-003"
     },
@@ -1225,11 +1292,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "AI顾问",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-AI-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-AI-004"
     },
@@ -1238,11 +1307,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "报告",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-AI-005"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-REPORT-001"
     },
@@ -1251,11 +1322,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "报告",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-AI-005"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-REPORT-002"
     },
@@ -1264,11 +1337,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "会员",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-MEMBER-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-MEMBER-001"
     },
@@ -1277,11 +1352,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "会员",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-MEMBER-002"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-MEMBER-002"
     },
@@ -1290,11 +1367,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "CRM",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-CRM-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-CRM-001"
     },
@@ -1303,11 +1382,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "CRM",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-CRM-002"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-CRM-002"
     },
@@ -1316,6 +1397,7 @@
       "executed_at": null,
       "executed_by": null,
       "module": "CRM申请",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-OPP-006",
         "FR-PAR-005",
@@ -1324,6 +1406,7 @@
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-CRM-REQUEST-001"
     },
@@ -1332,11 +1415,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "渠道",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-CHANNEL-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-CHANNEL-001"
     },
@@ -1345,11 +1430,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "运营后台",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-ADMIN-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-DATA-001"
     },
@@ -1358,11 +1445,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "运营后台",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-ADMIN-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-DATA-002"
     },
@@ -1371,11 +1460,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "运营后台",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-ADMIN-003"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-CONFIG-001"
     },
@@ -1384,11 +1475,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "AI后台",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-ADMIN-004"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-ADMIN-AI-001"
     },
@@ -1397,11 +1490,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "审计",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-ADMIN-005"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-AUDIT-001"
     },
@@ -1410,11 +1505,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "信息架构",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-IA-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-IA-001"
     },
@@ -1423,11 +1520,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "路由",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-IA-002"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-IA-002"
     },
@@ -1436,11 +1535,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "路由",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-UX-003"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-IA-003"
     },
@@ -1449,11 +1550,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "通用状态",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-UX-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-UX-001"
     },
@@ -1462,11 +1565,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "通用状态",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-UX-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-UX-002"
     },
@@ -1475,11 +1580,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "表单",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-UX-002"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-FORM-001"
     },
@@ -1488,11 +1595,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "表单",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-UX-002"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-FORM-002"
     },
@@ -1501,11 +1610,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "表单",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-UX-002"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-FORM-003"
     },
@@ -1514,11 +1625,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "设计系统",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-UI-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-UI-001"
     },
@@ -1527,11 +1640,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "响应式",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-UI-002"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-RESP-001"
     },
@@ -1540,11 +1655,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "可访问性",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-A11Y-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-A11Y-001"
     },
@@ -1553,11 +1670,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "可访问性",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-A11Y-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-A11Y-002"
     },
@@ -1566,11 +1685,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "国际化",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-I18N-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-I18N-001"
     },
@@ -1579,11 +1700,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "行为分析",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-ANALYTICS-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-EVENT-001"
     },
@@ -1592,11 +1715,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "AI交互",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-AI-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-AI-005"
     },
@@ -1605,11 +1730,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "后台",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-IA-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-ADMIN-ROUTE-001"
     },
@@ -1618,11 +1745,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "CRM",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-CRM-002"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-CRM-003"
     },
@@ -1631,11 +1760,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "数据架构",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-DATA-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-DATA-ARCH-001"
     },
@@ -1644,6 +1775,7 @@
       "executed_at": null,
       "executed_by": null,
       "module": "数据血缘",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-DATA-001",
         "FR-DATA-002",
@@ -1651,6 +1783,7 @@
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-DATA-LINEAGE-001"
     },
@@ -1659,12 +1792,14 @@
       "executed_at": null,
       "executed_by": null,
       "module": "质量闭环",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-DATA-003",
         "FR-QUALITY-008"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-DATA-QUALITY-001"
     },
@@ -1673,12 +1808,14 @@
       "executed_at": null,
       "executed_by": null,
       "module": "来源准入",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-COLLECT-001",
         "FR-COLLECT-007"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-COLLECT-001"
     },
@@ -1687,11 +1824,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "证据链",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-COLLECT-002"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-COLLECT-002"
     },
@@ -1700,11 +1839,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "API采集",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-COLLECT-003"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-COLLECT-003"
     },
@@ -1713,12 +1854,14 @@
       "executed_at": null,
       "executed_by": null,
       "module": "网页采集",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-COLLECT-003",
         "FR-COLLECT-006"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-COLLECT-004"
     },
@@ -1727,11 +1870,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "文件导入",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-COLLECT-004"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-COLLECT-005"
     },
@@ -1740,11 +1885,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "更新频率",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-COLLECT-005"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-COLLECT-006"
     },
@@ -1753,12 +1900,14 @@
       "executed_at": null,
       "executed_by": null,
       "module": "模式漂移",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-COLLECT-003",
         "FR-COLLECT-006"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-COLLECT-007"
     },
@@ -1767,6 +1916,7 @@
       "executed_at": null,
       "executed_by": null,
       "module": "来源退役",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-DATA-006",
         "FR-COLLECT-001",
@@ -1774,6 +1924,7 @@
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-COLLECT-008"
     },
@@ -1782,11 +1933,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "原始保护",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-QUALITY-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-QUALITY-001"
     },
@@ -1795,11 +1948,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "标准化",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-QUALITY-002"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-QUALITY-002"
     },
@@ -1808,11 +1963,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "实体解析",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-QUALITY-003"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-QUALITY-003"
     },
@@ -1821,11 +1978,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "翻译",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-QUALITY-004"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-QUALITY-004"
     },
@@ -1834,11 +1993,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "审核发布",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-QUALITY-006"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-QUALITY-005"
     },
@@ -1847,12 +2008,14 @@
       "executed_at": null,
       "executed_by": null,
       "module": "失效同步",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-QUALITY-007",
         "FR-DATA-006"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-QUALITY-006"
     },
@@ -1861,11 +2024,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "豁免治理",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-QUALITY-008"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-QUALITY-007"
     },
@@ -1874,11 +2039,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "评分",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-SCORE-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-SCORE-001"
     },
@@ -1887,11 +2054,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "评分",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-SCORE-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-SCORE-002"
     },
@@ -1900,12 +2069,14 @@
       "executed_at": null,
       "executed_by": null,
       "module": "评分",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-SCORE-001",
         "FR-DATA-004"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-SCORE-003"
     },
@@ -1914,11 +2085,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "国家机会",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-SCORE-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-SCORE-004"
     },
@@ -1927,11 +2100,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "评分",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-SCORE-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-SCORE-005"
     },
@@ -1940,11 +2115,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "国家风险",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-SCORE-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-SCORE-006"
     },
@@ -1953,11 +2130,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "国家风险",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-SCORE-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-SCORE-007"
     },
@@ -1966,11 +2145,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "国家风险",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-SCORE-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-SCORE-008"
     },
@@ -1979,11 +2160,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "项目机会",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-SCORE-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-SCORE-009"
     },
@@ -1992,11 +2175,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "项目真实性",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-SCORE-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-SCORE-010"
     },
@@ -2005,11 +2190,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "伙伴推荐",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-SCORE-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-SCORE-011"
     },
@@ -2018,11 +2205,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "推荐中立",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-SCORE-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-SCORE-012"
     },
@@ -2031,12 +2220,14 @@
       "executed_at": null,
       "executed_by": null,
       "module": "可信度",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-SCORE-001",
         "FR-QUALITY-005"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-SCORE-013"
     },
@@ -2045,12 +2236,14 @@
       "executed_at": null,
       "executed_by": null,
       "module": "覆盖等级",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-SCORE-001",
         "FR-DATA-005"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-SCORE-014"
     },
@@ -2059,12 +2252,14 @@
       "executed_at": null,
       "executed_by": null,
       "module": "覆盖等级",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-SCORE-001",
         "FR-DATA-005"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-SCORE-015"
     },
@@ -2073,11 +2268,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "人工调整",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-SCORE-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-SCORE-016"
     },
@@ -2086,11 +2283,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "人工调整",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-SCORE-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-SCORE-017"
     },
@@ -2099,11 +2298,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "模型版本",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-SCORE-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-SCORE-018"
     },
@@ -2112,11 +2313,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "模型版本",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-SCORE-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-SCORE-019"
     },
@@ -2125,11 +2328,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "项目评分迁移",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-SCORE-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-SCORE-020"
     },
@@ -2138,11 +2343,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "评分幂等",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-SCORE-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-SCORE-021"
     },
@@ -2151,11 +2358,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "历史复现",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-SCORE-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-SCORE-022"
     },
@@ -2164,11 +2373,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "评分阈值",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-SCORE-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-SCORE-023"
     },
@@ -2177,11 +2388,13 @@
       "executed_at": null,
       "executed_by": null,
       "module": "评分读取",
+      "required_reviewer_role": "测试负责人",
       "requirement_ids": [
         "FR-SCORE-001"
       ],
       "reviewed_at": null,
       "reviewed_by": null,
+      "reviewer_role": null,
       "status": "pending",
       "test_id": "TC-SCORE-024"
     }
@@ -4356,7 +4569,73 @@
       "status": "pending"
     }
   ],
-  "schema_version": 2,
+  "schema_version": 3,
+  "signer_authorizations": [
+    {
+      "authorized_at": null,
+      "authorized_by": null,
+      "authorizer_role": "项目委员会",
+      "evidence_ids": [],
+      "person_name": null,
+      "role": "业务/产品"
+    },
+    {
+      "authorized_at": null,
+      "authorized_by": null,
+      "authorizer_role": "项目委员会",
+      "evidence_ids": [],
+      "person_name": null,
+      "role": "业务/法务"
+    },
+    {
+      "authorized_at": null,
+      "authorized_by": null,
+      "authorizer_role": "项目委员会",
+      "evidence_ids": [],
+      "person_name": null,
+      "role": "业务代表"
+    },
+    {
+      "authorized_at": null,
+      "authorized_by": null,
+      "authorizer_role": "项目委员会",
+      "evidence_ids": [],
+      "person_name": null,
+      "role": "产品/业务"
+    },
+    {
+      "authorized_at": null,
+      "authorized_by": null,
+      "authorizer_role": "项目委员会",
+      "evidence_ids": [],
+      "person_name": null,
+      "role": "商务代表"
+    },
+    {
+      "authorized_at": null,
+      "authorized_by": null,
+      "authorizer_role": "项目委员会",
+      "evidence_ids": [],
+      "person_name": null,
+      "role": "技术负责人"
+    },
+    {
+      "authorized_at": null,
+      "authorized_by": null,
+      "authorizer_role": "项目委员会",
+      "evidence_ids": [],
+      "person_name": null,
+      "role": "测试负责人"
+    },
+    {
+      "authorized_at": null,
+      "authorized_by": null,
+      "authorizer_role": "项目委员会",
+      "evidence_ids": [],
+      "person_name": null,
+      "role": "种子用户"
+    }
+  ],
   "stage": "P0-DELIVERY",
   "template_only": true,
   "warning": "This template cannot replace D4 approval, implementation, test execution, UAT, or release authorization. It records evidence only after those events occur."

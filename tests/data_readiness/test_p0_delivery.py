@@ -51,6 +51,15 @@ def _approved_d4_bundle() -> dict[str, Any]:
         "acceptance": {
             "decision": "approved",
             "d4_gate_evidence_id": "EVD-D4-FINAL",
+            "committee_approvals": [
+                {
+                    "role": "项目委员会",
+                    "person_name": "kevin",
+                    "signed_at": "2026-07-31",
+                    "evidence_id": "EVD-D4-FINAL",
+                    "decision": "approved",
+                }
+            ],
         },
     }
 
@@ -71,10 +80,22 @@ def _completed_bundle() -> tuple[dict[str, Any], dict[str, Any]]:
             "commit_sha": commit_sha,
             "generated_by": "test",
             "generated_at": "2026-07-31T00:00:00Z",
+            "approved_by": "kevin",
+            "approval_role": "项目委员会",
+            "approved_at": "2026-07-31T00:00:00Z",
             "status": "approved",
             "contains_restricted_data": False,
         }
     ]
+    for item in bundle["signer_authorizations"]:
+        item.update(
+            {
+                "person_name": "kevin",
+                "authorized_by": "kevin",
+                "authorized_at": "2026-07-31",
+                "evidence_ids": [evidence_id],
+            }
+        )
     for section in ("requirements", "routes", "apis"):
         for item in bundle[section]:
             item.update(
@@ -94,6 +115,7 @@ def _completed_bundle() -> tuple[dict[str, Any], dict[str, Any]]:
                     "executed_by": "kevin",
                     "executed_at": "2026-07-31",
                     "reviewed_by": "kevin",
+                    "reviewer_role": item["required_reviewer_role"],
                     "reviewed_at": "2026-07-31",
                     "evidence_ids": [evidence_id],
                 }
@@ -132,6 +154,7 @@ def _completed_bundle() -> tuple[dict[str, Any], dict[str, Any]]:
         "rollback_status": "passed",
         "restore_status": "passed",
         "handover_status": "passed",
+        "approver_role": "项目委员会",
         "approved_by": "kevin",
         "approved_at": "2026-07-31",
         "evidence_ids": [evidence_id],
@@ -154,13 +177,23 @@ def test_delivery_template_freezes_complete_p0_scope() -> None:
 
     assert bundle["template_only"] is True
     assert bundle["append_only"] is True
-    assert bundle["schema_version"] == 2
+    assert bundle["schema_version"] == 3
     assert len(bundle["requirements"]) == 90
     assert len(bundle["routes"]) == 125
     assert len(bundle["apis"]) == 56
     assert len(bundle["product_tests"]) == 89
     assert len(bundle["engineering_tests"]) == 17
     assert len(bundle["acceptance_items"]) == 11
+    assert {item["role"] for item in bundle["signer_authorizations"]} == {
+        "产品/业务",
+        "技术负责人",
+        "商务代表",
+        "业务/产品",
+        "业务/法务",
+        "业务代表",
+        "测试负责人",
+        "种子用户",
+    }
     assert len(bundle["baseline"]["p0_traceability_assessment_sha256"]) == 64
 
 
@@ -180,10 +213,16 @@ def test_unfilled_delivery_template_is_blocked() -> None:
     assert "P0_DELIVERY_TEMPLATE_UNCOPIED" in codes
     assert "P0_DELIVERY_TRACEABILITY_GATE_FAILED" in codes
     assert "P0_DELIVERY_D4_DEPENDENCY_INVALID" in codes
+    assert "P0_DELIVERY_SIGNER_AUTHORIZATION_INCOMPLETE" in codes
+    assert "P0_DELIVERY_SIGNER_ROLE_COVERAGE_INCOMPLETE" in codes
     assert "P0_DELIVERY_IMPLEMENTATION_PENDING" in codes
+    assert "P0_DELIVERY_IMPLEMENTATION_METADATA_INCOMPLETE" in codes
     assert "P0_DELIVERY_TEST_NOT_PASSED" in codes
+    assert "P0_DELIVERY_TEST_METADATA_INCOMPLETE" in codes
     assert "P0_DELIVERY_ACCEPTANCE_PENDING" in codes
+    assert "P0_DELIVERY_ACCEPTANCE_METADATA_INCOMPLETE" in codes
     assert "P0_DELIVERY_FINAL_RELEASE_PENDING" in codes
+    assert "P0_DELIVERY_FINAL_RELEASE_METADATA_INCOMPLETE" in codes
 
 
 def test_completed_delivery_bundle_passes(
@@ -271,6 +310,96 @@ def test_unknown_commit_and_failed_metrics_are_rejected(monkeypatch: Any) -> Non
     assert "P0_DELIVERY_DEFECT_GATE_FAILED" in codes
     assert "P0_DELIVERY_LEAK_GATE_FAILED" in codes
     assert "P0_DELIVERY_TASK_SUCCESS_GATE_FAILED" in codes
+
+
+def test_delivery_signers_must_follow_committee_authorization(monkeypatch: Any) -> None:
+    monkeypatch.setattr(
+        "navigator_data_readiness.p0_delivery.build_p0_traceability_report",
+        lambda _paths: _ready_traceability(),
+    )
+    bundle, d4_bundle = _completed_bundle()
+    bundle["signer_authorizations"][0]["authorized_by"] = "mallory"
+    bundle["product_tests"][0]["reviewed_by"] = "mallory"
+    non_committee_acceptance = next(
+        item
+        for item in bundle["acceptance_items"]
+        if item["required_reviewer_role"] != "项目委员会"
+    )
+    non_committee_acceptance["reviewed_by"] = "mallory"
+    bundle["evidence"][0]["approved_by"] = "mallory"
+    bundle["final_release"]["approved_by"] = "mallory"
+
+    checks = validate_p0_delivery_bundle(
+        discover_repository(),
+        bundle,
+        d4_bundle,
+        d4_chain_checks=[],
+    )
+    codes = _codes(checks)
+
+    assert "P0_DELIVERY_SIGNER_AUTHORIZER_INVALID" in codes
+    assert "P0_DELIVERY_TEST_REVIEWER_UNAUTHORIZED" in codes
+    assert "P0_DELIVERY_ACCEPTANCE_REVIEWER_UNAUTHORIZED" in codes
+    assert "P0_DELIVERY_EVIDENCE_APPROVER_UNAUTHORIZED" in codes
+    assert "P0_DELIVERY_FINAL_RELEASE_APPROVER_UNAUTHORIZED" in codes
+
+
+def test_signer_authorization_evidence_requires_committee_approval(
+    monkeypatch: Any,
+) -> None:
+    monkeypatch.setattr(
+        "navigator_data_readiness.p0_delivery.build_p0_traceability_report",
+        lambda _paths: _ready_traceability(),
+    )
+    bundle, d4_bundle = _completed_bundle()
+    bundle["evidence"][0]["approval_role"] = "测试负责人"
+
+    checks = validate_p0_delivery_bundle(
+        discover_repository(),
+        bundle,
+        d4_bundle,
+        d4_chain_checks=[],
+    )
+
+    assert "P0_DELIVERY_EVIDENCE_APPROVER_UNAUTHORIZED" not in _codes(checks)
+    assert "P0_DELIVERY_SIGNER_AUTHORIZATION_EVIDENCE_INVALID" in _codes(checks)
+
+
+def test_all_required_signer_roles_must_be_authorized(monkeypatch: Any) -> None:
+    monkeypatch.setattr(
+        "navigator_data_readiness.p0_delivery.build_p0_traceability_report",
+        lambda _paths: _ready_traceability(),
+    )
+    bundle, d4_bundle = _completed_bundle()
+    bundle["signer_authorizations"].pop()
+
+    checks = validate_p0_delivery_bundle(
+        discover_repository(),
+        bundle,
+        d4_bundle,
+        d4_chain_checks=[],
+    )
+
+    assert "P0_DELIVERY_SIGNER_ROLE_COVERAGE_INCOMPLETE" in _codes(checks)
+
+
+def test_d4_requires_one_committee_authority_root(monkeypatch: Any) -> None:
+    monkeypatch.setattr(
+        "navigator_data_readiness.p0_delivery.build_p0_traceability_report",
+        lambda _paths: _ready_traceability(),
+    )
+    bundle, d4_bundle = _completed_bundle()
+    d4_bundle["acceptance"]["committee_approvals"] = []
+    bundle["dependencies"]["d4_bundle_sha256"] = payload_sha256(d4_bundle)
+
+    checks = validate_p0_delivery_bundle(
+        discover_repository(),
+        bundle,
+        d4_bundle,
+        d4_chain_checks=[],
+    )
+
+    assert "P0_DELIVERY_COMMITTEE_APPROVER_INVALID" in _codes(checks)
 
 
 def test_evidence_must_match_the_blob_in_its_declared_commit(monkeypatch: Any) -> None:
