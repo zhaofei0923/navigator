@@ -14,6 +14,7 @@ from .p0_traceability import build_p0_traceability_report, extract_references
 from .paths import RepositoryPaths
 
 _COMMIT_PATTERN = re.compile(r"^[0-9a-f]{40}(?:[0-9a-f]{24})?$")
+_SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 _PASS_STATUS = "passed"
 _IMPLEMENTED_STATUS = "implemented"
 _APPROVED_STATUS = "approved"
@@ -83,7 +84,7 @@ def build_p0_delivery_template(paths: RepositoryPaths) -> dict[str, Any]:
     engineering_tests = _p0_records(contracts, "engineering_acceptance_tests")
     acceptance = cast(list[dict[str, Any]], contracts["mvp_acceptance"])
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "stage": "P0-DELIVERY",
         "template_only": True,
         "append_only": True,
@@ -466,7 +467,7 @@ def _validate_evidence(
     checks: list[CheckResult],
     paths: RepositoryPaths,
     payload: dict[str, Any],
-) -> set[str]:
+) -> tuple[set[str], list[tuple[str, str, str, str]]]:
     entries = payload.get("evidence")
     if not isinstance(entries, list):
         checks.append(
@@ -476,8 +477,9 @@ def _validate_evidence(
                 location="evidence",
             )
         )
-        return set()
+        return set(), []
     identifiers: set[str] = set()
+    bindings: list[tuple[str, str, str, str]] = []
     for index, entry in enumerate(entries):
         location = f"evidence[{index}]"
         if not isinstance(entry, dict):
@@ -497,6 +499,7 @@ def _validate_evidence(
                 "artifact_type",
                 "path",
                 "sha256",
+                "commit_sha",
                 "generated_by",
                 "generated_at",
             ),
@@ -531,6 +534,25 @@ def _validate_evidence(
                 )
             )
         relative_path = _text(entry, "path")
+        declared_sha256 = _text(entry, "sha256").lower()
+        commit_sha = _text(entry, "commit_sha").lower()
+        commit_valid = bool(_COMMIT_PATTERN.fullmatch(commit_sha))
+        if commit_sha and not commit_valid:
+            checks.append(
+                CheckResult(
+                    code="P0_DELIVERY_EVIDENCE_COMMIT_SHA_INVALID",
+                    message=f"Invalid evidence commit SHA: {commit_sha}",
+                    location=location,
+                )
+            )
+        if declared_sha256 and not _SHA256_PATTERN.fullmatch(declared_sha256):
+            checks.append(
+                CheckResult(
+                    code="P0_DELIVERY_EVIDENCE_SHA256_INVALID",
+                    message=f"Invalid evidence SHA-256: {declared_sha256}",
+                    location=location,
+                )
+            )
         if not relative_path:
             continue
         evidence_path = (paths.root / relative_path).resolve()
@@ -553,7 +575,7 @@ def _validate_evidence(
                     location=location,
                 )
             )
-        elif sha256_file(evidence_path) != _text(entry, "sha256").lower():
+        elif sha256_file(evidence_path) != declared_sha256:
             checks.append(
                 CheckResult(
                     code="P0_DELIVERY_EVIDENCE_HASH_MISMATCH",
@@ -561,7 +583,10 @@ def _validate_evidence(
                     location=location,
                 )
             )
-    return identifiers
+        if commit_valid and _SHA256_PATTERN.fullmatch(declared_sha256):
+            normalized_path = evidence_path.relative_to(paths.root).as_posix()
+            bindings.append((evidence_id, normalized_path, declared_sha256, commit_sha))
+    return identifiers, bindings
 
 
 def _number(value: Any) -> float | None:
@@ -719,24 +744,37 @@ def _validate_final_release(
     return evidence_ids
 
 
-def _validate_git_commits(
+def _run_git(
+    paths: RepositoryPaths,
+    *arguments: str,
+    text: bool = True,
+) -> subprocess.CompletedProcess[str] | subprocess.CompletedProcess[bytes] | None:
+    try:
+        return subprocess.run(
+            ["git", "-C", str(paths.root), *arguments],
+            check=False,
+            capture_output=True,
+            text=text,
+        )
+    except OSError:
+        return None
+
+
+def _validate_git_provenance(
     checks: list[CheckResult],
     paths: RepositoryPaths,
     commit_shas: set[str],
+    final_release_commit: str,
+    evidence_bindings: list[tuple[str, str, str, str]],
 ) -> None:
+    existing_commits: set[str] = set()
     for commit_sha in sorted(commit_shas):
-        try:
-            result = subprocess.run(
-                ["git", "-C", str(paths.root), "cat-file", "-e", f"{commit_sha}^{{commit}}"],
-                check=False,
-                capture_output=True,
-                text=True,
-            )
-        except OSError as error:
+        result = _run_git(paths, "cat-file", "-e", f"{commit_sha}^{{commit}}")
+        if result is None:
             checks.append(
                 CheckResult(
                     code="P0_DELIVERY_GIT_UNAVAILABLE",
-                    message=f"Cannot validate Git commits: {error}",
+                    message="Cannot execute Git while validating delivery provenance",
                     location=str(paths.root),
                 )
             )
@@ -747,6 +785,113 @@ def _validate_git_commits(
                     code="P0_DELIVERY_COMMIT_NOT_FOUND",
                     message=f"Commit does not exist in the repository: {commit_sha}",
                     location="commit_sha",
+                )
+            )
+        else:
+            existing_commits.add(commit_sha)
+
+    if final_release_commit in existing_commits:
+        head_result = _run_git(paths, "rev-parse", "HEAD")
+        if head_result is None:
+            checks.append(
+                CheckResult(
+                    code="P0_DELIVERY_GIT_UNAVAILABLE",
+                    message="Cannot resolve HEAD while validating delivery provenance",
+                    location=str(paths.root),
+                )
+            )
+            return
+        head_commit = str(head_result.stdout).strip().lower()
+        release_reachable = _run_git(
+            paths,
+            "merge-base",
+            "--is-ancestor",
+            final_release_commit,
+            head_commit,
+        )
+        if release_reachable is None:
+            checks.append(
+                CheckResult(
+                    code="P0_DELIVERY_GIT_UNAVAILABLE",
+                    message="Cannot validate final release reachability",
+                    location=str(paths.root),
+                )
+            )
+            return
+        if release_reachable.returncode != 0:
+            checks.append(
+                CheckResult(
+                    code="P0_DELIVERY_RELEASE_COMMIT_UNREACHABLE",
+                    message=(
+                        f"Final release commit is not reachable from HEAD: {final_release_commit}"
+                    ),
+                    location="final_release.commit_sha",
+                )
+            )
+
+        for commit_sha in sorted(existing_commits - {final_release_commit}):
+            result = _run_git(
+                paths,
+                "merge-base",
+                "--is-ancestor",
+                commit_sha,
+                final_release_commit,
+            )
+            if result is None:
+                checks.append(
+                    CheckResult(
+                        code="P0_DELIVERY_GIT_UNAVAILABLE",
+                        message="Cannot validate commit ancestry",
+                        location=str(paths.root),
+                    )
+                )
+                return
+            if result.returncode != 0:
+                checks.append(
+                    CheckResult(
+                        code="P0_DELIVERY_COMMIT_NOT_IN_RELEASE",
+                        message=(
+                            f"Implementation or evidence commit is not included in the final "
+                            f"release: {commit_sha}"
+                        ),
+                        location="commit_sha",
+                    )
+                )
+
+    for evidence_id, relative_path, declared_sha256, commit_sha in evidence_bindings:
+        if commit_sha not in existing_commits:
+            continue
+        result = _run_git(paths, "show", f"{commit_sha}:{relative_path}", text=False)
+        if result is None:
+            checks.append(
+                CheckResult(
+                    code="P0_DELIVERY_GIT_UNAVAILABLE",
+                    message="Cannot read committed evidence blobs",
+                    location=str(paths.root),
+                )
+            )
+            return
+        if result.returncode != 0:
+            checks.append(
+                CheckResult(
+                    code="P0_DELIVERY_EVIDENCE_NOT_IN_COMMIT",
+                    message=(
+                        f"Evidence {evidence_id} is not present at {relative_path} "
+                        f"in commit {commit_sha}"
+                    ),
+                    location=f"evidence.{evidence_id}",
+                )
+            )
+            continue
+        committed_sha256 = hashlib.sha256(cast(bytes, result.stdout)).hexdigest()
+        if committed_sha256 != declared_sha256:
+            checks.append(
+                CheckResult(
+                    code="P0_DELIVERY_EVIDENCE_COMMIT_HASH_MISMATCH",
+                    message=(
+                        f"Evidence {evidence_id} does not match its Git blob in commit {commit_sha}"
+                    ),
+                    location=f"evidence.{evidence_id}",
                 )
             )
 
@@ -760,11 +905,11 @@ def validate_p0_delivery_bundle(
 ) -> list[CheckResult]:
     checks: list[CheckResult] = []
     current = build_p0_delivery_template(paths)
-    if bundle.get("schema_version") != 1 or bundle.get("stage") != "P0-DELIVERY":
+    if bundle.get("schema_version") != 2 or bundle.get("stage") != "P0-DELIVERY":
         checks.append(
             CheckResult(
                 code="P0_DELIVERY_HEADER_INVALID",
-                message="Bundle requires schema_version 1 and stage P0-DELIVERY",
+                message="Bundle requires schema_version 2 and stage P0-DELIVERY",
                 location="bundle",
             )
         )
@@ -922,7 +1067,8 @@ def validate_p0_delivery_bundle(
     referenced_evidence_ids.update(
         _validate_final_release(checks, bundle.get("final_release"), commit_shas)
     )
-    evidence_ids = _validate_evidence(checks, paths, bundle)
+    evidence_ids, evidence_bindings = _validate_evidence(checks, paths, bundle)
+    commit_shas.update(binding[3] for binding in evidence_bindings)
     unknown_evidence = sorted(referenced_evidence_ids - evidence_ids)
     if unknown_evidence:
         checks.append(
@@ -932,7 +1078,17 @@ def validate_p0_delivery_bundle(
                 location="evidence",
             )
         )
-    _validate_git_commits(checks, paths, commit_shas)
+    final_release = bundle.get("final_release")
+    final_release_commit = (
+        _text(final_release, "commit_sha").lower() if isinstance(final_release, dict) else ""
+    )
+    _validate_git_provenance(
+        checks,
+        paths,
+        commit_shas,
+        final_release_commit,
+        evidence_bindings,
+    )
     return checks
 
 

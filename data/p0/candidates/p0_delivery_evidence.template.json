@@ -4356,7 +4356,7 @@
       "status": "pending"
     }
   ],
-  "schema_version": 1,
+  "schema_version": 2,
   "stage": "P0-DELIVERY",
   "template_only": true,
   "warning": "This template cannot replace D4 approval, implementation, test execution, UAT, or release authorization. It records evidence only after those events occur."

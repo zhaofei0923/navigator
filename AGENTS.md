@@ -27,6 +27,8 @@
 - Generated P0 delivery templates belong in `data/p0/candidates`; completed delivery packets must
   replay the full D4 chain, reference only hashed non-restricted evidence, and prove every P0
   requirement, route, API, test, acceptance item, release metric, and recovery capability.
+  Evidence hashes must match both the current file and its declared committed Git blob; every
+  implementation and evidence commit must be an ancestor of the final release commit.
 - Generated reviewer templates belong in `data/d0/review`; only actual authorized reviewers may
   fill a review copy, and completed copies must not contain private contact details or secrets.
 - Generated D1 source-onboarding templates belong in `data/d1/candidates`; no source may become

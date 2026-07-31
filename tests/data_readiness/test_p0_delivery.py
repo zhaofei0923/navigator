@@ -35,6 +35,14 @@ def _head_commit() -> str:
     ).strip()
 
 
+def _parent_commit() -> str:
+    paths = discover_repository()
+    return subprocess.check_output(
+        ["git", "-C", str(paths.root), "rev-parse", "HEAD^"],
+        text=True,
+    ).strip()
+
+
 def _approved_d4_bundle() -> dict[str, Any]:
     return {
         "schema_version": 1,
@@ -59,6 +67,7 @@ def _completed_bundle() -> tuple[dict[str, Any], dict[str, Any]]:
             "artifact_type": "integration_test_fixture",
             "path": evidence_path,
             "sha256": sha256_file(paths.root / evidence_path),
+            "commit_sha": commit_sha,
             "generated_by": "test",
             "generated_at": "2026-07-31T00:00:00Z",
             "status": "approved",
@@ -144,6 +153,7 @@ def test_delivery_template_freezes_complete_p0_scope() -> None:
 
     assert bundle["template_only"] is True
     assert bundle["append_only"] is True
+    assert bundle["schema_version"] == 2
     assert len(bundle["requirements"]) == 90
     assert len(bundle["routes"]) == 125
     assert len(bundle["apis"]) == 56
@@ -260,6 +270,71 @@ def test_unknown_commit_and_failed_metrics_are_rejected(monkeypatch: Any) -> Non
     assert "P0_DELIVERY_DEFECT_GATE_FAILED" in codes
     assert "P0_DELIVERY_LEAK_GATE_FAILED" in codes
     assert "P0_DELIVERY_TASK_SUCCESS_GATE_FAILED" in codes
+
+
+def test_evidence_must_match_the_blob_in_its_declared_commit(monkeypatch: Any) -> None:
+    monkeypatch.setattr(
+        "navigator_data_readiness.p0_delivery.build_p0_traceability_report",
+        lambda _paths: _ready_traceability(),
+    )
+    bundle, d4_bundle = _completed_bundle()
+    real_run = subprocess.run
+
+    def tamper_git_show(*args: Any, **kwargs: Any) -> subprocess.CompletedProcess[Any]:
+        command = args[0]
+        if isinstance(command, list) and "show" in command:
+            return subprocess.CompletedProcess(command, 0, stdout=b"tampered", stderr=b"")
+        return real_run(*args, **kwargs)
+
+    monkeypatch.setattr(
+        "navigator_data_readiness.p0_delivery.subprocess.run",
+        tamper_git_show,
+    )
+
+    checks = validate_p0_delivery_bundle(
+        discover_repository(),
+        bundle,
+        d4_bundle,
+        d4_chain_checks=[],
+    )
+
+    assert "P0_DELIVERY_EVIDENCE_COMMIT_HASH_MISMATCH" in _codes(checks)
+
+
+def test_implementation_and_evidence_commits_must_be_in_release(monkeypatch: Any) -> None:
+    monkeypatch.setattr(
+        "navigator_data_readiness.p0_delivery.build_p0_traceability_report",
+        lambda _paths: _ready_traceability(),
+    )
+    bundle, d4_bundle = _completed_bundle()
+    bundle["final_release"]["commit_sha"] = _parent_commit()
+
+    checks = validate_p0_delivery_bundle(
+        discover_repository(),
+        bundle,
+        d4_bundle,
+        d4_chain_checks=[],
+    )
+
+    assert "P0_DELIVERY_COMMIT_NOT_IN_RELEASE" in _codes(checks)
+
+
+def test_evidence_requires_a_commit_binding(monkeypatch: Any) -> None:
+    monkeypatch.setattr(
+        "navigator_data_readiness.p0_delivery.build_p0_traceability_report",
+        lambda _paths: _ready_traceability(),
+    )
+    bundle, d4_bundle = _completed_bundle()
+    bundle["evidence"][0].pop("commit_sha")
+
+    checks = validate_p0_delivery_bundle(
+        discover_repository(),
+        bundle,
+        d4_bundle,
+        d4_chain_checks=[],
+    )
+
+    assert "P0_DELIVERY_EVIDENCE_METADATA_INCOMPLETE" in _codes(checks)
 
 
 def test_write_delivery_template_is_deterministic(tmp_path: Path) -> None:
