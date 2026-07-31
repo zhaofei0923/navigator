@@ -411,14 +411,7 @@ def _required_fields(
         )
 
 
-def _iso_temporal(
-    checks: list[CheckResult],
-    item: dict[str, Any],
-    field: str,
-    *,
-    location: str,
-) -> _Temporal | None:
-    value = _text(item, field)
+def _parse_iso_temporal(value: str) -> _Temporal | None:
     if not value:
         return None
     if re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
@@ -449,6 +442,22 @@ def _iso_temporal(
                 parsed_datetime.date(),
                 False,
             )
+    return None
+
+
+def _iso_temporal(
+    checks: list[CheckResult],
+    item: dict[str, Any],
+    field: str,
+    *,
+    location: str,
+) -> _Temporal | None:
+    value = _text(item, field)
+    if not value:
+        return None
+    parsed = _parse_iso_temporal(value)
+    if parsed is not None:
+        return parsed
     checks.append(
         CheckResult(
             code="P0_DELIVERY_TEMPORAL_INVALID",
@@ -504,6 +513,45 @@ def _validate_signer_effective_at(
         message=message,
         location=location,
     )
+
+
+def _validate_final_release_after_events(
+    checks: list[CheckResult],
+    bundle: dict[str, Any],
+) -> None:
+    final_release = bundle.get("final_release")
+    if not isinstance(final_release, dict):
+        return
+    released_at = _parse_iso_temporal(_text(final_release, "approved_at"))
+    if released_at is None:
+        return
+    event_specs = (
+        ("signer_authorizations", "authorized_at"),
+        ("requirements", "implemented_at"),
+        ("routes", "implemented_at"),
+        ("apis", "implemented_at"),
+        ("product_tests", "reviewed_at"),
+        ("engineering_tests", "reviewed_at"),
+        ("acceptance_items", "reviewed_at"),
+        ("evidence", "approved_at"),
+    )
+    for section, field in event_specs:
+        items = bundle.get(section)
+        if not isinstance(items, list):
+            continue
+        for index, item in enumerate(items):
+            if not isinstance(item, dict):
+                continue
+            event_at = _parse_iso_temporal(_text(item, field))
+            location = f"{section}[{index}].{field}"
+            _validate_temporal_order(
+                checks,
+                event_at,
+                released_at,
+                code="P0_DELIVERY_EVENT_AFTER_FINAL_RELEASE",
+                message=f"{location} cannot occur after final release approval",
+                location=location,
+            )
 
 
 def _d4_committee_approver(
@@ -1755,6 +1803,7 @@ def validate_p0_delivery_bundle(
         signer_authorized_at,
         committee_approver,
     )
+    _validate_final_release_after_events(checks, bundle)
     commit_shas.update(binding[3] for binding in evidence_bindings)
     unknown_evidence = sorted(referenced_evidence_ids - evidence_ids)
     if unknown_evidence:

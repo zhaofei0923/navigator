@@ -507,6 +507,43 @@ def test_committee_authority_cannot_be_applied_retroactively(
     assert "P0_DELIVERY_FINAL_RELEASE_BEFORE_AUTHORIZATION" in codes
 
 
+def test_final_release_must_follow_every_delivery_event(monkeypatch: Any) -> None:
+    monkeypatch.setattr(
+        "navigator_data_readiness.p0_delivery.build_p0_traceability_report",
+        lambda _paths: _ready_traceability(),
+    )
+    bundle, d4_bundle = _completed_bundle()
+    bundle["final_release"]["approved_at"] = "2026-08-01"
+    bundle["signer_authorizations"][0]["authorized_at"] = "2026-08-02"
+    for section in ("requirements", "routes", "apis"):
+        bundle[section][0]["implemented_at"] = "2026-08-02"
+    for section in ("product_tests", "engineering_tests"):
+        bundle[section][0]["reviewed_at"] = "2026-08-02"
+    bundle["acceptance_items"][0]["reviewed_at"] = "2026-08-02"
+    bundle["evidence"][0]["approved_at"] = "2026-08-02"
+
+    checks = validate_p0_delivery_bundle(
+        discover_repository(),
+        bundle,
+        d4_bundle,
+        d4_chain_checks=[],
+    )
+
+    release_order_locations = {
+        check.location for check in checks if check.code == "P0_DELIVERY_EVENT_AFTER_FINAL_RELEASE"
+    }
+    assert release_order_locations == {
+        "signer_authorizations[0].authorized_at",
+        "requirements[0].implemented_at",
+        "routes[0].implemented_at",
+        "apis[0].implemented_at",
+        "product_tests[0].reviewed_at",
+        "engineering_tests[0].reviewed_at",
+        "acceptance_items[0].reviewed_at",
+        "evidence[0].approved_at",
+    }
+
+
 def test_d4_chain_cannot_be_self_reported(monkeypatch: Any) -> None:
     monkeypatch.setattr(
         "navigator_data_readiness.p0_delivery.build_p0_traceability_report",

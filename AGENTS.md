@@ -41,6 +41,8 @@
   predate execution, and evidence approval must not predate generation.
   Non-committee signer authority starts only after the recorded D4 committee approval and the
   signer-specific authorization. Reviews and approvals cannot be retroactively authorized.
+  Final release approval must be at or after every implementation, signer authorization, test
+  review, acceptance review, and evidence approval event in the delivery bundle.
 - Generated reviewer templates belong in `data/d0/review`; only actual authorized reviewers may
   fill a review copy, and completed copies must not contain private contact details or secrets.
 - Generated D1 source-onboarding templates belong in `data/d1/candidates`; no source may become
