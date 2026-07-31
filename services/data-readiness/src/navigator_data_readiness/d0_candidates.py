@@ -621,6 +621,167 @@ def build_core_contract_recommendations(
     }
 
 
+def _markdown_cell(value: Any) -> str:
+    return str(value or "-").replace("|", "\\|").replace("\n", " ")
+
+
+def build_core_contract_review_worksheet(recommendations: dict[str, Any]) -> str:
+    """Render the unsigned AC-001/002 advice as a reviewer-friendly Markdown worksheet."""
+    recommendation_sha256 = hashlib.sha256(_candidate_json_bytes(recommendations)).hexdigest()
+    primary_keys = recommendations["entity_primary_key_recommendations"]
+    unit_items = recommendations["field_unit_recommendations"]
+    not_applicable = [
+        item for item in unit_items if item["recommendation_kind"] == "not_applicable_candidate"
+    ]
+    numeric = [
+        item
+        for item in unit_items
+        if item["recommendation_kind"] == "numeric_semantics_requires_human_analysis"
+    ]
+    compound = [
+        item
+        for item in unit_items
+        if item["recommendation_kind"] == "compound_contract_requires_human_analysis"
+    ]
+
+    lines = [
+        "# D0 AC-001/002人工审核工作表",
+        "",
+        "> 本文件仅把机器建议排版供人工阅读，不是整改副本、签署记录或批准证据。",
+        "> 请在对话或独立评审记录中回复决定，不要直接编辑本生成文件。",
+        "",
+        f"- 建议文件SHA-256：`{recommendation_sha256}`",
+        f"- 主键建议：{len(primary_keys)}项",
+        f"- 单位不适用候选：{len(not_applicable)}项",
+        f"- 数值语义待审：{len(numeric)}项",
+        f"- 复合字段待审：{len(compound)}项",
+        "",
+        "## A. AC-001主键建议",
+        "",
+        "机器统一建议新增不可变UUID代理主键。自然键候选只作对照，仍须确认其唯一约束。",
+        "",
+        "| # | 实体 | 当前字段编号 | 建议新字段 | 自然键候选 |",
+        "|---:|---|---|---|---|",
+    ]
+    for index, item in enumerate(primary_keys, start=1):
+        contract = item["recommended_field_contract"]
+        natural_keys = ", ".join(
+            f"{candidate['field_id']} ({candidate['field_name']})"
+            for candidate in item["natural_key_candidates_requiring_review"]
+        )
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    str(index),
+                    _markdown_cell(item["entity_code"]),
+                    _markdown_cell(", ".join(item["current_field_ids"])),
+                    _markdown_cell(f"{contract['字段编号']} / {contract['字段名']} / uuid"),
+                    _markdown_cell(natural_keys),
+                ]
+            )
+            + " |"
+        )
+
+    lines.extend(
+        [
+            "",
+            "## B. AC-002单位不适用候选",
+            "",
+            "以下字段的顶层类型不表达可度量数值；JSON或文本内部数值仍须由子结构合同定义单位。",
+            "",
+            "| # | 字段编号 | 实体.字段 | 类型 | 置信度 |",
+            "|---:|---|---|---|---|",
+        ]
+    )
+    for index, item in enumerate(not_applicable, start=1):
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    str(index),
+                    _markdown_cell(item["field_id"]),
+                    _markdown_cell(f"{item['entity_code']}.{item['field_name']}"),
+                    _markdown_cell(item["data_type"]),
+                    _markdown_cell(item["confidence"]),
+                ]
+            )
+            + " |"
+        )
+
+    lines.extend(
+        [
+            "",
+            "## C. AC-002数值语义待审",
+            "",
+            "请为每项明确单位代码、量纲和单位登记来源；不得仅凭存储类型推断。",
+            "",
+            "| # | 字段编号 | 实体.字段 | 类型 | 待决定内容 |",
+            "|---:|---|---|---|---|",
+        ]
+    )
+    for index, item in enumerate(numeric, start=1):
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    str(index),
+                    _markdown_cell(item["field_id"]),
+                    _markdown_cell(f"{item['entity_code']}.{item['field_name']}"),
+                    _markdown_cell(item["data_type"]),
+                    "unit_code / unit_dimension / unit_registry_reference",
+                ]
+            )
+            + " |"
+        )
+
+    lines.extend(
+        [
+            "",
+            "## D. AC-002复合字段待审",
+            "",
+            "以下合同行包含多个子字段。请决定拆分为原子字段，或逐项说明保留复合合同的理由。",
+            "",
+            "| # | 字段编号 | 实体.复合字段 | 复合类型 |",
+            "|---:|---|---|---|",
+        ]
+    )
+    for index, item in enumerate(compound, start=1):
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    str(index),
+                    _markdown_cell(item["field_id"]),
+                    _markdown_cell(f"{item['entity_code']}.{item['field_name']}"),
+                    _markdown_cell(item["data_type"]),
+                ]
+            )
+            + " |"
+        )
+
+    lines.extend(
+        [
+            "",
+            "## 建议回复格式",
+            "",
+            "```text",
+            "AC-001主键：同意全部29项 / 例外：<实体及决定>",
+            "AC-002非度量字段：同意69项全部标记不适用 / 例外：<字段及决定>",
+            "DATA-ENTITLEMENT-001：unit_code=<...>；unit_dimension=<...>；registry=<...>",
+            "DATA-LEAD-004：unit_code=<...>；unit_dimension=<...>；registry=<...>",
+            "DATA-PROJECT-003：unit_code=<...>；unit_dimension=<...>；registry=<...>",
+            "AC-002复合字段：全部拆分 / 保留例外：<字段编号及理由>",
+            "```",
+            "",
+            "人工决定形成后，须填写独立的core_contract_resolution整改副本，并补齐实名、",
+            "时间、变更单和证据；本工作表本身不得提交给正式校验器。",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
 def build_machine_evidence_review_queue(
     evidence_payloads: dict[str, dict[str, Any]],
 ) -> dict[str, Any]:
@@ -1274,9 +1435,17 @@ def candidate_payloads(paths: RepositoryPaths) -> dict[str, dict[str, Any]]:
 
 def write_candidates(paths: RepositoryPaths) -> list[Path]:
     paths.d0_candidates_dir.mkdir(parents=True, exist_ok=True)
+    payloads = candidate_payloads(paths)
     written: list[Path] = []
-    for filename, payload in candidate_payloads(paths).items():
+    for filename, payload in payloads.items():
         destination = paths.d0_candidates_dir / filename
         destination.write_bytes(_candidate_json_bytes(payload))
         written.append(destination)
+    worksheet = paths.d0_candidates_dir / "core_contract_review_worksheet.md"
+    worksheet.write_text(
+        build_core_contract_review_worksheet(payloads["core_contract_recommendations.json"]),
+        encoding="utf-8",
+        newline="\n",
+    )
+    written.append(worksheet)
     return written

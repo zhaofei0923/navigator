@@ -12,6 +12,7 @@ from navigator_data_readiness.d0_candidates import (
     build_conventions_candidate,
     build_core_contract_recommendations,
     build_core_contract_resolution_template,
+    build_core_contract_review_worksheet,
     build_core_entity_evidence,
     build_core_field_evidence,
     build_enum_migration_evidence,
@@ -307,6 +308,30 @@ def test_core_contract_recommendations_are_complete_conservative_and_unsigned() 
     assert not keys(recommendations) & signing_keys
 
 
+def test_core_contract_review_worksheet_groups_every_decision_without_signing() -> None:
+    paths = discover_repository()
+    recommendations = json.loads(
+        (paths.d0_candidates_dir / "core_contract_recommendations.json").read_text(encoding="utf-8")
+    )
+
+    worksheet = build_core_contract_review_worksheet(recommendations)
+
+    expected_hash = hashlib.sha256(
+        (json.dumps(recommendations, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode()
+    ).hexdigest()
+    assert f"建议文件SHA-256：`{expected_hash}`" in worksheet
+    assert "主键建议：29项" in worksheet
+    assert "单位不适用候选：69项" in worksheet
+    assert "数值语义待审：3项" in worksheet
+    assert "复合字段待审：20项" in worksheet
+    assert worksheet.count("DATA-D0-PK-") == 29
+    assert "DATA-ENTITLEMENT-001" in worksheet
+    assert "DATA-D4-020" in worksheet
+    assert "reviewed_by" not in worksheet
+    assert "evidence_ids" not in worksheet
+    assert "本工作表本身不得提交给正式校验器" in worksheet
+
+
 def test_enum_evidence_checks_structural_migration_contract_without_approving_semantics() -> None:
     contracts = extract_contracts(discover_repository())
 
@@ -356,7 +381,9 @@ def test_write_candidates_exports_review_package(tmp_path: Path) -> None:
         (paths.d0_candidates_dir / "core_contract_recommendations.json").read_text(encoding="utf-8")
     )
 
-    assert len(written) == 13
+    worksheet_path = paths.d0_candidates_dir / "core_contract_review_worksheet.md"
+
+    assert len(written) == 14
     assert assessment["automated_assessment_only"] is True
     assert len(resolution["entity_primary_key_resolutions"]) == 29
     assert len(resolution["field_unit_resolutions"]) == 92
@@ -367,6 +394,8 @@ def test_write_candidates_exports_review_package(tmp_path: Path) -> None:
     assert recommendations["source_binding"]["resolution_template"]["sha256"] == (
         hashlib.sha256(resolution_bytes).hexdigest()
     )
+    assert worksheet_path.is_file()
+    assert "主键建议：29项" in worksheet_path.read_text(encoding="utf-8")
     assert len(queue["items"]) == 3
     assert {item["machine_status"] for item in queue["items"]} == {"fail", "pass"}
     for item in queue["items"]:

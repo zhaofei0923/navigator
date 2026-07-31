@@ -10,6 +10,7 @@
 | `core_field_evidence.json` | AC-002字段代码、类型、单位、空值和来源证据 | 92个字段缺独立单位/不适用元数据，机器失败 |
 | `core_contract_resolution.template.json` | AC-001/002逐项整改提案模板 | 固定29个主键决策和92个单位/不适用决策；通过仅表示可进入基线变更评审 |
 | `core_contract_recommendations.json` | AC-001/002保守机器建议 | 29个UUID代理主键建议；69个字段建议单位不适用，3个数值字段和20个复合合同留待人工分析 |
+| `core_contract_review_worksheet.md` | AC-001/002人工审核工作表 | 将121项决定分组排版并提供回复模板；绑定建议JSON哈希，不含签署字段 |
 | `enum_migration_evidence.json` | AC-003枚举互斥与迁移记录证据 | 251条枚举和13条迁移结构通过，语义待人工复核 |
 | `machine_evidence_review_queue.json` | 三份机器证据的路径、哈希与待审登记模板 | 失败项不得批准，模板不得直接复制成已批准证据 |
 | `conventions.json` | 单位、货币、时区、精度和多语言规则候选 | 待产品、数据和语言审校批准 |
@@ -22,7 +23,8 @@
 处理原则：
 
 1. 6条映射已有正式决定；基线变更仍须按批准目标更新字段/实体合同和版本记录；
-2. 先审阅`core_contract_recommendations.json`；它不含签署字段，所有建议均要求人工
+2. 优先阅读`core_contract_review_worksheet.md`，必要时再核对其绑定的
+   `core_contract_recommendations.json`；二者不含签署字段，所有建议均要求人工
    决策，不得把它改名或补签后当作整改副本；它不属于正式D0评审输入哈希，算法更新
    不会追溯性废止既有签署，建议文件自身则绑定当前整改模板哈希；
 3. 复制`core_contract_resolution.template.json`，逐项填写实名提案人与复核人、变更单、
