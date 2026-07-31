@@ -35,6 +35,7 @@ uv run navigator-data prepare-d3
 uv run navigator-data prepare-d4
 uv run navigator-data prepare-p0-traceability
 uv run navigator-data assess-p0-traceability
+uv run navigator-data prepare-p0-resolution
 uv run navigator-data report
 uv run pytest --cov
 ```
@@ -94,6 +95,9 @@ P0追踪预检候选包位于
 已进入机器合同。当前仅63项P0需求关联P0测试，且17个P0页面需求映射、93个API映射、
 76个测试映射仍待补充或细化；页面权限代码与`PERM-*`编号也缺少直接映射列。因此
 追踪预检和交付预检均未通过，工具不会把“文档已确认”解释为已实现或已验收。
+整改模板已把27个需求测试缺口、98个页面映射整改项和105种权限代码逐项列出；
+`validate-p0-resolution`只校验提案的冻结哈希、稳定编号、变更请求和复核元数据，
+不会自动应用或批准任何基线变更。
 
 完整实施顺序见
 [`docs/development/P0_IMPLEMENTATION_PLAN.md`](docs/development/P0_IMPLEMENTATION_PLAN.md)。

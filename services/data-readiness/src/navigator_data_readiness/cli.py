@@ -14,6 +14,10 @@ from .d2_collection import load_and_validate_d2_bundle, write_d2_candidates
 from .d3_processing import load_and_validate_d3_bundle, write_d3_candidates
 from .d4_acceptance import load_and_validate_d4_bundle, write_d4_candidates
 from .models import CheckResult
+from .p0_resolution import (
+    load_and_validate_p0_resolution_packet,
+    write_p0_resolution_template,
+)
 from .p0_traceability import build_p0_traceability_report, write_p0_traceability_candidates
 from .paths import discover_repository
 from .readiness import build_readiness_report, render_markdown
@@ -111,6 +115,15 @@ def _parser() -> argparse.ArgumentParser:
         help="Print the machine-verifiable P0 traceability and delivery preflight.",
     )
     p0_assessment.add_argument("--format", choices=("json",), default="json")
+    commands.add_parser(
+        "prepare-p0-resolution",
+        help="Generate a reviewer-fillable packet for current P0 traceability gaps.",
+    )
+    p0_resolution_validation = commands.add_parser(
+        "validate-p0-resolution",
+        help="Validate a proposed P0 traceability change packet against the frozen baseline.",
+    )
+    p0_resolution_validation.add_argument("--input", type=Path, required=True)
 
     report = commands.add_parser("report", help="Render the current D0 readiness report.")
     report.add_argument("--format", choices=("markdown", "json"), default="markdown")
@@ -290,6 +303,17 @@ def main(argv: list[str] | None = None) -> int:
         assessment = build_p0_traceability_report(paths)
         print(json.dumps(assessment, ensure_ascii=False, indent=2))
         return 0
+
+    if args.command == "prepare-p0-resolution":
+        path = write_p0_resolution_template(paths)
+        print(path.relative_to(paths.root).as_posix())
+        return 0
+
+    if args.command == "validate-p0-resolution":
+        packet_path = args.input if args.input.is_absolute() else paths.root / args.input
+        checks = load_and_validate_p0_resolution_packet(paths, packet_path)
+        _print_checks(checks)
+        return 1 if checks else 0
 
     report = build_readiness_report(paths)
     output = (

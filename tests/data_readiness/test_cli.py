@@ -332,6 +332,38 @@ def test_assess_p0_traceability_command_outputs_machine_boundary(
     assert '"does_not_authorize_user_facing_development": true' in captured.out
 
 
+def test_prepare_p0_resolution_command_lists_template(
+    monkeypatch: MonkeyPatch,
+    capsys: CaptureFixture[str],
+) -> None:
+    paths = discover_repository()
+    template = paths.p0_candidates_dir / "p0_traceability_resolution.template.json"
+    monkeypatch.setattr(
+        "navigator_data_readiness.cli.write_p0_resolution_template",
+        lambda _paths: template,
+    )
+
+    exit_code = main(["prepare-p0-resolution"])
+
+    assert exit_code == 0
+    captured = capsys.readouterr()
+    assert "data/p0/candidates/p0_traceability_resolution.template.json" in captured.out
+
+
+def test_validate_p0_resolution_command_reports_blockers(
+    tmp_path: Path,
+    capsys: CaptureFixture[str],
+) -> None:
+    packet = tmp_path / "resolution.json"
+    packet.write_text("{}", encoding="utf-8")
+
+    exit_code = main(["validate-p0-resolution", "--input", str(packet)])
+
+    assert exit_code == 1
+    captured = capsys.readouterr()
+    assert "P0_RESOLUTION_HEADER_INVALID" in captured.err
+
+
 def test_validate_d4_command_reports_blockers(
     tmp_path: Path,
     capsys: CaptureFixture[str],
