@@ -24,8 +24,14 @@ uv run navigator-data prepare-d3
 cp data/d3/candidates/d3_processing_bundle.template.json /安全的评审工作区/d3_processing_bundle.json
 uv run navigator-data validate-d3 \
   --bundle /安全的评审工作区/d3_processing_bundle.json \
-  --d2-bundle /安全的评审工作区/d2_collection_bundle.json
+  --d2-bundle /安全的评审工作区/d2_collection_bundle.json \
+  --d1-registry /安全的评审工作区/source_admission_registry.json \
+  --d1-matrix /安全的评审工作区/domain_source_matrix.json \
+  --d1-evidence /安全的评审工作区/d1_evidence_manifest.json
 ```
+
+`validate-d3`会重新执行完整D2采集校验；D2校验又会验证D1来源、数据域矩阵、证据
+哈希和当前D0门禁。仅在D3或D2文件中填写“上游已批准”不能绕过完整上游链。
 
 填写副本时必须：
 

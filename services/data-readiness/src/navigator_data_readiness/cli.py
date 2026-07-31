@@ -84,6 +84,9 @@ def _parser() -> argparse.ArgumentParser:
     )
     d3_validation.add_argument("--bundle", type=Path, required=True)
     d3_validation.add_argument("--d2-bundle", type=Path, required=True)
+    d3_validation.add_argument("--d1-registry", type=Path, required=True)
+    d3_validation.add_argument("--d1-matrix", type=Path, required=True)
+    d3_validation.add_argument("--d1-evidence", type=Path, required=True)
     commands.add_parser(
         "prepare-d4",
         help="Generate D4 quality, sampling, seed-package, rehearsal, and sign-off templates.",
@@ -94,6 +97,10 @@ def _parser() -> argparse.ArgumentParser:
     )
     d4_validation.add_argument("--bundle", type=Path, required=True)
     d4_validation.add_argument("--d3-bundle", type=Path, required=True)
+    d4_validation.add_argument("--d2-bundle", type=Path, required=True)
+    d4_validation.add_argument("--d1-registry", type=Path, required=True)
+    d4_validation.add_argument("--d1-matrix", type=Path, required=True)
+    d4_validation.add_argument("--d1-evidence", type=Path, required=True)
 
     report = commands.add_parser("report", help="Render the current D0 readiness report.")
     report.add_argument("--format", choices=("markdown", "json"), default="markdown")
@@ -208,7 +215,23 @@ def main(argv: list[str] | None = None) -> int:
         d2_bundle_path = (
             args.d2_bundle if args.d2_bundle.is_absolute() else paths.root / args.d2_bundle
         )
-        checks = load_and_validate_d3_bundle(paths, bundle_path, d2_bundle_path)
+        d1_registry_path = (
+            args.d1_registry if args.d1_registry.is_absolute() else paths.root / args.d1_registry
+        )
+        d1_matrix_path = (
+            args.d1_matrix if args.d1_matrix.is_absolute() else paths.root / args.d1_matrix
+        )
+        d1_evidence_path = (
+            args.d1_evidence if args.d1_evidence.is_absolute() else paths.root / args.d1_evidence
+        )
+        checks = load_and_validate_d3_bundle(
+            paths,
+            bundle_path,
+            d2_bundle_path,
+            d1_registry_path,
+            d1_matrix_path,
+            d1_evidence_path,
+        )
         _print_checks(checks)
         return 1 if checks else 0
 
@@ -223,7 +246,27 @@ def main(argv: list[str] | None = None) -> int:
         d3_bundle_path = (
             args.d3_bundle if args.d3_bundle.is_absolute() else paths.root / args.d3_bundle
         )
-        checks = load_and_validate_d4_bundle(paths, bundle_path, d3_bundle_path)
+        d2_bundle_path = (
+            args.d2_bundle if args.d2_bundle.is_absolute() else paths.root / args.d2_bundle
+        )
+        d1_registry_path = (
+            args.d1_registry if args.d1_registry.is_absolute() else paths.root / args.d1_registry
+        )
+        d1_matrix_path = (
+            args.d1_matrix if args.d1_matrix.is_absolute() else paths.root / args.d1_matrix
+        )
+        d1_evidence_path = (
+            args.d1_evidence if args.d1_evidence.is_absolute() else paths.root / args.d1_evidence
+        )
+        checks = load_and_validate_d4_bundle(
+            paths,
+            bundle_path,
+            d3_bundle_path,
+            d2_bundle_path,
+            d1_registry_path,
+            d1_matrix_path,
+            d1_evidence_path,
+        )
         _print_checks(checks)
         return 1 if checks else 0
 

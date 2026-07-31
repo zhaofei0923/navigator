@@ -19,8 +19,15 @@ uv run navigator-data prepare-d4
 cp data/d4/candidates/d4_acceptance_bundle.template.json /安全的评审工作区/d4_acceptance_bundle.json
 uv run navigator-data validate-d4 \
   --bundle /安全的评审工作区/d4_acceptance_bundle.json \
-  --d3-bundle /安全的评审工作区/d3_processing_bundle.json
+  --d3-bundle /安全的评审工作区/d3_processing_bundle.json \
+  --d2-bundle /安全的评审工作区/d2_collection_bundle.json \
+  --d1-registry /安全的评审工作区/source_admission_registry.json \
+  --d1-matrix /安全的评审工作区/domain_source_matrix.json \
+  --d1-evidence /安全的评审工作区/d1_evidence_manifest.json
 ```
+
+`validate-d4`会重放D3、D2、D1和当前D0的完整上游校验。任何阶段文件中自报的
+`approved`状态或孤立证据编号都不能代替可重放的上游事实、来源许可和证据哈希。
 
 完整副本至少必须证明：
 

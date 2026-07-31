@@ -255,8 +255,14 @@ def test_validate_d3_command_reports_blockers(
 ) -> None:
     bundle = tmp_path / "bundle.json"
     d2_bundle = tmp_path / "d2.json"
+    d1_registry = tmp_path / "d1_registry.json"
+    d1_matrix = tmp_path / "d1_matrix.json"
+    d1_evidence = tmp_path / "d1_evidence.json"
     bundle.write_text("{}", encoding="utf-8")
     d2_bundle.write_text("{}", encoding="utf-8")
+    d1_registry.write_text("{}", encoding="utf-8")
+    d1_matrix.write_text("{}", encoding="utf-8")
+    d1_evidence.write_text("{}", encoding="utf-8")
 
     exit_code = main(
         [
@@ -265,6 +271,12 @@ def test_validate_d3_command_reports_blockers(
             str(bundle),
             "--d2-bundle",
             str(d2_bundle),
+            "--d1-registry",
+            str(d1_registry),
+            "--d1-matrix",
+            str(d1_matrix),
+            "--d1-evidence",
+            str(d1_evidence),
         ]
     )
 
@@ -297,8 +309,16 @@ def test_validate_d4_command_reports_blockers(
 ) -> None:
     bundle = tmp_path / "bundle.json"
     d3_bundle = tmp_path / "d3.json"
+    d2_bundle = tmp_path / "d2.json"
+    d1_registry = tmp_path / "d1_registry.json"
+    d1_matrix = tmp_path / "d1_matrix.json"
+    d1_evidence = tmp_path / "d1_evidence.json"
     bundle.write_text("{}", encoding="utf-8")
     d3_bundle.write_text("{}", encoding="utf-8")
+    d2_bundle.write_text("{}", encoding="utf-8")
+    d1_registry.write_text("{}", encoding="utf-8")
+    d1_matrix.write_text("{}", encoding="utf-8")
+    d1_evidence.write_text("{}", encoding="utf-8")
 
     exit_code = main(
         [
@@ -307,6 +327,14 @@ def test_validate_d4_command_reports_blockers(
             str(bundle),
             "--d3-bundle",
             str(d3_bundle),
+            "--d2-bundle",
+            str(d2_bundle),
+            "--d1-registry",
+            str(d1_registry),
+            "--d1-matrix",
+            str(d1_matrix),
+            "--d1-evidence",
+            str(d1_evidence),
         ]
     )
 

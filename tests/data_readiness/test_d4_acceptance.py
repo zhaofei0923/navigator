@@ -7,6 +7,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
+import pytest
 from navigator_data_readiness.d4_acceptance import (
     APPROVAL_ROLES,
     COUNTRIES,
@@ -783,20 +784,89 @@ def test_write_d4_candidates_is_deterministic(tmp_path: Path) -> None:
 
 def test_load_and_validate_d4_bundle_handles_valid_and_invalid_files(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     paths = discover_repository()
     bundle, d3_bundle = _completed_d4_payloads(paths)
     bundle_path = tmp_path / "d4.json"
     d3_path = tmp_path / "d3.json"
+    d2_path = tmp_path / "d2.json"
+    registry_path = tmp_path / "d1_registry.json"
+    matrix_path = tmp_path / "d1_matrix.json"
+    evidence_path = tmp_path / "d1_evidence.json"
     bundle_path.write_text(json.dumps(bundle), encoding="utf-8")
     d3_path.write_text(json.dumps(d3_bundle), encoding="utf-8")
+    d2_path.write_text("{}", encoding="utf-8")
+    registry_path.write_text("{}", encoding="utf-8")
+    matrix_path.write_text("{}", encoding="utf-8")
+    evidence_path.write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(
+        "navigator_data_readiness.d4_acceptance.load_and_validate_d3_bundle",
+        lambda *_args: [],
+    )
 
-    assert load_and_validate_d4_bundle(paths, bundle_path, d3_path) == []
+    assert (
+        load_and_validate_d4_bundle(
+            paths,
+            bundle_path,
+            d3_path,
+            d2_path,
+            registry_path,
+            matrix_path,
+            evidence_path,
+        )
+        == []
+    )
 
     bundle_path.write_text("{", encoding="utf-8")
-    checks = load_and_validate_d4_bundle(paths, bundle_path, d3_path)
+    checks = load_and_validate_d4_bundle(
+        paths,
+        bundle_path,
+        d3_path,
+        d2_path,
+        registry_path,
+        matrix_path,
+        evidence_path,
+    )
     assert checks[0].code == "D4_ARTIFACT_INVALID"
 
     bundle_path.write_text("[]", encoding="utf-8")
-    checks = load_and_validate_d4_bundle(paths, bundle_path, d3_path)
+    checks = load_and_validate_d4_bundle(
+        paths,
+        bundle_path,
+        d3_path,
+        d2_path,
+        registry_path,
+        matrix_path,
+        evidence_path,
+    )
     assert checks[0].code == "D4_ARTIFACT_INVALID"
+
+
+def test_load_d4_rejects_bundle_when_full_d3_chain_is_invalid(tmp_path: Path) -> None:
+    paths = discover_repository()
+    bundle, d3_bundle = _completed_d4_payloads(paths)
+    bundle_path = tmp_path / "d4.json"
+    d3_path = tmp_path / "d3.json"
+    d2_path = tmp_path / "d2.json"
+    registry_path = tmp_path / "d1_registry.json"
+    matrix_path = tmp_path / "d1_matrix.json"
+    evidence_path = tmp_path / "d1_evidence.json"
+    bundle_path.write_text(json.dumps(bundle), encoding="utf-8")
+    d3_path.write_text(json.dumps(d3_bundle), encoding="utf-8")
+    d2_path.write_text("{}", encoding="utf-8")
+    registry_path.write_text("{}", encoding="utf-8")
+    matrix_path.write_text("{}", encoding="utf-8")
+    evidence_path.write_text("{}", encoding="utf-8")
+
+    checks = load_and_validate_d4_bundle(
+        paths,
+        bundle_path,
+        d3_path,
+        d2_path,
+        registry_path,
+        matrix_path,
+        evidence_path,
+    )
+
+    assert any(item.code == "D4_D3_PROCESSING_INVALID" for item in checks)

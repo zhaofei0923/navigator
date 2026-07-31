@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .baseline import extract_contracts, sha256_file
+from .d2_collection import load_and_validate_d2_bundle
 from .models import CheckResult
 from .paths import RepositoryPaths
 
@@ -1429,6 +1430,9 @@ def load_and_validate_d3_bundle(
     paths: RepositoryPaths,
     bundle_path: Path,
     d2_bundle_path: Path,
+    d1_registry_path: Path,
+    d1_matrix_path: Path,
+    d1_evidence_path: Path,
 ) -> list[CheckResult]:
     payloads: list[dict[str, Any]] = []
     for label, path in (("bundle", bundle_path), ("D2 bundle", d2_bundle_path)):
@@ -1451,4 +1455,24 @@ def load_and_validate_d3_bundle(
                 )
             ]
         payloads.append(payload)
-    return validate_d3_bundle(paths, payloads[0], payloads[1])
+    checks = validate_d3_bundle(paths, payloads[0], payloads[1])
+    d2_checks = load_and_validate_d2_bundle(
+        paths,
+        d2_bundle_path,
+        d1_registry_path,
+        d1_matrix_path,
+        d1_evidence_path,
+    )
+    if d2_checks:
+        upstream_codes = ", ".join(sorted({item.code for item in d2_checks}))
+        checks.append(
+            CheckResult(
+                code="D3_D2_COLLECTION_INVALID",
+                message=(
+                    f"Full D2 collection validation failed with {len(d2_checks)} check(s): "
+                    f"{upstream_codes}"
+                ),
+                location="d2_collection",
+            )
+        )
+    return checks

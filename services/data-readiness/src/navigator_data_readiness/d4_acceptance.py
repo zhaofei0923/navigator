@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, TypeGuard
 
 from .baseline import extract_contracts, sha256_file
+from .d3_processing import load_and_validate_d3_bundle
 from .models import CheckResult
 from .paths import RepositoryPaths
 
@@ -1795,6 +1796,10 @@ def load_and_validate_d4_bundle(
     paths: RepositoryPaths,
     bundle_path: Path,
     d3_bundle_path: Path,
+    d2_bundle_path: Path,
+    d1_registry_path: Path,
+    d1_matrix_path: Path,
+    d1_evidence_path: Path,
 ) -> list[CheckResult]:
     payloads: list[dict[str, Any]] = []
     for label, path in (("bundle", bundle_path), ("D3 bundle", d3_bundle_path)):
@@ -1817,4 +1822,25 @@ def load_and_validate_d4_bundle(
                 )
             ]
         payloads.append(payload)
-    return validate_d4_bundle(paths, payloads[0], payloads[1])
+    checks = validate_d4_bundle(paths, payloads[0], payloads[1])
+    d3_checks = load_and_validate_d3_bundle(
+        paths,
+        d3_bundle_path,
+        d2_bundle_path,
+        d1_registry_path,
+        d1_matrix_path,
+        d1_evidence_path,
+    )
+    if d3_checks:
+        upstream_codes = ", ".join(sorted({item.code for item in d3_checks}))
+        checks.append(
+            CheckResult(
+                code="D4_D3_PROCESSING_INVALID",
+                message=(
+                    f"Full D3 processing validation failed with {len(d3_checks)} check(s): "
+                    f"{upstream_codes}"
+                ),
+                location="d3_processing",
+            )
+        )
+    return checks
