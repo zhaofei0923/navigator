@@ -99,7 +99,7 @@ def build_p0_delivery_template(paths: RepositoryPaths) -> dict[str, Any]:
         | {_TEST_REVIEWER_ROLE}
     )
     return {
-        "schema_version": 4,
+        "schema_version": 5,
         "stage": "P0-DELIVERY",
         "template_only": True,
         "append_only": True,
@@ -185,6 +185,9 @@ def build_p0_delivery_template(paths: RepositoryPaths) -> dict[str, Any]:
             for record in acceptance
         ],
         "release_metrics": {
+            "evaluated_commit_sha": None,
+            "measured_by": None,
+            "measured_at": None,
             "open_s0_defects": None,
             "open_s1_defects": None,
             "critical_task_success_rate_pct": None,
@@ -552,6 +555,17 @@ def _validate_final_release_after_events(
                 message=f"{location} cannot occur after final release approval",
                 location=location,
             )
+    metrics = bundle.get("release_metrics")
+    if isinstance(metrics, dict):
+        measured_at = _parse_iso_temporal(_text(metrics, "measured_at"))
+        _validate_temporal_order(
+            checks,
+            measured_at,
+            released_at,
+            code="P0_DELIVERY_EVENT_AFTER_FINAL_RELEASE",
+            message="release_metrics.measured_at cannot occur after final release approval",
+            location="release_metrics.measured_at",
+        )
 
 
 def _d4_committee_approver(
@@ -1170,6 +1184,7 @@ def _number(value: Any) -> float | None:
 def _validate_metrics(
     checks: list[CheckResult],
     metrics: Any,
+    final_release_commit: str,
 ) -> set[str]:
     if not isinstance(metrics, dict):
         checks.append(
@@ -1180,6 +1195,41 @@ def _validate_metrics(
             )
         )
         return set()
+    _required_fields(
+        checks,
+        metrics,
+        ("evaluated_commit_sha", "measured_by", "measured_at"),
+        code="P0_DELIVERY_METRIC_METADATA_INCOMPLETE",
+        location="release_metrics",
+    )
+    _iso_temporal(
+        checks,
+        metrics,
+        "measured_at",
+        location="release_metrics",
+    )
+    evaluated_commit = _text(metrics, "evaluated_commit_sha").lower()
+    evaluated_commit_valid = bool(_COMMIT_PATTERN.fullmatch(evaluated_commit))
+    if evaluated_commit and not evaluated_commit_valid:
+        checks.append(
+            CheckResult(
+                code="P0_DELIVERY_METRIC_COMMIT_SHA_INVALID",
+                message=f"Invalid evaluated commit SHA: {evaluated_commit}",
+                location="release_metrics.evaluated_commit_sha",
+            )
+        )
+    if (
+        evaluated_commit_valid
+        and _COMMIT_PATTERN.fullmatch(final_release_commit)
+        and evaluated_commit != final_release_commit
+    ):
+        checks.append(
+            CheckResult(
+                code="P0_DELIVERY_METRIC_COMMIT_MISMATCH",
+                message="Release metrics must evaluate the exact final release commit",
+                location="release_metrics.evaluated_commit_sha",
+            )
+        )
     for field in ("open_s0_defects", "open_s1_defects"):
         if _number(metrics.get(field)) != 0:
             checks.append(
@@ -1569,11 +1619,11 @@ def validate_p0_delivery_bundle(
 ) -> list[CheckResult]:
     checks: list[CheckResult] = []
     current = build_p0_delivery_template(paths)
-    if bundle.get("schema_version") != 4 or bundle.get("stage") != "P0-DELIVERY":
+    if bundle.get("schema_version") != 5 or bundle.get("stage") != "P0-DELIVERY":
         checks.append(
             CheckResult(
                 code="P0_DELIVERY_HEADER_INVALID",
-                message="Bundle requires schema_version 4 and stage P0-DELIVERY",
+                message="Bundle requires schema_version 5 and stage P0-DELIVERY",
                 location="bundle",
             )
         )
@@ -1770,7 +1820,15 @@ def validate_p0_delivery_bundle(
                 f"{section}:{identifier}",
             )
 
-    metric_evidence_ids = _validate_metrics(checks, bundle.get("release_metrics"))
+    final_release = bundle.get("final_release")
+    final_release_commit = (
+        _text(final_release, "commit_sha").lower() if isinstance(final_release, dict) else ""
+    )
+    metric_evidence_ids = _validate_metrics(
+        checks,
+        bundle.get("release_metrics"),
+        final_release_commit,
+    )
     referenced_evidence_ids.update(metric_evidence_ids)
     _bind_evidence_subjects(
         evidence_subject_requirements,
@@ -1884,10 +1942,6 @@ def validate_p0_delivery_bundle(
                 location="signer_authorizations",
             )
         )
-    final_release = bundle.get("final_release")
-    final_release_commit = (
-        _text(final_release, "commit_sha").lower() if isinstance(final_release, dict) else ""
-    )
     _validate_git_provenance(
         checks,
         paths,

@@ -131,6 +131,9 @@ def _completed_bundle() -> tuple[dict[str, Any], dict[str, Any]]:
             }
         )
     bundle["release_metrics"] = {
+        "evaluated_commit_sha": commit_sha,
+        "measured_by": "kevin",
+        "measured_at": "2026-07-31",
         "open_s0_defects": 0,
         "open_s1_defects": 0,
         "critical_task_success_rate_pct": 95,
@@ -190,7 +193,7 @@ def test_delivery_template_freezes_complete_p0_scope() -> None:
 
     assert bundle["template_only"] is True
     assert bundle["append_only"] is True
-    assert bundle["schema_version"] == 4
+    assert bundle["schema_version"] == 5
     assert len(bundle["requirements"]) == 90
     assert len(bundle["routes"]) == 125
     assert len(bundle["apis"]) == 56
@@ -521,6 +524,7 @@ def test_final_release_must_follow_every_delivery_event(monkeypatch: Any) -> Non
         bundle[section][0]["reviewed_at"] = "2026-08-02"
     bundle["acceptance_items"][0]["reviewed_at"] = "2026-08-02"
     bundle["evidence"][0]["approved_at"] = "2026-08-02"
+    bundle["release_metrics"]["measured_at"] = "2026-08-02"
 
     checks = validate_p0_delivery_bundle(
         discover_repository(),
@@ -541,7 +545,49 @@ def test_final_release_must_follow_every_delivery_event(monkeypatch: Any) -> Non
         "engineering_tests[0].reviewed_at",
         "acceptance_items[0].reviewed_at",
         "evidence[0].approved_at",
+        "release_metrics.measured_at",
     }
+
+
+def test_release_metrics_must_evaluate_the_final_commit(monkeypatch: Any) -> None:
+    monkeypatch.setattr(
+        "navigator_data_readiness.p0_delivery.build_p0_traceability_report",
+        lambda _paths: _ready_traceability(),
+    )
+    bundle, d4_bundle = _completed_bundle()
+    bundle["release_metrics"]["evaluated_commit_sha"] = _parent_commit()
+
+    checks = validate_p0_delivery_bundle(
+        discover_repository(),
+        bundle,
+        d4_bundle,
+        d4_chain_checks=[],
+    )
+
+    assert "P0_DELIVERY_METRIC_COMMIT_MISMATCH" in _codes(checks)
+
+
+def test_release_metric_provenance_metadata_is_required(monkeypatch: Any) -> None:
+    monkeypatch.setattr(
+        "navigator_data_readiness.p0_delivery.build_p0_traceability_report",
+        lambda _paths: _ready_traceability(),
+    )
+    bundle, d4_bundle = _completed_bundle()
+    bundle["release_metrics"]["measured_by"] = None
+    bundle["release_metrics"]["measured_at"] = "sometime"
+    bundle["release_metrics"]["evaluated_commit_sha"] = "not-a-commit"
+
+    checks = validate_p0_delivery_bundle(
+        discover_repository(),
+        bundle,
+        d4_bundle,
+        d4_chain_checks=[],
+    )
+    codes = _codes(checks)
+
+    assert "P0_DELIVERY_METRIC_METADATA_INCOMPLETE" in codes
+    assert "P0_DELIVERY_TEMPORAL_INVALID" in codes
+    assert "P0_DELIVERY_METRIC_COMMIT_SHA_INVALID" in codes
 
 
 def test_d4_chain_cannot_be_self_reported(monkeypatch: Any) -> None:

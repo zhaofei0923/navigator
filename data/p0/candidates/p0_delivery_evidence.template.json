@@ -2402,6 +2402,7 @@
   "release_metrics": {
     "ai_citation_coverage_pct": null,
     "critical_task_success_rate_pct": null,
+    "evaluated_commit_sha": null,
     "evidence_ids": [],
     "leak_counts": {
       "ai": null,
@@ -2411,6 +2412,8 @@
       "search": null,
       "tenant": null
     },
+    "measured_at": null,
+    "measured_by": null,
     "open_s0_defects": null,
     "open_s1_defects": null,
     "performance_capacity_rpo_rto_status": "pending"
@@ -4569,7 +4572,7 @@
       "status": "pending"
     }
   ],
-  "schema_version": 4,
+  "schema_version": 5,
   "signer_authorizations": [
     {
       "authorized_at": null,
