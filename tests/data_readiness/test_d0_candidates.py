@@ -18,6 +18,7 @@ from navigator_data_readiness.d0_candidates import (
     build_enum_migration_evidence,
     build_gold_standard_gap_report,
     build_mapping_resolution_proposal,
+    build_raw_sample_review_worksheet,
     build_template_trial,
     build_terminology_review_queue,
     load_license_snapshots,
@@ -332,6 +333,40 @@ def test_core_contract_review_worksheet_groups_every_decision_without_signing() 
     assert "本工作表本身不得提交给正式校验器" in worksheet
 
 
+def test_raw_sample_review_worksheet_binds_verified_metadata_without_document_content() -> None:
+    paths = discover_repository()
+    contracts = extract_contracts(paths)
+    captures = load_research_captures(paths)
+    snapshots = load_license_snapshots(paths)
+    gold_gap = build_gold_standard_gap_report(
+        contracts,
+        captures,
+        license_snapshots=snapshots,
+    )
+
+    worksheet = build_raw_sample_review_worksheet(captures, snapshots, gold_gap)
+
+    inputs = {
+        "captures": sorted(captures, key=lambda item: str(item.get("raw_id") or "")),
+        "license_snapshots": sorted(snapshots, key=lambda item: str(item.get("snapshot_id") or "")),
+        "gold_candidates": sorted(
+            gold_gap["candidates"], key=lambda item: str(item.get("raw_id") or "")
+        ),
+    }
+    expected_hash = hashlib.sha256(
+        (json.dumps(inputs, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode()
+    ).hexdigest()
+    assert f"审核输入SHA-256：`{expected_hash}`" in worksheet
+    assert worksheet.count("## 1. RAW-EXAMPLE-001") == 1
+    assert worksheet.count("## 2. RAW-EXAMPLE-002") == 1
+    assert worksheet.count("## 3. RAW-EXAMPLE-003") == 1
+    assert all(str(item["sha256"]) in worksheet for item in captures)
+    assert all(str(item["final_url"]) in worksheet for item in captures)
+    assert "license_decision`：`approved` / `limited` / `rejected`" in worksheet
+    assert "rights_term_scan" not in worksheet
+    assert "本工作表本身不得作为批准证据" in worksheet
+
+
 def test_enum_evidence_checks_structural_migration_contract_without_approving_semantics() -> None:
     contracts = extract_contracts(discover_repository())
 
@@ -382,8 +417,9 @@ def test_write_candidates_exports_review_package(tmp_path: Path) -> None:
     )
 
     worksheet_path = paths.d0_candidates_dir / "core_contract_review_worksheet.md"
+    raw_sample_worksheet_path = paths.d0_candidates_dir / "raw_sample_review_worksheet.md"
 
-    assert len(written) == 14
+    assert len(written) == 15
     assert assessment["automated_assessment_only"] is True
     assert len(resolution["entity_primary_key_resolutions"]) == 29
     assert len(resolution["field_unit_resolutions"]) == 92
@@ -396,6 +432,8 @@ def test_write_candidates_exports_review_package(tmp_path: Path) -> None:
     )
     assert worksheet_path.is_file()
     assert "主键建议：29项" in worksheet_path.read_text(encoding="utf-8")
+    assert raw_sample_worksheet_path.is_file()
+    assert "样本数量：3" in raw_sample_worksheet_path.read_text(encoding="utf-8")
     assert len(queue["items"]) == 3
     assert {item["machine_status"] for item in queue["items"]} == {"fail", "pass"}
     for item in queue["items"]:

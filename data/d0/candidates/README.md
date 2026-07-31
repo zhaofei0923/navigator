@@ -17,6 +17,7 @@
 | `file_rules.json` | 原始资料目录、命名和清单字段候选 | 待数据和合规负责人批准 |
 | `template_trial_report.json` | 批次、来源、原始资料和字段映射交叉试填 | 6条映射目标不存在，当前失败 |
 | `gold_standard_gap_report.json` | 金标准示例缺口 | 三份原件元数据与许可观察快照已核验；许可结论和专业复核待完成 |
+| `raw_sample_review_worksheet.md` | 三份金标准样本人工审核工作表 | 展示官方URL、日期、文件哈希和许可观察，列出四项必选结论；不含原件正文 |
 | `mapping_resolution_proposal.json` | 6条未知映射的候选处理 | 仅ISO代码存在高置信直接目标，其余需领域决策 |
 | `terminology_review_queue.json` | 45组、251条枚举术语复核队列 | 待专业语言和业务复核 |
 
@@ -36,7 +37,8 @@
    公式改动；
 5. 候选工作簿验证通过仍须接受正式变更评审，不会替换或批准权威基线；
 6. 正式变更必须同步更新Markdown、技术附件、D0台账和版本记录；
-7. 真实金标准必须由合规和专业负责人补齐最终结论及各自证据；
+7. 真实金标准先按`raw_sample_review_worksheet.md`明确许可、再分发、AI索引和专业
+   结论，再由合规和专业负责人补齐各自证据；工作表不构成法律意见或批准证据；
 8. 机器状态为`fail`时不得批准；`pass`也只表示可进入实名人工复核；
 9. 审批证据登记到 `data/d0/evidence/manifest.json`，不得直接编辑机器结论伪造通过；
 10. 更新正式基线后重新运行 `snapshot`、`prepare-d0`、`validate`和`gate --stage D0`。

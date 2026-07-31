@@ -782,6 +782,113 @@ def build_core_contract_review_worksheet(recommendations: dict[str, Any]) -> str
     return "\n".join(lines)
 
 
+def build_raw_sample_review_worksheet(
+    captures: list[dict[str, Any]],
+    license_snapshots: list[dict[str, Any]],
+    gold_gap_report: dict[str, Any],
+) -> str:
+    """Render verified sample metadata and explicit human choices without document content."""
+    ordered_captures = sorted(captures, key=lambda item: str(item.get("raw_id") or ""))
+    ordered_snapshots = sorted(
+        license_snapshots, key=lambda item: str(item.get("snapshot_id") or "")
+    )
+    ordered_candidates = sorted(
+        gold_gap_report["candidates"], key=lambda item: str(item.get("raw_id") or "")
+    )
+    review_inputs = {
+        "captures": ordered_captures,
+        "license_snapshots": ordered_snapshots,
+        "gold_candidates": ordered_candidates,
+    }
+    review_input_sha256 = hashlib.sha256(_candidate_json_bytes(review_inputs)).hexdigest()
+    captures_by_raw_id = {str(item["raw_id"]): item for item in ordered_captures}
+    snapshots_by_id = {str(item["snapshot_id"]): item for item in ordered_snapshots}
+
+    lines = [
+        "# D0金标准样本人工审核工作表",
+        "",
+        "> 本文件只展示来源元数据、哈希和许可观察，不包含原件正文，不构成法律意见。",
+        "> 许可、再分发、AI索引和专业结论必须由授权人员明确选择并另行登记证据。",
+        "",
+        f"- 审核输入SHA-256：`{review_input_sha256}`",
+        f"- 样本数量：{len(ordered_candidates)}",
+        "- 当前保守控制：原件不入Git、再分发关闭、AI索引关闭",
+        "",
+    ]
+    for index, candidate in enumerate(ordered_candidates, start=1):
+        raw_id = str(candidate["raw_id"])
+        capture = captures_by_raw_id.get(raw_id, {})
+        snapshot_id = str(capture.get("license_snapshot_id") or "")
+        snapshot = snapshots_by_id.get(snapshot_id, {})
+        observations = snapshot.get("observations")
+        if not isinstance(observations, dict):
+            observations = {}
+        interim_controls = snapshot.get("interim_controls")
+        if not isinstance(interim_controls, dict):
+            interim_controls = {}
+        pdf = capture.get("pdf")
+        if not isinstance(pdf, dict):
+            pdf = {}
+        unresolved = ", ".join(str(item) for item in candidate.get("unresolved", [])) or "无"
+        lines.extend(
+            [
+                f"## {index}. {raw_id}",
+                "",
+                f"- 国家/来源：`{_markdown_cell(capture.get('country'))}` / "
+                f"`{_markdown_cell(capture.get('source_id'))}`",
+                f"- 机构：{_markdown_cell(capture.get('organization'))}",
+                f"- 文件：{_markdown_cell(capture.get('title'))}",
+                f"- 发布页：<{capture.get('publication_page') or ''}>",
+                f"- 官方文件：<{capture.get('final_url') or ''}>",
+                f"- 发布/采集时间：`{_markdown_cell(capture.get('published_at'))}` / "
+                f"`{_markdown_cell(capture.get('captured_at'))}`",
+                f"- 文件SHA-256：`{_markdown_cell(capture.get('sha256'))}`",
+                f"- PDF核验：{_markdown_cell(pdf.get('pages'))}页；"
+                f"encrypted={str(bool(pdf.get('encrypted'))).lower()}；"
+                f"javascript={str(bool(pdf.get('javascript'))).lower()}；"
+                f"visual={_markdown_cell(pdf.get('visual_check'))}",
+                f"- 许可快照：`{_markdown_cell(snapshot_id)}`；"
+                f"绑定核验={str(bool(candidate.get('license_snapshot_verified'))).lower()}",
+                f"- 权利提示观察：{_markdown_cell(observations.get('rights_notice'))}",
+                "- 明示许可观察："
+                f"公开复用={str(bool(observations.get('explicit_public_reuse_license_found'))).lower()}；"
+                f"再分发={str(bool(observations.get('explicit_redistribution_permission_found'))).lower()}；"
+                f"AI索引={str(bool(observations.get('explicit_ai_index_permission_found'))).lower()}；"
+                f"署名要求={str(bool(observations.get('attribution_requirement_found'))).lower()}",
+                "- 复核前允许范围："
+                f"{_markdown_cell(interim_controls.get('permitted_until_review'))}",
+                f"- 当前未决：{_markdown_cell(unresolved)}",
+                "",
+                "需选择：",
+                "",
+                "- `license_decision`：`approved` / `limited` / `rejected`",
+                "- `redistribution_allowed`：`true` / `false`",
+                "- `ai_index_allowed`：`true` / `false`",
+                "- `professional_review_status`：`approved` / `rejected`",
+                "",
+            ]
+        )
+
+    lines.extend(
+        [
+            "## 建议回复格式",
+            "",
+            "```text",
+            "RAW-EXAMPLE-001：license=<approved|limited|rejected>；redistribution=<true|false>；AI=<true|false>；professional=<approved|rejected>",
+            "RAW-EXAMPLE-002：license=<approved|limited|rejected>；redistribution=<true|false>；AI=<true|false>；professional=<approved|rejected>",
+            "RAW-EXAMPLE-003：license=<approved|limited|rejected>；redistribution=<true|false>；AI=<true|false>；professional=<approved|rejected>",
+            "```",
+            "",
+            "约束：`license=rejected`时再分发和AI索引必须均为`false`；"
+            "`professional=rejected`时样本必须替换或整改。",
+            "人工决定形成后还须补齐合规证据、专业证据、实名复核人和复核时间；"
+            "本工作表本身不得作为批准证据。",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
 def build_machine_evidence_review_queue(
     evidence_payloads: dict[str, dict[str, Any]],
 ) -> dict[str, Any]:
@@ -1448,4 +1555,15 @@ def write_candidates(paths: RepositoryPaths) -> list[Path]:
         newline="\n",
     )
     written.append(worksheet)
+    raw_sample_worksheet = paths.d0_candidates_dir / "raw_sample_review_worksheet.md"
+    raw_sample_worksheet.write_text(
+        build_raw_sample_review_worksheet(
+            load_research_captures(paths),
+            load_license_snapshots(paths),
+            payloads["gold_standard_gap_report.json"],
+        ),
+        encoding="utf-8",
+        newline="\n",
+    )
+    written.append(raw_sample_worksheet)
     return written
