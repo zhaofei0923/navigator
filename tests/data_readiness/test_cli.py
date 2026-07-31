@@ -205,8 +205,12 @@ def test_validate_d2_command_reports_blockers(
 ) -> None:
     bundle = tmp_path / "bundle.json"
     d1_registry = tmp_path / "d1.json"
+    d1_matrix = tmp_path / "d1_matrix.json"
+    d1_evidence = tmp_path / "d1_evidence.json"
     bundle.write_text("{}", encoding="utf-8")
     d1_registry.write_text('{"sources": []}', encoding="utf-8")
+    d1_matrix.write_text("{}", encoding="utf-8")
+    d1_evidence.write_text("{}", encoding="utf-8")
 
     exit_code = main(
         [
@@ -215,6 +219,10 @@ def test_validate_d2_command_reports_blockers(
             str(bundle),
             "--d1-registry",
             str(d1_registry),
+            "--d1-matrix",
+            str(d1_matrix),
+            "--d1-evidence",
+            str(d1_evidence),
         ]
     )
 

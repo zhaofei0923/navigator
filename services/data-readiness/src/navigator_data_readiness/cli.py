@@ -72,6 +72,8 @@ def _parser() -> argparse.ArgumentParser:
     )
     d2_validation.add_argument("--bundle", type=Path, required=True)
     d2_validation.add_argument("--d1-registry", type=Path, required=True)
+    d2_validation.add_argument("--d1-matrix", type=Path, required=True)
+    d2_validation.add_argument("--d1-evidence", type=Path, required=True)
     commands.add_parser(
         "prepare-d3",
         help="Generate D3 replayable parsing, normalization, and entity-resolution templates.",
@@ -179,7 +181,19 @@ def main(argv: list[str] | None = None) -> int:
         d1_registry_path = (
             args.d1_registry if args.d1_registry.is_absolute() else paths.root / args.d1_registry
         )
-        checks = load_and_validate_d2_bundle(paths, bundle_path, d1_registry_path)
+        d1_matrix_path = (
+            args.d1_matrix if args.d1_matrix.is_absolute() else paths.root / args.d1_matrix
+        )
+        d1_evidence_path = (
+            args.d1_evidence if args.d1_evidence.is_absolute() else paths.root / args.d1_evidence
+        )
+        checks = load_and_validate_d2_bundle(
+            paths,
+            bundle_path,
+            d1_registry_path,
+            d1_matrix_path,
+            d1_evidence_path,
+        )
         _print_checks(checks)
         return 1 if checks else 0
 

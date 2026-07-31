@@ -16,6 +16,7 @@ from navigator_data_readiness.d2_collection import (
     write_d2_candidates,
 )
 from navigator_data_readiness.paths import RepositoryPaths, discover_repository
+from pytest import MonkeyPatch
 
 
 def _configure_job(item: dict[str, Any]) -> None:
@@ -463,11 +464,75 @@ def test_write_and_load_d2_artifacts(tmp_path: Path) -> None:
     bundle_path = paths.d2_candidates_dir / "d2_collection_bundle.template.json"
     d1_registry = tmp_path / "d1.json"
     d1_registry.write_text(json.dumps({"sources": []}), encoding="utf-8")
-    checks = load_and_validate_d2_bundle(paths, bundle_path, d1_registry)
+    d1_matrix = source_paths.d1_candidates_dir / "domain_source_matrix.template.json"
+    d1_evidence = source_paths.d1_candidates_dir / "d1_evidence_manifest.template.json"
+    checks = load_and_validate_d2_bundle(
+        paths,
+        bundle_path,
+        d1_registry,
+        d1_matrix,
+        d1_evidence,
+    )
 
     assert len(written) == 3
     assert all(path.is_file() for path in written)
     assert any(item.code == "D2_D1_DEPENDENCY_PENDING" for item in checks)
+    assert any(item.code == "D2_D1_ADMISSION_INVALID" for item in checks)
+
+
+def test_load_d2_accepts_only_after_full_d1_admission_passes(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    paths = discover_repository()
+    bundle, registry = _completed_d2_payloads(paths)
+    bundle_path = tmp_path / "bundle.json"
+    registry_path = tmp_path / "registry.json"
+    matrix_path = tmp_path / "matrix.json"
+    evidence_path = tmp_path / "evidence.json"
+    bundle_path.write_text(json.dumps(bundle), encoding="utf-8")
+    registry_path.write_text(json.dumps(registry), encoding="utf-8")
+    matrix_path.write_text("{}", encoding="utf-8")
+    evidence_path.write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(
+        "navigator_data_readiness.d2_collection.load_and_validate_d1_admission",
+        lambda *_args: [],
+    )
+
+    checks = load_and_validate_d2_bundle(
+        paths,
+        bundle_path,
+        registry_path,
+        matrix_path,
+        evidence_path,
+    )
+
+    assert checks == []
+
+
+def test_load_d2_rejects_fabricated_active_registry_without_valid_d1_artifacts(
+    tmp_path: Path,
+) -> None:
+    paths = discover_repository()
+    bundle, registry = _completed_d2_payloads(paths)
+    bundle_path = tmp_path / "bundle.json"
+    registry_path = tmp_path / "registry.json"
+    matrix_path = tmp_path / "matrix.json"
+    evidence_path = tmp_path / "evidence.json"
+    bundle_path.write_text(json.dumps(bundle), encoding="utf-8")
+    registry_path.write_text(json.dumps(registry), encoding="utf-8")
+    matrix_path.write_text("{}", encoding="utf-8")
+    evidence_path.write_text("{}", encoding="utf-8")
+
+    checks = load_and_validate_d2_bundle(
+        paths,
+        bundle_path,
+        registry_path,
+        matrix_path,
+        evidence_path,
+    )
+
+    assert any(item.code == "D2_D1_ADMISSION_INVALID" for item in checks)
 
 
 def test_load_d2_handles_missing_invalid_and_non_object_files(tmp_path: Path) -> None:
@@ -479,9 +544,9 @@ def test_load_d2_handles_missing_invalid_and_non_object_files(tmp_path: Path) ->
     array = tmp_path / "array.json"
     array.write_text("[]", encoding="utf-8")
 
-    missing = load_and_validate_d2_bundle(paths, tmp_path / "missing.json", valid)
-    malformed = load_and_validate_d2_bundle(paths, invalid, valid)
-    non_object = load_and_validate_d2_bundle(paths, array, valid)
+    missing = load_and_validate_d2_bundle(paths, tmp_path / "missing.json", valid, valid, valid)
+    malformed = load_and_validate_d2_bundle(paths, invalid, valid, valid, valid)
+    non_object = load_and_validate_d2_bundle(paths, array, valid, valid, valid)
 
     assert missing[0].code == "D2_ARTIFACT_INVALID"
     assert malformed[0].code == "D2_ARTIFACT_INVALID"

@@ -11,7 +11,8 @@
 
 ## 执行顺序
 
-1. D1正式批准后，复制bundle模板并将 `template_only` 改为 `false`；
+1. D1正式批准后，保留已批准的来源登记、数据域矩阵和哈希证据清单，复制bundle
+   模板并将 `template_only` 改为 `false`；
 2. 填写D1阶段门证据编号，将6个任务补齐连接器版本、范围、时区、水位、幂等键、
    去重键、限速、超时、重试、schema指纹和User-Agent策略；
 3. 每次执行追加唯一 `run_id`，记录参数哈希、连接器版本、开始/结束时间、水位、
@@ -28,8 +29,14 @@
    ```bash
    uv run navigator-data validate-d2 \
      --bundle data/d2/d2_collection_bundle.json \
-     --d1-registry data/d1/source_admission_registry.json
+     --d1-registry data/d1/source_admission_registry.json \
+     --d1-matrix data/d1/domain_source_matrix.json \
+     --d1-evidence data/d1/d1_evidence_manifest.json
    ```
+
+`validate-d2`会重新执行完整D1准入校验，包括当前D0门禁、来源状态、用途边界、
+优先/替代来源矩阵及仓库内证据文件哈希；仅在D1来源表中填写`active`或伪造一个
+上游证据编号不能进入D2。
 
 ## 强制禁止
 

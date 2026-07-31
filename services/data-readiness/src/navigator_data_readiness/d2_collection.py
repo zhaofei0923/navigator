@@ -9,6 +9,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 from .baseline import extract_contracts, sha256_file
+from .d1_sources import load_and_validate_d1_admission
 from .models import CheckResult
 from .paths import RepositoryPaths
 
@@ -983,6 +984,8 @@ def load_and_validate_d2_bundle(
     paths: RepositoryPaths,
     bundle_path: Path,
     d1_registry_path: Path,
+    d1_matrix_path: Path,
+    d1_evidence_path: Path,
 ) -> list[CheckResult]:
     payloads: list[dict[str, Any]] = []
     for label, path in (("bundle", bundle_path), ("D1 registry", d1_registry_path)):
@@ -1005,4 +1008,23 @@ def load_and_validate_d2_bundle(
                 )
             ]
         payloads.append(payload)
-    return validate_d2_bundle(paths, payloads[0], payloads[1])
+    checks = validate_d2_bundle(paths, payloads[0], payloads[1])
+    d1_checks = load_and_validate_d1_admission(
+        paths,
+        d1_registry_path,
+        d1_matrix_path,
+        d1_evidence_path,
+    )
+    if d1_checks:
+        upstream_codes = ", ".join(sorted({item.code for item in d1_checks}))
+        checks.append(
+            CheckResult(
+                code="D2_D1_ADMISSION_INVALID",
+                message=(
+                    f"Full D1 admission validation failed with {len(d1_checks)} check(s): "
+                    f"{upstream_codes}"
+                ),
+                location="d1_admission",
+            )
+        )
+    return checks
