@@ -21,6 +21,7 @@ _IMPLEMENTED_STATUS = "implemented"
 _APPROVED_STATUS = "approved"
 _COMMITTEE_ROLE = "项目委员会"
 _TEST_REVIEWER_ROLE = "测试负责人"
+_Temporal = tuple[datetime, date, bool]
 
 
 def payload_sha256(payload: Any) -> str:
@@ -416,7 +417,7 @@ def _iso_temporal(
     field: str,
     *,
     location: str,
-) -> tuple[datetime, date, bool] | None:
+) -> _Temporal | None:
     value = _text(item, field)
     if not value:
         return None
@@ -460,8 +461,8 @@ def _iso_temporal(
 
 def _validate_temporal_order(
     checks: list[CheckResult],
-    earlier: tuple[datetime, date, bool] | None,
-    later: tuple[datetime, date, bool] | None,
+    earlier: _Temporal | None,
+    later: _Temporal | None,
     *,
     code: str,
     message: str,
@@ -483,10 +484,32 @@ def _validate_temporal_order(
         )
 
 
+def _validate_signer_effective_at(
+    checks: list[CheckResult],
+    role: str,
+    person_name: str,
+    event_at: _Temporal | None,
+    signer_authorized_at: dict[tuple[str, str], _Temporal],
+    *,
+    code: str,
+    message: str,
+    location: str,
+) -> None:
+    authorized_at = signer_authorized_at.get((role, person_name))
+    _validate_temporal_order(
+        checks,
+        authorized_at,
+        event_at,
+        code=code,
+        message=message,
+        location=location,
+    )
+
+
 def _d4_committee_approver(
     checks: list[CheckResult],
     d4_bundle: dict[str, Any],
-) -> str:
+) -> tuple[str, _Temporal | None]:
     acceptance = d4_bundle.get("acceptance")
     approvals = acceptance.get("committee_approvals") if isinstance(acceptance, dict) else None
     committee_approvals = (
@@ -509,8 +532,22 @@ def _d4_committee_approver(
                 location="d4_bundle.acceptance.committee_approvals",
             )
         )
-        return ""
-    return _text(committee_approvals[0], "person_name")
+        return "", None
+    committee_approval = committee_approvals[0]
+    _required_fields(
+        checks,
+        committee_approval,
+        ("signed_at",),
+        code="P0_DELIVERY_COMMITTEE_APPROVAL_INCOMPLETE",
+        location="d4_bundle.acceptance.committee_approvals",
+    )
+    signed_at = _iso_temporal(
+        checks,
+        committee_approval,
+        "signed_at",
+        location="d4_bundle.acceptance.committee_approvals",
+    )
+    return _text(committee_approval, "person_name"), signed_at
 
 
 def _is_authorized_signer(
@@ -529,8 +566,10 @@ def _validate_signer_authorizations(
     payload: dict[str, Any],
     required_roles: set[str],
     committee_approver: str,
+    committee_approved_at: _Temporal | None,
 ) -> tuple[
     dict[str, set[str]],
+    dict[tuple[str, str], _Temporal],
     set[str],
     dict[str, set[str]],
     set[str],
@@ -544,8 +583,9 @@ def _validate_signer_authorizations(
                 location="signer_authorizations",
             )
         )
-        return {}, set(), {}, set()
+        return {}, {}, set(), {}, set()
     authorized_signers: dict[str, set[str]] = {}
+    signer_authorized_at: dict[tuple[str, str], _Temporal] = {}
     evidence_ids: set[str] = set()
     evidence_subject_requirements: dict[str, set[str]] = {}
     known_subject_refs: set[str] = set()
@@ -574,7 +614,15 @@ def _validate_signer_authorizations(
             code="P0_DELIVERY_SIGNER_AUTHORIZATION_INCOMPLETE",
             location=location,
         )
-        _iso_temporal(checks, entry, "authorized_at", location=location)
+        authorized_at = _iso_temporal(checks, entry, "authorized_at", location=location)
+        _validate_temporal_order(
+            checks,
+            committee_approved_at,
+            authorized_at,
+            code="P0_DELIVERY_SIGNER_AUTHORIZATION_BEFORE_COMMITTEE_APPROVAL",
+            message="Signer authorization cannot predate the D4 committee approval",
+            location=location,
+        )
         role = _text(entry, "role")
         person_name = _text(entry, "person_name")
         if role == _COMMITTEE_ROLE:
@@ -598,6 +646,8 @@ def _validate_signer_authorizations(
             else:
                 seen_pairs.add(pair)
                 authorized_signers.setdefault(role, set()).add(person_name)
+                if authorized_at is not None:
+                    signer_authorized_at[pair] = authorized_at
         if (
             not committee_approver
             or _text(entry, "authorizer_role") != _COMMITTEE_ROLE
@@ -642,6 +692,7 @@ def _validate_signer_authorizations(
         )
     return (
         authorized_signers,
+        signer_authorized_at,
         evidence_ids,
         evidence_subject_requirements,
         known_subject_refs,
@@ -701,6 +752,7 @@ def _validate_test_execution(
     *,
     location: str,
     authorized_signers: dict[str, set[str]],
+    signer_authorized_at: dict[tuple[str, str], _Temporal],
     committee_approver: str,
 ) -> set[str]:
     if item.get("status") != _PASS_STATUS:
@@ -730,6 +782,16 @@ def _validate_test_execution(
     )
     reviewer_role = _text(item, "reviewer_role")
     reviewed_by = _text(item, "reviewed_by")
+    _validate_signer_effective_at(
+        checks,
+        reviewer_role,
+        reviewed_by,
+        reviewed_at,
+        signer_authorized_at,
+        code="P0_DELIVERY_TEST_REVIEW_BEFORE_AUTHORIZATION",
+        message="Test review cannot predate the reviewer's authorization",
+        location=location,
+    )
     if reviewer_role != _text(item, "required_reviewer_role"):
         checks.append(
             CheckResult(
@@ -769,6 +831,7 @@ def _validate_acceptance(
     *,
     location: str,
     authorized_signers: dict[str, set[str]],
+    signer_authorized_at: dict[tuple[str, str], _Temporal],
     committee_approver: str,
 ) -> set[str]:
     if item.get("status") != _APPROVED_STATUS:
@@ -786,9 +849,19 @@ def _validate_acceptance(
         code="P0_DELIVERY_ACCEPTANCE_METADATA_INCOMPLETE",
         location=location,
     )
-    _iso_temporal(checks, item, "reviewed_at", location=location)
+    reviewed_at = _iso_temporal(checks, item, "reviewed_at", location=location)
     reviewer_role = _text(item, "reviewer_role")
     reviewed_by = _text(item, "reviewed_by")
+    _validate_signer_effective_at(
+        checks,
+        reviewer_role,
+        reviewed_by,
+        reviewed_at,
+        signer_authorized_at,
+        code="P0_DELIVERY_ACCEPTANCE_REVIEW_BEFORE_AUTHORIZATION",
+        message="Acceptance review cannot predate the reviewer's authorization",
+        location=location,
+    )
     if reviewer_role != _text(item, "required_reviewer_role"):
         checks.append(
             CheckResult(
@@ -827,6 +900,7 @@ def _validate_evidence(
     paths: RepositoryPaths,
     payload: dict[str, Any],
     authorized_signers: dict[str, set[str]],
+    signer_authorized_at: dict[tuple[str, str], _Temporal],
     committee_approver: str,
 ) -> tuple[
     set[str],
@@ -905,6 +979,16 @@ def _validate_evidence(
             _subject_refs(checks, entry, location=location)
         approval_role = _text(entry, "approval_role")
         approved_by = _text(entry, "approved_by")
+        _validate_signer_effective_at(
+            checks,
+            approval_role,
+            approved_by,
+            approved_at,
+            signer_authorized_at,
+            code="P0_DELIVERY_EVIDENCE_APPROVAL_BEFORE_AUTHORIZATION",
+            message="Evidence approval cannot predate the approver's authorization",
+            location=location,
+        )
         if evidence_id and approval_role and approved_by:
             approvals[evidence_id] = (approval_role, approved_by)
         if not _is_authorized_signer(
@@ -1121,6 +1205,7 @@ def _validate_final_release(
     final_release: Any,
     commit_shas: set[str],
     committee_approver: str,
+    signer_authorized_at: dict[tuple[str, str], _Temporal],
 ) -> set[str]:
     if not isinstance(final_release, dict):
         checks.append(
@@ -1161,16 +1246,28 @@ def _validate_final_release(
         code="P0_DELIVERY_FINAL_RELEASE_METADATA_INCOMPLETE",
         location="final_release",
     )
-    _iso_temporal(
+    approved_at = _iso_temporal(
         checks,
         final_release,
         "approved_at",
         location="final_release",
     )
+    approver_role = _text(final_release, "approver_role")
+    approved_by = _text(final_release, "approved_by")
+    _validate_signer_effective_at(
+        checks,
+        approver_role,
+        approved_by,
+        approved_at,
+        signer_authorized_at,
+        code="P0_DELIVERY_FINAL_RELEASE_BEFORE_AUTHORIZATION",
+        message="Final release approval cannot predate the approver's authority",
+        location="final_release",
+    )
     if (
         not committee_approver
-        or _text(final_release, "approver_role") != _COMMITTEE_ROLE
-        or _text(final_release, "approved_by") != committee_approver
+        or approver_role != _COMMITTEE_ROLE
+        or approved_by != committee_approver
     ):
         checks.append(
             CheckResult(
@@ -1503,7 +1600,10 @@ def validate_p0_delivery_bundle(
             )
         )
 
-    committee_approver = _d4_committee_approver(checks, d4_bundle)
+    committee_approver, committee_approved_at = _d4_committee_approver(
+        checks,
+        d4_bundle,
+    )
     referenced_evidence_ids: set[str] = set()
     evidence_subject_requirements: dict[str, set[str]] = {}
     known_subject_refs = {"release_metrics", "final_release"}
@@ -1512,10 +1612,19 @@ def validate_p0_delivery_bundle(
     }
     (
         authorized_signers,
+        signer_authorized_at,
         authorization_evidence_ids,
         authorization_subject_requirements,
         authorization_subject_refs,
-    ) = _validate_signer_authorizations(checks, bundle, required_signer_roles, committee_approver)
+    ) = _validate_signer_authorizations(
+        checks,
+        bundle,
+        required_signer_roles,
+        committee_approver,
+        committee_approved_at,
+    )
+    if committee_approver and committee_approved_at is not None:
+        signer_authorized_at[(_COMMITTEE_ROLE, committee_approver)] = committee_approved_at
     referenced_evidence_ids.update(authorization_evidence_ids)
     for evidence_id, subject_refs in authorization_subject_requirements.items():
         evidence_subject_requirements.setdefault(evidence_id, set()).update(subject_refs)
@@ -1594,6 +1703,7 @@ def validate_p0_delivery_bundle(
                     item,
                     location=location,
                     authorized_signers=authorized_signers,
+                    signer_authorized_at=signer_authorized_at,
                     committee_approver=committee_approver,
                 )
             else:
@@ -1602,6 +1712,7 @@ def validate_p0_delivery_bundle(
                     item,
                     location=location,
                     authorized_signers=authorized_signers,
+                    signer_authorized_at=signer_authorized_at,
                     committee_approver=committee_approver,
                 )
             referenced_evidence_ids.update(item_evidence_ids)
@@ -1623,6 +1734,7 @@ def validate_p0_delivery_bundle(
         bundle.get("final_release"),
         commit_shas,
         committee_approver,
+        signer_authorized_at,
     )
     referenced_evidence_ids.update(final_release_evidence_ids)
     _bind_evidence_subjects(
@@ -1640,6 +1752,7 @@ def validate_p0_delivery_bundle(
         paths,
         bundle,
         authorized_signers,
+        signer_authorized_at,
         committee_approver,
     )
     commit_shas.update(binding[3] for binding in evidence_bindings)

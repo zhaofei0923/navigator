@@ -440,6 +440,73 @@ def test_reviews_and_approvals_cannot_predate_their_events(monkeypatch: Any) -> 
     assert "P0_DELIVERY_EVIDENCE_APPROVAL_BEFORE_GENERATION" in codes
 
 
+def test_noncommittee_signatures_require_prior_authorization(monkeypatch: Any) -> None:
+    monkeypatch.setattr(
+        "navigator_data_readiness.p0_delivery.build_p0_traceability_report",
+        lambda _paths: _ready_traceability(),
+    )
+    bundle, d4_bundle = _completed_bundle()
+    test_authorization = next(
+        item for item in bundle["signer_authorizations"] if item["role"] == "测试负责人"
+    )
+    test_authorization["authorized_at"] = "2026-08-02"
+    bundle["product_tests"][0]["executed_at"] = "2026-07-31"
+    bundle["product_tests"][0]["reviewed_at"] = "2026-08-01"
+
+    acceptance = next(
+        item
+        for item in bundle["acceptance_items"]
+        if item["required_reviewer_role"] != "项目委员会"
+    )
+    acceptance_authorization = next(
+        item
+        for item in bundle["signer_authorizations"]
+        if item["role"] == acceptance["required_reviewer_role"]
+    )
+    acceptance_authorization["authorized_at"] = "2026-08-02"
+    acceptance["reviewed_at"] = "2026-08-01"
+
+    bundle["evidence"][0]["approval_role"] = "测试负责人"
+    bundle["evidence"][0]["approved_at"] = "2026-08-01"
+
+    checks = validate_p0_delivery_bundle(
+        discover_repository(),
+        bundle,
+        d4_bundle,
+        d4_chain_checks=[],
+    )
+    codes = _codes(checks)
+
+    assert "P0_DELIVERY_TEST_REVIEW_BEFORE_AUTHORIZATION" in codes
+    assert "P0_DELIVERY_ACCEPTANCE_REVIEW_BEFORE_AUTHORIZATION" in codes
+    assert "P0_DELIVERY_EVIDENCE_APPROVAL_BEFORE_AUTHORIZATION" in codes
+
+
+def test_committee_authority_cannot_be_applied_retroactively(
+    monkeypatch: Any,
+) -> None:
+    monkeypatch.setattr(
+        "navigator_data_readiness.p0_delivery.build_p0_traceability_report",
+        lambda _paths: _ready_traceability(),
+    )
+    bundle, d4_bundle = _completed_bundle()
+    d4_bundle["acceptance"]["committee_approvals"][0]["signed_at"] = "2026-08-02"
+    bundle["dependencies"]["d4_bundle_sha256"] = payload_sha256(d4_bundle)
+
+    checks = validate_p0_delivery_bundle(
+        discover_repository(),
+        bundle,
+        d4_bundle,
+        d4_chain_checks=[],
+    )
+    codes = _codes(checks)
+
+    assert "P0_DELIVERY_SIGNER_AUTHORIZATION_BEFORE_COMMITTEE_APPROVAL" in codes
+    assert "P0_DELIVERY_ACCEPTANCE_REVIEW_BEFORE_AUTHORIZATION" in codes
+    assert "P0_DELIVERY_EVIDENCE_APPROVAL_BEFORE_AUTHORIZATION" in codes
+    assert "P0_DELIVERY_FINAL_RELEASE_BEFORE_AUTHORIZATION" in codes
+
+
 def test_d4_chain_cannot_be_self_reported(monkeypatch: Any) -> None:
     monkeypatch.setattr(
         "navigator_data_readiness.p0_delivery.build_p0_traceability_report",
