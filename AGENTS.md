@@ -21,8 +21,9 @@
 - Treat the source workbooks as read-only. Generated contracts belong in
   `data/contracts/current`; machine-generated D0 candidates belong in `data/d0/candidates`.
 - P0 baseline-change verification must target a separate candidate workbook, compare formula
-  contracts as well as displayed values, reject unreviewed deltas, and never activate the
-  candidate or overwrite the authoritative workbook.
+  contracts as well as displayed values, bind every proposed new contract ID to its complete
+  reviewed row definition, reject unreviewed deltas, and never activate the candidate or
+  overwrite the authoritative workbook.
 - Generated P0 delivery templates belong in `data/p0/candidates`; completed delivery packets must
   replay the full D4 chain, reference only hashed non-restricted evidence, and prove every P0
   requirement, route, API, test, acceptance item, release metric, and recovery capability.

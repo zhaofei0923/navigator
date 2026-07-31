@@ -9,10 +9,11 @@ from typing import Any, cast
 
 from .baseline import TECH_SHEETS, extract_contracts, sha256_file
 from .models import CheckResult
-from .p0_resolution import validate_p0_resolution_packet
+from .p0_resolution import PROPOSED_CONTRACT_SPECS, validate_p0_resolution_packet
 from .p0_traceability import build_p0_traceability_report, extract_references
 from .paths import RepositoryPaths
 from .validation import validate_structure
+from .workbook import load_read_only
 
 _PERMISSION_SEPARATOR = re.compile(r"[;；,，、\n]+")
 
@@ -31,10 +32,13 @@ _CONTRACT_IDS = {
     "test_cases": "用例编号",
 }
 _PROPOSED_CONTRACTS = {
-    "requirements": ("feature_requirements", "需求编号"),
-    "permissions": ("role_permissions", "权限编号"),
-    "apis": ("api_catalog", "接口编号"),
-    "tests": ("test_cases", "用例编号"),
+    category: (contract_name, identifier_field)
+    for category, (
+        contract_name,
+        identifier_field,
+        _required_fields,
+        _extension_fields,
+    ) in PROPOSED_CONTRACT_SPECS.items()
 }
 _ROUTE_DIMENSIONS = {
     "requirement": ("关联需求编号", "proposed_requirement_ids", ("FR-",)),
@@ -42,20 +46,16 @@ _ROUTE_DIMENSIONS = {
     "test": ("测试用例", "proposed_test_case_ids", ("TC-",)),
 }
 _NEW_ROW_REQUIRED_FIELDS = {
-    "feature_requirements": ("需求编号", "模块", "功能", "优先级", "需求状态"),
-    "role_permissions": ("权限编号", "模块/对象", "操作"),
-    "api_catalog": ("接口编号", "模块", "用途", "方法", "路径", "状态"),
-    "test_cases": (
-        "用例编号",
-        "模块",
-        "场景/目标",
-        "测试类型",
-        "优先级",
-        "需求编号",
-        "状态",
-    ),
+    contract_name: required_fields
+    for (
+        contract_name,
+        _identifier_field,
+        required_fields,
+        _extension_fields,
+    ) in PROPOSED_CONTRACT_SPECS.values()
 }
 _NOT_APPLICABLE_MARKERS = {"不适用", "无需API", "N/A", "NA"}
+_REVIEWED_HEADER_EXTENSIONS = {"role_permissions": {"权限代码"}}
 
 
 def _payload_sha256(payload: Any) -> str:
@@ -98,11 +98,104 @@ def _changed_fields(before: dict[str, Any], after: dict[str, Any]) -> set[str]:
     return {field for field in set(before) | set(after) if before.get(field) != after.get(field)}
 
 
+def _header_contract(workbook_path: Path) -> dict[str, dict[int, str]]:
+    workbook = load_read_only(workbook_path, data_only=False)
+    try:
+        result: dict[str, dict[int, str]] = {}
+        for sheet_name, contract_name in TECH_SHEETS.items():
+            row = next(
+                workbook[sheet_name].iter_rows(min_row=4, max_row=4),
+                (),
+            )
+            result[contract_name] = {
+                int(cell.column): str(cell.value).strip()
+                for cell in row
+                if cell.value is not None and str(cell.value).strip()
+            }
+        return result
+    finally:
+        workbook.close()
+
+
+def _validate_header_delta(
+    checks: list[CheckResult],
+    source_workbook: Path,
+    candidate_workbook: Path,
+) -> None:
+    source_headers = _header_contract(source_workbook)
+    candidate_headers = _header_contract(candidate_workbook)
+    for contract_name in TECH_SHEETS.values():
+        before = source_headers[contract_name]
+        after = candidate_headers[contract_name]
+        changed_existing = {
+            column: (header, after.get(column))
+            for column, header in before.items()
+            if after.get(column) != header
+        }
+        added = {column: header for column, header in after.items() if column not in before}
+        allowed_extensions = _REVIEWED_HEADER_EXTENSIONS.get(contract_name, set())
+        unexpected_added = {
+            column: header for column, header in added.items() if header not in allowed_extensions
+        }
+        duplicate_extensions = {
+            header
+            for header in allowed_extensions
+            if sum(value == header for value in after.values()) > 1
+        }
+        if changed_existing or unexpected_added or duplicate_extensions:
+            details: list[str] = []
+            if changed_existing:
+                details.append(
+                    "changed="
+                    + ", ".join(
+                        f"{column}:{old}->{new}"
+                        for column, (old, new) in sorted(changed_existing.items())
+                    )
+                )
+            if unexpected_added:
+                details.append(
+                    "added="
+                    + ", ".join(
+                        f"{column}:{header}" for column, header in sorted(unexpected_added.items())
+                    )
+                )
+            if duplicate_extensions:
+                details.append(f"duplicate={', '.join(sorted(duplicate_extensions))}")
+            checks.append(
+                CheckResult(
+                    code="P0_CHANGE_UNAUTHORIZED_HEADER_CHANGE",
+                    message=(
+                        f"{contract_name} contains unreviewed header changes: " + "; ".join(details)
+                    ),
+                    location=contract_name,
+                )
+            )
+
+
 def _proposed_ids(resolution: dict[str, Any]) -> dict[str, set[str]]:
     proposed = resolution.get("proposed_contract_ids")
     if not isinstance(proposed, dict):
         return {category: set() for category in _PROPOSED_CONTRACTS}
     return {category: set(_string_list(proposed.get(category))) for category in _PROPOSED_CONTRACTS}
+
+
+def _proposed_rows(resolution: dict[str, Any]) -> dict[str, dict[str, dict[str, Any]]]:
+    raw_rows = resolution.get("proposed_contract_rows")
+    if not isinstance(raw_rows, dict):
+        return {category: {} for category in _PROPOSED_CONTRACTS}
+    result: dict[str, dict[str, dict[str, Any]]] = {}
+    for category, (_contract_name, identifier_field) in _PROPOSED_CONTRACTS.items():
+        values = raw_rows.get(category)
+        rows: dict[str, dict[str, Any]] = {}
+        if isinstance(values, list):
+            for value in values:
+                if not isinstance(value, dict):
+                    continue
+                identifier = _text(value, identifier_field)
+                if identifier:
+                    rows[identifier] = value
+        result[category] = rows
+    return result
 
 
 def _allowed_existing_changes(
@@ -150,6 +243,7 @@ def _validate_contract_delta(
     resolution: dict[str, Any],
 ) -> None:
     proposed = _proposed_ids(resolution)
+    proposed_rows = _proposed_rows(resolution)
     allowed_changes = _allowed_existing_changes(resolution)
 
     for contract_name in TECH_SHEETS.values():
@@ -226,6 +320,23 @@ def _validate_contract_delta(
                         CheckResult(
                             code="P0_CHANGE_NEW_CONTRACT_INCOMPLETE",
                             message=f"{identifier} is missing: {', '.join(missing)}",
+                            location=f"{contract_name}.{identifier}",
+                        )
+                    )
+                if category and record != proposed_rows[category].get(identifier):
+                    mismatch_fields = sorted(
+                        _changed_fields(
+                            proposed_rows[category].get(identifier, {}),
+                            record,
+                        )
+                    )
+                    checks.append(
+                        CheckResult(
+                            code="P0_CHANGE_NEW_CONTRACT_ROW_MISMATCH",
+                            message=(
+                                f"{identifier} differs from its reviewed full-row definition"
+                                + (f": {', '.join(mismatch_fields)}" if mismatch_fields else "")
+                            ),
                             location=f"{contract_name}.{identifier}",
                         )
                     )
@@ -479,6 +590,7 @@ def assess_p0_baseline_change(
     candidate_paths = replace(paths, technical_workbook=candidate_path)
     try:
         checks.extend(validate_structure(candidate_paths))
+        _validate_header_delta(checks, source_workbook, candidate_path)
         original_contracts = extract_contracts(paths, data_only=False)
         candidate_contracts = extract_contracts(candidate_paths, data_only=False)
     except Exception as error:

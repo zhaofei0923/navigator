@@ -8,7 +8,8 @@
 
 - 保留当前工作簿与P0候选哈希；
 - 对模板列出的每个缺口提出稳定编号或明确“不适用”结论；
-- 新编号先登记到`proposed_contract_ids`，不得冒充现有合同；
+- 新编号先登记到`proposed_contract_ids`，并在`proposed_contract_rows`填写完整非空
+  合同记录；记录只能使用模板`proposed_contract_schema`允许的字段，不得冒充现有合同；
 - 填写变更请求、理由、复核人、日期、最终变更集和证据编号；
 - 将`template_only`改为`false`后执行`validate-p0-resolution`。
 
@@ -24,5 +25,6 @@ uv run navigator-data validate-p0-baseline-change \
   --output /安全的评审工作区/p0_baseline_change_assessment.json
 ```
 
-成功仅证明候选附件与提案一致且其P0追踪阻断为0；它不会复制、覆盖或激活候选附件。
+成功要求每个新增合同记录逐字段等于评审包中的完整行定义，并证明候选附件其余变更
+与提案一致且P0追踪阻断为0；它不会复制、覆盖或激活候选附件。
 只有经授权完成正式基线替换后，`assess-p0-traceability`和D4才会读取新权威基线。

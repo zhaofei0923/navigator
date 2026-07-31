@@ -27,6 +27,26 @@ def _completed_resolution() -> dict[str, Any]:
         for index, _item in enumerate(packet["requirement_test_resolutions"], start=1)
     ]
     packet["proposed_contract_ids"]["tests"] = proposed_test_ids
+    packet["proposed_contract_rows"]["tests"] = [
+        {
+            "优先级": "P0",
+            "前置条件": "测试前置条件",
+            "场景/目标": f"{item['requirement_id']}追踪覆盖",
+            "模块": item["module"],
+            "步骤摘要": "执行需求验收路径",
+            "测试类型": "契约/E2E",
+            "状态": "已确认；待执行",
+            "用例编号": test_id,
+            "负责人": "测试",
+            "需求编号": item["requirement_id"],
+            "预期结果": "满足冻结验收条件",
+        }
+        for item, test_id in zip(
+            packet["requirement_test_resolutions"],
+            proposed_test_ids,
+            strict=True,
+        )
+    ]
     metadata = {
         "resolution_status": "proposed",
         "change_request_id": "CR-P0-TRACE-20260731",
@@ -99,21 +119,7 @@ def _apply_resolution(candidate: Path, packet: dict[str, Any]) -> None:
         test_sheet = workbook["测试用例"]
         test_headers = _headers(test_sheet)
         next_test_row = _next_record_row(test_sheet, "用例编号")
-        for item in packet["requirement_test_resolutions"]:
-            test_id = item["proposed_test_case_ids"][0]
-            values = {
-                "优先级": "P0",
-                "前置条件": "测试前置条件",
-                "场景/目标": f"{item['requirement_id']}追踪覆盖",
-                "模块": item["module"],
-                "步骤摘要": "执行需求验收路径",
-                "测试类型": "契约/E2E",
-                "状态": "已确认；待执行",
-                "用例编号": test_id,
-                "负责人": "测试",
-                "需求编号": item["requirement_id"],
-                "预期结果": "满足冻结验收条件",
-            }
+        for values in packet["proposed_contract_rows"]["tests"]:
             for field, value in values.items():
                 test_sheet.cell(next_test_row, test_headers[field], value)
             next_test_row += 1
@@ -237,6 +243,44 @@ def test_new_test_cannot_add_unreviewed_requirement_reference(tmp_path: Path) ->
 
     assert report["candidate_ready_for_formal_baseline_review"] is False
     assert "P0_CHANGE_REQUIREMENT_TEST_NOT_APPLIED" in _codes(report)
+
+
+def test_new_contract_row_cannot_contain_unreviewed_content(tmp_path: Path) -> None:
+    paths = discover_repository()
+    packet = _completed_resolution()
+    candidate = _candidate_workbook(tmp_path, packet)
+    workbook = load_workbook(candidate)
+    try:
+        sheet = workbook["测试用例"]
+        test_id = packet["requirement_test_resolutions"][0]["proposed_test_case_ids"][0]
+        row = _row_index(sheet, "用例编号", test_id)
+        sheet.cell(row, _headers(sheet)["步骤摘要"], "未在评审包中批准的步骤")
+        workbook.save(candidate)
+    finally:
+        workbook.close()
+
+    report = assess_p0_baseline_change(paths, packet, candidate)
+
+    assert report["candidate_ready_for_formal_baseline_review"] is False
+    assert "P0_CHANGE_NEW_CONTRACT_ROW_MISMATCH" in _codes(report)
+
+
+def test_candidate_cannot_add_an_unreviewed_contract_header(tmp_path: Path) -> None:
+    paths = discover_repository()
+    packet = _completed_resolution()
+    candidate = _candidate_workbook(tmp_path, packet)
+    workbook = load_workbook(candidate)
+    try:
+        sheet = workbook["测试用例"]
+        sheet.cell(4, sheet.max_column + 1, "未评审列")
+        workbook.save(candidate)
+    finally:
+        workbook.close()
+
+    report = assess_p0_baseline_change(paths, packet, candidate)
+
+    assert report["candidate_ready_for_formal_baseline_review"] is False
+    assert "P0_CHANGE_UNAUTHORIZED_HEADER_CHANGE" in _codes(report)
 
 
 def test_source_workbook_cannot_be_used_as_candidate() -> None:

@@ -1521,6 +1521,116 @@
     "requirements": [],
     "tests": []
   },
+  "proposed_contract_rows": {
+    "apis": [],
+    "permissions": [],
+    "requirements": [],
+    "tests": []
+  },
+  "proposed_contract_schema": {
+    "apis": {
+      "allowed_fields": [
+        "主要输入",
+        "主要输出",
+        "幂等",
+        "接口编号",
+        "方法",
+        "权限/限流",
+        "模块",
+        "状态",
+        "用途",
+        "路径",
+        "鉴权"
+      ],
+      "contract_name": "api_catalog",
+      "identifier_field": "接口编号",
+      "required_fields": [
+        "接口编号",
+        "模块",
+        "用途",
+        "方法",
+        "路径",
+        "状态"
+      ]
+    },
+    "permissions": {
+      "allowed_fields": [
+        "企业会员",
+        "企业成员",
+        "企业管理员",
+        "商务人员",
+        "操作",
+        "数据审核",
+        "数据编辑",
+        "权限代码",
+        "权限编号",
+        "模块/对象",
+        "注册用户",
+        "游客",
+        "系统管理员",
+        "运营人员"
+      ],
+      "contract_name": "role_permissions",
+      "identifier_field": "权限编号",
+      "required_fields": [
+        "权限编号",
+        "模块/对象",
+        "操作"
+      ]
+    },
+    "requirements": {
+      "allowed_fields": [
+        "V1.0范围",
+        "主要验收条件",
+        "优先级",
+        "兼容/父级编号",
+        "功能",
+        "核心场景",
+        "模块",
+        "目标用户",
+        "责任人",
+        "需求状态",
+        "需求编号"
+      ],
+      "contract_name": "feature_requirements",
+      "identifier_field": "需求编号",
+      "required_fields": [
+        "需求编号",
+        "模块",
+        "功能",
+        "优先级",
+        "需求状态"
+      ]
+    },
+    "tests": {
+      "allowed_fields": [
+        "优先级",
+        "前置条件",
+        "场景/目标",
+        "模块",
+        "模型代码",
+        "步骤摘要",
+        "测试类型",
+        "状态",
+        "用例编号",
+        "规则版本",
+        "负责人",
+        "需求编号",
+        "预期结果"
+      ],
+      "contract_name": "test_cases",
+      "identifier_field": "用例编号",
+      "required_fields": [
+        "用例编号",
+        "模块",
+        "场景/目标",
+        "测试类型",
+        "优先级",
+        "需求编号",
+        "状态"
+      ]
+    }
+  },
   "requirement_test_resolutions": [
     {
       "change_request_id": null,
@@ -4154,7 +4264,7 @@
       ]
     }
   ],
-  "schema_version": 1,
+  "schema_version": 2,
   "stage": "P0",
   "template_only": true,
   "warning": "This packet records proposed baseline changes only. It cannot amend the read-only workbook, approve D0-D4, or authorize user-facing development."

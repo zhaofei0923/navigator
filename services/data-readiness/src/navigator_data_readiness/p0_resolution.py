@@ -21,6 +21,44 @@ _ID_PATTERNS = {
     "permissions": re.compile(r"PERM-[A-Z0-9]+(?:-[A-Z0-9]+)*"),
 }
 
+PROPOSED_CONTRACT_SPECS: dict[
+    str,
+    tuple[str, str, tuple[str, ...], frozenset[str]],
+] = {
+    "requirements": (
+        "feature_requirements",
+        "需求编号",
+        ("需求编号", "模块", "功能", "优先级", "需求状态"),
+        frozenset(),
+    ),
+    "apis": (
+        "api_catalog",
+        "接口编号",
+        ("接口编号", "模块", "用途", "方法", "路径", "状态"),
+        frozenset(),
+    ),
+    "tests": (
+        "test_cases",
+        "用例编号",
+        (
+            "用例编号",
+            "模块",
+            "场景/目标",
+            "测试类型",
+            "优先级",
+            "需求编号",
+            "状态",
+        ),
+        frozenset(),
+    ),
+    "permissions": (
+        "role_permissions",
+        "权限编号",
+        ("权限编号", "模块/对象", "操作"),
+        frozenset({"权限代码"}),
+    ),
+}
+
 
 def _text(record: dict[str, Any], column: str) -> str:
     return str(record.get(column, "")).strip()
@@ -76,9 +114,27 @@ def build_p0_resolution_template(paths: RepositoryPaths) -> dict[str, Any]:
         if permission_code:
             permission_pages.setdefault(permission_code, []).append(_text(route, "页面编号"))
 
+    proposed_contract_schema: dict[str, dict[str, Any]] = {}
+    for category, (
+        contract_name,
+        identifier_field,
+        required_fields,
+        extension_fields,
+    ) in PROPOSED_CONTRACT_SPECS.items():
+        records = cast(list[dict[str, Any]], contracts[contract_name])
+        allowed_fields = set(extension_fields)
+        for record in records:
+            allowed_fields.update(record)
+        proposed_contract_schema[category] = {
+            "contract_name": contract_name,
+            "identifier_field": identifier_field,
+            "allowed_fields": sorted(allowed_fields),
+            "required_fields": list(required_fields),
+        }
+
     source_manifest = snapshot_manifest(paths)
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "stage": "P0",
         "template_only": True,
         "baseline": {
@@ -95,6 +151,13 @@ def build_p0_resolution_template(paths: RepositoryPaths) -> dict[str, Any]:
             "tests": [],
             "permissions": [],
         },
+        "proposed_contract_rows": {
+            "requirements": [],
+            "apis": [],
+            "tests": [],
+            "permissions": [],
+        },
+        "proposed_contract_schema": proposed_contract_schema,
         "requirement_test_resolutions": [
             {
                 "requirement_id": requirement_id,
@@ -330,7 +393,7 @@ def _validate_proposed_ids(
     checks: list[CheckResult],
     payload: dict[str, Any],
     contracts: dict[str, Any],
-) -> dict[str, set[str]]:
+) -> tuple[dict[str, set[str]], dict[str, set[str]]]:
     raw_proposed = payload.get("proposed_contract_ids")
     if not isinstance(raw_proposed, dict):
         checks.append(
@@ -391,7 +454,141 @@ def _validate_proposed_ids(
                 )
             )
         proposed[category] = set(identifiers)
-    return {category: known[category] | proposed[category] for category in known}
+    allowed = {category: known[category] | proposed[category] for category in known}
+    return allowed, proposed
+
+
+def _validate_proposed_contract_rows(
+    checks: list[CheckResult],
+    payload: dict[str, Any],
+    template: dict[str, Any],
+    proposed_ids: dict[str, set[str]],
+) -> None:
+    if payload.get("proposed_contract_schema") != template["proposed_contract_schema"]:
+        checks.append(
+            CheckResult(
+                code="P0_RESOLUTION_CONTRACT_SCHEMA_STALE",
+                message="Proposed contract schema differs from the current review template",
+                location="proposed_contract_schema",
+            )
+        )
+
+    raw_rows = payload.get("proposed_contract_rows")
+    if not isinstance(raw_rows, dict):
+        checks.append(
+            CheckResult(
+                code="P0_RESOLUTION_PROPOSED_ROWS_INVALID",
+                message="proposed_contract_rows must be an object",
+                location="proposed_contract_rows",
+            )
+        )
+        raw_rows = {}
+
+    schema = cast(dict[str, dict[str, Any]], template["proposed_contract_schema"])
+    for category, (
+        _contract_name,
+        identifier_field,
+        required_fields,
+        _extension_fields,
+    ) in PROPOSED_CONTRACT_SPECS.items():
+        location = f"proposed_contract_rows.{category}"
+        values = raw_rows.get(category)
+        if not isinstance(values, list):
+            checks.append(
+                CheckResult(
+                    code="P0_RESOLUTION_PROPOSED_ROW_LIST_INVALID",
+                    message=f"{location} must be a list",
+                    location=location,
+                )
+            )
+            values = []
+
+        rows: dict[str, dict[str, Any]] = {}
+        allowed_fields = set(cast(list[str], schema[category]["allowed_fields"]))
+        for index, value in enumerate(values):
+            item_location = f"{location}[{index}]"
+            if not isinstance(value, dict):
+                checks.append(
+                    CheckResult(
+                        code="P0_RESOLUTION_PROPOSED_ROW_INVALID",
+                        message=f"{item_location} must be an object",
+                        location=item_location,
+                    )
+                )
+                continue
+            identifier = _text(value, identifier_field)
+            if not identifier:
+                checks.append(
+                    CheckResult(
+                        code="P0_RESOLUTION_PROPOSED_ROW_ID_MISSING",
+                        message=f"{item_location} requires {identifier_field}",
+                        location=item_location,
+                    )
+                )
+                continue
+            if identifier in rows:
+                checks.append(
+                    CheckResult(
+                        code="P0_RESOLUTION_PROPOSED_ROW_DUPLICATE",
+                        message=f"{identifier} has more than one proposed row definition",
+                        location=location,
+                    )
+                )
+                continue
+            rows[identifier] = value
+
+            unexpected_fields = sorted(set(value) - allowed_fields)
+            if unexpected_fields:
+                checks.append(
+                    CheckResult(
+                        code="P0_RESOLUTION_PROPOSED_ROW_FIELD_UNKNOWN",
+                        message=(
+                            f"{identifier} contains fields outside the reviewed schema: "
+                            f"{', '.join(unexpected_fields)}"
+                        ),
+                        location=item_location,
+                    )
+                )
+            blank_fields = sorted(
+                field
+                for field, field_value in value.items()
+                if field_value is None or not str(field_value).strip()
+            )
+            if blank_fields:
+                checks.append(
+                    CheckResult(
+                        code="P0_RESOLUTION_PROPOSED_ROW_BLANK_FIELD",
+                        message=(
+                            f"{identifier} contains blank fields; omit them instead: "
+                            f"{', '.join(blank_fields)}"
+                        ),
+                        location=item_location,
+                    )
+                )
+            missing = [field for field in required_fields if not _text(value, field)]
+            if missing:
+                checks.append(
+                    CheckResult(
+                        code="P0_RESOLUTION_PROPOSED_ROW_INCOMPLETE",
+                        message=f"{identifier} is missing: {', '.join(missing)}",
+                        location=item_location,
+                    )
+                )
+
+        actual_ids = set(rows)
+        expected_ids = proposed_ids[category]
+        if actual_ids != expected_ids:
+            checks.append(
+                CheckResult(
+                    code="P0_RESOLUTION_PROPOSED_ROW_SET_INVALID",
+                    message=(
+                        f"{category} row definitions differ; "
+                        f"missing={sorted(expected_ids - actual_ids)}, "
+                        f"unexpected={sorted(actual_ids - expected_ids)}"
+                    ),
+                    location=location,
+                )
+            )
 
 
 def _check_known_ids(
@@ -421,11 +618,11 @@ def validate_p0_resolution_packet(
     template = build_p0_resolution_template(paths)
     contracts = extract_contracts(paths)
 
-    if payload.get("schema_version") != 1 or payload.get("stage") != "P0":
+    if payload.get("schema_version") != 2 or payload.get("stage") != "P0":
         checks.append(
             CheckResult(
                 code="P0_RESOLUTION_HEADER_INVALID",
-                message="schema_version must be 1 and stage must be P0",
+                message="schema_version must be 2 and stage must be P0",
             )
         )
     if payload.get("template_only") is not False:
@@ -444,7 +641,13 @@ def validate_p0_resolution_packet(
             )
         )
 
-    allowed_ids = _validate_proposed_ids(checks, payload, contracts)
+    allowed_ids, proposed_ids = _validate_proposed_ids(checks, payload, contracts)
+    _validate_proposed_contract_rows(
+        checks,
+        payload,
+        template,
+        proposed_ids,
+    )
 
     requirements = _indexed_items(
         checks,
