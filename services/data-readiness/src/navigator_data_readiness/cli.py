@@ -14,6 +14,7 @@ from .d2_collection import load_and_validate_d2_bundle, write_d2_candidates
 from .d3_processing import load_and_validate_d3_bundle, write_d3_candidates
 from .d4_acceptance import load_and_validate_d4_bundle, write_d4_candidates
 from .models import CheckResult
+from .p0_traceability import build_p0_traceability_report, write_p0_traceability_candidates
 from .paths import discover_repository
 from .readiness import build_readiness_report, render_markdown
 from .validation import validate_structure
@@ -101,6 +102,15 @@ def _parser() -> argparse.ArgumentParser:
     d4_validation.add_argument("--d1-registry", type=Path, required=True)
     d4_validation.add_argument("--d1-matrix", type=Path, required=True)
     d4_validation.add_argument("--d1-evidence", type=Path, required=True)
+    commands.add_parser(
+        "prepare-p0-traceability",
+        help="Generate the P0 requirement-to-route/API/permission/test preflight artifacts.",
+    )
+    p0_assessment = commands.add_parser(
+        "assess-p0-traceability",
+        help="Print the machine-verifiable P0 traceability and delivery preflight.",
+    )
+    p0_assessment.add_argument("--format", choices=("json",), default="json")
 
     report = commands.add_parser("report", help="Render the current D0 readiness report.")
     report.add_argument("--format", choices=("markdown", "json"), default="markdown")
@@ -269,6 +279,17 @@ def main(argv: list[str] | None = None) -> int:
         )
         _print_checks(checks)
         return 1 if checks else 0
+
+    if args.command == "prepare-p0-traceability":
+        written = write_p0_traceability_candidates(paths)
+        for path in written:
+            print(path.relative_to(paths.root).as_posix())
+        return 0
+
+    if args.command == "assess-p0-traceability":
+        assessment = build_p0_traceability_report(paths)
+        print(json.dumps(assessment, ensure_ascii=False, indent=2))
+        return 0
 
     report = build_readiness_report(paths)
     output = (

@@ -1,7 +1,8 @@
 {
   "baseline_version": "V1.0-BASELINE",
-  "generated_at": "2026-07-30T16:36:32+00:00",
+  "generated_at": "2026-07-31T05:33:56+00:00",
   "record_counts": {
+    "api_catalog": 70,
     "collection_batch_template": 6,
     "collection_rules": 14,
     "countries": 5,
@@ -10,15 +11,22 @@
     "d0_tasks": 4,
     "data_issue_template": 8,
     "domain_targets": 9,
+    "engineering_acceptance_tests": 17,
     "entities": 25,
     "enums": 251,
+    "feature_requirements": 103,
     "field_mapping_template": 6,
     "fields": 92,
+    "identifier_migrations": 13,
+    "mvp_acceptance": 11,
+    "page_routes": 166,
     "quality_rules": 16,
     "raw_asset_template": 3,
     "responsibilities": 9,
     "review_checklist": 12,
-    "source_registry_seed": 18
+    "role_permissions": 29,
+    "source_registry_seed": 18,
+    "test_cases": 92
   },
   "schema_version": 1,
   "sources": {

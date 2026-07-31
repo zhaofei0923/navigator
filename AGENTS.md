@@ -40,6 +40,7 @@
   `uv run navigator-data validate`, `uv run navigator-data prepare-d0`,
   `uv run navigator-data prepare-d0-review`, `uv run navigator-data prepare-d1`,
   `uv run navigator-data prepare-d2`, `uv run navigator-data prepare-d3`,
-  `uv run navigator-data prepare-d4`, and `uv run pytest --cov` before committing.
+  `uv run navigator-data prepare-d4`, `uv run navigator-data prepare-p0-traceability`,
+  and `uv run pytest --cov` before committing.
 - Never commit secrets, private contact details, restricted source material, or unredacted
   evidence.

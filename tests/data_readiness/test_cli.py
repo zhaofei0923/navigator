@@ -303,6 +303,35 @@ def test_prepare_d4_command_lists_candidates(
     assert "data/d4/candidates/candidate.json" in captured.out
 
 
+def test_prepare_p0_traceability_command_lists_candidates(
+    monkeypatch: MonkeyPatch,
+    capsys: CaptureFixture[str],
+) -> None:
+    paths = discover_repository()
+    candidate = paths.p0_candidates_dir / "p0_traceability_assessment.json"
+    monkeypatch.setattr(
+        "navigator_data_readiness.cli.write_p0_traceability_candidates",
+        lambda _paths: [candidate],
+    )
+
+    exit_code = main(["prepare-p0-traceability"])
+
+    assert exit_code == 0
+    captured = capsys.readouterr()
+    assert "data/p0/candidates/p0_traceability_assessment.json" in captured.out
+
+
+def test_assess_p0_traceability_command_outputs_machine_boundary(
+    capsys: CaptureFixture[str],
+) -> None:
+    exit_code = main(["assess-p0-traceability", "--format", "json"])
+
+    assert exit_code == 0
+    captured = capsys.readouterr()
+    assert '"p0_requirements": 90' in captured.out
+    assert '"does_not_authorize_user_facing_development": true' in captured.out
+
+
 def test_validate_d4_command_reports_blockers(
     tmp_path: Path,
     capsys: CaptureFixture[str],

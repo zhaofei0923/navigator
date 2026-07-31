@@ -23,6 +23,14 @@ D0_SHEETS: dict[str, str] = {
 }
 
 TECH_SHEETS: dict[str, str] = {
+    "功能优先级": "feature_requirements",
+    "编号纠错映射": "identifier_migrations",
+    "角色权限矩阵": "role_permissions",
+    "页面路由清单": "page_routes",
+    "API清单": "api_catalog",
+    "测试用例": "test_cases",
+    "工程验收用例": "engineering_acceptance_tests",
+    "MVP验收矩阵": "mvp_acceptance",
     "首批来源建档": "source_registry_seed",
     "D0-D4任务计划": "d0_d4_roadmap",
     "采集批次台账": "collection_batch_template",

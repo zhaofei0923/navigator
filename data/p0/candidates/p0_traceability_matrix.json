@@ -1,0 +1,1807 @@
+[
+  {
+    "api_ids_via_routes": [],
+    "function": "键盘、焦点、语义与对比度",
+    "has_p0_test": true,
+    "module": "可访问性",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [],
+    "priority": "P0",
+    "requirement_id": "FR-A11Y-001",
+    "route_ids": [],
+    "test_case_ids": [
+      "TC-A11Y-001",
+      "TC-A11Y-002"
+    ]
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "结构化数据采编审发",
+    "has_p0_test": true,
+    "module": "运营后台",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "country.admin.read",
+      "country.coverage.manage",
+      "country.edit",
+      "country.publish",
+      "country.review",
+      "opportunity.admin.read",
+      "opportunity.edit",
+      "opportunity.import",
+      "opportunity.merge",
+      "opportunity.review",
+      "policy.admin.read",
+      "policy.edit",
+      "policy.review",
+      "risk.admin.read",
+      "risk.edit",
+      "risk.review"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-ADMIN-001",
+    "route_ids": [
+      "ADM-CTY-001",
+      "ADM-CTY-002",
+      "ADM-CTY-003",
+      "ADM-CTY-004",
+      "ADM-CTY-005",
+      "ADM-OPP-001",
+      "ADM-OPP-002",
+      "ADM-OPP-003",
+      "ADM-OPP-004",
+      "ADM-OPP-005",
+      "ADM-POL-001",
+      "ADM-POL-002",
+      "ADM-POL-003",
+      "ADM-RSK-001",
+      "ADM-RSK-002",
+      "ADM-RSK-003"
+    ],
+    "test_case_ids": [
+      "TC-DATA-001",
+      "TC-DATA-002"
+    ]
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "内容、会员、用户和CRM管理",
+    "has_p0_test": false,
+    "module": "运营后台",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "content.admin.read",
+      "content.edit",
+      "content.publish",
+      "event.manage",
+      "form.manage"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-ADMIN-002",
+    "route_ids": [
+      "ADM-CNT-001",
+      "ADM-CNT-002",
+      "ADM-CNT-003",
+      "ADM-EVT-001",
+      "ADM-FRM-001"
+    ],
+    "test_case_ids": []
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "来源、标签、枚举与质量看板",
+    "has_p0_test": true,
+    "module": "运营后台",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "collection_job.manage",
+      "collection_job.read",
+      "dictionary.manage",
+      "dictionary.migrate",
+      "quality.issue.manage",
+      "quality.read",
+      "source.manage",
+      "source.read"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-ADMIN-003",
+    "route_ids": [
+      "ADM-DIC-001",
+      "ADM-DIC-002",
+      "ADM-QLT-001",
+      "ADM-QLT-002",
+      "ADM-SRC-001",
+      "ADM-SRC-002",
+      "ADM-SRC-003",
+      "ADM-SRC-004"
+    ],
+    "test_case_ids": [
+      "TC-CONFIG-001"
+    ]
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "AI知识库、Prompt和模型配置",
+    "has_p0_test": true,
+    "module": "运营后台",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "ai.operations.read",
+      "knowledge.chunk.manage",
+      "knowledge.edit",
+      "knowledge.index.manage",
+      "knowledge.read",
+      "model.manage",
+      "prompt.approve",
+      "prompt.edit",
+      "prompt.read"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-ADMIN-004",
+    "route_ids": [
+      "ADM-AI-001",
+      "ADM-AI-002",
+      "ADM-AI-003",
+      "ADM-AI-004",
+      "ADM-AI-005",
+      "ADM-KB-001",
+      "ADM-KB-002",
+      "ADM-KB-003",
+      "ADM-KB-004"
+    ],
+    "test_case_ids": [
+      "TC-ADMIN-AI-001"
+    ]
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "操作日志与审计检索",
+    "has_p0_test": true,
+    "module": "运营后台",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "audit.export",
+      "audit.read",
+      "role.manage",
+      "system.configure"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-ADMIN-005",
+    "route_ids": [
+      "ADM-AUD-001",
+      "ADM-AUD-002",
+      "ADM-AUD-003",
+      "ADM-SEC-001",
+      "ADM-SEC-002"
+    ],
+    "test_case_ids": [
+      "TC-AUDIT-001"
+    ]
+  },
+  {
+    "api_ids_via_routes": [
+      "API-AI-001"
+    ],
+    "function": "统一问答工作流",
+    "has_p0_test": true,
+    "module": "AI顾问",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "ai.chat.use"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-AI-001",
+    "route_ids": [
+      "PC-AI-001"
+    ],
+    "test_case_ids": [
+      "TC-AI-002",
+      "TC-AI-003",
+      "TC-AI-004",
+      "TC-AI-005"
+    ]
+  },
+  {
+    "api_ids_via_routes": [
+      "API-AI-001"
+    ],
+    "function": "七类决策场景",
+    "has_p0_test": false,
+    "module": "AI顾问",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "ai.chat.use"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-AI-002",
+    "route_ids": [
+      "PC-AI-001"
+    ],
+    "test_case_ids": []
+  },
+  {
+    "api_ids_via_routes": [
+      "API-AI-001"
+    ],
+    "function": "引用与时效",
+    "has_p0_test": true,
+    "module": "AI顾问",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "ai.chat.use",
+      "ai.conversation.read_own"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-AI-003",
+    "route_ids": [
+      "PC-AI-001",
+      "PC-AI-002"
+    ],
+    "test_case_ids": [
+      "TC-AI-001"
+    ]
+  },
+  {
+    "api_ids_via_routes": [
+      "API-AI-001"
+    ],
+    "function": "高风险复核",
+    "has_p0_test": false,
+    "module": "AI顾问",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "ai.chat.use"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-AI-004",
+    "route_ids": [
+      "PC-AI-001"
+    ],
+    "test_case_ids": []
+  },
+  {
+    "api_ids_via_routes": [
+      "API-REPORT-001",
+      "API-REPORT-002",
+      "API-REPORT-004"
+    ],
+    "function": "报告中心完整链路",
+    "has_p0_test": true,
+    "module": "AI顾问",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "report.create",
+      "report.preview",
+      "report.read_own",
+      "report.template.read"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-AI-005",
+    "route_ids": [
+      "PC-RPT-001",
+      "PC-RPT-002",
+      "PC-RPT-003",
+      "PC-RPT-004",
+      "PC-RPT-006"
+    ],
+    "test_case_ids": [
+      "TC-REPORT-001",
+      "TC-REPORT-002"
+    ]
+  },
+  {
+    "api_ids_via_routes": [
+      "API-AI-001"
+    ],
+    "function": "全链路权限与审计",
+    "has_p0_test": false,
+    "module": "AI顾问",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "ai.chat.use",
+      "ai.conversation.read_own"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-AI-007",
+    "route_ids": [
+      "PC-AI-001",
+      "PC-AI-002",
+      "PC-AI-003"
+    ],
+    "test_case_ids": []
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "受控埋点与隐私同意",
+    "has_p0_test": true,
+    "module": "行为分析",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [],
+    "priority": "P0",
+    "requirement_id": "FR-ANALYTICS-001",
+    "route_ids": [],
+    "test_case_ids": [
+      "TC-EVENT-001"
+    ]
+  },
+  {
+    "api_ids_via_routes": [
+      "API-AUTH-001"
+    ],
+    "function": "注册、登录与会话管理",
+    "has_p0_test": true,
+    "module": "账号与企业",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "匿名"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-AUTH-001",
+    "route_ids": [
+      "PC-AUTH-001",
+      "PC-AUTH-002",
+      "PC-AUTH-003"
+    ],
+    "test_case_ids": [
+      "TC-AUTH-001"
+    ]
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "身份绑定与账号合并",
+    "has_p0_test": false,
+    "module": "账号与企业",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "account.manage_self"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-AUTH-002",
+    "route_ids": [
+      "PC-USR-001"
+    ],
+    "test_case_ids": []
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "渠道参数与归因",
+    "has_p0_test": true,
+    "module": "H5与渠道",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "channel.analytics.read",
+      "channel.manage"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-CHANNEL-001",
+    "route_ids": [
+      "ADM-CHN-001",
+      "ADM-CHN-002"
+    ],
+    "test_case_ids": [
+      "TC-CHANNEL-001"
+    ]
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "来源主数据与准入",
+    "has_p0_test": true,
+    "module": "数据采集",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [],
+    "priority": "P0",
+    "requirement_id": "FR-COLLECT-001",
+    "route_ids": [],
+    "test_case_ids": [
+      "TC-COLLECT-001",
+      "TC-COLLECT-008"
+    ]
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "原始证据与字段链路",
+    "has_p0_test": true,
+    "module": "数据采集",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [],
+    "priority": "P0",
+    "requirement_id": "FR-COLLECT-002",
+    "route_ids": [],
+    "test_case_ids": [
+      "TC-COLLECT-002",
+      "TC-DATA-LINEAGE-001"
+    ]
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "API与网页合规采集",
+    "has_p0_test": true,
+    "module": "数据采集",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [],
+    "priority": "P0",
+    "requirement_id": "FR-COLLECT-003",
+    "route_ids": [],
+    "test_case_ids": [
+      "TC-COLLECT-003",
+      "TC-COLLECT-004",
+      "TC-COLLECT-007"
+    ]
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "文件导入与人工录入",
+    "has_p0_test": true,
+    "module": "数据采集",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [],
+    "priority": "P0",
+    "requirement_id": "FR-COLLECT-004",
+    "route_ids": [],
+    "test_case_ids": [
+      "TC-COLLECT-005"
+    ]
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "动态频率与复核计划",
+    "has_p0_test": true,
+    "module": "数据采集",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [],
+    "priority": "P0",
+    "requirement_id": "FR-COLLECT-005",
+    "route_ids": [],
+    "test_case_ids": [
+      "TC-COLLECT-006"
+    ]
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "失败、降级与恢复",
+    "has_p0_test": true,
+    "module": "数据采集",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [],
+    "priority": "P0",
+    "requirement_id": "FR-COLLECT-006",
+    "route_ids": [],
+    "test_case_ids": [
+      "TC-COLLECT-004",
+      "TC-COLLECT-007"
+    ]
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "合法采集与权限边界",
+    "has_p0_test": true,
+    "module": "数据采集",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [],
+    "priority": "P0",
+    "requirement_id": "FR-COLLECT-007",
+    "route_ids": [],
+    "test_case_ids": [
+      "TC-COLLECT-001",
+      "TC-COLLECT-008"
+    ]
+  },
+  {
+    "api_ids_via_routes": [
+      "API-COMPARE-001"
+    ],
+    "function": "创建2—4国对比",
+    "has_p0_test": true,
+    "module": "国家对比",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "country.compare"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-COMPARE-001",
+    "route_ids": [
+      "PC-CTY-003"
+    ],
+    "test_case_ids": [
+      "TC-COMPARE-001"
+    ]
+  },
+  {
+    "api_ids_via_routes": [
+      "API-COMPARE-001"
+    ],
+    "function": "标准指标矩阵",
+    "has_p0_test": false,
+    "module": "国家对比",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "country.compare"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-COMPARE-002",
+    "route_ids": [
+      "PC-CTY-004"
+    ],
+    "test_case_ids": []
+  },
+  {
+    "api_ids_via_routes": [
+      "API-COMPARE-001"
+    ],
+    "function": "缺失与可比性控制",
+    "has_p0_test": true,
+    "module": "国家对比",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "country.compare"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-COMPARE-003",
+    "route_ids": [
+      "PC-CTY-004"
+    ],
+    "test_case_ids": [
+      "TC-COMPARE-001"
+    ]
+  },
+  {
+    "api_ids_via_routes": [
+      "API-COMPARE-001"
+    ],
+    "function": "专项维度对比",
+    "has_p0_test": false,
+    "module": "国家对比",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "country.compare"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-COMPARE-004",
+    "route_ids": [
+      "PC-CTY-004"
+    ],
+    "test_case_ids": []
+  },
+  {
+    "api_ids_via_routes": [
+      "API-COMPARE-001"
+    ],
+    "function": "规则化基础结论",
+    "has_p0_test": false,
+    "module": "国家对比",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "country.compare"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-COMPARE-005",
+    "route_ids": [
+      "PC-CTY-004"
+    ],
+    "test_case_ids": []
+  },
+  {
+    "api_ids_via_routes": [
+      "API-COMPARE-001"
+    ],
+    "function": "AI解释当前快照",
+    "has_p0_test": false,
+    "module": "国家对比",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "country.compare"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-COMPARE-006",
+    "route_ids": [
+      "PC-CTY-004"
+    ],
+    "test_case_ids": []
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "协议、授权与撤回",
+    "has_p0_test": false,
+    "module": "隐私授权",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "consent.manage_self"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-CONSENT-001",
+    "route_ids": [
+      "PC-USR-002"
+    ],
+    "test_case_ids": []
+  },
+  {
+    "api_ids_via_routes": [
+      "API-CRM-004",
+      "API-CRM-005",
+      "API-CRM-006",
+      "API-CRM-007",
+      "API-REQUEST-001",
+      "API-REQUEST-002",
+      "API-REQUEST-003"
+    ],
+    "function": "咨询与撮合申请",
+    "has_p0_test": true,
+    "module": "商业服务",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "consulting.apply",
+      "crm.request.read",
+      "crm.request.review",
+      "matchmaking.apply",
+      "request.read_own"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-CONSULT-001",
+    "route_ids": [
+      "CRM-REQ-001",
+      "CRM-REQ-002",
+      "CRM-REQ-003",
+      "PC-REQ-003",
+      "PC-REQ-004",
+      "PC-WRK-003",
+      "PC-WRK-004"
+    ],
+    "test_case_ids": [
+      "TC-CRM-REQUEST-001"
+    ]
+  },
+  {
+    "api_ids_via_routes": [
+      "API-COUNTRY-001"
+    ],
+    "function": "全球地图、国家列表与筛选",
+    "has_p0_test": true,
+    "module": "国家数据库",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "country.read"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-COUNTRY-001",
+    "route_ids": [
+      "PC-CTY-001"
+    ],
+    "test_case_ids": [
+      "TC-COUNTRY-002"
+    ]
+  },
+  {
+    "api_ids_via_routes": [
+      "API-COUNTRY-002"
+    ],
+    "function": "统一国家详情页",
+    "has_p0_test": true,
+    "module": "国家数据库",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "country.admin.read",
+      "country.coverage.manage",
+      "country.edit",
+      "country.publish",
+      "country.read",
+      "country.review"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-COUNTRY-002",
+    "route_ids": [
+      "ADM-CTY-001",
+      "ADM-CTY-002",
+      "ADM-CTY-003",
+      "ADM-CTY-004",
+      "ADM-CTY-005",
+      "PC-CTY-002"
+    ],
+    "test_case_ids": [
+      "TC-COUNTRY-001"
+    ]
+  },
+  {
+    "api_ids_via_routes": [
+      "API-COUNTRY-001"
+    ],
+    "function": "国家筛选与排序",
+    "has_p0_test": false,
+    "module": "国家数据库",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "country.read"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-COUNTRY-003",
+    "route_ids": [
+      "PC-CTY-001"
+    ],
+    "test_case_ids": []
+  },
+  {
+    "api_ids_via_routes": [
+      "API-COUNTRY-001"
+    ],
+    "function": "机会、风险与政策友好度评价展示",
+    "has_p0_test": false,
+    "module": "国家数据库",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "country.read"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-COUNTRY-004",
+    "route_ids": [
+      "PC-CTY-001"
+    ],
+    "test_case_ids": []
+  },
+  {
+    "api_ids_via_routes": [
+      "API-COUNTRY-002"
+    ],
+    "function": "缺失值与权限一致性",
+    "has_p0_test": true,
+    "module": "国家数据库",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "country.read"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-COUNTRY-005",
+    "route_ids": [
+      "PC-CTY-002"
+    ],
+    "test_case_ids": [
+      "TC-ANON-001"
+    ]
+  },
+  {
+    "api_ids_via_routes": [
+      "API-COUNTRY-002"
+    ],
+    "function": "来源与时效展示",
+    "has_p0_test": false,
+    "module": "国家数据库",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "country.read"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-COUNTRY-006",
+    "route_ids": [
+      "PC-CTY-002"
+    ],
+    "test_case_ids": []
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "收藏关注完整流程",
+    "has_p0_test": false,
+    "module": "国家数据库",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [],
+    "priority": "P0",
+    "requirement_id": "FR-COUNTRY-007",
+    "route_ids": [],
+    "test_case_ids": []
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "覆盖等级计算与验收",
+    "has_p0_test": false,
+    "module": "国家数据库",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [],
+    "priority": "P0",
+    "requirement_id": "FR-COVERAGE-001",
+    "route_ids": [],
+    "test_case_ids": []
+  },
+  {
+    "api_ids_via_routes": [
+      "API-CRM-001",
+      "API-CRM-004",
+      "API-CRM-005",
+      "API-CRM-006",
+      "API-CRM-007",
+      "API-REQUEST-001"
+    ],
+    "function": "多来源线索自动创建与去重",
+    "has_p0_test": true,
+    "module": "CRM",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "crm.dashboard.read",
+      "crm.exception.manage",
+      "crm.lead.merge",
+      "crm.lead.read",
+      "crm.request.read",
+      "crm.request.review",
+      "matchmaking.apply"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-CRM-001",
+    "route_ids": [
+      "CRM-HOME-001",
+      "CRM-LED-001",
+      "CRM-LED-002",
+      "CRM-LED-003",
+      "CRM-QUE-001",
+      "CRM-REQ-001",
+      "CRM-REQ-002",
+      "CRM-REQ-003",
+      "PC-REQ-004"
+    ],
+    "test_case_ids": [
+      "TC-CRM-001",
+      "TC-CRM-REQUEST-001"
+    ]
+  },
+  {
+    "api_ids_via_routes": [
+      "API-CRM-003"
+    ],
+    "function": "分级、分配、跟进与商机阶段",
+    "has_p0_test": true,
+    "module": "CRM",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "crm.account.read",
+      "crm.activity.manage",
+      "crm.assignment.manage",
+      "crm.contact.read",
+      "crm.dictionary.manage",
+      "crm.opportunity.read",
+      "crm.task.read"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-CRM-002",
+    "route_ids": [
+      "CRM-ACC-001",
+      "CRM-ACC-002",
+      "CRM-ACT-001",
+      "CRM-CFG-001",
+      "CRM-CFG-003",
+      "CRM-CON-001",
+      "CRM-CON-002",
+      "CRM-OPP-001",
+      "CRM-OPP-002",
+      "CRM-TSK-001"
+    ],
+    "test_case_ids": [
+      "TC-CRM-002",
+      "TC-CRM-003"
+    ]
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "统一主数据、版本、血缘与多语言模型",
+    "has_p0_test": true,
+    "module": "数据架构",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [],
+    "priority": "P0",
+    "requirement_id": "FR-DATA-001",
+    "route_ids": [],
+    "test_case_ids": [
+      "TC-DATA-ARCH-001",
+      "TC-DATA-LINEAGE-001"
+    ]
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "来源准入、采集编排与原始证据保存",
+    "has_p0_test": true,
+    "module": "数据采集",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [],
+    "priority": "P0",
+    "requirement_id": "FR-DATA-002",
+    "route_ids": [],
+    "test_case_ids": [
+      "TC-DATA-LINEAGE-001"
+    ]
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "质量规则、审核发布与问题闭环",
+    "has_p0_test": true,
+    "module": "数据质量",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [],
+    "priority": "P0",
+    "requirement_id": "FR-DATA-003",
+    "route_ids": [],
+    "test_case_ids": [
+      "TC-DATA-QUALITY-001"
+    ]
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "版本化评分、硬门槛、置信度与解释治理",
+    "has_p0_test": true,
+    "module": "评分推荐",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [],
+    "priority": "P0",
+    "requirement_id": "FR-DATA-004",
+    "route_ids": [],
+    "test_case_ids": [
+      "TC-SCORE-003"
+    ]
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "Basic/Standard/Complete规则化验收",
+    "has_p0_test": true,
+    "module": "数据覆盖",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [],
+    "priority": "P0",
+    "requirement_id": "FR-DATA-005",
+    "route_ids": [],
+    "test_case_ids": [
+      "TC-SCORE-014",
+      "TC-SCORE-015"
+    ]
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "失效、下架、删除与下游同步",
+    "has_p0_test": true,
+    "module": "数据生命周期",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [],
+    "priority": "P0",
+    "requirement_id": "FR-DATA-006",
+    "route_ids": [],
+    "test_case_ids": [
+      "TC-COLLECT-008",
+      "TC-QUALITY-006"
+    ]
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "创建或加入企业",
+    "has_p0_test": true,
+    "module": "账号与企业",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "account.authenticated"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-ENT-001",
+    "route_ids": [
+      "PC-AUTH-004"
+    ],
+    "test_case_ids": [
+      "TC-ORG-001"
+    ]
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "企业认证完整流程",
+    "has_p0_test": false,
+    "module": "账号与企业",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "enterprise.read_own"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-ENT-002",
+    "route_ids": [
+      "PC-ENT-001"
+    ],
+    "test_case_ids": []
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "关注、推荐、更新和待办聚合",
+    "has_p0_test": false,
+    "module": "工作台",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "public.read",
+      "workspace.read"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-HOME-001",
+    "route_ids": [
+      "PC-PUB-001",
+      "PC-WRK-001"
+    ],
+    "test_case_ids": []
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "中英文扩展与本地化字段预留",
+    "has_p0_test": true,
+    "module": "国际化预留",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [],
+    "priority": "P0",
+    "requirement_id": "FR-I18N-001",
+    "route_ids": [],
+    "test_case_ids": [
+      "TC-I18N-001"
+    ]
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "任务型全局导航与菜单权限",
+    "has_p0_test": true,
+    "module": "信息架构",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [],
+    "priority": "P0",
+    "requirement_id": "FR-IA-001",
+    "route_ids": [],
+    "test_case_ids": [
+      "TC-ADMIN-ROUTE-001",
+      "TC-ANON-001",
+      "TC-IA-001"
+    ]
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "稳定路由、深链与上下文恢复",
+    "has_p0_test": true,
+    "module": "信息架构",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [],
+    "priority": "P0",
+    "requirement_id": "FR-IA-002",
+    "route_ids": [],
+    "test_case_ids": [
+      "TC-IA-002"
+    ]
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "产品、权益和额度配置",
+    "has_p0_test": true,
+    "module": "会员权益",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "entitlement.read_own",
+      "membership.activation.manage",
+      "membership.approve",
+      "membership.product.manage",
+      "membership.read",
+      "membership.renewal.manage",
+      "quota.ledger.read"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-MEMBER-001",
+    "route_ids": [
+      "ADM-MEM-001",
+      "ADM-MEM-002",
+      "ADM-MEM-003",
+      "ADM-MEM-004",
+      "ADM-MEM-005",
+      "ADM-MEM-006",
+      "PC-ENT-003"
+    ],
+    "test_case_ids": [
+      "TC-MEMBER-001"
+    ]
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "后台开通、续期、暂停和到期",
+    "has_p0_test": true,
+    "module": "会员权益",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "membership.activation.manage",
+      "membership.approve",
+      "membership.product.manage",
+      "membership.read",
+      "membership.renewal.manage",
+      "quota.ledger.read"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-MEMBER-002",
+    "route_ids": [
+      "ADM-MEM-001",
+      "ADM-MEM-002",
+      "ADM-MEM-003",
+      "ADM-MEM-004",
+      "ADM-MEM-005",
+      "ADM-MEM-006"
+    ],
+    "test_case_ids": [
+      "TC-MEMBER-002"
+    ]
+  },
+  {
+    "api_ids_via_routes": [
+      "API-PROJECT-001",
+      "API-PROJECT-002"
+    ],
+    "function": "项目库、列表与详情",
+    "has_p0_test": false,
+    "module": "项目机会",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "opportunity.admin.read",
+      "opportunity.edit",
+      "opportunity.import",
+      "opportunity.merge",
+      "opportunity.read",
+      "opportunity.review"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-OPP-001",
+    "route_ids": [
+      "ADM-OPP-001",
+      "ADM-OPP-002",
+      "ADM-OPP-003",
+      "ADM-OPP-004",
+      "ADM-OPP-005",
+      "PC-OPP-001",
+      "PC-OPP-002"
+    ],
+    "test_case_ids": []
+  },
+  {
+    "api_ids_via_routes": [
+      "API-PROJECT-001",
+      "API-PROJECT-002"
+    ],
+    "function": "生命周期与事件",
+    "has_p0_test": false,
+    "module": "项目机会",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "opportunity.read"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-OPP-002",
+    "route_ids": [
+      "PC-OPP-001",
+      "PC-OPP-002"
+    ],
+    "test_case_ids": []
+  },
+  {
+    "api_ids_via_routes": [
+      "API-PROJECT-001",
+      "API-PROJECT-002"
+    ],
+    "function": "机会等级与推荐解释",
+    "has_p0_test": true,
+    "module": "项目机会",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "opportunity.read"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-OPP-003",
+    "route_ids": [
+      "PC-OPP-001",
+      "PC-OPP-002"
+    ],
+    "test_case_ids": [
+      "TC-PROJECT-001"
+    ]
+  },
+  {
+    "api_ids_via_routes": [
+      "API-TENDER-003",
+      "API-TENDER-004"
+    ],
+    "function": "项目与招标关联",
+    "has_p0_test": true,
+    "module": "招投标",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "tender.read"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-OPP-004",
+    "route_ids": [
+      "PC-OPP-003",
+      "PC-OPP-004"
+    ],
+    "test_case_ids": [
+      "TC-TENDER-BROWSE-001"
+    ]
+  },
+  {
+    "api_ids_via_routes": [
+      "API-CRM-004",
+      "API-CRM-005",
+      "API-CRM-006",
+      "API-CRM-007",
+      "API-REQUEST-001",
+      "API-REQUEST-002",
+      "API-REQUEST-003"
+    ],
+    "function": "详情申请与跟进",
+    "has_p0_test": true,
+    "module": "项目机会",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "crm.request.read",
+      "crm.request.review",
+      "project_detail.apply",
+      "request.read_own"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-OPP-006",
+    "route_ids": [
+      "CRM-REQ-001",
+      "CRM-REQ-002",
+      "CRM-REQ-003",
+      "PC-REQ-001",
+      "PC-WRK-003",
+      "PC-WRK-004"
+    ],
+    "test_case_ids": [
+      "TC-CRM-REQUEST-001",
+      "TC-PROJECT-002"
+    ]
+  },
+  {
+    "api_ids_via_routes": [
+      "API-PROJECT-002",
+      "API-TENDER-004"
+    ],
+    "function": "企业隔离与脱敏",
+    "has_p0_test": true,
+    "module": "项目机会",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "opportunity.read",
+      "tender.read"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-OPP-007",
+    "route_ids": [
+      "PC-OPP-002",
+      "PC-OPP-004"
+    ],
+    "test_case_ids": [
+      "TC-ANON-001"
+    ]
+  },
+  {
+    "api_ids_via_routes": [
+      "API-PARTNER-001",
+      "API-PARTNER-002"
+    ],
+    "function": "伙伴主数据建模",
+    "has_p0_test": false,
+    "module": "伙伴资源",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "partner.read"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-PAR-001",
+    "route_ids": [
+      "PC-PAR-001",
+      "PC-PAR-002"
+    ],
+    "test_case_ids": []
+  },
+  {
+    "api_ids_via_routes": [
+      "API-PARTNER-001",
+      "API-PARTNER-002"
+    ],
+    "function": "能力与服务区域证据",
+    "has_p0_test": false,
+    "module": "伙伴资源",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "partner.read"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-PAR-002",
+    "route_ids": [
+      "PC-PAR-001",
+      "PC-PAR-002"
+    ],
+    "test_case_ids": []
+  },
+  {
+    "api_ids_via_routes": [
+      "API-PARTNER-001"
+    ],
+    "function": "任务型伙伴匹配",
+    "has_p0_test": false,
+    "module": "伙伴资源",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "partner.read"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-PAR-003",
+    "route_ids": [
+      "PC-PAR-001"
+    ],
+    "test_case_ids": []
+  },
+  {
+    "api_ids_via_routes": [
+      "API-PARTNER-001",
+      "API-PARTNER-002"
+    ],
+    "function": "风险与审核",
+    "has_p0_test": false,
+    "module": "伙伴资源",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "partner.read"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-PAR-004",
+    "route_ids": [
+      "PC-PAR-001",
+      "PC-PAR-002"
+    ],
+    "test_case_ids": []
+  },
+  {
+    "api_ids_via_routes": [
+      "API-CRM-004",
+      "API-CRM-005",
+      "API-CRM-006",
+      "API-CRM-007",
+      "API-REQUEST-001",
+      "API-REQUEST-002",
+      "API-REQUEST-003"
+    ],
+    "function": "双向授权对接",
+    "has_p0_test": true,
+    "module": "伙伴资源",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "crm.request.read",
+      "crm.request.review",
+      "partner_connection.apply",
+      "request.read_own"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-PAR-005",
+    "route_ids": [
+      "CRM-REQ-001",
+      "CRM-REQ-002",
+      "CRM-REQ-003",
+      "PC-REQ-002",
+      "PC-WRK-003",
+      "PC-WRK-004"
+    ],
+    "test_case_ids": [
+      "TC-CRM-REQUEST-001"
+    ]
+  },
+  {
+    "api_ids_via_routes": [
+      "API-PARTNER-002"
+    ],
+    "function": "敏感联系人保护",
+    "has_p0_test": true,
+    "module": "伙伴资源",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "partner.read"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-PAR-007",
+    "route_ids": [
+      "PC-PAR-002"
+    ],
+    "test_case_ids": [
+      "TC-ANON-001",
+      "TC-PARTNER-001"
+    ]
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "企业与后台角色隔离",
+    "has_p0_test": true,
+    "module": "组织权限",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "enterprise.member.manage",
+      "role.manage",
+      "system.configure"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-PERM-ORG-001",
+    "route_ids": [
+      "ADM-SEC-001",
+      "ADM-SEC-002",
+      "PC-ENT-002"
+    ],
+    "test_case_ids": [
+      "TC-ORG-001"
+    ]
+  },
+  {
+    "api_ids_via_routes": [
+      "API-POLICY-001",
+      "API-POLICY-002"
+    ],
+    "function": "政策检索与详情",
+    "has_p0_test": false,
+    "module": "政策风险",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "policy.read"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-PR-001",
+    "route_ids": [
+      "PC-POL-001",
+      "PC-POL-002"
+    ],
+    "test_case_ids": []
+  },
+  {
+    "api_ids_via_routes": [
+      "API-POLICY-002"
+    ],
+    "function": "政策版本与条款",
+    "has_p0_test": true,
+    "module": "政策风险",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "policy.admin.read",
+      "policy.edit",
+      "policy.read",
+      "policy.review"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-PR-002",
+    "route_ids": [
+      "ADM-POL-001",
+      "ADM-POL-002",
+      "ADM-POL-003",
+      "PC-POL-002"
+    ],
+    "test_case_ids": [
+      "TC-POLICY-001"
+    ]
+  },
+  {
+    "api_ids_via_routes": [
+      "API-POLICY-001",
+      "API-POLICY-002"
+    ],
+    "function": "法律、内容与时效三状态",
+    "has_p0_test": true,
+    "module": "政策风险",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "policy.read"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-PR-003",
+    "route_ids": [
+      "PC-POL-001",
+      "PC-POL-002"
+    ],
+    "test_case_ids": [
+      "TC-POLICY-001"
+    ]
+  },
+  {
+    "api_ids_via_routes": [
+      "API-RISK-001",
+      "API-RISK-002"
+    ],
+    "function": "风险库与四级评级",
+    "has_p0_test": true,
+    "module": "政策风险",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "risk.admin.read",
+      "risk.edit",
+      "risk.read",
+      "risk.review"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-PR-004",
+    "route_ids": [
+      "ADM-RSK-001",
+      "ADM-RSK-002",
+      "ADM-RSK-003",
+      "PC-RSK-001",
+      "PC-RSK-002"
+    ],
+    "test_case_ids": [
+      "TC-RISK-001"
+    ]
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "关联与影响清单",
+    "has_p0_test": false,
+    "module": "政策风险",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [],
+    "priority": "P0",
+    "requirement_id": "FR-PR-006",
+    "route_ids": [],
+    "test_case_ids": []
+  },
+  {
+    "api_ids_via_routes": [
+      "API-POLICY-002",
+      "API-RISK-002"
+    ],
+    "function": "权限与高风险提示",
+    "has_p0_test": false,
+    "module": "政策风险",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "policy.read",
+      "risk.read"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-PR-007",
+    "route_ids": [
+      "PC-POL-002",
+      "PC-RSK-002"
+    ],
+    "test_case_ids": []
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "企业能力与出海需求画像",
+    "has_p0_test": true,
+    "module": "企业画像",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [
+      "enterprise.read_own"
+    ],
+    "priority": "P0",
+    "requirement_id": "FR-PROFILE-001",
+    "route_ids": [
+      "PC-ENT-001"
+    ],
+    "test_case_ids": [
+      "TC-PROFILE-001"
+    ]
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "标签来源与行为控制",
+    "has_p0_test": false,
+    "module": "企业画像",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [],
+    "priority": "P0",
+    "requirement_id": "FR-PROFILE-003",
+    "route_ids": [],
+    "test_case_ids": []
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "分层与原始证据保护",
+    "has_p0_test": true,
+    "module": "数据质量",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [],
+    "priority": "P0",
+    "requirement_id": "FR-QUALITY-001",
+    "route_ids": [],
+    "test_case_ids": [
+      "TC-QUALITY-001"
+    ]
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "清洗、映射与标准化",
+    "has_p0_test": true,
+    "module": "数据质量",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [],
+    "priority": "P0",
+    "requirement_id": "FR-QUALITY-002",
+    "route_ids": [],
+    "test_case_ids": [
+      "TC-QUALITY-002"
+    ]
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "去重与实体解析",
+    "has_p0_test": true,
+    "module": "数据质量",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [],
+    "priority": "P0",
+    "requirement_id": "FR-QUALITY-003",
+    "route_ids": [],
+    "test_case_ids": [
+      "TC-QUALITY-003"
+    ]
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "翻译与原文定位",
+    "has_p0_test": true,
+    "module": "数据质量",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [],
+    "priority": "P0",
+    "requirement_id": "FR-QUALITY-004",
+    "route_ids": [],
+    "test_case_ids": [
+      "TC-QUALITY-004"
+    ]
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "可信度与完整度",
+    "has_p0_test": true,
+    "module": "数据质量",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [],
+    "priority": "P0",
+    "requirement_id": "FR-QUALITY-005",
+    "route_ids": [],
+    "test_case_ids": [
+      "TC-SCORE-013"
+    ]
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "审核发布与原子切换",
+    "has_p0_test": true,
+    "module": "数据质量",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [],
+    "priority": "P0",
+    "requirement_id": "FR-QUALITY-006",
+    "route_ids": [],
+    "test_case_ids": [
+      "TC-QUALITY-005"
+    ]
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "过期、纠错与下架联动",
+    "has_p0_test": true,
+    "module": "数据质量",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [],
+    "priority": "P0",
+    "requirement_id": "FR-QUALITY-007",
+    "route_ids": [],
+    "test_case_ids": [
+      "TC-QUALITY-006"
+    ]
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "指标、SLA与质量看板",
+    "has_p0_test": true,
+    "module": "数据质量",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [],
+    "priority": "P0",
+    "requirement_id": "FR-QUALITY-008",
+    "route_ids": [],
+    "test_case_ids": [
+      "TC-DATA-QUALITY-001",
+      "TC-QUALITY-007"
+    ]
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "统一评分服务与模型版本运行",
+    "has_p0_test": true,
+    "module": "评分推荐",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [],
+    "priority": "P0",
+    "requirement_id": "FR-SCORE-001",
+    "route_ids": [],
+    "test_case_ids": [
+      "TC-SCORE-001",
+      "TC-SCORE-002",
+      "TC-SCORE-003",
+      "TC-SCORE-004",
+      "TC-SCORE-005",
+      "TC-SCORE-006",
+      "TC-SCORE-007",
+      "TC-SCORE-008",
+      "TC-SCORE-009",
+      "TC-SCORE-010",
+      "TC-SCORE-011",
+      "TC-SCORE-012",
+      "TC-SCORE-013",
+      "TC-SCORE-014",
+      "TC-SCORE-015",
+      "TC-SCORE-016",
+      "TC-SCORE-017",
+      "TC-SCORE-018",
+      "TC-SCORE-019",
+      "TC-SCORE-020",
+      "TC-SCORE-021",
+      "TC-SCORE-022",
+      "TC-SCORE-023",
+      "TC-SCORE-024"
+    ]
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "设计令牌与核心组件库",
+    "has_p0_test": true,
+    "module": "设计系统",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [],
+    "priority": "P0",
+    "requirement_id": "FR-UI-001",
+    "route_ids": [],
+    "test_case_ids": [
+      "TC-UI-001"
+    ]
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "PC Web响应式与H5共用框架预留",
+    "has_p0_test": true,
+    "module": "设计系统",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [],
+    "priority": "P0",
+    "requirement_id": "FR-UI-002",
+    "route_ids": [],
+    "test_case_ids": [
+      "TC-RESP-001"
+    ]
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "统一加载、空、错误、部分成功状态",
+    "has_p0_test": true,
+    "module": "交互规范",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [],
+    "priority": "P0",
+    "requirement_id": "FR-UX-001",
+    "route_ids": [],
+    "test_case_ids": [
+      "TC-UX-001",
+      "TC-UX-002"
+    ]
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "表单校验、草稿与幂等提交",
+    "has_p0_test": true,
+    "module": "交互规范",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [],
+    "priority": "P0",
+    "requirement_id": "FR-UX-002",
+    "route_ids": [],
+    "test_case_ids": [
+      "TC-FORM-001",
+      "TC-FORM-002",
+      "TC-FORM-003"
+    ]
+  },
+  {
+    "api_ids_via_routes": [],
+    "function": "筛选、分页、排序与URL同步",
+    "has_p0_test": true,
+    "module": "交互规范",
+    "mvp_acceptance_ids": [],
+    "permission_codes_via_routes": [],
+    "priority": "P0",
+    "requirement_id": "FR-UX-003",
+    "route_ids": [],
+    "test_case_ids": [
+      "TC-IA-003"
+    ]
+  }
+]

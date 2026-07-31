@@ -11,7 +11,9 @@ D0 数据标准冻结；D4 数据就绪评审正式通过之前，只建设数�
 - 生成可版本化的数据合同快照；
 - 输出 D0 就绪报告，并对缺少签署、任务、验收和证据给出明确阻断原因；
 - 校验验收证据文件的哈希和关联关系；
-- 生成并校验 D1 来源准入、哈希证据、D2 不可变采集和 D3 可重放处理候选合同。
+- 生成并校验 D1 来源准入、哈希证据、D2 不可变采集和 D3 可重放处理候选合同；
+- 只读提取103项需求、166个页面、70个API、29条角色权限、109个产品/工程测试和
+  11项MVP验收，并生成P0需求追踪预检矩阵。
 
 ## 本地运行
 
@@ -31,6 +33,8 @@ uv run navigator-data prepare-d1
 uv run navigator-data prepare-d2
 uv run navigator-data prepare-d3
 uv run navigator-data prepare-d4
+uv run navigator-data prepare-p0-traceability
+uv run navigator-data assess-p0-traceability
 uv run navigator-data report
 uv run pytest --cov
 ```
@@ -83,6 +87,13 @@ D4候选包位于
 100分评分、双人抽样、追溯/许可/准确率/重复率/P0硬门、种子导入与重建、回滚、
 来源撤权、RAG权限、九项移交物和项目委员会签署做成一套可复算合同。只有真实完成
 并通过`validate-d4`的评审副本，才可能作为进入V0.1的证据。
+
+P0追踪预检候选包位于
+[`data/p0/candidates`](data/p0/candidates/README.md)。技术附件中的90项P0需求、
+125个P0页面、56个P0 API合同、89个P0产品测试、17个P0工程验收用例和11项MVP验收
+已进入机器合同。当前仅63项P0需求关联P0测试，且17个P0页面需求映射、93个API映射、
+76个测试映射仍待补充或细化；页面权限代码与`PERM-*`编号也缺少直接映射列。因此
+追踪预检和交付预检均未通过，工具不会把“文档已确认”解释为已实现或已验收。
 
 完整实施顺序见
 [`docs/development/P0_IMPLEMENTATION_PLAN.md`](docs/development/P0_IMPLEMENTATION_PLAN.md)。
