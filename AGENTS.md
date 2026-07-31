@@ -44,7 +44,8 @@
 - Any new behavior must include tests and update the implementation plan or operating
   documentation when its contract changes.
 - Run `uv run ruff format --check .`, `uv run ruff check .`, `uv run mypy`,
-  `uv run navigator-data validate`, `uv run navigator-data prepare-d0`,
+  `uv run navigator-data validate`, `uv run navigator-data snapshot`,
+  `uv run navigator-data prepare-d0`,
   `uv run navigator-data prepare-d0-review`, `uv run navigator-data prepare-d1`,
   `uv run navigator-data prepare-d2`, `uv run navigator-data prepare-d3`,
   `uv run navigator-data prepare-d4`, `uv run navigator-data prepare-p0-traceability`,

@@ -8,31 +8,72 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: data-readiness-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate:
+    name: D0-P0 deterministic validation
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Python and uv
+        uses: astral-sh/setup-uv@v6
         with:
           python-version: "3.13"
           enable-cache: true
-      - run: uv sync --locked --dev
-      - run: uv run ruff format --check .
-      - run: uv run ruff check .
-      - run: uv run mypy
-      - run: uv run navigator-data validate
-      - run: uv run navigator-data prepare-d0
-      - run: git diff --exit-code -- data/d0/candidates
-      - run: uv run navigator-data prepare-d0-review
-      - run: git diff --exit-code -- data/d0/review/d0_review_packet.template.json
-      - run: uv run navigator-data prepare-d1
-      - run: git diff --exit-code -- data/d1/candidates
-      - run: uv run navigator-data prepare-d2
-      - run: git diff --exit-code -- data/d2/candidates
-      - run: uv run navigator-data prepare-d3
-      - run: git diff --exit-code -- data/d3/candidates
-      - run: uv run navigator-data prepare-d4
-      - run: git diff --exit-code -- data/d4/candidates
-      - run: uv run pytest --cov --cov-report=term-missing
+          cache-dependency-glob: uv.lock
+
+      - name: Install locked dependencies
+        run: uv sync --locked --dev
+
+      - name: Run formatting, lint, and type checks
+        run: |
+          uv run ruff format --check .
+          uv run ruff check .
+          uv run mypy
+
+      - name: Freeze source workbook hashes
+        run: |
+          find doc/doc -type f \( -name '*.xlsx' -o -name '*.xlsm' \) -print0 \
+            | sort -z \
+            | xargs -0 sha256sum > /tmp/navigator-source-workbooks.sha256
+          test -s /tmp/navigator-source-workbooks.sha256
+
+      - name: Validate baseline and regenerate deterministic candidates
+        run: |
+          uv run navigator-data validate
+          uv run navigator-data snapshot
+          uv run navigator-data prepare-d0
+          uv run navigator-data prepare-d0-review
+          uv run navigator-data prepare-d1
+          uv run navigator-data prepare-d2
+          uv run navigator-data prepare-d3
+          uv run navigator-data prepare-d4
+          uv run navigator-data prepare-p0-traceability
+          uv run navigator-data prepare-p0-resolution
+          uv run navigator-data prepare-p0-delivery
+
+      - name: Verify source workbooks are unchanged
+        run: sha256sum --check /tmp/navigator-source-workbooks.sha256
+
+      - name: Reject generated contract or candidate drift
+        run: |
+          git status --short --untracked-files=all -- \
+            data/contracts/current \
+            data/d0/candidates \
+            data/d0/review/d0_review_packet.template.json \
+            data/d1/candidates \
+            data/d2/candidates \
+            data/d3/candidates \
+            data/d4/candidates \
+            data/p0/candidates \
+            | tee /tmp/navigator-generated-status.txt
+          test ! -s /tmp/navigator-generated-status.txt
+
+      - name: Run test suite with coverage gate
+        run: uv run pytest --cov --cov-report=term-missing

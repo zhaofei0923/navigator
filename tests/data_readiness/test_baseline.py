@@ -4,7 +4,12 @@ import json
 from dataclasses import replace
 from pathlib import Path
 
-from navigator_data_readiness.baseline import extract_contracts, snapshot_manifest, write_snapshot
+from navigator_data_readiness.baseline import (
+    extract_contracts,
+    sha256_file,
+    snapshot_manifest,
+    write_snapshot,
+)
 from navigator_data_readiness.paths import discover_repository
 from navigator_data_readiness.validation import validate_structure
 
@@ -51,6 +56,7 @@ def test_manifest_hashes_are_repeatable() -> None:
 
     assert first == second
     assert first["record_counts"] == {}
+    assert first["contract_sha256"] == {}
     assert len(first["sources"]["d0_workbook"]["sha256"]) == 64
     assert len(first["sources"]["technical_workbook"]["sha256"]) == 64
 
@@ -67,4 +73,52 @@ def test_write_snapshot_exports_all_contracts(tmp_path: Path) -> None:
     assert manifest["record_counts"]["enums"] == 251
     assert manifest["record_counts"]["feature_requirements"] == 103
     assert manifest["record_counts"]["page_routes"] == 166
+    assert manifest["contract_sha256"]["feature_requirements"] == sha256_file(
+        paths.contracts_dir / "feature_requirements.json"
+    )
+    assert len(manifest["contract_sha256"]) == 25
     assert all(path.is_file() for path in written)
+
+
+def test_write_snapshot_preserves_timestamp_when_contracts_are_unchanged(
+    tmp_path: Path,
+) -> None:
+    source_paths = discover_repository()
+    paths = replace(source_paths, contracts_dir=tmp_path / "contracts")
+    write_snapshot(paths)
+    manifest_path = paths.contracts_dir / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["generated_at"] = "2000-01-01T00:00:00+00:00"
+    manifest_path.write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    write_snapshot(paths)
+    regenerated = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    assert regenerated["generated_at"] == "2000-01-01T00:00:00+00:00"
+
+
+def test_write_snapshot_refreshes_timestamp_when_contract_hashes_are_stale(
+    tmp_path: Path,
+) -> None:
+    source_paths = discover_repository()
+    paths = replace(source_paths, contracts_dir=tmp_path / "contracts")
+    write_snapshot(paths)
+    manifest_path = paths.contracts_dir / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["generated_at"] = "2000-01-01T00:00:00+00:00"
+    manifest["contract_sha256"]["feature_requirements"] = "0" * 64
+    manifest_path.write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    write_snapshot(paths)
+    regenerated = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    assert regenerated["generated_at"] != "2000-01-01T00:00:00+00:00"
+    assert regenerated["contract_sha256"]["feature_requirements"] == sha256_file(
+        paths.contracts_dir / "feature_requirements.json"
+    )

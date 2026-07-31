@@ -72,6 +72,7 @@ def snapshot_manifest(
     paths: RepositoryPaths,
     generated_at: str | None = None,
     record_counts: dict[str, int] | None = None,
+    contract_hashes: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     timestamp = generated_at or datetime.now(UTC).replace(microsecond=0).isoformat()
     return {
@@ -79,6 +80,7 @@ def snapshot_manifest(
         "baseline_version": "V1.0-BASELINE",
         "generated_at": timestamp,
         "record_counts": record_counts or {},
+        "contract_sha256": contract_hashes or {},
         "sources": {
             "d0_workbook": {
                 "path": paths.d0_workbook.relative_to(paths.root).as_posix(),
@@ -92,23 +94,61 @@ def snapshot_manifest(
     }
 
 
+def _preserved_generated_at(
+    manifest_path: Path,
+    current: dict[str, Any],
+) -> str | None:
+    try:
+        existing = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return None
+    if not isinstance(existing, dict):
+        return None
+    comparable_fields = (
+        "schema_version",
+        "baseline_version",
+        "record_counts",
+        "contract_sha256",
+        "sources",
+    )
+    if any(existing.get(field) != current.get(field) for field in comparable_fields):
+        return None
+    generated_at = existing.get("generated_at")
+    return str(generated_at).strip() if generated_at else None
+
+
 def write_snapshot(paths: RepositoryPaths) -> list[Path]:
     contracts = extract_contracts(paths)
+    record_counts = {name: len(records) for name, records in contracts.items()}
+    serialized_contracts = {
+        name: json.dumps(records, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+        for name, records in contracts.items()
+    }
+    contract_hashes = {
+        name: hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+        for name, serialized in serialized_contracts.items()
+    }
+    manifest_path = paths.contracts_dir / "manifest.json"
+    current_manifest = snapshot_manifest(
+        paths,
+        generated_at="pending",
+        record_counts=record_counts,
+        contract_hashes=contract_hashes,
+    )
+    generated_at = _preserved_generated_at(manifest_path, current_manifest)
     paths.contracts_dir.mkdir(parents=True, exist_ok=True)
     written: list[Path] = []
-    for name, records in sorted(contracts.items()):
+    for name, serialized in sorted(serialized_contracts.items()):
         destination = paths.contracts_dir / f"{name}.json"
-        destination.write_text(
-            json.dumps(records, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
+        destination.write_text(serialized, encoding="utf-8")
         written.append(destination)
-    manifest_path = paths.contracts_dir / "manifest.json"
     manifest_path.write_text(
         json.dumps(
             snapshot_manifest(
                 paths,
-                record_counts={name: len(records) for name, records in contracts.items()},
+                generated_at=generated_at,
+                record_counts=record_counts,
+                contract_hashes=contract_hashes,
             ),
             ensure_ascii=False,
             indent=2,

@@ -53,6 +53,11 @@ uv run navigator-data gate --stage D0
 
 在当前台账尚未完成责任签署和验收的情况下，该命令应返回非零状态；这是正确的门禁行为。
 
+GitHub Actions会在每次`main`推送和Pull Request上执行同一套校验：锁定依赖、格式、
+静态检查、类型检查、冻结基线、合同快照、D0—D4及P0全部候选生成和测试覆盖率。
+工作流在运行生成器前后核对两个源Excel的SHA-256，并拒绝任何合同或候选文件漂移。
+合同清单还保存每个生成JSON文件的SHA-256，因此解析逻辑改变但行数未变也会被发现。
+
 `prepare-d0`生成的候选验收包位于
 [`data/d0/candidates`](data/d0/candidates/README.md)。印尼 ESDM、越南 EVN 和沙特
 Principal Buyer 三份公开原件均已完成来源、日期、文件哈希、PDF安全属性和视觉
