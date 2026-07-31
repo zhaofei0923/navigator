@@ -10,6 +10,7 @@ from typing import Any
 from navigator_data_readiness.baseline import sha256_file
 from navigator_data_readiness.models import CheckResult
 from navigator_data_readiness.p0_delivery import (
+    _validate_delivery_packet_provenance,
     build_p0_delivery_template,
     load_and_validate_p0_delivery_bundle,
     payload_sha256,
@@ -366,6 +367,83 @@ def test_load_delivery_rejects_invalid_artifact(tmp_path: Path) -> None:
     )
 
     assert [check.code for check in checks] == ["P0_DELIVERY_ARTIFACT_INVALID"]
+
+
+def test_completed_delivery_packet_must_match_git_head(
+    tmp_path: Path,
+    monkeypatch: Any,
+) -> None:
+    repository_root = tmp_path / "repository"
+    delivery_dir = repository_root / "data" / "p0" / "delivery"
+    delivery_dir.mkdir(parents=True)
+    packet_path = delivery_dir / "p0_delivery_evidence.v1.json"
+    packet_path.write_text('{"stage":"P0-DELIVERY"}\n', encoding="utf-8")
+    paths = replace(discover_repository(), root=repository_root)
+
+    monkeypatch.setattr(
+        "navigator_data_readiness.p0_delivery._run_git",
+        lambda *_args, **_kwargs: subprocess.CompletedProcess(
+            ["git"],
+            0,
+            stdout=packet_path.read_bytes(),
+            stderr=b"",
+        ),
+    )
+    assert _validate_delivery_packet_provenance(paths, packet_path) == []
+
+    monkeypatch.setattr(
+        "navigator_data_readiness.p0_delivery._run_git",
+        lambda *_args, **_kwargs: subprocess.CompletedProcess(
+            ["git"],
+            0,
+            stdout=b"tampered",
+            stderr=b"",
+        ),
+    )
+    assert "P0_DELIVERY_PACKET_HEAD_MISMATCH" in _codes(
+        _validate_delivery_packet_provenance(paths, packet_path)
+    )
+
+    monkeypatch.setattr(
+        "navigator_data_readiness.p0_delivery._run_git",
+        lambda *_args, **_kwargs: subprocess.CompletedProcess(
+            ["git"],
+            128,
+            stdout=b"",
+            stderr=b"missing",
+        ),
+    )
+    assert "P0_DELIVERY_PACKET_NOT_IN_HEAD" in _codes(
+        _validate_delivery_packet_provenance(paths, packet_path)
+    )
+
+    outside_path = repository_root / "p0_delivery_evidence.v1.json"
+    outside_path.write_text("{}", encoding="utf-8")
+    assert "P0_DELIVERY_PACKET_PATH_INVALID" in _codes(
+        _validate_delivery_packet_provenance(paths, outside_path)
+    )
+
+
+def test_load_delivery_reports_packet_provenance_before_missing_d4(tmp_path: Path) -> None:
+    packet_path = tmp_path / "p0_delivery_evidence.v1.json"
+    packet_path.write_text("{}", encoding="utf-8")
+    missing = tmp_path / "missing.json"
+
+    checks = load_and_validate_p0_delivery_bundle(
+        discover_repository(),
+        packet_path,
+        missing,
+        missing,
+        missing,
+        missing,
+        missing,
+        missing,
+    )
+
+    assert [check.code for check in checks] == [
+        "P0_DELIVERY_PACKET_PATH_INVALID",
+        "P0_DELIVERY_ARTIFACT_INVALID",
+    ]
 
 
 def test_template_is_json_serializable() -> None:

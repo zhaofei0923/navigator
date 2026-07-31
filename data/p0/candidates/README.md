@@ -61,6 +61,7 @@ P0追踪报告，只有所有提案精确落地且追踪阻断为0时才返回�
 机器报告不能修改工作簿状态、代替D0—D4正式签署，也不能授权启动V0.1/P0用户侧开发。
 
 正式开发、测试和验收发生后，按
-[`../delivery/README.md`](../delivery/README.md)复制并填写P0交付证据包。只有完整
-D4上游链、当前P0追踪、全部实现/测试/验收、发布指标、Git提交和证据哈希同时通过，
-`validate-p0-delivery`才返回成功。
+[`../delivery/README.md`](../delivery/README.md)复制并填写P0交付证据包。只有完成
+包已提交到`data/p0/delivery`并匹配当前`HEAD`，且完整D4上游链、当前P0追踪、全部
+实现/测试/验收、发布指标、Git提交和证据哈希同时通过，`validate-p0-delivery`才
+返回成功。

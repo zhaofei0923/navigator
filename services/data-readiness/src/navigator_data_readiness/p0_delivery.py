@@ -760,6 +760,66 @@ def _run_git(
         return None
 
 
+def _validate_delivery_packet_provenance(
+    paths: RepositoryPaths,
+    bundle_path: Path,
+) -> list[CheckResult]:
+    checks: list[CheckResult] = []
+    repository_root = paths.root.resolve()
+    delivery_dir = (repository_root / "data" / "p0" / "delivery").resolve()
+    resolved_path = bundle_path.resolve()
+    try:
+        resolved_path.relative_to(delivery_dir)
+    except ValueError:
+        return [
+            CheckResult(
+                code="P0_DELIVERY_PACKET_PATH_INVALID",
+                message=("Completed P0 delivery bundles must be stored under data/p0/delivery"),
+                location=str(bundle_path),
+            )
+        ]
+
+    relative_path = resolved_path.relative_to(repository_root).as_posix()
+    result = _run_git(paths, "show", f"HEAD:{relative_path}", text=False)
+    if result is None:
+        return [
+            CheckResult(
+                code="P0_DELIVERY_GIT_UNAVAILABLE",
+                message="Cannot read the completed delivery bundle from Git HEAD",
+                location=str(paths.root),
+            )
+        ]
+    if result.returncode != 0:
+        return [
+            CheckResult(
+                code="P0_DELIVERY_PACKET_NOT_IN_HEAD",
+                message=(f"Completed delivery bundle is not committed at HEAD: {relative_path}"),
+                location=relative_path,
+            )
+        ]
+    try:
+        current_bytes = resolved_path.read_bytes()
+    except OSError as error:
+        return [
+            CheckResult(
+                code="P0_DELIVERY_ARTIFACT_INVALID",
+                message=f"Cannot reread P0 delivery bundle: {error}",
+                location=str(bundle_path),
+            )
+        ]
+    if current_bytes != cast(bytes, result.stdout):
+        checks.append(
+            CheckResult(
+                code="P0_DELIVERY_PACKET_HEAD_MISMATCH",
+                message=(
+                    f"Completed delivery bundle differs from its Git HEAD blob: {relative_path}"
+                ),
+                location=relative_path,
+            )
+        )
+    return checks
+
+
 def _validate_git_provenance(
     checks: list[CheckResult],
     paths: RepositoryPaths,
@@ -1123,9 +1183,10 @@ def load_and_validate_p0_delivery_bundle(
     bundle, bundle_error = _load_object(bundle_path, "P0 delivery bundle")
     if bundle_error:
         return [bundle_error]
+    packet_checks = _validate_delivery_packet_provenance(paths, bundle_path)
     d4_bundle, d4_error = _load_object(d4_bundle_path, "D4 bundle")
     if d4_error:
-        return [d4_error]
+        return [*packet_checks, d4_error]
     assert bundle is not None
     assert d4_bundle is not None
     d4_checks = load_and_validate_d4_bundle(
@@ -1137,9 +1198,12 @@ def load_and_validate_p0_delivery_bundle(
         d1_matrix_path,
         d1_evidence_path,
     )
-    return validate_p0_delivery_bundle(
-        paths,
-        bundle,
-        d4_bundle,
-        d4_chain_checks=d4_checks,
-    )
+    return [
+        *packet_checks,
+        *validate_p0_delivery_bundle(
+            paths,
+            bundle,
+            d4_bundle,
+            d4_chain_checks=d4_checks,
+        ),
+    ]
