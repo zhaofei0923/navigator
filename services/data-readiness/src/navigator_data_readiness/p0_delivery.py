@@ -864,6 +864,16 @@ def _validate_evidence(
             )
         if not relative_path:
             continue
+        declared_path = Path(relative_path)
+        if declared_path.is_absolute():
+            checks.append(
+                CheckResult(
+                    code="P0_DELIVERY_EVIDENCE_PATH_NOT_RELATIVE",
+                    message=f"Evidence path must be repository-relative: {relative_path}",
+                    location=location,
+                )
+            )
+            continue
         evidence_path = (paths.root / relative_path).resolve()
         try:
             evidence_path.relative_to(paths.root)
@@ -872,6 +882,31 @@ def _validate_evidence(
                 CheckResult(
                     code="P0_DELIVERY_EVIDENCE_PATH_OUTSIDE_REPOSITORY",
                     message=f"Evidence path escapes repository: {relative_path}",
+                    location=location,
+                )
+            )
+            continue
+        normalized_path = evidence_path.relative_to(paths.root).as_posix()
+        if relative_path != normalized_path:
+            checks.append(
+                CheckResult(
+                    code="P0_DELIVERY_EVIDENCE_PATH_NOT_CANONICAL",
+                    message=(
+                        f"Evidence path must use its canonical repository-relative form: "
+                        f"{relative_path}"
+                    ),
+                    location=location,
+                )
+            )
+            continue
+        evidence_root = (paths.root / "data" / "p0" / "evidence").resolve()
+        try:
+            evidence_path.relative_to(evidence_root)
+        except ValueError:
+            checks.append(
+                CheckResult(
+                    code="P0_DELIVERY_EVIDENCE_PATH_SCOPE_INVALID",
+                    message=(f"Evidence path must stay under data/p0/evidence: {relative_path}"),
                     location=location,
                 )
             )
@@ -893,7 +928,6 @@ def _validate_evidence(
                 )
             )
         if commit_valid and _SHA256_PATTERN.fullmatch(declared_sha256):
-            normalized_path = evidence_path.relative_to(paths.root).as_posix()
             bindings.append((evidence_id, normalized_path, declared_sha256, commit_sha))
     return identifiers, bindings, approvals, declared_subject_refs
 

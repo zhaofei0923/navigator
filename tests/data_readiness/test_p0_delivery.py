@@ -70,7 +70,7 @@ def _completed_bundle() -> tuple[dict[str, Any], dict[str, Any]]:
     bundle["template_only"] = False
     commit_sha = _head_commit()
     evidence_id = "EVD-P0-DELIVERY-INTEGRATION"
-    evidence_path = "data/d0/evidence/kevin_review_decisions_20260731.md"
+    evidence_path = "data/p0/evidence/README.md"
     bundle["evidence"] = [
         {
             "evidence_id": evidence_id,
@@ -357,6 +357,41 @@ def test_evidence_subject_refs_are_required_and_unique(monkeypatch: Any) -> None
         d4_chain_checks=[],
     )
     assert "P0_DELIVERY_EVIDENCE_SUBJECT_REF_DUPLICATE" in _codes(checks)
+
+
+def test_evidence_path_must_be_relative_canonical_and_scoped(
+    monkeypatch: Any,
+) -> None:
+    monkeypatch.setattr(
+        "navigator_data_readiness.p0_delivery.build_p0_traceability_report",
+        lambda _paths: _ready_traceability(),
+    )
+    paths = discover_repository()
+    cases = (
+        (
+            str(paths.root / "data" / "p0" / "evidence" / "README.md"),
+            "P0_DELIVERY_EVIDENCE_PATH_NOT_RELATIVE",
+        ),
+        (
+            "data/p0/evidence/./README.md",
+            "P0_DELIVERY_EVIDENCE_PATH_NOT_CANONICAL",
+        ),
+        (
+            "data/d0/evidence/kevin_review_decisions_20260731.md",
+            "P0_DELIVERY_EVIDENCE_PATH_SCOPE_INVALID",
+        ),
+    )
+
+    for evidence_path, expected_code in cases:
+        bundle, d4_bundle = _completed_bundle()
+        bundle["evidence"][0]["path"] = evidence_path
+        checks = validate_p0_delivery_bundle(
+            paths,
+            bundle,
+            d4_bundle,
+            d4_chain_checks=[],
+        )
+        assert expected_code in _codes(checks)
 
 
 def test_d4_chain_cannot_be_self_reported(monkeypatch: Any) -> None:

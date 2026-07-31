@@ -34,6 +34,9 @@
   authorization chain; non-committee signer authorizations require committee-approved evidence.
   Every evidence entry must declare stable subject references that bind back to all items using
   its evidence ID; unknown subjects, missing reverse bindings, and unreferenced evidence fail.
+  Evidence paths must be canonical repository-relative paths that resolve under
+  `data/p0/evidence`; absolute paths, aliases, symlink escapes, and other repository directories
+  fail.
 - Generated reviewer templates belong in `data/d0/review`; only actual authorized reviewers may
   fill a review copy, and completed copies must not contain private contact details or secrets.
 - Generated D1 source-onboarding templates belong in `data/d1/candidates`; no source may become
