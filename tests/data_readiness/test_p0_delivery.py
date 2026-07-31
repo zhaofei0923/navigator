@@ -165,6 +165,19 @@ def _completed_bundle() -> tuple[dict[str, Any], dict[str, Any]]:
         "d4_gate_evidence_id": "EVD-D4-FINAL",
         "d4_bundle_sha256": payload_sha256(d4_bundle),
     }
+    subject_refs = {"release_metrics", "final_release"}
+    for item in bundle["signer_authorizations"]:
+        subject_refs.add(f"signer_authorizations:{item['role']}:{item['person_name']}")
+    for section, identifier_field in (
+        ("requirements", "requirement_id"),
+        ("routes", "page_id"),
+        ("apis", "api_id"),
+        ("product_tests", "test_id"),
+        ("engineering_tests", "test_id"),
+        ("acceptance_items", "acceptance_id"),
+    ):
+        subject_refs.update(f"{section}:{item[identifier_field]}" for item in bundle[section])
+    bundle["evidence"][0]["subject_refs"] = sorted(subject_refs)
     return bundle, d4_bundle
 
 
@@ -177,7 +190,7 @@ def test_delivery_template_freezes_complete_p0_scope() -> None:
 
     assert bundle["template_only"] is True
     assert bundle["append_only"] is True
-    assert bundle["schema_version"] == 3
+    assert bundle["schema_version"] == 4
     assert len(bundle["requirements"]) == 90
     assert len(bundle["routes"]) == 125
     assert len(bundle["apis"]) == 56
@@ -242,6 +255,108 @@ def test_completed_delivery_bundle_passes(
     )
 
     assert checks == []
+
+
+def test_evidence_must_declare_every_referenced_subject(monkeypatch: Any) -> None:
+    monkeypatch.setattr(
+        "navigator_data_readiness.p0_delivery.build_p0_traceability_report",
+        lambda _paths: _ready_traceability(),
+    )
+    bundle, d4_bundle = _completed_bundle()
+    subject_ref = f"requirements:{bundle['requirements'][0]['requirement_id']}"
+    bundle["evidence"][0]["subject_refs"].remove(subject_ref)
+
+    checks = validate_p0_delivery_bundle(
+        discover_repository(),
+        bundle,
+        d4_bundle,
+        d4_chain_checks=[],
+    )
+
+    assert "P0_DELIVERY_EVIDENCE_SUBJECT_BINDING_MISSING" in _codes(checks)
+
+
+def test_evidence_cannot_declare_an_unknown_subject(monkeypatch: Any) -> None:
+    monkeypatch.setattr(
+        "navigator_data_readiness.p0_delivery.build_p0_traceability_report",
+        lambda _paths: _ready_traceability(),
+    )
+    bundle, d4_bundle = _completed_bundle()
+    bundle["evidence"][0]["subject_refs"].append("requirements:FR-NOT-REAL")
+
+    checks = validate_p0_delivery_bundle(
+        discover_repository(),
+        bundle,
+        d4_bundle,
+        d4_chain_checks=[],
+    )
+
+    assert "P0_DELIVERY_EVIDENCE_SUBJECT_UNKNOWN" in _codes(checks)
+
+
+def test_declared_subject_must_reference_the_evidence(monkeypatch: Any) -> None:
+    monkeypatch.setattr(
+        "navigator_data_readiness.p0_delivery.build_p0_traceability_report",
+        lambda _paths: _ready_traceability(),
+    )
+    bundle, d4_bundle = _completed_bundle()
+    bundle["requirements"][0]["evidence_ids"] = []
+
+    checks = validate_p0_delivery_bundle(
+        discover_repository(),
+        bundle,
+        d4_bundle,
+        d4_chain_checks=[],
+    )
+
+    assert "P0_DELIVERY_EVIDENCE_SUBJECT_REFERENCE_MISSING" in _codes(checks)
+
+
+def test_unreferenced_evidence_is_rejected(monkeypatch: Any) -> None:
+    monkeypatch.setattr(
+        "navigator_data_readiness.p0_delivery.build_p0_traceability_report",
+        lambda _paths: _ready_traceability(),
+    )
+    bundle, d4_bundle = _completed_bundle()
+    unreferenced = copy.deepcopy(bundle["evidence"][0])
+    unreferenced["evidence_id"] = "EVD-P0-UNREFERENCED"
+    bundle["evidence"].append(unreferenced)
+
+    checks = validate_p0_delivery_bundle(
+        discover_repository(),
+        bundle,
+        d4_bundle,
+        d4_chain_checks=[],
+    )
+
+    assert "P0_DELIVERY_EVIDENCE_UNREFERENCED" in _codes(checks)
+
+
+def test_evidence_subject_refs_are_required_and_unique(monkeypatch: Any) -> None:
+    monkeypatch.setattr(
+        "navigator_data_readiness.p0_delivery.build_p0_traceability_report",
+        lambda _paths: _ready_traceability(),
+    )
+    bundle, d4_bundle = _completed_bundle()
+    bundle["evidence"][0]["subject_refs"] = []
+
+    checks = validate_p0_delivery_bundle(
+        discover_repository(),
+        bundle,
+        d4_bundle,
+        d4_chain_checks=[],
+    )
+    assert "P0_DELIVERY_EVIDENCE_SUBJECT_REFS_INVALID" in _codes(checks)
+
+    bundle, d4_bundle = _completed_bundle()
+    bundle["evidence"][0]["subject_refs"].append(bundle["evidence"][0]["subject_refs"][0])
+    checks = validate_p0_delivery_bundle(
+        discover_repository(),
+        bundle,
+        d4_bundle,
+        d4_chain_checks=[],
+    )
+    assert "P0_DELIVERY_EVIDENCE_SUBJECT_REF_DUPLICATE" in _codes(checks)
 
 
 def test_d4_chain_cannot_be_self_reported(monkeypatch: Any) -> None:

@@ -97,7 +97,7 @@ def build_p0_delivery_template(paths: RepositoryPaths) -> dict[str, Any]:
         | {_TEST_REVIEWER_ROLE}
     )
     return {
-        "schema_version": 3,
+        "schema_version": 4,
         "stage": "P0-DELIVERY",
         "template_only": True,
         "append_only": True,
@@ -349,6 +349,47 @@ def _string_ids(
     return identifiers
 
 
+def _subject_refs(
+    checks: list[CheckResult],
+    item: dict[str, Any],
+    *,
+    location: str,
+) -> set[str]:
+    value = item.get("subject_refs")
+    if (
+        not isinstance(value, list)
+        or not value
+        or any(not isinstance(entry, str) or not entry.strip() for entry in value)
+    ):
+        checks.append(
+            CheckResult(
+                code="P0_DELIVERY_EVIDENCE_SUBJECT_REFS_INVALID",
+                message="subject_refs must be a list of non-empty strings",
+                location=location,
+            )
+        )
+        return set()
+    normalized = [entry.strip() for entry in value]
+    if len(normalized) != len(set(normalized)):
+        checks.append(
+            CheckResult(
+                code="P0_DELIVERY_EVIDENCE_SUBJECT_REF_DUPLICATE",
+                message="subject_refs contains duplicates",
+                location=location,
+            )
+        )
+    return set(normalized)
+
+
+def _bind_evidence_subjects(
+    bindings: dict[str, set[str]],
+    evidence_ids: set[str],
+    subject_ref: str,
+) -> None:
+    for evidence_id in evidence_ids:
+        bindings.setdefault(evidence_id, set()).add(subject_ref)
+
+
 def _required_fields(
     checks: list[CheckResult],
     item: dict[str, Any],
@@ -414,7 +455,12 @@ def _validate_signer_authorizations(
     payload: dict[str, Any],
     required_roles: set[str],
     committee_approver: str,
-) -> tuple[dict[str, set[str]], set[str]]:
+) -> tuple[
+    dict[str, set[str]],
+    set[str],
+    dict[str, set[str]],
+    set[str],
+]:
     entries = payload.get("signer_authorizations")
     if not isinstance(entries, list):
         checks.append(
@@ -424,9 +470,11 @@ def _validate_signer_authorizations(
                 location="signer_authorizations",
             )
         )
-        return {}, set()
+        return {}, set(), {}, set()
     authorized_signers: dict[str, set[str]] = {}
     evidence_ids: set[str] = set()
+    evidence_subject_requirements: dict[str, set[str]] = {}
+    known_subject_refs: set[str] = set()
     seen_pairs: set[tuple[str, str]] = set()
     for index, entry in enumerate(entries):
         location = f"signer_authorizations[{index}]"
@@ -498,6 +546,14 @@ def _validate_signer_authorizations(
                     location=location,
                 )
             )
+        if all(pair):
+            subject_ref = f"signer_authorizations:{role}:{person_name}"
+            known_subject_refs.add(subject_ref)
+            _bind_evidence_subjects(
+                evidence_subject_requirements,
+                entry_evidence_ids,
+                subject_ref,
+            )
         evidence_ids.update(entry_evidence_ids)
 
     missing_roles = sorted(required_roles - set(authorized_signers))
@@ -509,7 +565,12 @@ def _validate_signer_authorizations(
                 location="signer_authorizations",
             )
         )
-    return authorized_signers, evidence_ids
+    return (
+        authorized_signers,
+        evidence_ids,
+        evidence_subject_requirements,
+        known_subject_refs,
+    )
 
 
 def _validate_implementation(
@@ -684,6 +745,7 @@ def _validate_evidence(
     set[str],
     list[tuple[str, str, str, str]],
     dict[str, tuple[str, str]],
+    dict[str, set[str]],
 ]:
     entries = payload.get("evidence")
     if not isinstance(entries, list):
@@ -694,10 +756,11 @@ def _validate_evidence(
                 location="evidence",
             )
         )
-        return set(), [], {}
+        return set(), [], {}, {}
     identifiers: set[str] = set()
     bindings: list[tuple[str, str, str, str]] = []
     approvals: dict[str, tuple[str, str]] = {}
+    declared_subject_refs: dict[str, set[str]] = {}
     for index, entry in enumerate(entries):
         location = f"evidence[{index}]"
         if not isinstance(entry, dict):
@@ -738,6 +801,11 @@ def _validate_evidence(
             )
         if evidence_id:
             identifiers.add(evidence_id)
+            declared_subject_refs.setdefault(evidence_id, set()).update(
+                _subject_refs(checks, entry, location=location)
+            )
+        else:
+            _subject_refs(checks, entry, location=location)
         approval_role = _text(entry, "approval_role")
         approved_by = _text(entry, "approved_by")
         if evidence_id and approval_role and approved_by:
@@ -827,7 +895,7 @@ def _validate_evidence(
         if commit_valid and _SHA256_PATTERN.fullmatch(declared_sha256):
             normalized_path = evidence_path.relative_to(paths.root).as_posix()
             bindings.append((evidence_id, normalized_path, declared_sha256, commit_sha))
-    return identifiers, bindings, approvals
+    return identifiers, bindings, approvals, declared_subject_refs
 
 
 def _number(value: Any) -> float | None:
@@ -1219,11 +1287,11 @@ def validate_p0_delivery_bundle(
 ) -> list[CheckResult]:
     checks: list[CheckResult] = []
     current = build_p0_delivery_template(paths)
-    if bundle.get("schema_version") != 3 or bundle.get("stage") != "P0-DELIVERY":
+    if bundle.get("schema_version") != 4 or bundle.get("stage") != "P0-DELIVERY":
         checks.append(
             CheckResult(
                 code="P0_DELIVERY_HEADER_INVALID",
-                message="Bundle requires schema_version 3 and stage P0-DELIVERY",
+                message="Bundle requires schema_version 4 and stage P0-DELIVERY",
                 location="bundle",
             )
         )
@@ -1300,16 +1368,21 @@ def validate_p0_delivery_bundle(
 
     committee_approver = _d4_committee_approver(checks, d4_bundle)
     referenced_evidence_ids: set[str] = set()
+    evidence_subject_requirements: dict[str, set[str]] = {}
+    known_subject_refs = {"release_metrics", "final_release"}
     required_signer_roles = {
         _text(item, "role") for item in cast(list[dict[str, Any]], current["signer_authorizations"])
     }
-    authorized_signers, authorization_evidence_ids = _validate_signer_authorizations(
-        checks,
-        bundle,
-        required_signer_roles,
-        committee_approver,
-    )
+    (
+        authorized_signers,
+        authorization_evidence_ids,
+        authorization_subject_requirements,
+        authorization_subject_refs,
+    ) = _validate_signer_authorizations(checks, bundle, required_signer_roles, committee_approver)
     referenced_evidence_ids.update(authorization_evidence_ids)
+    for evidence_id, subject_refs in authorization_subject_requirements.items():
+        evidence_subject_requirements.setdefault(evidence_id, set()).update(subject_refs)
+    known_subject_refs.update(authorization_subject_refs)
     commit_shas: set[str] = set()
     section_specs = (
         (
@@ -1361,6 +1434,7 @@ def validate_p0_delivery_bundle(
             str(item[identifier_field]): item
             for item in cast(list[dict[str, Any]], current[section])
         }
+        known_subject_refs.update(f"{section}:{identifier}" for identifier in expected)
         _validate_exact_section(
             checks,
             actual,
@@ -1371,45 +1445,60 @@ def validate_p0_delivery_bundle(
         for identifier, item in actual.items():
             location = f"{section}.{identifier}"
             if validator is _validate_implementation:
-                referenced_evidence_ids.update(
-                    _validate_implementation(
-                        checks,
-                        item,
-                        location=location,
-                        commit_shas=commit_shas,
-                    )
+                item_evidence_ids = _validate_implementation(
+                    checks,
+                    item,
+                    location=location,
+                    commit_shas=commit_shas,
                 )
             elif validator is _validate_test_execution:
-                referenced_evidence_ids.update(
-                    _validate_test_execution(
-                        checks,
-                        item,
-                        location=location,
-                        authorized_signers=authorized_signers,
-                        committee_approver=committee_approver,
-                    )
+                item_evidence_ids = _validate_test_execution(
+                    checks,
+                    item,
+                    location=location,
+                    authorized_signers=authorized_signers,
+                    committee_approver=committee_approver,
                 )
             else:
-                referenced_evidence_ids.update(
-                    _validate_acceptance(
-                        checks,
-                        item,
-                        location=location,
-                        authorized_signers=authorized_signers,
-                        committee_approver=committee_approver,
-                    )
+                item_evidence_ids = _validate_acceptance(
+                    checks,
+                    item,
+                    location=location,
+                    authorized_signers=authorized_signers,
+                    committee_approver=committee_approver,
                 )
+            referenced_evidence_ids.update(item_evidence_ids)
+            _bind_evidence_subjects(
+                evidence_subject_requirements,
+                item_evidence_ids,
+                f"{section}:{identifier}",
+            )
 
-    referenced_evidence_ids.update(_validate_metrics(checks, bundle.get("release_metrics")))
-    referenced_evidence_ids.update(
-        _validate_final_release(
-            checks,
-            bundle.get("final_release"),
-            commit_shas,
-            committee_approver,
-        )
+    metric_evidence_ids = _validate_metrics(checks, bundle.get("release_metrics"))
+    referenced_evidence_ids.update(metric_evidence_ids)
+    _bind_evidence_subjects(
+        evidence_subject_requirements,
+        metric_evidence_ids,
+        "release_metrics",
     )
-    evidence_ids, evidence_bindings, evidence_approvals = _validate_evidence(
+    final_release_evidence_ids = _validate_final_release(
+        checks,
+        bundle.get("final_release"),
+        commit_shas,
+        committee_approver,
+    )
+    referenced_evidence_ids.update(final_release_evidence_ids)
+    _bind_evidence_subjects(
+        evidence_subject_requirements,
+        final_release_evidence_ids,
+        "final_release",
+    )
+    (
+        evidence_ids,
+        evidence_bindings,
+        evidence_approvals,
+        declared_subject_refs,
+    ) = _validate_evidence(
         checks,
         paths,
         bundle,
@@ -1426,6 +1515,60 @@ def validate_p0_delivery_bundle(
                 location="evidence",
             )
         )
+    unreferenced_evidence = sorted(evidence_ids - referenced_evidence_ids)
+    if unreferenced_evidence:
+        checks.append(
+            CheckResult(
+                code="P0_DELIVERY_EVIDENCE_UNREFERENCED",
+                message=f"Unreferenced evidence IDs: {', '.join(unreferenced_evidence)}",
+                location="evidence",
+            )
+        )
+    for evidence_id in sorted(evidence_ids):
+        unknown_subject_refs = sorted(
+            declared_subject_refs.get(evidence_id, set()) - known_subject_refs
+        )
+        if unknown_subject_refs:
+            checks.append(
+                CheckResult(
+                    code="P0_DELIVERY_EVIDENCE_SUBJECT_UNKNOWN",
+                    message=(
+                        f"{evidence_id} declares unknown subjects: "
+                        f"{', '.join(unknown_subject_refs)}"
+                    ),
+                    location=f"evidence.{evidence_id}",
+                )
+            )
+        missing_subject_refs = sorted(
+            evidence_subject_requirements.get(evidence_id, set())
+            - declared_subject_refs.get(evidence_id, set())
+        )
+        if missing_subject_refs:
+            checks.append(
+                CheckResult(
+                    code="P0_DELIVERY_EVIDENCE_SUBJECT_BINDING_MISSING",
+                    message=(
+                        f"{evidence_id} does not declare referenced subjects: "
+                        f"{', '.join(missing_subject_refs)}"
+                    ),
+                    location=f"evidence.{evidence_id}",
+                )
+            )
+        unlinked_subject_refs = sorted(
+            (declared_subject_refs.get(evidence_id, set()) & known_subject_refs)
+            - evidence_subject_requirements.get(evidence_id, set())
+        )
+        if unlinked_subject_refs:
+            checks.append(
+                CheckResult(
+                    code="P0_DELIVERY_EVIDENCE_SUBJECT_REFERENCE_MISSING",
+                    message=(
+                        f"{evidence_id} declares subjects that do not reference it: "
+                        f"{', '.join(unlinked_subject_refs)}"
+                    ),
+                    location=f"evidence.{evidence_id}",
+                )
+            )
     invalid_authorization_evidence = sorted(
         evidence_id
         for evidence_id in authorization_evidence_ids & evidence_ids
