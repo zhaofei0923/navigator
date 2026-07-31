@@ -1036,6 +1036,188 @@
     "evidence_ids": [],
     "status": "pending"
   },
+  "nonfunctional_metrics": [
+    {
+      "comparison": "maximum",
+      "evidence_ids": [],
+      "metric_id": "read_api_p95_ms",
+      "observed_value": null,
+      "requirement_id": "NFR-001",
+      "status": "pending",
+      "threshold": 800,
+      "unit": "ms"
+    },
+    {
+      "comparison": "maximum",
+      "evidence_ids": [],
+      "metric_id": "read_api_p99_ms",
+      "observed_value": null,
+      "requirement_id": "NFR-001",
+      "status": "pending",
+      "threshold": 1500,
+      "unit": "ms"
+    },
+    {
+      "comparison": "maximum",
+      "evidence_ids": [],
+      "metric_id": "search_compare_p95_ms",
+      "observed_value": null,
+      "requirement_id": "NFR-001",
+      "status": "pending",
+      "threshold": 2000,
+      "unit": "ms"
+    },
+    {
+      "comparison": "maximum",
+      "evidence_ids": [],
+      "metric_id": "mobile_lcp_ms",
+      "observed_value": null,
+      "requirement_id": "NFR-001",
+      "status": "pending",
+      "threshold": 2500,
+      "unit": "ms"
+    },
+    {
+      "comparison": "maximum",
+      "evidence_ids": [],
+      "metric_id": "ai_first_token_standard_p95_ms",
+      "observed_value": null,
+      "requirement_id": "NFR-001",
+      "status": "pending",
+      "threshold": 3000,
+      "unit": "ms"
+    },
+    {
+      "comparison": "maximum",
+      "evidence_ids": [],
+      "metric_id": "ai_first_token_high_risk_p95_ms",
+      "observed_value": null,
+      "requirement_id": "NFR-001",
+      "status": "pending",
+      "threshold": 5000,
+      "unit": "ms"
+    },
+    {
+      "comparison": "minimum",
+      "evidence_ids": [],
+      "metric_id": "concurrent_sessions",
+      "observed_value": null,
+      "requirement_id": "NFR-002",
+      "status": "pending",
+      "threshold": 300,
+      "unit": "sessions"
+    },
+    {
+      "comparison": "minimum",
+      "evidence_ids": [],
+      "metric_id": "read_peak_rps",
+      "observed_value": null,
+      "requirement_id": "NFR-002",
+      "status": "pending",
+      "threshold": 100,
+      "unit": "rps"
+    },
+    {
+      "comparison": "minimum",
+      "evidence_ids": [],
+      "metric_id": "write_peak_rps",
+      "observed_value": null,
+      "requirement_id": "NFR-002",
+      "status": "pending",
+      "threshold": 20,
+      "unit": "rps"
+    },
+    {
+      "comparison": "minimum",
+      "evidence_ids": [],
+      "metric_id": "concurrent_ai_interactions",
+      "observed_value": null,
+      "requirement_id": "NFR-002",
+      "status": "pending",
+      "threshold": 20,
+      "unit": "interactions"
+    },
+    {
+      "comparison": "minimum",
+      "evidence_ids": [],
+      "metric_id": "concurrent_report_tasks",
+      "observed_value": null,
+      "requirement_id": "NFR-002",
+      "status": "pending",
+      "threshold": 5,
+      "unit": "tasks"
+    },
+    {
+      "comparison": "maximum",
+      "evidence_ids": [],
+      "metric_id": "primary_db_rpo_minutes",
+      "observed_value": null,
+      "requirement_id": "NFR-007",
+      "status": "pending",
+      "threshold": 15,
+      "unit": "minutes"
+    },
+    {
+      "comparison": "maximum",
+      "evidence_ids": [],
+      "metric_id": "primary_db_rto_minutes",
+      "observed_value": null,
+      "requirement_id": "NFR-007",
+      "status": "pending",
+      "threshold": 120,
+      "unit": "minutes"
+    },
+    {
+      "comparison": "maximum",
+      "evidence_ids": [],
+      "metric_id": "object_store_rpo_minutes",
+      "observed_value": null,
+      "requirement_id": "NFR-007",
+      "status": "pending",
+      "threshold": 60,
+      "unit": "minutes"
+    },
+    {
+      "comparison": "maximum",
+      "evidence_ids": [],
+      "metric_id": "object_store_rto_minutes",
+      "observed_value": null,
+      "requirement_id": "NFR-007",
+      "status": "pending",
+      "threshold": 240,
+      "unit": "minutes"
+    },
+    {
+      "comparison": "maximum",
+      "evidence_ids": [],
+      "metric_id": "search_vector_rpo_minutes",
+      "observed_value": null,
+      "requirement_id": "NFR-007",
+      "status": "pending",
+      "threshold": 1440,
+      "unit": "minutes"
+    },
+    {
+      "comparison": "maximum",
+      "evidence_ids": [],
+      "metric_id": "search_vector_rto_minutes",
+      "observed_value": null,
+      "requirement_id": "NFR-007",
+      "status": "pending",
+      "threshold": 480,
+      "unit": "minutes"
+    },
+    {
+      "comparison": "maximum",
+      "evidence_ids": [],
+      "metric_id": "app_config_rto_minutes",
+      "observed_value": null,
+      "requirement_id": "NFR-007",
+      "status": "pending",
+      "threshold": 60,
+      "unit": "minutes"
+    }
+  ],
   "product_tests": [
     {
       "evidence_ids": [],
@@ -2476,8 +2658,10 @@
     }
   ],
   "release_metrics": {
-    "ai_citation_coverage_pct": null,
-    "critical_task_success_rate_pct": null,
+    "ai_answers_evaluated": null,
+    "ai_answers_with_citations": null,
+    "critical_tasks_passed": null,
+    "critical_tasks_total": null,
     "evaluated_artifact_sha256": null,
     "evaluated_commit_sha": null,
     "evidence_ids": [],
@@ -2489,11 +2673,18 @@
       "search": null,
       "tenant": null
     },
+    "leak_test_counts": {
+      "ai": null,
+      "cache": null,
+      "file": null,
+      "report": null,
+      "search": null,
+      "tenant": null
+    },
     "measured_at": null,
     "measured_by": null,
     "open_s0_defects": null,
-    "open_s1_defects": null,
-    "performance_capacity_rpo_rto_status": "pending"
+    "open_s1_defects": null
   },
   "requirements": [
     {
@@ -4649,7 +4840,7 @@
       "status": "pending"
     }
   ],
-  "schema_version": 7,
+  "schema_version": 8,
   "signer_authorizations": [
     {
       "authorized_at": null,

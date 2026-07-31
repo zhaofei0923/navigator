@@ -45,7 +45,13 @@
   review, acceptance review, release-capability execution and review, metric measurement, and
   evidence approval event in the delivery bundle.
   Release metrics must identify who measured them, when they were measured, and the exact Git
-  commit evaluated; that commit must equal the final release commit.
+  commit evaluated; that commit must equal the final release commit. Critical-task success and
+  AI-citation coverage must be recalculated from integer numerators and positive denominators,
+  not accepted as self-reported percentages. All six leak categories require a zero integer
+  count and a positive executed-sample count.
+  Every frozen Chapter 35 performance, capacity, RPO, and RTO metric must record a non-negative
+  observed value and evidence; validation must recalculate it against its immutable comparison,
+  threshold, unit, and requirement ID.
   Build, deployment, rollback, restore, and handover are separate frozen release capabilities;
   each must bind the exact final release commit, execution, authorized review, and evidence.
   The release artifact must record its immutable SHA-256, reference, source commit, producer,

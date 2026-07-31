@@ -138,7 +138,8 @@ def _completed_bundle() -> tuple[dict[str, Any], dict[str, Any]]:
         "measured_at": "2026-07-31",
         "open_s0_defects": 0,
         "open_s1_defects": 0,
-        "critical_task_success_rate_pct": 95,
+        "critical_tasks_passed": 19,
+        "critical_tasks_total": 20,
         "leak_counts": {
             "tenant": 0,
             "search": 0,
@@ -147,8 +148,16 @@ def _completed_bundle() -> tuple[dict[str, Any], dict[str, Any]]:
             "report": 0,
             "ai": 0,
         },
-        "ai_citation_coverage_pct": 95,
-        "performance_capacity_rpo_rto_status": "passed",
+        "leak_test_counts": {
+            "tenant": 1,
+            "search": 1,
+            "cache": 1,
+            "file": 1,
+            "report": 1,
+            "ai": 1,
+        },
+        "ai_answers_with_citations": 19,
+        "ai_answers_evaluated": 20,
         "evidence_ids": [evidence_id],
     }
     bundle["release_artifact"] = {
@@ -170,6 +179,14 @@ def _completed_bundle() -> tuple[dict[str, Any], dict[str, Any]]:
                 "reviewed_by": "kevin",
                 "reviewer_role": item["required_reviewer_role"],
                 "reviewed_at": "2026-07-31",
+                "evidence_ids": [evidence_id],
+            }
+        )
+    for item in bundle["nonfunctional_metrics"]:
+        item.update(
+            {
+                "observed_value": item["threshold"],
+                "status": "passed",
                 "evidence_ids": [evidence_id],
             }
         )
@@ -199,6 +216,7 @@ def _completed_bundle() -> tuple[dict[str, Any], dict[str, Any]]:
         ("engineering_tests", "test_id"),
         ("acceptance_items", "acceptance_id"),
         ("release_capabilities", "capability_id"),
+        ("nonfunctional_metrics", "metric_id"),
     ):
         subject_refs.update(f"{section}:{item[identifier_field]}" for item in bundle[section])
     bundle["evidence"][0]["subject_refs"] = sorted(subject_refs)
@@ -214,7 +232,7 @@ def test_delivery_template_freezes_complete_p0_scope() -> None:
 
     assert bundle["template_only"] is True
     assert bundle["append_only"] is True
-    assert bundle["schema_version"] == 7
+    assert bundle["schema_version"] == 8
     assert len(bundle["requirements"]) == 90
     assert len(bundle["routes"]) == 125
     assert len(bundle["apis"]) == 56
@@ -227,6 +245,27 @@ def test_delivery_template_freezes_complete_p0_scope() -> None:
         "rollback",
         "restore",
         "handover",
+    }
+    assert len(bundle["nonfunctional_metrics"]) == 18
+    assert {item["metric_id"] for item in bundle["nonfunctional_metrics"]} == {
+        "read_api_p95_ms",
+        "read_api_p99_ms",
+        "search_compare_p95_ms",
+        "mobile_lcp_ms",
+        "ai_first_token_standard_p95_ms",
+        "ai_first_token_high_risk_p95_ms",
+        "concurrent_sessions",
+        "read_peak_rps",
+        "write_peak_rps",
+        "concurrent_ai_interactions",
+        "concurrent_report_tasks",
+        "primary_db_rpo_minutes",
+        "primary_db_rto_minutes",
+        "object_store_rpo_minutes",
+        "object_store_rto_minutes",
+        "search_vector_rpo_minutes",
+        "search_vector_rto_minutes",
+        "app_config_rto_minutes",
     }
     assert set(bundle["release_artifact"]) == {
         "commit_sha",
@@ -841,7 +880,7 @@ def test_unknown_commit_and_failed_metrics_are_rejected(monkeypatch: Any) -> Non
     bundle["requirements"][0]["commit_sha"] = unknown_commit
     bundle["release_metrics"]["open_s0_defects"] = 1
     bundle["release_metrics"]["leak_counts"]["ai"] = 1
-    bundle["release_metrics"]["critical_task_success_rate_pct"] = 94
+    bundle["release_metrics"]["critical_tasks_passed"] = 18
 
     checks = validate_p0_delivery_bundle(
         discover_repository(),
@@ -855,6 +894,83 @@ def test_unknown_commit_and_failed_metrics_are_rejected(monkeypatch: Any) -> Non
     assert "P0_DELIVERY_DEFECT_GATE_FAILED" in codes
     assert "P0_DELIVERY_LEAK_GATE_FAILED" in codes
     assert "P0_DELIVERY_TASK_SUCCESS_GATE_FAILED" in codes
+
+
+def test_release_metric_counts_must_be_recalculable(monkeypatch: Any) -> None:
+    monkeypatch.setattr(
+        "navigator_data_readiness.p0_delivery.build_p0_traceability_report",
+        lambda _paths: _ready_traceability(),
+    )
+    bundle, d4_bundle = _completed_bundle()
+    bundle["release_metrics"]["critical_tasks_total"] = 0
+    bundle["release_metrics"]["ai_answers_with_citations"] = 21
+    bundle["release_metrics"]["leak_test_counts"]["ai"] = 0
+    bundle["release_metrics"]["critical_task_success_rate_pct"] = 100
+
+    checks = validate_p0_delivery_bundle(
+        discover_repository(),
+        bundle,
+        d4_bundle,
+        d4_chain_checks=[],
+    )
+    codes = _codes(checks)
+
+    assert "P0_DELIVERY_TASK_COUNTS_INVALID" in codes
+    assert "P0_DELIVERY_AI_CITATION_COUNTS_INVALID" in codes
+    assert "P0_DELIVERY_LEAK_SAMPLE_MISSING" in codes
+    assert "P0_DELIVERY_METRIC_FIELDS_INVALID" in codes
+
+
+def test_ai_citation_coverage_is_recalculated(monkeypatch: Any) -> None:
+    monkeypatch.setattr(
+        "navigator_data_readiness.p0_delivery.build_p0_traceability_report",
+        lambda _paths: _ready_traceability(),
+    )
+    bundle, d4_bundle = _completed_bundle()
+    bundle["release_metrics"]["ai_answers_with_citations"] = 18
+
+    checks = validate_p0_delivery_bundle(
+        discover_repository(),
+        bundle,
+        d4_bundle,
+        d4_chain_checks=[],
+    )
+
+    assert "P0_DELIVERY_AI_CITATION_GATE_FAILED" in _codes(checks)
+
+
+def test_nonfunctional_metrics_are_frozen_recalculated_and_evidenced(
+    monkeypatch: Any,
+) -> None:
+    monkeypatch.setattr(
+        "navigator_data_readiness.p0_delivery.build_p0_traceability_report",
+        lambda _paths: _ready_traceability(),
+    )
+    bundle, d4_bundle = _completed_bundle()
+    maximum_metric = next(
+        item for item in bundle["nonfunctional_metrics"] if item["comparison"] == "maximum"
+    )
+    minimum_metric = next(
+        item for item in bundle["nonfunctional_metrics"] if item["comparison"] == "minimum"
+    )
+    maximum_metric["observed_value"] = maximum_metric["threshold"] + 1
+    maximum_metric["evidence_ids"] = []
+    minimum_metric["observed_value"] = minimum_metric["threshold"] - 1
+    minimum_metric["threshold"] = minimum_metric["threshold"] + 1
+    bundle["nonfunctional_metrics"][2]["observed_value"] = float("nan")
+
+    checks = validate_p0_delivery_bundle(
+        discover_repository(),
+        bundle,
+        d4_bundle,
+        d4_chain_checks=[],
+    )
+    codes = _codes(checks)
+
+    assert "P0_DELIVERY_NONFUNCTIONAL_METRIC_THRESHOLD_FAILED" in codes
+    assert "P0_DELIVERY_NONFUNCTIONAL_METRIC_VALUE_INVALID" in codes
+    assert "P0_DELIVERY_NONFUNCTIONAL_METRIC_EVIDENCE_MISSING" in codes
+    assert "P0_DELIVERY_FROZEN_INPUT_CHANGED" in codes
 
 
 def test_delivery_signers_must_follow_committee_authorization(monkeypatch: Any) -> None:

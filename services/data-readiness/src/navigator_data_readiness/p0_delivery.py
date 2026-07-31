@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import re
 import subprocess
 from datetime import UTC, date, datetime
@@ -47,6 +48,26 @@ _RELEASE_CAPABILITIES = (
         "Independent recipient operation and final handover sign-off",
         _COMMITTEE_ROLE,
     ),
+)
+_NONFUNCTIONAL_METRICS = (
+    ("read_api_p95_ms", "NFR-001", "maximum", 800, "ms"),
+    ("read_api_p99_ms", "NFR-001", "maximum", 1500, "ms"),
+    ("search_compare_p95_ms", "NFR-001", "maximum", 2000, "ms"),
+    ("mobile_lcp_ms", "NFR-001", "maximum", 2500, "ms"),
+    ("ai_first_token_standard_p95_ms", "NFR-001", "maximum", 3000, "ms"),
+    ("ai_first_token_high_risk_p95_ms", "NFR-001", "maximum", 5000, "ms"),
+    ("concurrent_sessions", "NFR-002", "minimum", 300, "sessions"),
+    ("read_peak_rps", "NFR-002", "minimum", 100, "rps"),
+    ("write_peak_rps", "NFR-002", "minimum", 20, "rps"),
+    ("concurrent_ai_interactions", "NFR-002", "minimum", 20, "interactions"),
+    ("concurrent_report_tasks", "NFR-002", "minimum", 5, "tasks"),
+    ("primary_db_rpo_minutes", "NFR-007", "maximum", 15, "minutes"),
+    ("primary_db_rto_minutes", "NFR-007", "maximum", 120, "minutes"),
+    ("object_store_rpo_minutes", "NFR-007", "maximum", 60, "minutes"),
+    ("object_store_rto_minutes", "NFR-007", "maximum", 240, "minutes"),
+    ("search_vector_rpo_minutes", "NFR-007", "maximum", 1440, "minutes"),
+    ("search_vector_rto_minutes", "NFR-007", "maximum", 480, "minutes"),
+    ("app_config_rto_minutes", "NFR-007", "maximum", 60, "minutes"),
 )
 _Temporal = tuple[datetime, date, bool]
 
@@ -128,6 +149,25 @@ def _release_capability_item(
     }
 
 
+def _nonfunctional_metric_item(
+    metric_id: str,
+    requirement_id: str,
+    comparison: str,
+    threshold: int,
+    unit: str,
+) -> dict[str, Any]:
+    return {
+        "metric_id": metric_id,
+        "requirement_id": requirement_id,
+        "comparison": comparison,
+        "threshold": threshold,
+        "unit": unit,
+        "observed_value": None,
+        "status": "pending",
+        "evidence_ids": [],
+    }
+
+
 def build_p0_delivery_template(paths: RepositoryPaths) -> dict[str, Any]:
     contracts = extract_contracts(paths)
     traceability = build_p0_traceability_report(paths)
@@ -152,7 +192,7 @@ def build_p0_delivery_template(paths: RepositoryPaths) -> dict[str, Any]:
         | {_TEST_REVIEWER_ROLE}
     )
     return {
-        "schema_version": 7,
+        "schema_version": 8,
         "stage": "P0-DELIVERY",
         "template_only": True,
         "append_only": True,
@@ -244,7 +284,8 @@ def build_p0_delivery_template(paths: RepositoryPaths) -> dict[str, Any]:
             "measured_at": None,
             "open_s0_defects": None,
             "open_s1_defects": None,
-            "critical_task_success_rate_pct": None,
+            "critical_tasks_passed": None,
+            "critical_tasks_total": None,
             "leak_counts": {
                 "tenant": None,
                 "search": None,
@@ -253,10 +294,28 @@ def build_p0_delivery_template(paths: RepositoryPaths) -> dict[str, Any]:
                 "report": None,
                 "ai": None,
             },
-            "ai_citation_coverage_pct": None,
-            "performance_capacity_rpo_rto_status": "pending",
+            "leak_test_counts": {
+                "tenant": None,
+                "search": None,
+                "cache": None,
+                "file": None,
+                "report": None,
+                "ai": None,
+            },
+            "ai_answers_with_citations": None,
+            "ai_answers_evaluated": None,
             "evidence_ids": [],
         },
+        "nonfunctional_metrics": [
+            _nonfunctional_metric_item(
+                metric_id,
+                requirement_id,
+                comparison,
+                threshold,
+                unit,
+            )
+            for metric_id, requirement_id, comparison, threshold, unit in (_NONFUNCTIONAL_METRICS)
+        ],
         "release_artifact": {
             "commit_sha": None,
             "artifact_reference": None,
@@ -1521,7 +1580,17 @@ def _validate_evidence(
 def _number(value: Any) -> float | None:
     if isinstance(value, bool) or not isinstance(value, int | float):
         return None
-    return float(value)
+    try:
+        normalized = float(value)
+    except OverflowError:
+        return None
+    return normalized if math.isfinite(normalized) else None
+
+
+def _nonnegative_int(value: Any) -> int | None:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        return None
+    return int(value)
 
 
 def _validate_metrics(
@@ -1539,6 +1608,33 @@ def _validate_metrics(
             )
         )
         return set()
+    expected_fields = {
+        "evaluated_commit_sha",
+        "evaluated_artifact_sha256",
+        "measured_by",
+        "measured_at",
+        "open_s0_defects",
+        "open_s1_defects",
+        "critical_tasks_passed",
+        "critical_tasks_total",
+        "leak_counts",
+        "leak_test_counts",
+        "ai_answers_with_citations",
+        "ai_answers_evaluated",
+        "evidence_ids",
+    }
+    if set(metrics) != expected_fields:
+        checks.append(
+            CheckResult(
+                code="P0_DELIVERY_METRIC_FIELDS_INVALID",
+                message=(
+                    "release_metrics fields differ from schema v8; "
+                    f"missing={sorted(expected_fields - set(metrics))}, "
+                    f"unexpected={sorted(set(metrics) - expected_fields)}"
+                ),
+                location="release_metrics",
+            )
+        )
     _required_fields(
         checks,
         metrics,
@@ -1599,61 +1695,120 @@ def _validate_metrics(
             )
         )
     for field in ("open_s0_defects", "open_s1_defects"):
-        if _number(metrics.get(field)) != 0:
+        if _nonnegative_int(metrics.get(field)) != 0:
             checks.append(
                 CheckResult(
                     code="P0_DELIVERY_DEFECT_GATE_FAILED",
-                    message=f"{field} must be 0",
+                    message=f"{field} must be the integer 0",
                     location=f"release_metrics.{field}",
                 )
             )
-    task_rate = _number(metrics.get("critical_task_success_rate_pct"))
-    if task_rate is None or task_rate < 95 or task_rate > 100:
+    critical_tasks_passed = _nonnegative_int(metrics.get("critical_tasks_passed"))
+    critical_tasks_total = _nonnegative_int(metrics.get("critical_tasks_total"))
+    if (
+        critical_tasks_passed is None
+        or critical_tasks_total is None
+        or critical_tasks_total == 0
+        or critical_tasks_passed > critical_tasks_total
+    ):
+        checks.append(
+            CheckResult(
+                code="P0_DELIVERY_TASK_COUNTS_INVALID",
+                message=(
+                    "Critical task counts must be non-negative integers with a positive "
+                    "total and passed no greater than total"
+                ),
+                location="release_metrics",
+            )
+        )
+    elif critical_tasks_passed * 100 < critical_tasks_total * 95:
         checks.append(
             CheckResult(
                 code="P0_DELIVERY_TASK_SUCCESS_GATE_FAILED",
-                message="critical_task_success_rate_pct must be between 95 and 100",
-                location="release_metrics.critical_task_success_rate_pct",
+                message="Critical task success must be at least 95 percent",
+                location="release_metrics",
             )
         )
-    citation_rate = _number(metrics.get("ai_citation_coverage_pct"))
-    if citation_rate is None or citation_rate < 95 or citation_rate > 100:
+    ai_answers_with_citations = _nonnegative_int(metrics.get("ai_answers_with_citations"))
+    ai_answers_evaluated = _nonnegative_int(metrics.get("ai_answers_evaluated"))
+    if (
+        ai_answers_with_citations is None
+        or ai_answers_evaluated is None
+        or ai_answers_evaluated == 0
+        or ai_answers_with_citations > ai_answers_evaluated
+    ):
+        checks.append(
+            CheckResult(
+                code="P0_DELIVERY_AI_CITATION_COUNTS_INVALID",
+                message=(
+                    "AI citation counts must be non-negative integers with a positive "
+                    "evaluated total and cited answers no greater than evaluated answers"
+                ),
+                location="release_metrics",
+            )
+        )
+    elif ai_answers_with_citations * 100 < ai_answers_evaluated * 95:
         checks.append(
             CheckResult(
                 code="P0_DELIVERY_AI_CITATION_GATE_FAILED",
-                message="ai_citation_coverage_pct must be between 95 and 100",
-                location="release_metrics.ai_citation_coverage_pct",
+                message="AI citation coverage must be at least 95 percent",
+                location="release_metrics",
             )
         )
     leaks = metrics.get("leak_counts")
-    if not isinstance(leaks, dict):
+    leak_test_counts = metrics.get("leak_test_counts")
+    expected_leaks = {"tenant", "search", "cache", "file", "report", "ai"}
+    if (
+        not isinstance(leaks, dict)
+        or not isinstance(leak_test_counts, dict)
+        or set(leaks) != expected_leaks
+        or set(leak_test_counts) != expected_leaks
+    ):
         checks.append(
             CheckResult(
                 code="P0_DELIVERY_LEAK_METRICS_INVALID",
-                message="leak_counts must be an object",
-                location="release_metrics.leak_counts",
+                message=(
+                    "leak_counts and leak_test_counts must contain the six frozen leak categories"
+                ),
+                location="release_metrics",
             )
         )
     else:
-        expected_leaks = {"tenant", "search", "cache", "file", "report", "ai"}
-        if set(leaks) != expected_leaks or any(
-            _number(leaks.get(field)) != 0 for field in expected_leaks
-        ):
+        invalid_leak_counts = [
+            field for field in expected_leaks if _nonnegative_int(leaks.get(field)) is None
+        ]
+        if invalid_leak_counts:
             checks.append(
                 CheckResult(
-                    code="P0_DELIVERY_LEAK_GATE_FAILED",
-                    message="All declared leak counts must be present and equal 0",
+                    code="P0_DELIVERY_LEAK_METRICS_INVALID",
+                    message="Leak counts must be non-negative integers",
                     location="release_metrics.leak_counts",
                 )
             )
-    if metrics.get("performance_capacity_rpo_rto_status") != _PASS_STATUS:
-        checks.append(
-            CheckResult(
-                code="P0_DELIVERY_NONFUNCTIONAL_GATE_FAILED",
-                message="Performance, capacity, RPO, and RTO status must be passed",
-                location="release_metrics.performance_capacity_rpo_rto_status",
+        elif any(leaks[field] != 0 for field in expected_leaks):
+            checks.append(
+                CheckResult(
+                    code="P0_DELIVERY_LEAK_GATE_FAILED",
+                    message="All six leak counts must equal 0",
+                    location="release_metrics.leak_counts",
+                )
             )
-        )
+        invalid_test_counts = [
+            field
+            for field in expected_leaks
+            if (_nonnegative_int(leak_test_counts.get(field)) or 0) == 0
+        ]
+        if invalid_test_counts:
+            checks.append(
+                CheckResult(
+                    code="P0_DELIVERY_LEAK_SAMPLE_MISSING",
+                    message=(
+                        "Every leak category requires at least one executed test sample: "
+                        f"{', '.join(sorted(invalid_test_counts))}"
+                    ),
+                    location="release_metrics.leak_test_counts",
+                )
+            )
     evidence_ids = set(_string_ids(checks, metrics, location="release_metrics"))
     if not evidence_ids:
         checks.append(
@@ -1661,6 +1816,56 @@ def _validate_metrics(
                 code="P0_DELIVERY_METRIC_EVIDENCE_MISSING",
                 message="Release metrics require evidence IDs",
                 location="release_metrics",
+            )
+        )
+    return evidence_ids
+
+
+def _validate_nonfunctional_metric(
+    checks: list[CheckResult],
+    item: dict[str, Any],
+    *,
+    location: str,
+) -> set[str]:
+    if item.get("status") != _PASS_STATUS:
+        checks.append(
+            CheckResult(
+                code="P0_DELIVERY_NONFUNCTIONAL_METRIC_NOT_PASSED",
+                message="Nonfunctional metric status must be passed",
+                location=location,
+            )
+        )
+    observed_value = _number(item.get("observed_value"))
+    threshold = _number(item.get("threshold"))
+    comparison = _text(item, "comparison")
+    if observed_value is None or observed_value < 0 or threshold is None:
+        checks.append(
+            CheckResult(
+                code="P0_DELIVERY_NONFUNCTIONAL_METRIC_VALUE_INVALID",
+                message="observed_value must be a non-negative number",
+                location=location,
+            )
+        )
+    elif (comparison == "maximum" and observed_value > threshold) or (
+        comparison == "minimum" and observed_value < threshold
+    ):
+        checks.append(
+            CheckResult(
+                code="P0_DELIVERY_NONFUNCTIONAL_METRIC_THRESHOLD_FAILED",
+                message=(
+                    f"observed_value {observed_value:g} violates {comparison} "
+                    f"threshold {threshold:g}"
+                ),
+                location=location,
+            )
+        )
+    evidence_ids = set(_string_ids(checks, item, location=location))
+    if not evidence_ids:
+        checks.append(
+            CheckResult(
+                code="P0_DELIVERY_NONFUNCTIONAL_METRIC_EVIDENCE_MISSING",
+                message="Each nonfunctional metric requires evidence IDs",
+                location=location,
             )
         )
     return evidence_ids
@@ -1994,11 +2199,11 @@ def validate_p0_delivery_bundle(
 ) -> list[CheckResult]:
     checks: list[CheckResult] = []
     current = build_p0_delivery_template(paths)
-    if bundle.get("schema_version") != 7 or bundle.get("stage") != "P0-DELIVERY":
+    if bundle.get("schema_version") != 8 or bundle.get("stage") != "P0-DELIVERY":
         checks.append(
             CheckResult(
                 code="P0_DELIVERY_HEADER_INVALID",
-                message="Bundle requires schema_version 7 and stage P0-DELIVERY",
+                message="Bundle requires schema_version 8 and stage P0-DELIVERY",
                 location="bundle",
             )
         )
@@ -2168,6 +2373,12 @@ def validate_p0_delivery_bundle(
             ("capability_id", "name", "required_reviewer_role"),
             _validate_release_capability,
         ),
+        (
+            "nonfunctional_metrics",
+            "metric_id",
+            ("metric_id", "requirement_id", "comparison", "threshold", "unit"),
+            _validate_nonfunctional_metric,
+        ),
     )
     for section, identifier_field, immutable_fields, validator in section_specs:
         actual = _indexed_section(checks, bundle, section, identifier_field)
@@ -2212,6 +2423,12 @@ def validate_p0_delivery_bundle(
                     authorized_signers=authorized_signers,
                     signer_authorized_at=signer_authorized_at,
                     committee_approver=committee_approver,
+                )
+            elif validator is _validate_nonfunctional_metric:
+                item_evidence_ids = _validate_nonfunctional_metric(
+                    checks,
+                    item,
+                    location=location,
                 )
             else:
                 item_evidence_ids = _validate_acceptance(
