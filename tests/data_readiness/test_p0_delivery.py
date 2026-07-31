@@ -394,6 +394,52 @@ def test_evidence_path_must_be_relative_canonical_and_scoped(
         assert expected_code in _codes(checks)
 
 
+def test_delivery_temporal_fields_must_be_iso8601(monkeypatch: Any) -> None:
+    monkeypatch.setattr(
+        "navigator_data_readiness.p0_delivery.build_p0_traceability_report",
+        lambda _paths: _ready_traceability(),
+    )
+    bundle, d4_bundle = _completed_bundle()
+    bundle["requirements"][0]["implemented_at"] = "eventually"
+    bundle["signer_authorizations"][0]["authorized_at"] = "2026-07-31T10:00:00"
+
+    checks = validate_p0_delivery_bundle(
+        discover_repository(),
+        bundle,
+        d4_bundle,
+        d4_chain_checks=[],
+    )
+
+    temporal_checks = [check for check in checks if check.code == "P0_DELIVERY_TEMPORAL_INVALID"]
+    assert {check.location for check in temporal_checks} == {
+        f"requirements.{bundle['requirements'][0]['requirement_id']}.implemented_at",
+        "signer_authorizations[0].authorized_at",
+    }
+
+
+def test_reviews_and_approvals_cannot_predate_their_events(monkeypatch: Any) -> None:
+    monkeypatch.setattr(
+        "navigator_data_readiness.p0_delivery.build_p0_traceability_report",
+        lambda _paths: _ready_traceability(),
+    )
+    bundle, d4_bundle = _completed_bundle()
+    bundle["product_tests"][0]["executed_at"] = "2026-07-31T10:00:00+08:00"
+    bundle["product_tests"][0]["reviewed_at"] = "2026-07-31T09:00:00+08:00"
+    bundle["evidence"][0]["generated_at"] = "2026-07-31T10:00:00Z"
+    bundle["evidence"][0]["approved_at"] = "2026-07-31T09:00:00Z"
+
+    checks = validate_p0_delivery_bundle(
+        discover_repository(),
+        bundle,
+        d4_bundle,
+        d4_chain_checks=[],
+    )
+    codes = _codes(checks)
+
+    assert "P0_DELIVERY_TEST_REVIEW_BEFORE_EXECUTION" in codes
+    assert "P0_DELIVERY_EVIDENCE_APPROVAL_BEFORE_GENERATION" in codes
+
+
 def test_d4_chain_cannot_be_self_reported(monkeypatch: Any) -> None:
     monkeypatch.setattr(
         "navigator_data_readiness.p0_delivery.build_p0_traceability_report",

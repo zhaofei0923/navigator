@@ -37,6 +37,8 @@
   Evidence paths must be canonical repository-relative paths that resolve under
   `data/p0/evidence`; absolute paths, aliases, symlink escapes, and other repository directories
   fail.
+  P0 `*_at` values must be ISO dates or timezone-aware ISO datetimes. Test review must not
+  predate execution, and evidence approval must not predate generation.
 - Generated reviewer templates belong in `data/d0/review`; only actual authorized reviewers may
   fill a review copy, and completed copies must not contain private contact details or secrets.
 - Generated D1 source-onboarding templates belong in `data/d1/candidates`; no source may become

@@ -4,6 +4,7 @@ import hashlib
 import json
 import re
 import subprocess
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any, cast
 
@@ -409,6 +410,79 @@ def _required_fields(
         )
 
 
+def _iso_temporal(
+    checks: list[CheckResult],
+    item: dict[str, Any],
+    field: str,
+    *,
+    location: str,
+) -> tuple[datetime, date, bool] | None:
+    value = _text(item, field)
+    if not value:
+        return None
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+        try:
+            parsed_date = date.fromisoformat(value)
+        except ValueError:
+            parsed_date = None
+        if parsed_date is not None:
+            return (
+                datetime.combine(parsed_date, datetime.min.time(), tzinfo=UTC),
+                parsed_date,
+                True,
+            )
+    else:
+        normalized = f"{value[:-1]}+00:00" if value.endswith("Z") else value
+        try:
+            parsed_datetime = datetime.fromisoformat(normalized)
+        except ValueError:
+            parsed_datetime = None
+        if (
+            parsed_datetime is not None
+            and "T" in value
+            and parsed_datetime.tzinfo is not None
+            and parsed_datetime.utcoffset() is not None
+        ):
+            return (
+                parsed_datetime.astimezone(UTC),
+                parsed_datetime.date(),
+                False,
+            )
+    checks.append(
+        CheckResult(
+            code="P0_DELIVERY_TEMPORAL_INVALID",
+            message=(f"{field} must be YYYY-MM-DD or an ISO-8601 datetime with a timezone"),
+            location=f"{location}.{field}",
+        )
+    )
+    return None
+
+
+def _validate_temporal_order(
+    checks: list[CheckResult],
+    earlier: tuple[datetime, date, bool] | None,
+    later: tuple[datetime, date, bool] | None,
+    *,
+    code: str,
+    message: str,
+    location: str,
+) -> None:
+    if earlier is None or later is None:
+        return
+    if not earlier[2] and not later[2]:
+        invalid_order = earlier[0] > later[0]
+    else:
+        invalid_order = earlier[1] > later[1]
+    if invalid_order:
+        checks.append(
+            CheckResult(
+                code=code,
+                message=message,
+                location=location,
+            )
+        )
+
+
 def _d4_committee_approver(
     checks: list[CheckResult],
     d4_bundle: dict[str, Any],
@@ -500,6 +574,7 @@ def _validate_signer_authorizations(
             code="P0_DELIVERY_SIGNER_AUTHORIZATION_INCOMPLETE",
             location=location,
         )
+        _iso_temporal(checks, entry, "authorized_at", location=location)
         role = _text(entry, "role")
         person_name = _text(entry, "person_name")
         if role == _COMMITTEE_ROLE:
@@ -595,6 +670,7 @@ def _validate_implementation(
         code="P0_DELIVERY_IMPLEMENTATION_METADATA_INCOMPLETE",
         location=location,
     )
+    _iso_temporal(checks, item, "implemented_at", location=location)
     commit_sha = _text(item, "commit_sha").lower()
     if commit_sha:
         if not _COMMIT_PATTERN.fullmatch(commit_sha):
@@ -640,6 +716,16 @@ def _validate_test_execution(
         item,
         ("executed_by", "executed_at", "reviewed_by", "reviewer_role", "reviewed_at"),
         code="P0_DELIVERY_TEST_METADATA_INCOMPLETE",
+        location=location,
+    )
+    executed_at = _iso_temporal(checks, item, "executed_at", location=location)
+    reviewed_at = _iso_temporal(checks, item, "reviewed_at", location=location)
+    _validate_temporal_order(
+        checks,
+        executed_at,
+        reviewed_at,
+        code="P0_DELIVERY_TEST_REVIEW_BEFORE_EXECUTION",
+        message="Test review cannot occur before test execution",
         location=location,
     )
     reviewer_role = _text(item, "reviewer_role")
@@ -700,6 +786,7 @@ def _validate_acceptance(
         code="P0_DELIVERY_ACCEPTANCE_METADATA_INCOMPLETE",
         location=location,
     )
+    _iso_temporal(checks, item, "reviewed_at", location=location)
     reviewer_role = _text(item, "reviewer_role")
     reviewed_by = _text(item, "reviewed_by")
     if reviewer_role != _text(item, "required_reviewer_role"):
@@ -788,6 +875,16 @@ def _validate_evidence(
                 "approved_at",
             ),
             code="P0_DELIVERY_EVIDENCE_METADATA_INCOMPLETE",
+            location=location,
+        )
+        generated_at = _iso_temporal(checks, entry, "generated_at", location=location)
+        approved_at = _iso_temporal(checks, entry, "approved_at", location=location)
+        _validate_temporal_order(
+            checks,
+            generated_at,
+            approved_at,
+            code="P0_DELIVERY_EVIDENCE_APPROVAL_BEFORE_GENERATION",
+            message="Evidence approval cannot occur before evidence generation",
             location=location,
         )
         evidence_id = _text(entry, "evidence_id")
@@ -1062,6 +1159,12 @@ def _validate_final_release(
         final_release,
         ("commit_sha", "approver_role", "approved_by", "approved_at"),
         code="P0_DELIVERY_FINAL_RELEASE_METADATA_INCOMPLETE",
+        location="final_release",
+    )
+    _iso_temporal(
+        checks,
+        final_release,
+        "approved_at",
         location="final_release",
     )
     if (
