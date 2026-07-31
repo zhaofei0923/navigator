@@ -118,6 +118,7 @@ def _release_capability_item(
         "required_reviewer_role": required_reviewer_role,
         "status": "pending",
         "commit_sha": None,
+        "artifact_sha256": None,
         "executed_by": None,
         "executed_at": None,
         "reviewed_by": None,
@@ -151,7 +152,7 @@ def build_p0_delivery_template(paths: RepositoryPaths) -> dict[str, Any]:
         | {_TEST_REVIEWER_ROLE}
     )
     return {
-        "schema_version": 6,
+        "schema_version": 7,
         "stage": "P0-DELIVERY",
         "template_only": True,
         "append_only": True,
@@ -238,6 +239,7 @@ def build_p0_delivery_template(paths: RepositoryPaths) -> dict[str, Any]:
         ],
         "release_metrics": {
             "evaluated_commit_sha": None,
+            "evaluated_artifact_sha256": None,
             "measured_by": None,
             "measured_at": None,
             "open_s0_defects": None,
@@ -255,6 +257,14 @@ def build_p0_delivery_template(paths: RepositoryPaths) -> dict[str, Any]:
             "performance_capacity_rpo_rto_status": "pending",
             "evidence_ids": [],
         },
+        "release_artifact": {
+            "commit_sha": None,
+            "artifact_reference": None,
+            "artifact_sha256": None,
+            "produced_by": None,
+            "produced_at": None,
+            "evidence_ids": [],
+        },
         "release_capabilities": [
             _release_capability_item(capability_id, name, required_reviewer_role)
             for capability_id, name, required_reviewer_role in _RELEASE_CAPABILITIES
@@ -262,6 +272,7 @@ def build_p0_delivery_template(paths: RepositoryPaths) -> dict[str, Any]:
         "final_release": {
             "status": "pending",
             "commit_sha": None,
+            "artifact_sha256": None,
             "approver_role": _COMMITTEE_ROLE,
             "approved_by": None,
             "approved_at": None,
@@ -618,6 +629,53 @@ def _validate_final_release_after_events(
             code="P0_DELIVERY_EVENT_AFTER_FINAL_RELEASE",
             message="release_metrics.measured_at cannot occur after final release approval",
             location="release_metrics.measured_at",
+        )
+    artifact = bundle.get("release_artifact")
+    if isinstance(artifact, dict):
+        produced_at = _parse_iso_temporal(_text(artifact, "produced_at"))
+        _validate_temporal_order(
+            checks,
+            produced_at,
+            released_at,
+            code="P0_DELIVERY_EVENT_AFTER_FINAL_RELEASE",
+            message="release_artifact.produced_at cannot occur after final release approval",
+            location="release_artifact.produced_at",
+        )
+
+
+def _validate_release_artifact_timeline(
+    checks: list[CheckResult],
+    bundle: dict[str, Any],
+) -> None:
+    artifact = bundle.get("release_artifact")
+    if not isinstance(artifact, dict):
+        return
+    produced_at = _parse_iso_temporal(_text(artifact, "produced_at"))
+    metrics = bundle.get("release_metrics")
+    if isinstance(metrics, dict):
+        measured_at = _parse_iso_temporal(_text(metrics, "measured_at"))
+        _validate_temporal_order(
+            checks,
+            produced_at,
+            measured_at,
+            code="P0_DELIVERY_ARTIFACT_AFTER_EVALUATION",
+            message="Release artifact must be produced before release metrics are measured",
+            location="release_metrics.measured_at",
+        )
+    capabilities = bundle.get("release_capabilities")
+    if not isinstance(capabilities, list):
+        return
+    for index, capability in enumerate(capabilities):
+        if not isinstance(capability, dict):
+            continue
+        executed_at = _parse_iso_temporal(_text(capability, "executed_at"))
+        _validate_temporal_order(
+            checks,
+            produced_at,
+            executed_at,
+            code="P0_DELIVERY_ARTIFACT_AFTER_CAPABILITY_EXECUTION",
+            message="Release artifact must be produced before release capability execution",
+            location=f"release_capabilities[{index}].executed_at",
         )
 
 
@@ -1010,12 +1068,117 @@ def _validate_acceptance(
     return evidence_ids
 
 
+def _validated_artifact_sha256(
+    checks: list[CheckResult],
+    item: dict[str, Any],
+    field: str,
+    *,
+    code: str,
+    location: str,
+) -> str:
+    value = _text(item, field).lower()
+    if value and not _SHA256_PATTERN.fullmatch(value):
+        checks.append(
+            CheckResult(
+                code=code,
+                message=f"{field} must be a 64-character lowercase SHA-256",
+                location=f"{location}.{field}",
+            )
+        )
+        return ""
+    return value
+
+
+def _validate_release_artifact(
+    checks: list[CheckResult],
+    artifact: Any,
+    *,
+    final_release_commit: str,
+    commit_shas: set[str],
+) -> tuple[str, set[str]]:
+    if not isinstance(artifact, dict):
+        checks.append(
+            CheckResult(
+                code="P0_DELIVERY_RELEASE_ARTIFACT_INVALID",
+                message="release_artifact must be an object",
+                location="release_artifact",
+            )
+        )
+        return "", set()
+    _required_fields(
+        checks,
+        artifact,
+        (
+            "commit_sha",
+            "artifact_reference",
+            "artifact_sha256",
+            "produced_by",
+            "produced_at",
+        ),
+        code="P0_DELIVERY_RELEASE_ARTIFACT_METADATA_INCOMPLETE",
+        location="release_artifact",
+    )
+    _iso_temporal(
+        checks,
+        artifact,
+        "produced_at",
+        location="release_artifact",
+    )
+    commit_sha = _text(artifact, "commit_sha").lower()
+    commit_valid = bool(_COMMIT_PATTERN.fullmatch(commit_sha))
+    if commit_sha and not commit_valid:
+        checks.append(
+            CheckResult(
+                code="P0_DELIVERY_RELEASE_ARTIFACT_COMMIT_SHA_INVALID",
+                message=f"Invalid release artifact commit SHA: {commit_sha}",
+                location="release_artifact.commit_sha",
+            )
+        )
+    if commit_valid:
+        commit_shas.add(commit_sha)
+        if _COMMIT_PATTERN.fullmatch(final_release_commit) and commit_sha != final_release_commit:
+            checks.append(
+                CheckResult(
+                    code="P0_DELIVERY_RELEASE_ARTIFACT_COMMIT_MISMATCH",
+                    message="Release artifact must be built from the final release commit",
+                    location="release_artifact.commit_sha",
+                )
+            )
+    artifact_sha256 = _validated_artifact_sha256(
+        checks,
+        artifact,
+        "artifact_sha256",
+        code="P0_DELIVERY_RELEASE_ARTIFACT_SHA256_INVALID",
+        location="release_artifact",
+    )
+    artifact_reference = _text(artifact, "artifact_reference").lower()
+    if artifact_sha256 and artifact_sha256 not in artifact_reference:
+        checks.append(
+            CheckResult(
+                code="P0_DELIVERY_RELEASE_ARTIFACT_REFERENCE_MUTABLE",
+                message="artifact_reference must contain the immutable artifact SHA-256",
+                location="release_artifact.artifact_reference",
+            )
+        )
+    evidence_ids = set(_string_ids(checks, artifact, location="release_artifact"))
+    if not evidence_ids:
+        checks.append(
+            CheckResult(
+                code="P0_DELIVERY_RELEASE_ARTIFACT_EVIDENCE_MISSING",
+                message="Release artifact requires evidence IDs",
+                location="release_artifact",
+            )
+        )
+    return artifact_sha256, evidence_ids
+
+
 def _validate_release_capability(
     checks: list[CheckResult],
     item: dict[str, Any],
     *,
     location: str,
     final_release_commit: str,
+    release_artifact_sha256: str,
     commit_shas: set[str],
     authorized_signers: dict[str, set[str]],
     signer_authorized_at: dict[tuple[str, str], _Temporal],
@@ -1034,6 +1197,7 @@ def _validate_release_capability(
         item,
         (
             "commit_sha",
+            "artifact_sha256",
             "executed_by",
             "executed_at",
             "reviewed_by",
@@ -1109,6 +1273,21 @@ def _validate_release_capability(
                     location=location,
                 )
             )
+    artifact_sha256 = _validated_artifact_sha256(
+        checks,
+        item,
+        "artifact_sha256",
+        code="P0_DELIVERY_RELEASE_CAPABILITY_ARTIFACT_SHA256_INVALID",
+        location=location,
+    )
+    if artifact_sha256 and release_artifact_sha256 and artifact_sha256 != release_artifact_sha256:
+        checks.append(
+            CheckResult(
+                code="P0_DELIVERY_RELEASE_CAPABILITY_ARTIFACT_MISMATCH",
+                message="Release capability must use the immutable release artifact",
+                location=f"{location}.artifact_sha256",
+            )
+        )
     evidence_ids = set(_string_ids(checks, item, location=location))
     if not evidence_ids:
         checks.append(
@@ -1349,6 +1528,7 @@ def _validate_metrics(
     checks: list[CheckResult],
     metrics: Any,
     final_release_commit: str,
+    release_artifact_sha256: str,
 ) -> set[str]:
     if not isinstance(metrics, dict):
         checks.append(
@@ -1362,7 +1542,12 @@ def _validate_metrics(
     _required_fields(
         checks,
         metrics,
-        ("evaluated_commit_sha", "measured_by", "measured_at"),
+        (
+            "evaluated_commit_sha",
+            "evaluated_artifact_sha256",
+            "measured_by",
+            "measured_at",
+        ),
         code="P0_DELIVERY_METRIC_METADATA_INCOMPLETE",
         location="release_metrics",
     )
@@ -1392,6 +1577,25 @@ def _validate_metrics(
                 code="P0_DELIVERY_METRIC_COMMIT_MISMATCH",
                 message="Release metrics must evaluate the exact final release commit",
                 location="release_metrics.evaluated_commit_sha",
+            )
+        )
+    evaluated_artifact_sha256 = _validated_artifact_sha256(
+        checks,
+        metrics,
+        "evaluated_artifact_sha256",
+        code="P0_DELIVERY_METRIC_ARTIFACT_SHA256_INVALID",
+        location="release_metrics",
+    )
+    if (
+        evaluated_artifact_sha256
+        and release_artifact_sha256
+        and evaluated_artifact_sha256 != release_artifact_sha256
+    ):
+        checks.append(
+            CheckResult(
+                code="P0_DELIVERY_METRIC_ARTIFACT_MISMATCH",
+                message="Release metrics must evaluate the immutable release artifact",
+                location="release_metrics.evaluated_artifact_sha256",
             )
         )
     for field in ("open_s0_defects", "open_s1_defects"):
@@ -1468,6 +1672,7 @@ def _validate_final_release(
     commit_shas: set[str],
     committee_approver: str,
     signer_authorized_at: dict[tuple[str, str], _Temporal],
+    release_artifact_sha256: str,
 ) -> set[str]:
     if not isinstance(final_release, dict):
         checks.append(
@@ -1489,7 +1694,13 @@ def _validate_final_release(
     _required_fields(
         checks,
         final_release,
-        ("commit_sha", "approver_role", "approved_by", "approved_at"),
+        (
+            "commit_sha",
+            "artifact_sha256",
+            "approver_role",
+            "approved_by",
+            "approved_at",
+        ),
         code="P0_DELIVERY_FINAL_RELEASE_METADATA_INCOMPLETE",
         location="final_release",
     )
@@ -1535,6 +1746,21 @@ def _validate_final_release(
             )
         else:
             commit_shas.add(commit_sha)
+    artifact_sha256 = _validated_artifact_sha256(
+        checks,
+        final_release,
+        "artifact_sha256",
+        code="P0_DELIVERY_FINAL_RELEASE_ARTIFACT_SHA256_INVALID",
+        location="final_release",
+    )
+    if artifact_sha256 and release_artifact_sha256 and artifact_sha256 != release_artifact_sha256:
+        checks.append(
+            CheckResult(
+                code="P0_DELIVERY_FINAL_RELEASE_ARTIFACT_MISMATCH",
+                message="Final release approval must bind the immutable release artifact",
+                location="final_release.artifact_sha256",
+            )
+        )
     evidence_ids = set(_string_ids(checks, final_release, location="final_release"))
     if not evidence_ids:
         checks.append(
@@ -1768,11 +1994,11 @@ def validate_p0_delivery_bundle(
 ) -> list[CheckResult]:
     checks: list[CheckResult] = []
     current = build_p0_delivery_template(paths)
-    if bundle.get("schema_version") != 6 or bundle.get("stage") != "P0-DELIVERY":
+    if bundle.get("schema_version") != 7 or bundle.get("stage") != "P0-DELIVERY":
         checks.append(
             CheckResult(
                 code="P0_DELIVERY_HEADER_INVALID",
-                message="Bundle requires schema_version 6 and stage P0-DELIVERY",
+                message="Bundle requires schema_version 7 and stage P0-DELIVERY",
                 location="bundle",
             )
         )
@@ -1853,7 +2079,7 @@ def validate_p0_delivery_bundle(
     )
     referenced_evidence_ids: set[str] = set()
     evidence_subject_requirements: dict[str, set[str]] = {}
-    known_subject_refs = {"release_metrics", "final_release"}
+    known_subject_refs = {"release_artifact", "release_metrics", "final_release"}
     required_signer_roles = {
         _text(item, "role") for item in cast(list[dict[str, Any]], current["signer_authorizations"])
     }
@@ -1880,6 +2106,18 @@ def validate_p0_delivery_bundle(
     final_release = bundle.get("final_release")
     final_release_commit = (
         _text(final_release, "commit_sha").lower() if isinstance(final_release, dict) else ""
+    )
+    release_artifact_sha256, release_artifact_evidence_ids = _validate_release_artifact(
+        checks,
+        bundle.get("release_artifact"),
+        final_release_commit=final_release_commit,
+        commit_shas=commit_shas,
+    )
+    referenced_evidence_ids.update(release_artifact_evidence_ids)
+    _bind_evidence_subjects(
+        evidence_subject_requirements,
+        release_artifact_evidence_ids,
+        "release_artifact",
     )
     section_specs = (
         (
@@ -1969,6 +2207,7 @@ def validate_p0_delivery_bundle(
                     item,
                     location=location,
                     final_release_commit=final_release_commit,
+                    release_artifact_sha256=release_artifact_sha256,
                     commit_shas=commit_shas,
                     authorized_signers=authorized_signers,
                     signer_authorized_at=signer_authorized_at,
@@ -1994,6 +2233,7 @@ def validate_p0_delivery_bundle(
         checks,
         bundle.get("release_metrics"),
         final_release_commit,
+        release_artifact_sha256,
     )
     referenced_evidence_ids.update(metric_evidence_ids)
     _bind_evidence_subjects(
@@ -2007,6 +2247,7 @@ def validate_p0_delivery_bundle(
         commit_shas,
         committee_approver,
         signer_authorized_at,
+        release_artifact_sha256,
     )
     referenced_evidence_ids.update(final_release_evidence_ids)
     _bind_evidence_subjects(
@@ -2027,6 +2268,7 @@ def validate_p0_delivery_bundle(
         signer_authorized_at,
         committee_approver,
     )
+    _validate_release_artifact_timeline(checks, bundle)
     _validate_final_release_after_events(checks, bundle)
     commit_shas.update(binding[3] for binding in evidence_bindings)
     unknown_evidence = sorted(referenced_evidence_ids - evidence_ids)

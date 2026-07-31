@@ -48,6 +48,10 @@
   commit evaluated; that commit must equal the final release commit.
   Build, deployment, rollback, restore, and handover are separate frozen release capabilities;
   each must bind the exact final release commit, execution, authorized review, and evidence.
+  The release artifact must record its immutable SHA-256, reference, source commit, producer,
+  production time, and evidence; the reference itself must contain that SHA-256 rather than use a
+  mutable tag. Metrics, all release capabilities, and final approval must bind that same artifact
+  SHA-256 after it is produced.
 - Generated reviewer templates belong in `data/d0/review`; only actual authorized reviewers may
   fill a review copy, and completed copies must not contain private contact details or secrets.
 - Generated D1 source-onboarding templates belong in `data/d1/candidates`; no source may become

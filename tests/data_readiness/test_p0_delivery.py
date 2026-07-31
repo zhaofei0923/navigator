@@ -71,6 +71,7 @@ def _completed_bundle() -> tuple[dict[str, Any], dict[str, Any]]:
     commit_sha = _head_commit()
     evidence_id = "EVD-P0-DELIVERY-INTEGRATION"
     evidence_path = "data/p0/evidence/README.md"
+    artifact_sha256 = sha256_file(paths.root / evidence_path)
     bundle["evidence"] = [
         {
             "evidence_id": evidence_id,
@@ -132,6 +133,7 @@ def _completed_bundle() -> tuple[dict[str, Any], dict[str, Any]]:
         )
     bundle["release_metrics"] = {
         "evaluated_commit_sha": commit_sha,
+        "evaluated_artifact_sha256": artifact_sha256,
         "measured_by": "kevin",
         "measured_at": "2026-07-31",
         "open_s0_defects": 0,
@@ -149,11 +151,20 @@ def _completed_bundle() -> tuple[dict[str, Any], dict[str, Any]]:
         "performance_capacity_rpo_rto_status": "passed",
         "evidence_ids": [evidence_id],
     }
+    bundle["release_artifact"] = {
+        "commit_sha": commit_sha,
+        "artifact_reference": (f"registry.example.invalid/navigator@sha256:{artifact_sha256}"),
+        "artifact_sha256": artifact_sha256,
+        "produced_by": "test",
+        "produced_at": "2026-07-31",
+        "evidence_ids": [evidence_id],
+    }
     for item in bundle["release_capabilities"]:
         item.update(
             {
                 "status": "passed",
                 "commit_sha": commit_sha,
+                "artifact_sha256": artifact_sha256,
                 "executed_by": "kevin",
                 "executed_at": "2026-07-31",
                 "reviewed_by": "kevin",
@@ -165,6 +176,7 @@ def _completed_bundle() -> tuple[dict[str, Any], dict[str, Any]]:
     bundle["final_release"] = {
         "status": "approved",
         "commit_sha": commit_sha,
+        "artifact_sha256": artifact_sha256,
         "approver_role": "项目委员会",
         "approved_by": "kevin",
         "approved_at": "2026-07-31",
@@ -176,7 +188,7 @@ def _completed_bundle() -> tuple[dict[str, Any], dict[str, Any]]:
         "d4_gate_evidence_id": "EVD-D4-FINAL",
         "d4_bundle_sha256": payload_sha256(d4_bundle),
     }
-    subject_refs = {"release_metrics", "final_release"}
+    subject_refs = {"release_artifact", "release_metrics", "final_release"}
     for item in bundle["signer_authorizations"]:
         subject_refs.add(f"signer_authorizations:{item['role']}:{item['person_name']}")
     for section, identifier_field in (
@@ -202,7 +214,7 @@ def test_delivery_template_freezes_complete_p0_scope() -> None:
 
     assert bundle["template_only"] is True
     assert bundle["append_only"] is True
-    assert bundle["schema_version"] == 6
+    assert bundle["schema_version"] == 7
     assert len(bundle["requirements"]) == 90
     assert len(bundle["routes"]) == 125
     assert len(bundle["apis"]) == 56
@@ -215,6 +227,14 @@ def test_delivery_template_freezes_complete_p0_scope() -> None:
         "rollback",
         "restore",
         "handover",
+    }
+    assert set(bundle["release_artifact"]) == {
+        "commit_sha",
+        "artifact_reference",
+        "artifact_sha256",
+        "produced_by",
+        "produced_at",
+        "evidence_ids",
     }
     assert {item["role"] for item in bundle["signer_authorizations"]} == {
         "产品/业务",
@@ -544,6 +564,7 @@ def test_final_release_must_follow_every_delivery_event(monkeypatch: Any) -> Non
     bundle["release_capabilities"][0]["reviewed_at"] = "2026-08-02"
     bundle["evidence"][0]["approved_at"] = "2026-08-02"
     bundle["release_metrics"]["measured_at"] = "2026-08-02"
+    bundle["release_artifact"]["produced_at"] = "2026-08-02"
 
     checks = validate_p0_delivery_bundle(
         discover_repository(),
@@ -567,6 +588,7 @@ def test_final_release_must_follow_every_delivery_event(monkeypatch: Any) -> Non
         "release_capabilities[0].reviewed_at",
         "evidence[0].approved_at",
         "release_metrics.measured_at",
+        "release_artifact.produced_at",
     }
 
 
@@ -597,6 +619,7 @@ def test_release_metric_provenance_metadata_is_required(monkeypatch: Any) -> Non
     bundle["release_metrics"]["measured_by"] = None
     bundle["release_metrics"]["measured_at"] = "sometime"
     bundle["release_metrics"]["evaluated_commit_sha"] = "not-a-commit"
+    bundle["release_metrics"]["evaluated_artifact_sha256"] = "not-a-digest"
 
     checks = validate_p0_delivery_bundle(
         discover_repository(),
@@ -609,6 +632,81 @@ def test_release_metric_provenance_metadata_is_required(monkeypatch: Any) -> Non
     assert "P0_DELIVERY_METRIC_METADATA_INCOMPLETE" in codes
     assert "P0_DELIVERY_TEMPORAL_INVALID" in codes
     assert "P0_DELIVERY_METRIC_COMMIT_SHA_INVALID" in codes
+    assert "P0_DELIVERY_METRIC_ARTIFACT_SHA256_INVALID" in codes
+
+
+def test_release_artifact_must_bind_final_commit_and_evidence(
+    monkeypatch: Any,
+) -> None:
+    monkeypatch.setattr(
+        "navigator_data_readiness.p0_delivery.build_p0_traceability_report",
+        lambda _paths: _ready_traceability(),
+    )
+    bundle, d4_bundle = _completed_bundle()
+    bundle["release_artifact"]["commit_sha"] = _parent_commit()
+    bundle["release_artifact"]["artifact_sha256"] = "not-a-digest"
+    bundle["release_artifact"]["artifact_reference"] = "registry.example.invalid/navigator:latest"
+    bundle["release_artifact"]["evidence_ids"] = []
+
+    checks = validate_p0_delivery_bundle(
+        discover_repository(),
+        bundle,
+        d4_bundle,
+        d4_chain_checks=[],
+    )
+    codes = _codes(checks)
+
+    assert "P0_DELIVERY_RELEASE_ARTIFACT_COMMIT_MISMATCH" in codes
+    assert "P0_DELIVERY_RELEASE_ARTIFACT_SHA256_INVALID" in codes
+    assert "P0_DELIVERY_RELEASE_ARTIFACT_EVIDENCE_MISSING" in codes
+
+
+def test_release_artifact_reference_must_be_content_addressed(
+    monkeypatch: Any,
+) -> None:
+    monkeypatch.setattr(
+        "navigator_data_readiness.p0_delivery.build_p0_traceability_report",
+        lambda _paths: _ready_traceability(),
+    )
+    bundle, d4_bundle = _completed_bundle()
+    bundle["release_artifact"]["artifact_reference"] = "registry.example.invalid/navigator:latest"
+
+    checks = validate_p0_delivery_bundle(
+        discover_repository(),
+        bundle,
+        d4_bundle,
+        d4_chain_checks=[],
+    )
+
+    assert "P0_DELIVERY_RELEASE_ARTIFACT_REFERENCE_MUTABLE" in _codes(checks)
+
+
+def test_release_stages_must_share_artifact_and_follow_production(
+    monkeypatch: Any,
+) -> None:
+    monkeypatch.setattr(
+        "navigator_data_readiness.p0_delivery.build_p0_traceability_report",
+        lambda _paths: _ready_traceability(),
+    )
+    bundle, d4_bundle = _completed_bundle()
+    bundle["release_metrics"]["evaluated_artifact_sha256"] = "a" * 64
+    bundle["release_capabilities"][0]["artifact_sha256"] = "b" * 64
+    bundle["final_release"]["artifact_sha256"] = "c" * 64
+    bundle["release_artifact"]["produced_at"] = "2026-08-01"
+
+    checks = validate_p0_delivery_bundle(
+        discover_repository(),
+        bundle,
+        d4_bundle,
+        d4_chain_checks=[],
+    )
+    codes = _codes(checks)
+
+    assert "P0_DELIVERY_METRIC_ARTIFACT_MISMATCH" in codes
+    assert "P0_DELIVERY_RELEASE_CAPABILITY_ARTIFACT_MISMATCH" in codes
+    assert "P0_DELIVERY_FINAL_RELEASE_ARTIFACT_MISMATCH" in codes
+    assert "P0_DELIVERY_ARTIFACT_AFTER_EVALUATION" in codes
+    assert "P0_DELIVERY_ARTIFACT_AFTER_CAPABILITY_EXECUTION" in codes
 
 
 def test_release_capability_must_pass_on_final_commit_with_evidence(

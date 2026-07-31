@@ -1031,6 +1031,7 @@
     "approved_at": null,
     "approved_by": null,
     "approver_role": "项目委员会",
+    "artifact_sha256": null,
     "commit_sha": null,
     "evidence_ids": [],
     "status": "pending"
@@ -2394,8 +2395,17 @@
       "test_id": "TC-SCORE-024"
     }
   ],
+  "release_artifact": {
+    "artifact_reference": null,
+    "artifact_sha256": null,
+    "commit_sha": null,
+    "evidence_ids": [],
+    "produced_at": null,
+    "produced_by": null
+  },
   "release_capabilities": [
     {
+      "artifact_sha256": null,
       "capability_id": "build",
       "commit_sha": null,
       "evidence_ids": [],
@@ -2409,6 +2419,7 @@
       "status": "pending"
     },
     {
+      "artifact_sha256": null,
       "capability_id": "deployment",
       "commit_sha": null,
       "evidence_ids": [],
@@ -2422,6 +2433,7 @@
       "status": "pending"
     },
     {
+      "artifact_sha256": null,
       "capability_id": "rollback",
       "commit_sha": null,
       "evidence_ids": [],
@@ -2435,6 +2447,7 @@
       "status": "pending"
     },
     {
+      "artifact_sha256": null,
       "capability_id": "restore",
       "commit_sha": null,
       "evidence_ids": [],
@@ -2448,6 +2461,7 @@
       "status": "pending"
     },
     {
+      "artifact_sha256": null,
       "capability_id": "handover",
       "commit_sha": null,
       "evidence_ids": [],
@@ -2464,6 +2478,7 @@
   "release_metrics": {
     "ai_citation_coverage_pct": null,
     "critical_task_success_rate_pct": null,
+    "evaluated_artifact_sha256": null,
     "evaluated_commit_sha": null,
     "evidence_ids": [],
     "leak_counts": {
@@ -4634,7 +4649,7 @@
       "status": "pending"
     }
   ],
-  "schema_version": 6,
+  "schema_version": 7,
   "signer_authorizations": [
     {
       "authorized_at": null,
