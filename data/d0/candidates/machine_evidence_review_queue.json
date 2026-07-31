@@ -1,0 +1,83 @@
+{
+  "candidate_only": true,
+  "instructions": [
+    "先解决machine_status为fail的合同缺口并重新生成候选",
+    "由指定角色检查候选文件及其SHA-256",
+    "只有实名批准后才可把模板补全并登记到data/d0/evidence/manifest.json",
+    "批准证据仍须在D0正式评审副本中由同一实名复核人引用"
+  ],
+  "items": [
+    {
+      "acceptance_id": "D0-AC-001",
+      "approval_blocked_when_machine_status_not_pass": true,
+      "candidate_path": "data/d0/candidates/core_entity_evidence.json",
+      "candidate_sha256": "5791b648d851e614b4744d57c83b9d9022c44fb791ace34e8b9cf9c57c02fad5",
+      "evidence_id": "EVD-D0-AC-001-MACHINE-BASELINE",
+      "human_status": "pending",
+      "machine_status": "fail",
+      "manifest_entry_template": {
+        "acceptance_id": "D0-AC-001",
+        "evidence_id": "EVD-D0-AC-001-MACHINE-BASELINE",
+        "path": "data/d0/candidates/core_entity_evidence.json",
+        "recorded_at": null,
+        "recorded_by": "navigator-data prepare-d0",
+        "reviewer": null,
+        "sha256": "5791b648d851e614b4744d57c83b9d9022c44fb791ace34e8b9cf9c57c02fad5",
+        "status": "待复核"
+      },
+      "required_reviewer_roles": [
+        "数据负责人",
+        "后端/数据架构负责人"
+      ]
+    },
+    {
+      "acceptance_id": "D0-AC-002",
+      "approval_blocked_when_machine_status_not_pass": true,
+      "candidate_path": "data/d0/candidates/core_field_evidence.json",
+      "candidate_sha256": "d4a4bcc19c963c2a04abe75c33dd355cd19a33857ce80cad8ae719531e55d640",
+      "evidence_id": "EVD-D0-AC-002-MACHINE-BASELINE",
+      "human_status": "pending",
+      "machine_status": "fail",
+      "manifest_entry_template": {
+        "acceptance_id": "D0-AC-002",
+        "evidence_id": "EVD-D0-AC-002-MACHINE-BASELINE",
+        "path": "data/d0/candidates/core_field_evidence.json",
+        "recorded_at": null,
+        "recorded_by": "navigator-data prepare-d0",
+        "reviewer": null,
+        "sha256": "d4a4bcc19c963c2a04abe75c33dd355cd19a33857ce80cad8ae719531e55d640",
+        "status": "待复核"
+      },
+      "required_reviewer_roles": [
+        "数据负责人",
+        "数据质量负责人"
+      ]
+    },
+    {
+      "acceptance_id": "D0-AC-003",
+      "approval_blocked_when_machine_status_not_pass": true,
+      "candidate_path": "data/d0/candidates/enum_migration_evidence.json",
+      "candidate_sha256": "2631d3ef2cff7ed5de7952877c07779565608e4de05601d7508ebb0f70472283",
+      "evidence_id": "EVD-D0-AC-003-MACHINE-BASELINE",
+      "human_status": "pending",
+      "machine_status": "pass",
+      "manifest_entry_template": {
+        "acceptance_id": "D0-AC-003",
+        "evidence_id": "EVD-D0-AC-003-MACHINE-BASELINE",
+        "path": "data/d0/candidates/enum_migration_evidence.json",
+        "recorded_at": null,
+        "recorded_by": "navigator-data prepare-d0",
+        "reviewer": null,
+        "sha256": "2631d3ef2cff7ed5de7952877c07779565608e4de05601d7508ebb0f70472283",
+        "status": "待复核"
+      },
+      "required_reviewer_roles": [
+        "产品负责人",
+        "数据负责人"
+      ]
+    }
+  ],
+  "schema_version": 1,
+  "stage": "D0",
+  "warning": "不得把本队列或待复核模板直接登记为已批准证据"
+}

@@ -8,6 +8,9 @@ from typing import Any
 
 from .baseline import extract_contracts, sha256_file
 from .d0_candidates import (
+    build_core_entity_evidence,
+    build_core_field_evidence,
+    build_enum_migration_evidence,
     build_gold_standard_gap_report,
     build_template_trial,
     load_license_snapshots,
@@ -264,6 +267,24 @@ def build_readiness_report(paths: RepositoryPaths) -> ReadinessReport:
     }
     evidence_checks = validate_evidence(paths, required_acceptance_ids=acceptance_ids)
     blockers.extend(evidence_checks)
+
+    for evidence in (
+        build_core_entity_evidence(contracts),
+        build_core_field_evidence(contracts),
+        build_enum_migration_evidence(contracts),
+    ):
+        for check in evidence["checks"]:
+            if check["status"] == "fail":
+                blockers.append(
+                    CheckResult(
+                        code=f"D0_{check['check_id'].replace('-', '_')}",
+                        message=(
+                            f"{check['description']} failed with "
+                            f"{len(check['findings'])} finding(s)"
+                        ),
+                        location=str(evidence["acceptance_id"]),
+                    )
+                )
 
     template_trial = build_template_trial(
         contracts,

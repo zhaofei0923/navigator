@@ -13,6 +13,9 @@ def test_current_d0_gate_fails_honestly() -> None:
     assert "D0_TASK_INCOMPLETE" in codes
     assert "D0_ACCEPTANCE_PENDING" in codes
     assert "EVIDENCE_ACCEPTANCE_MISSING" in codes
+    assert "D0_ENTITY_PRIMARY_KEY_COVERAGE" in codes
+    assert "D0_FIELD_UNIT_METADATA_PRESENT" in codes
+    assert "D0_ENUM_GROUP_CODE_UNIQUE" not in codes
     assert "D0_TRIAL_MAPPING_TARGET" not in codes
     assert not any(
         "D0-AC-007" in blocker.message

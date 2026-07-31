@@ -1,0 +1,182 @@
+{
+  "acceptance_id": "D0-AC-001",
+  "automated_assessment_only": true,
+  "candidate_only": true,
+  "checks": [
+    {
+      "check_id": "ENTITY-RELATIONSHIP-ID-UNIQUE",
+      "description": "关系编号必须非空且唯一",
+      "findings": [],
+      "status": "pass"
+    },
+    {
+      "check_id": "ENTITY-CODE-PRESENT",
+      "description": "每条关系必须引用非空父实体和子实体代码",
+      "findings": [],
+      "status": "pass"
+    },
+    {
+      "check_id": "ENTITY-PRIMARY-KEY-COVERAGE",
+      "description": "每个关系实体必须在字段合同中显式标记主键",
+      "findings": [
+        "country",
+        "country_metric_value",
+        "enterprise_member",
+        "enterprise_profile_version",
+        "field_provenance",
+        "legal_entity",
+        "metric_definition",
+        "partner",
+        "partner_recommendation",
+        "policy",
+        "policy_version",
+        "project",
+        "project_opportunity_assessment",
+        "project_version",
+        "quality_issue",
+        "raw_record",
+        "region",
+        "report",
+        "retrieval_run",
+        "review_task",
+        "risk",
+        "risk_assessment",
+        "scoring_adjustment",
+        "scoring_model_version",
+        "scoring_result",
+        "scoring_rule",
+        "source_family",
+        "source_snapshot",
+        "tender"
+      ],
+      "status": "fail"
+    },
+    {
+      "check_id": "ENTITY-RELATION-KEY-PRESENT",
+      "description": "每条关系必须给出外键或唯一键合同",
+      "findings": [],
+      "status": "pass"
+    },
+    {
+      "check_id": "ENTITY-AUTHORITY-PRESENT",
+      "description": "每条关系必须给出权威记录",
+      "findings": [],
+      "status": "pass"
+    },
+    {
+      "check_id": "ENTITY-CARDINALITY-CONSTRAINT-PRESENT",
+      "description": "每条关系必须给出基数和关键约束",
+      "findings": [],
+      "status": "pass"
+    }
+  ],
+  "findings": [
+    {
+      "check_id": "ENTITY-PRIMARY-KEY-COVERAGE",
+      "findings": [
+        "country",
+        "country_metric_value",
+        "enterprise_member",
+        "enterprise_profile_version",
+        "field_provenance",
+        "legal_entity",
+        "metric_definition",
+        "partner",
+        "partner_recommendation",
+        "policy",
+        "policy_version",
+        "project",
+        "project_opportunity_assessment",
+        "project_version",
+        "quality_issue",
+        "raw_record",
+        "region",
+        "report",
+        "retrieval_run",
+        "review_task",
+        "risk",
+        "risk_assessment",
+        "scoring_adjustment",
+        "scoring_model_version",
+        "scoring_result",
+        "scoring_rule",
+        "source_family",
+        "source_snapshot",
+        "tender"
+      ]
+    }
+  ],
+  "human_review_scope": [
+    "确认关系表中的实体代码覆盖全部核心实体",
+    "确认每个核心实体的主键合同；缺失项必须补充基线或记录正式例外",
+    "确认外键、唯一键、权威记录、基数和关键约束的业务语义"
+  ],
+  "human_status": "pending",
+  "inventory": {
+    "entity_code_count": 34,
+    "entity_codes": [
+      "app_user",
+      "country",
+      "country_metric_value",
+      "data_record_version",
+      "enterprise",
+      "enterprise_member",
+      "enterprise_profile_version",
+      "field_provenance",
+      "legal_entity",
+      "metric_definition",
+      "partner",
+      "partner_recommendation",
+      "policy",
+      "policy_version",
+      "project",
+      "project_opportunity_assessment",
+      "project_version",
+      "quality_issue",
+      "raw_record",
+      "region",
+      "report",
+      "retrieval_run",
+      "review_task",
+      "risk",
+      "risk_assessment",
+      "scoring_adjustment",
+      "scoring_model_version",
+      "scoring_result",
+      "scoring_rule",
+      "scoring_run",
+      "source_family",
+      "source_registry",
+      "source_snapshot",
+      "tender"
+    ],
+    "primary_key_entities": [
+      "app_user",
+      "data_record_version",
+      "enterprise",
+      "scoring_run",
+      "source_registry"
+    ],
+    "primary_key_entity_count": 5,
+    "relationship_count": 25
+  },
+  "machine_status": "fail",
+  "required_reviewer_roles": [
+    "数据负责人",
+    "后端/数据架构负责人"
+  ],
+  "schema_version": 1,
+  "source_binding": {
+    "baseline_version": "V1.0-BASELINE",
+    "d0_workbook": {
+      "path": "doc/doc/新能源企业出海导航仪_D0数据标准冻结执行台账.xlsx",
+      "sha256": "224e9a35bcbb363cf41c007499ba32aa6394cfdbf06331830c02d994e1c7ddff"
+    },
+    "technical_workbook": {
+      "path": "doc/doc/新能源企业出海导航仪_V1.0技术附件_BASELINE.xlsx",
+      "sha256": "8b36f7cad337d72713f09c2b36d7eaf6ebe0bc2cd13f2bf0c05c45edbd065fb8"
+    }
+  },
+  "stage": "D0",
+  "warning": "机器证据不能代替实名责任人复核、批准或冻结基线变更"
+}

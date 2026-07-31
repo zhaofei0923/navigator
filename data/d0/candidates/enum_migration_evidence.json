@@ -1,0 +1,119 @@
+{
+  "acceptance_id": "D0-AC-003",
+  "automated_assessment_only": true,
+  "candidate_only": true,
+  "checks": [
+    {
+      "check_id": "ENUM-ID-UNIQUE",
+      "description": "枚举编号必须非空且唯一",
+      "findings": [],
+      "status": "pass"
+    },
+    {
+      "check_id": "ENUM-GROUP-CODE-UNIQUE",
+      "description": "同一对象字段内代码必须互斥且唯一",
+      "findings": [],
+      "status": "pass"
+    },
+    {
+      "check_id": "ENUM-METADATA-COMPLETE",
+      "description": "枚举必须给出中文、代码、转向和进入条件",
+      "findings": [],
+      "status": "pass"
+    },
+    {
+      "check_id": "MIGRATION-HISTORICAL-ID-UNIQUE",
+      "description": "历史编号必须非空且唯一",
+      "findings": [],
+      "status": "pass"
+    },
+    {
+      "check_id": "MIGRATION-METADATA-COMPLETE",
+      "description": "迁移记录必须给出现行编号、冲突类型、处理规则和状态",
+      "findings": [],
+      "status": "pass"
+    }
+  ],
+  "findings": [],
+  "human_review_scope": [
+    "确认中文名称、代码和业务含义一致",
+    "确认可转向表达式中的业务宏、重开事件和终态语义",
+    "确认13条历史编号、实体和枚举迁移规则没有语义冲突"
+  ],
+  "human_status": "pending",
+  "inventory": {
+    "enum_count": 251,
+    "enum_group_count": 45,
+    "enum_group_counts": {
+      "*.freshness_status": 4,
+      "*.recommendation_status": 4,
+      "*.value_status": 5,
+      "ai_message.answer_status": 6,
+      "country.coverage_level": 3,
+      "country.coverage_status": 2,
+      "country.opportunity_level": 4,
+      "country.policy_friendliness_level": 4,
+      "country.risk_assessment_status": 2,
+      "country.risk_level": 4,
+      "crm_opportunity.stage": 8,
+      "data_record_version.publication_status": 7,
+      "data_record_version.quality_status": 4,
+      "enterprise.verification_status": 6,
+      "lead.status": 8,
+      "localized_text.translation_status": 4,
+      "membership.status": 5,
+      "partner.review_status": 5,
+      "partner_recommendation.grade": 5,
+      "policy.content_status": 8,
+      "policy.effective_status": 9,
+      "project.business_status": 7,
+      "project.opportunity_window": 8,
+      "project.stage": 12,
+      "project.verification_status": 4,
+      "project_opportunity_assessment.context_type": 2,
+      "quality_issue.severity": 4,
+      "quality_issue.status": 6,
+      "report.business_status": 10,
+      "report_task.status": 6,
+      "review_task.status": 7,
+      "risk.assessment_status": 2,
+      "risk.risk_level": 4,
+      "scoring_model_version.status": 6,
+      "scoring_result.grade_code[DATA_TRUST]": 4,
+      "scoring_result.grade_code[PROJECT_OPPORTUNITY_*]": 5,
+      "scoring_result.grade_code[RECOMMEND_PRIORITY]": 5,
+      "scoring_result.status": 4,
+      "service_request.status": 12,
+      "source_registry.authority_level": 4,
+      "source_registry.status": 5,
+      "tender.official_status": 9,
+      "tender.opportunity_window": 8,
+      "ui.async_state": 6,
+      "ui.form_state": 4
+    },
+    "migration_count": 13,
+    "migration_status_counts": {
+      "已确认": 6,
+      "已纠错": 7
+    }
+  },
+  "machine_status": "pass",
+  "required_reviewer_roles": [
+    "产品负责人",
+    "数据负责人"
+  ],
+  "schema_version": 1,
+  "source_binding": {
+    "baseline_version": "V1.0-BASELINE",
+    "d0_workbook": {
+      "path": "doc/doc/新能源企业出海导航仪_D0数据标准冻结执行台账.xlsx",
+      "sha256": "224e9a35bcbb363cf41c007499ba32aa6394cfdbf06331830c02d994e1c7ddff"
+    },
+    "technical_workbook": {
+      "path": "doc/doc/新能源企业出海导航仪_V1.0技术附件_BASELINE.xlsx",
+      "sha256": "8b36f7cad337d72713f09c2b36d7eaf6ebe0bc2cd13f2bf0c05c45edbd065fb8"
+    }
+  },
+  "stage": "D0",
+  "warning": "机器证据不能代替实名责任人复核、批准或冻结基线变更"
+}

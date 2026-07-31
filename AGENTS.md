@@ -70,6 +70,8 @@
   Every D0 review evidence ID must resolve to the correct acceptance item, the same named
   reviewer, and an approved manifest state. Compliance and professional sample decisions use
   separate evidence-ID lists so different role holders cannot share an ambiguous approval.
+  Candidate machine evidence for D0-AC-001/002/003 must remain outside the approved manifest
+  until its machine status passes and the required named roles explicitly approve its exact hash.
 - Generated D1 source-onboarding templates belong in `data/d1/candidates`; no source may become
   `active` before D0 passes and all access, license, usage-boundary, evidence, and owner fields pass.
 - Generated D2 collection templates belong in `data/d2/candidates`; L0 objects are append-only,

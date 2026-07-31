@@ -1,14 +1,417 @@
 from __future__ import annotations
 
+import hashlib
 import json
-from collections import defaultdict
+from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
 
-from .baseline import extract_contracts
+from .baseline import extract_contracts, sha256_file
 from .paths import RepositoryPaths
 
 PLACEHOLDER_VALUES = {"", "待填", "待复核", "待确认", "未执行"}
+
+
+def _duplicates(values: list[str]) -> list[str]:
+    return sorted(value for value, count in Counter(values).items() if value and count > 1)
+
+
+def _machine_check(
+    check_id: str,
+    description: str,
+    findings: list[Any],
+) -> dict[str, Any]:
+    return {
+        "check_id": check_id,
+        "description": description,
+        "status": "pass" if not findings else "fail",
+        "findings": findings,
+    }
+
+
+def _machine_evidence(
+    *,
+    acceptance_id: str,
+    required_reviewer_roles: list[str],
+    source_binding: dict[str, Any] | None,
+    checks: list[dict[str, Any]],
+    inventory: dict[str, Any],
+    human_review_scope: list[str],
+) -> dict[str, Any]:
+    failed_checks = [
+        {"check_id": check["check_id"], "findings": check["findings"]}
+        for check in checks
+        if check["status"] == "fail"
+    ]
+    return {
+        "schema_version": 1,
+        "stage": "D0",
+        "acceptance_id": acceptance_id,
+        "candidate_only": True,
+        "automated_assessment_only": True,
+        "machine_status": "pass" if not failed_checks else "fail",
+        "human_status": "pending",
+        "required_reviewer_roles": required_reviewer_roles,
+        "warning": "机器证据不能代替实名责任人复核、批准或冻结基线变更",
+        "source_binding": source_binding or {},
+        "checks": checks,
+        "findings": failed_checks,
+        "inventory": inventory,
+        "human_review_scope": human_review_scope,
+    }
+
+
+def build_core_entity_evidence(
+    contracts: dict[str, Any],
+    *,
+    source_binding: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    relationships = contracts["entities"]
+    fields = contracts["fields"]
+    relationship_ids = [str(item.get("关系编号") or "").strip() for item in relationships]
+    missing_entity_codes = [
+        str(item.get("关系编号") or f"row-{index + 1}")
+        for index, item in enumerate(relationships)
+        if not str(item.get("父实体") or "").strip() or not str(item.get("子实体") or "").strip()
+    ]
+    entity_codes = sorted(
+        {
+            str(item.get(key) or "").strip()
+            for item in relationships
+            for key in ("父实体", "子实体")
+            if str(item.get(key) or "").strip()
+        }
+    )
+    primary_key_entities = sorted(
+        {
+            str(item.get("实体") or "").strip()
+            for item in fields
+            if "主键" in str(item.get("唯一/索引") or "") and str(item.get("实体") or "").strip()
+        }
+    )
+    missing_primary_keys = sorted(set(entity_codes) - set(primary_key_entities))
+    missing_relation_keys = [
+        relationship_id or f"row-{index + 1}"
+        for index, (relationship_id, item) in enumerate(
+            zip(relationship_ids, relationships, strict=True)
+        )
+        if not str(item.get("外键/唯一键") or "").strip()
+    ]
+    missing_authority = [
+        relationship_id or f"row-{index + 1}"
+        for index, (relationship_id, item) in enumerate(
+            zip(relationship_ids, relationships, strict=True)
+        )
+        if not str(item.get("权威记录") or "").strip()
+    ]
+    missing_constraints = [
+        relationship_id or f"row-{index + 1}"
+        for index, (relationship_id, item) in enumerate(
+            zip(relationship_ids, relationships, strict=True)
+        )
+        if not str(item.get("基数") or "").strip() or not str(item.get("关键约束") or "").strip()
+    ]
+    checks = [
+        _machine_check(
+            "ENTITY-RELATIONSHIP-ID-UNIQUE",
+            "关系编号必须非空且唯一",
+            [
+                *[f"row-{index + 1}" for index, value in enumerate(relationship_ids) if not value],
+                *_duplicates(relationship_ids),
+            ],
+        ),
+        _machine_check(
+            "ENTITY-CODE-PRESENT",
+            "每条关系必须引用非空父实体和子实体代码",
+            missing_entity_codes,
+        ),
+        _machine_check(
+            "ENTITY-PRIMARY-KEY-COVERAGE",
+            "每个关系实体必须在字段合同中显式标记主键",
+            missing_primary_keys,
+        ),
+        _machine_check(
+            "ENTITY-RELATION-KEY-PRESENT",
+            "每条关系必须给出外键或唯一键合同",
+            missing_relation_keys,
+        ),
+        _machine_check(
+            "ENTITY-AUTHORITY-PRESENT",
+            "每条关系必须给出权威记录",
+            missing_authority,
+        ),
+        _machine_check(
+            "ENTITY-CARDINALITY-CONSTRAINT-PRESENT",
+            "每条关系必须给出基数和关键约束",
+            missing_constraints,
+        ),
+    ]
+    return _machine_evidence(
+        acceptance_id="D0-AC-001",
+        required_reviewer_roles=["数据负责人", "后端/数据架构负责人"],
+        source_binding=source_binding,
+        checks=checks,
+        inventory={
+            "relationship_count": len(relationships),
+            "entity_code_count": len(entity_codes),
+            "entity_codes": entity_codes,
+            "primary_key_entity_count": len(primary_key_entities),
+            "primary_key_entities": primary_key_entities,
+        },
+        human_review_scope=[
+            "确认关系表中的实体代码覆盖全部核心实体",
+            "确认每个核心实体的主键合同；缺失项必须补充基线或记录正式例外",
+            "确认外键、唯一键、权威记录、基数和关键约束的业务语义",
+        ],
+    )
+
+
+def build_core_field_evidence(
+    contracts: dict[str, Any],
+    *,
+    source_binding: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    fields = contracts["fields"]
+    field_ids = [str(item.get("字段编号") or "").strip() for item in fields]
+    field_keys = [
+        f"{str(item.get('实体') or '').strip()}.{str(item.get('字段名') or '').strip()}"
+        for item in fields
+    ]
+    required_metadata = ("字段编号", "实体", "字段名", "类型", "必填", "来源要求")
+    metadata_gaps = [
+        {
+            "field_id": str(item.get("字段编号") or f"row-{index + 1}"),
+            "missing": [key for key in required_metadata if not str(item.get(key) or "").strip()],
+        }
+        for index, item in enumerate(fields)
+        if any(not str(item.get(key) or "").strip() for key in required_metadata)
+    ]
+    allowed_required_values = {"是", "否", "条件必填"}
+    invalid_required_values = [
+        {
+            "field_id": str(item.get("字段编号") or f"row-{index + 1}"),
+            "value": item.get("必填"),
+        }
+        for index, item in enumerate(fields)
+        if str(item.get("必填") or "").strip() not in allowed_required_values
+    ]
+    has_unit_metadata_column = any("单位" in item for item in fields)
+    fields_without_unit_metadata = [
+        str(item.get("字段编号") or f"row-{index + 1}")
+        for index, item in enumerate(fields)
+        if not str(item.get("单位") or "").strip()
+    ]
+    unit_findings: list[Any] = []
+    if fields_without_unit_metadata:
+        unit_findings.append(
+            {
+                "missing_contract_column": "单位" if not has_unit_metadata_column else None,
+                "field_count": len(fields_without_unit_metadata),
+                "field_ids": fields_without_unit_metadata,
+                "required_resolution": "为每个字段显式记录单位代码或不适用",
+            }
+        )
+    checks = [
+        _machine_check(
+            "FIELD-ID-UNIQUE",
+            "字段编号必须非空且唯一",
+            [
+                *[f"row-{index + 1}" for index, value in enumerate(field_ids) if not value],
+                *_duplicates(field_ids),
+            ],
+        ),
+        _machine_check(
+            "FIELD-ENTITY-NAME-UNIQUE",
+            "实体与字段名组合必须唯一",
+            _duplicates(field_keys),
+        ),
+        _machine_check(
+            "FIELD-METADATA-COMPLETE",
+            "字段必须给出代码、实体、名称、类型、空值和来源规则",
+            metadata_gaps,
+        ),
+        _machine_check(
+            "FIELD-NULLABILITY-VALID",
+            "必填值必须明确为是、否或条件必填",
+            invalid_required_values,
+        ),
+        _machine_check(
+            "FIELD-UNIT-METADATA-PRESENT",
+            "字段合同必须显式记录单位代码或不适用",
+            unit_findings,
+        ),
+    ]
+    return _machine_evidence(
+        acceptance_id="D0-AC-002",
+        required_reviewer_roles=["数据负责人", "数据质量负责人"],
+        source_binding=source_binding,
+        checks=checks,
+        inventory={
+            "field_count": len(fields),
+            "entity_count": len(
+                {str(item.get("实体") or "").strip() for item in fields if item.get("实体")}
+            ),
+            "required_value_counts": dict(
+                sorted(Counter(str(item.get("必填") or "").strip() for item in fields).items())
+            ),
+            "unit_metadata_column_present": has_unit_metadata_column,
+            "fields_with_explicit_unit_or_not_applicable": (
+                len(fields) - len(fields_without_unit_metadata)
+            ),
+        },
+        human_review_scope=[
+            "确认字段代码、实体字段名、类型、空值和来源规则",
+            "补充单位代码或明确不适用，禁止仅从备注或展示文案推断单位",
+            "确认条件必填规则可由后续质量校验实现",
+        ],
+    )
+
+
+def build_enum_migration_evidence(
+    contracts: dict[str, Any],
+    *,
+    source_binding: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    enums = contracts["enums"]
+    migrations = contracts["identifier_migrations"]
+    enum_ids = [str(item.get("枚举编号") or "").strip() for item in enums]
+    enum_keys = [
+        f"{str(item.get('对象.字段') or '').strip()}::{str(item.get('代码值') or '').strip()}"
+        for item in enums
+    ]
+    enum_required = ("枚举编号", "对象.字段", "代码值", "中文名称", "可转向", "进入条件")
+    enum_metadata_gaps = [
+        {
+            "enum_id": str(item.get("枚举编号") or f"row-{index + 1}"),
+            "missing": [key for key in enum_required if not str(item.get(key) or "").strip()],
+        }
+        for index, item in enumerate(enums)
+        if any(not str(item.get(key) or "").strip() for key in enum_required)
+    ]
+    migration_required = (
+        "历史编号",
+        "现行规范编号",
+        "冲突类型",
+        "处理规则",
+        "状态",
+    )
+    migration_gaps = [
+        {
+            "historical_id": str(item.get("历史编号") or f"row-{index + 1}"),
+            "missing": [key for key in migration_required if not str(item.get(key) or "").strip()],
+        }
+        for index, item in enumerate(migrations)
+        if any(not str(item.get(key) or "").strip() for key in migration_required)
+    ]
+    historical_ids = [str(item.get("历史编号") or "").strip() for item in migrations]
+    checks = [
+        _machine_check(
+            "ENUM-ID-UNIQUE",
+            "枚举编号必须非空且唯一",
+            [
+                *[f"row-{index + 1}" for index, value in enumerate(enum_ids) if not value],
+                *_duplicates(enum_ids),
+            ],
+        ),
+        _machine_check(
+            "ENUM-GROUP-CODE-UNIQUE",
+            "同一对象字段内代码必须互斥且唯一",
+            _duplicates(enum_keys),
+        ),
+        _machine_check(
+            "ENUM-METADATA-COMPLETE",
+            "枚举必须给出中文、代码、转向和进入条件",
+            enum_metadata_gaps,
+        ),
+        _machine_check(
+            "MIGRATION-HISTORICAL-ID-UNIQUE",
+            "历史编号必须非空且唯一",
+            [
+                *[f"row-{index + 1}" for index, value in enumerate(historical_ids) if not value],
+                *_duplicates(historical_ids),
+            ],
+        ),
+        _machine_check(
+            "MIGRATION-METADATA-COMPLETE",
+            "迁移记录必须给出现行编号、冲突类型、处理规则和状态",
+            migration_gaps,
+        ),
+    ]
+    group_counts = Counter(str(item.get("对象.字段") or "").strip() for item in enums)
+    return _machine_evidence(
+        acceptance_id="D0-AC-003",
+        required_reviewer_roles=["产品负责人", "数据负责人"],
+        source_binding=source_binding,
+        checks=checks,
+        inventory={
+            "enum_count": len(enums),
+            "enum_group_count": len(group_counts),
+            "enum_group_counts": dict(sorted(group_counts.items())),
+            "migration_count": len(migrations),
+            "migration_status_counts": dict(
+                sorted(Counter(str(item.get("状态") or "").strip() for item in migrations).items())
+            ),
+        },
+        human_review_scope=[
+            "确认中文名称、代码和业务含义一致",
+            "确认可转向表达式中的业务宏、重开事件和终态语义",
+            "确认13条历史编号、实体和枚举迁移规则没有语义冲突",
+        ],
+    )
+
+
+def _candidate_json_bytes(payload: dict[str, Any]) -> bytes:
+    return (json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode()
+
+
+def build_machine_evidence_review_queue(
+    evidence_payloads: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    evidence_ids = {
+        "core_entity_evidence.json": "EVD-D0-AC-001-MACHINE-BASELINE",
+        "core_field_evidence.json": "EVD-D0-AC-002-MACHINE-BASELINE",
+        "enum_migration_evidence.json": "EVD-D0-AC-003-MACHINE-BASELINE",
+    }
+    items: list[dict[str, Any]] = []
+    for filename, evidence_id in evidence_ids.items():
+        payload = evidence_payloads[filename]
+        path = f"data/d0/candidates/{filename}"
+        candidate_sha256 = hashlib.sha256(_candidate_json_bytes(payload)).hexdigest()
+        items.append(
+            {
+                "evidence_id": evidence_id,
+                "acceptance_id": payload["acceptance_id"],
+                "candidate_path": path,
+                "candidate_sha256": candidate_sha256,
+                "machine_status": payload["machine_status"],
+                "human_status": "pending",
+                "required_reviewer_roles": payload["required_reviewer_roles"],
+                "approval_blocked_when_machine_status_not_pass": True,
+                "manifest_entry_template": {
+                    "evidence_id": evidence_id,
+                    "acceptance_id": payload["acceptance_id"],
+                    "path": path,
+                    "sha256": candidate_sha256,
+                    "recorded_by": "navigator-data prepare-d0",
+                    "recorded_at": None,
+                    "reviewer": None,
+                    "status": "待复核",
+                },
+            }
+        )
+    return {
+        "schema_version": 1,
+        "stage": "D0",
+        "candidate_only": True,
+        "warning": "不得把本队列或待复核模板直接登记为已批准证据",
+        "instructions": [
+            "先解决machine_status为fail的合同缺口并重新生成候选",
+            "由指定角色检查候选文件及其SHA-256",
+            "只有实名批准后才可把模板补全并登记到data/d0/evidence/manifest.json",
+            "批准证据仍须在D0正式评审副本中由同一实名复核人引用",
+        ],
+        "items": items,
+    }
 
 
 def load_research_captures(paths: RepositoryPaths) -> list[dict[str, Any]]:
@@ -434,45 +837,15 @@ def build_acceptance_assessment(
     *,
     template_trial: dict[str, Any] | None = None,
     gold_gap_report: dict[str, Any] | None = None,
+    core_entity_evidence: dict[str, Any] | None = None,
+    core_field_evidence: dict[str, Any] | None = None,
+    enum_migration_evidence: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     trial = template_trial or build_template_trial(contracts)
     gold = gold_gap_report or build_gold_standard_gap_report(contracts)
-
-    relation_required = (
-        "关系编号",
-        "父实体",
-        "子实体",
-        "基数",
-        "外键/唯一键",
-        "权威记录",
-        "关键约束",
-    )
-    relation_gaps = [
-        str(item.get("关系编号", ""))
-        for item in contracts["entities"]
-        if any(not str(item.get(field, "")).strip() for field in relation_required)
-    ]
-
-    field_required = (
-        "字段编号",
-        "实体",
-        "字段名",
-        "类型",
-        "必填",
-        "敏感级别",
-        "来源要求",
-        "更新规则",
-    )
-    field_gaps = [
-        str(item.get("字段编号", ""))
-        for item in contracts["fields"]
-        if any(not str(item.get(field, "")).strip() for field in field_required)
-    ]
-    field_keys = [f"{item.get('实体')}.{item.get('字段名')}" for item in contracts["fields"]]
-    duplicate_field_keys = sorted(key for key in set(field_keys) if field_keys.count(key) > 1)
-
-    enum_keys = [f"{item.get('对象.字段')}::{item.get('代码值')}" for item in contracts["enums"]]
-    duplicate_enum_keys = sorted(key for key in set(enum_keys) if enum_keys.count(key) > 1)
+    entity_evidence = core_entity_evidence or build_core_entity_evidence(contracts)
+    field_evidence = core_field_evidence or build_core_field_evidence(contracts)
+    enum_evidence = enum_migration_evidence or build_enum_migration_evidence(contracts)
 
     unsigned_roles = [
         str(item.get("角色", ""))
@@ -488,24 +861,27 @@ def build_acceptance_assessment(
     assessments = [
         {
             "acceptance_id": "D0-AC-001",
-            "machine_status": "pass" if not relation_gaps else "fail",
+            "machine_status": entity_evidence["machine_status"],
             "human_status": "pending",
-            "findings": relation_gaps,
-            "summary": "25条核心关系的编号、主子实体、键、权威记录和关键约束机器检查",
+            "findings": entity_evidence["findings"],
+            "summary": "核心实体代码、主键覆盖、关系键、权威记录和约束机器检查",
+            "candidate_evidence": "core_entity_evidence.json",
         },
         {
             "acceptance_id": "D0-AC-002",
-            "machine_status": "pass" if not field_gaps and not duplicate_field_keys else "fail",
+            "machine_status": field_evidence["machine_status"],
             "human_status": "pending",
-            "findings": field_gaps + duplicate_field_keys,
-            "summary": "92个字段的唯一标识、类型、必填、敏感、来源和更新规则机器检查",
+            "findings": field_evidence["findings"],
+            "summary": "核心字段代码、类型、单位、空值和来源规则机器检查",
+            "candidate_evidence": "core_field_evidence.json",
         },
         {
             "acceptance_id": "D0-AC-003",
-            "machine_status": "pass" if not duplicate_enum_keys else "fail",
+            "machine_status": enum_evidence["machine_status"],
             "human_status": "pending",
-            "findings": duplicate_enum_keys,
-            "summary": "251条枚举的对象内代码唯一性机器检查；迁移语义仍需业务复核",
+            "findings": enum_evidence["findings"],
+            "summary": "状态枚举中文、代码互斥、转向元数据和迁移记录机器检查",
+            "candidate_evidence": "enum_migration_evidence.json",
         },
         {
             "acceptance_id": "D0-AC-004",
@@ -578,19 +954,52 @@ def candidate_payloads(paths: RepositoryPaths) -> dict[str, dict[str, Any]]:
         load_research_captures(paths),
         license_snapshots=load_license_snapshots(paths),
     )
-    return {
+    source_binding = {
+        "baseline_version": "V1.0-BASELINE",
+        "d0_workbook": {
+            "path": paths.d0_workbook.relative_to(paths.root).as_posix(),
+            "sha256": sha256_file(paths.d0_workbook),
+        },
+        "technical_workbook": {
+            "path": paths.technical_workbook.relative_to(paths.root).as_posix(),
+            "sha256": sha256_file(paths.technical_workbook),
+        },
+    }
+    core_evidence_payloads = {
+        "core_entity_evidence.json": build_core_entity_evidence(
+            contracts,
+            source_binding=source_binding,
+        ),
+        "core_field_evidence.json": build_core_field_evidence(
+            contracts,
+            source_binding=source_binding,
+        ),
+        "enum_migration_evidence.json": build_enum_migration_evidence(
+            contracts,
+            source_binding=source_binding,
+        ),
+    }
+    payloads = {
         "acceptance_assessment.json": build_acceptance_assessment(
             contracts,
             template_trial=template_trial,
             gold_gap_report=gold_gap,
+            core_entity_evidence=core_evidence_payloads["core_entity_evidence.json"],
+            core_field_evidence=core_evidence_payloads["core_field_evidence.json"],
+            enum_migration_evidence=core_evidence_payloads["enum_migration_evidence.json"],
         ),
         "conventions.json": build_conventions_candidate(),
+        **core_evidence_payloads,
+        "machine_evidence_review_queue.json": build_machine_evidence_review_queue(
+            core_evidence_payloads
+        ),
         "file_rules.json": build_file_rules_candidate(),
         "gold_standard_gap_report.json": gold_gap,
         "mapping_resolution_proposal.json": build_mapping_resolution_proposal(),
         "template_trial_report.json": template_trial,
         "terminology_review_queue.json": build_terminology_review_queue(contracts),
     }
+    return payloads
 
 
 def write_candidates(paths: RepositoryPaths) -> list[Path]:
@@ -598,9 +1007,6 @@ def write_candidates(paths: RepositoryPaths) -> list[Path]:
     written: list[Path] = []
     for filename, payload in candidate_payloads(paths).items():
         destination = paths.d0_candidates_dir / filename
-        destination.write_text(
-            json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
+        destination.write_bytes(_candidate_json_bytes(payload))
         written.append(destination)
     return written

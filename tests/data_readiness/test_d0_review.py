@@ -235,7 +235,7 @@ def test_review_template_covers_every_hard_gate_and_open_decision() -> None:
     ]
     assert all(item["hard_gate"] is True for item in packet["acceptance_items"])
     assert packet["baseline"]["sources"]["d0_workbook"]["sha256"]
-    assert len(packet["baseline"]["candidate_hashes"]) == 7
+    assert len(packet["baseline"]["candidate_hashes"]) == 11
 
 
 def test_unfilled_review_template_reports_all_pending_categories() -> None:
@@ -298,7 +298,7 @@ def test_review_validation_detects_tampered_immutable_inputs() -> None:
     packet["raw_sample_reviews"][0]["source_id"] = "SRC-TAMPERED"
     packet["artifact_reviews"][0]["required_roles"] = []
     packet["artifact_reviews"][0]["reviewer_signatures"] = []
-    packet["acceptance_items"][0]["machine_status"] = "fail"
+    packet["acceptance_items"][0]["machine_status"] = "pass"
 
     codes = {item.code for item in validate_review_packet(paths, packet)}
 

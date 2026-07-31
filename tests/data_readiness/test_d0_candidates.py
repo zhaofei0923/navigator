@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import hashlib
 import json
+from copy import deepcopy
 from dataclasses import replace
 from pathlib import Path
 
@@ -8,6 +10,9 @@ from navigator_data_readiness.baseline import extract_contracts
 from navigator_data_readiness.d0_candidates import (
     build_acceptance_assessment,
     build_conventions_candidate,
+    build_core_entity_evidence,
+    build_core_field_evidence,
+    build_enum_migration_evidence,
     build_gold_standard_gap_report,
     build_mapping_resolution_proposal,
     build_template_trial,
@@ -170,13 +175,73 @@ def test_acceptance_assessment_separates_machine_and_human_status() -> None:
     assessments = {item["acceptance_id"]: item for item in report["assessments"]}
 
     assert report["overall_status"] == "not_ready"
-    assert assessments["D0-AC-001"]["machine_status"] == "pass"
-    assert assessments["D0-AC-002"]["machine_status"] == "pass"
+    assert assessments["D0-AC-001"]["machine_status"] == "fail"
+    assert assessments["D0-AC-002"]["machine_status"] == "fail"
     assert assessments["D0-AC-003"]["machine_status"] == "pass"
     assert assessments["D0-AC-005"]["machine_status"] == "fail"
     assert assessments["D0-AC-006"]["machine_status"] == "incomplete"
     assert assessments["D0-AC-007"]["machine_status"] == "fail"
     assert all(item["human_status"] == "pending" for item in assessments.values())
+
+
+def test_core_entity_evidence_does_not_overstate_primary_key_coverage() -> None:
+    contracts = extract_contracts(discover_repository())
+
+    evidence = build_core_entity_evidence(contracts)
+    checks = {item["check_id"]: item for item in evidence["checks"]}
+
+    assert evidence["machine_status"] == "fail"
+    assert evidence["human_status"] == "pending"
+    assert evidence["inventory"]["relationship_count"] == 25
+    assert evidence["inventory"]["entity_code_count"] == 34
+    assert evidence["inventory"]["primary_key_entity_count"] == 5
+    assert checks["ENTITY-PRIMARY-KEY-COVERAGE"]["status"] == "fail"
+    assert "country" in checks["ENTITY-PRIMARY-KEY-COVERAGE"]["findings"]
+    assert checks["ENTITY-AUTHORITY-PRESENT"]["status"] == "pass"
+
+
+def test_core_field_evidence_requires_explicit_unit_or_not_applicable() -> None:
+    contracts = extract_contracts(discover_repository())
+
+    evidence = build_core_field_evidence(contracts)
+    checks = {item["check_id"]: item for item in evidence["checks"]}
+
+    assert evidence["machine_status"] == "fail"
+    assert evidence["inventory"]["field_count"] == 92
+    assert evidence["inventory"]["unit_metadata_column_present"] is False
+    assert evidence["inventory"]["fields_with_explicit_unit_or_not_applicable"] == 0
+    assert checks["FIELD-ID-UNIQUE"]["status"] == "pass"
+    assert checks["FIELD-METADATA-COMPLETE"]["status"] == "pass"
+    assert checks["FIELD-UNIT-METADATA-PRESENT"]["status"] == "fail"
+    assert checks["FIELD-UNIT-METADATA-PRESENT"]["findings"][0]["field_count"] == 92
+
+
+def test_core_field_evidence_rejects_partial_unit_metadata() -> None:
+    contracts = deepcopy(extract_contracts(discover_repository()))
+    contracts["fields"][0]["单位"] = "不适用"
+
+    evidence = build_core_field_evidence(contracts)
+    unit_check = next(
+        item for item in evidence["checks"] if item["check_id"] == "FIELD-UNIT-METADATA-PRESENT"
+    )
+
+    assert evidence["machine_status"] == "fail"
+    assert evidence["inventory"]["unit_metadata_column_present"] is True
+    assert evidence["inventory"]["fields_with_explicit_unit_or_not_applicable"] == 1
+    assert unit_check["findings"][0]["field_count"] == 91
+
+
+def test_enum_evidence_checks_structural_migration_contract_without_approving_semantics() -> None:
+    contracts = extract_contracts(discover_repository())
+
+    evidence = build_enum_migration_evidence(contracts)
+
+    assert evidence["machine_status"] == "pass"
+    assert evidence["human_status"] == "pending"
+    assert evidence["inventory"]["enum_count"] == 251
+    assert evidence["inventory"]["enum_group_count"] == 45
+    assert evidence["inventory"]["migration_count"] == 13
+    assert evidence["findings"] == []
 
 
 def test_mapping_resolution_only_auto_targets_exact_iso_field() -> None:
@@ -202,6 +267,18 @@ def test_write_candidates_exports_review_package(tmp_path: Path) -> None:
         (paths.d0_candidates_dir / "acceptance_assessment.json").read_text(encoding="utf-8")
     )
 
-    assert len(written) == 7
+    queue = json.loads(
+        (paths.d0_candidates_dir / "machine_evidence_review_queue.json").read_text(encoding="utf-8")
+    )
+
+    assert len(written) == 11
     assert assessment["automated_assessment_only"] is True
+    assert len(queue["items"]) == 3
+    assert {item["machine_status"] for item in queue["items"]} == {"fail", "pass"}
+    for item in queue["items"]:
+        candidate = paths.d0_candidates_dir / Path(item["candidate_path"]).name
+        assert candidate.is_file()
+        assert hashlib.sha256(candidate.read_bytes()).hexdigest() == item["candidate_sha256"]
+        assert item["human_status"] == "pending"
+        assert item["manifest_entry_template"]["status"] == "待复核"
     assert all(path.is_file() for path in written)

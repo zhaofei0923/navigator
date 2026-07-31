@@ -4,7 +4,7 @@
       "acceptance_id": "D0-AC-001",
       "comments": null,
       "hard_gate": true,
-      "machine_status": "pass",
+      "machine_status": "fail",
       "required_roles": [
         "数据负责人",
         "后端/数据架构负责人"
@@ -30,7 +30,7 @@
       "acceptance_id": "D0-AC-002",
       "comments": null,
       "hard_gate": true,
-      "machine_status": "pass",
+      "machine_status": "fail",
       "required_roles": [
         "数据负责人",
         "数据质量负责人"
@@ -337,10 +337,14 @@
   ],
   "baseline": {
     "candidate_hashes": {
-      "acceptance_assessment.json": "007b41bc3b7312d1753d2fab280a499681867b5964542a20c808da24a3c3cf47",
+      "acceptance_assessment.json": "14b88413ab73834b70fd02451fcef8a7213d52011251a721f8a83a30383d570b",
       "conventions.json": "1cf742b3bdc0b47e1648b9dab84ababf912a601fc3485b6c73af61eb32a5ca32",
+      "core_entity_evidence.json": "9ff89d13dd829d1d7022d777eba2630c9257165a28d386be94054750f6cc162b",
+      "core_field_evidence.json": "77e5b77c6fa5f5e2ae62e4b726b529b87debf91526fff81fcdc618197f5d5d79",
+      "enum_migration_evidence.json": "124bef79891f4d1d18037ae0f4463190a65b4e782f41faa62a346974691fd0d0",
       "file_rules.json": "ec3849833020b0df72624b26ae805cbc62cd06f3923fdd51e8bb6157a5f152f1",
       "gold_standard_gap_report.json": "157efeb7157d594fb01aa44f1d927545b09ce2c78c7771f0161fb958554bb2c8",
+      "machine_evidence_review_queue.json": "cd7a504d79cef7589ffe97574b0d83d73c86921bec19fc94414a73f55713cfc7",
       "mapping_resolution_proposal.json": "a9ba9fb665b7602da3c95c32a371c05196b3b8b540bf416cbb7faa5661c0f0f4",
       "template_trial_report.json": "eddfcc94a73df607c16d9c1456b86be7d3f4bec0bbd54228033e21c6af884583",
       "terminology_review_queue.json": "e8057c35b44bdd3d8c6fdcc0cc844d34e1ba9fceaab8ecd5223742da1a65b3d2"
