@@ -69,6 +69,7 @@ FINAL_MAPPING_DECISIONS = {
 FINAL_REVIEW_STATES = {"approved", "rejected"}
 FINAL_LICENSE_DECISIONS = {"approved", "limited", "rejected"}
 FINAL_PROFESSIONAL_REVIEW_STATES = {"approved", "rejected"}
+ADVISORY_ONLY_CANDIDATES = {"core_contract_recommendations.json"}
 
 
 def _payload_sha256(payload: Any) -> str:
@@ -115,7 +116,9 @@ def build_review_packet(paths: RepositoryPaths) -> dict[str, Any]:
                 },
             },
             "candidate_hashes": {
-                name: _payload_sha256(payload) for name, payload in sorted(candidates.items())
+                name: _payload_sha256(payload)
+                for name, payload in sorted(candidates.items())
+                if name not in ADVISORY_ONLY_CANDIDATES
             },
         },
         "role_assignments": [

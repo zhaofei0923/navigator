@@ -1,0 +1,2185 @@
+{
+  "advisory_only": true,
+  "entity_primary_key_recommendations": [
+    {
+      "confidence": "medium",
+      "current_field_ids": [
+        "DATA-COUNTRY-001",
+        "DATA-COUNTRY-002",
+        "DATA-COUNTRY-003",
+        "DATA-COUNTRY-004",
+        "DATA-COUNTRY-005",
+        "DATA-COUNTRY-006",
+        "DATA-COUNTRY-007",
+        "DATA-D4-001"
+      ],
+      "entity_code": "country",
+      "human_decision_required": true,
+      "natural_key_candidates_requiring_review": [
+        {
+          "current_index_contract": "唯一",
+          "field_id": "DATA-COUNTRY-001",
+          "field_name": "iso_code"
+        }
+      ],
+      "rationale": "统一的不可变UUID代理主键可避免把可变业务代码、复合字段或展示属性升级为实体身份；领域负责人仍须确认自然键和唯一约束。",
+      "recommended_action": "add_primary_key_field",
+      "recommended_field_contract": {
+        "中文名称": "country主键ID",
+        "单位": "不适用",
+        "唯一/索引": "主键",
+        "备注": "AC-001机器建议；仅在正式基线变更评审批准后采用",
+        "字段名": "id",
+        "字段编号": "DATA-D0-PK-001",
+        "实体": "country",
+        "必填": "是",
+        "敏感级别": "内部",
+        "更新规则": "创建时生成，之后不变",
+        "来源要求": "系统生成",
+        "示例": "uuid",
+        "类型": "uuid"
+      }
+    },
+    {
+      "confidence": "medium",
+      "current_field_ids": [],
+      "entity_code": "country_metric_value",
+      "human_decision_required": true,
+      "natural_key_candidates_requiring_review": [],
+      "rationale": "统一的不可变UUID代理主键可避免把可变业务代码、复合字段或展示属性升级为实体身份；领域负责人仍须确认自然键和唯一约束。",
+      "recommended_action": "add_primary_key_field",
+      "recommended_field_contract": {
+        "中文名称": "country_metric_value主键ID",
+        "单位": "不适用",
+        "唯一/索引": "主键",
+        "备注": "AC-001机器建议；仅在正式基线变更评审批准后采用",
+        "字段名": "id",
+        "字段编号": "DATA-D0-PK-002",
+        "实体": "country_metric_value",
+        "必填": "是",
+        "敏感级别": "内部",
+        "更新规则": "创建时生成，之后不变",
+        "来源要求": "系统生成",
+        "示例": "uuid",
+        "类型": "uuid"
+      }
+    },
+    {
+      "confidence": "medium",
+      "current_field_ids": [],
+      "entity_code": "enterprise_member",
+      "human_decision_required": true,
+      "natural_key_candidates_requiring_review": [],
+      "rationale": "统一的不可变UUID代理主键可避免把可变业务代码、复合字段或展示属性升级为实体身份；领域负责人仍须确认自然键和唯一约束。",
+      "recommended_action": "add_primary_key_field",
+      "recommended_field_contract": {
+        "中文名称": "enterprise_member主键ID",
+        "单位": "不适用",
+        "唯一/索引": "主键",
+        "备注": "AC-001机器建议；仅在正式基线变更评审批准后采用",
+        "字段名": "id",
+        "字段编号": "DATA-D0-PK-003",
+        "实体": "enterprise_member",
+        "必填": "是",
+        "敏感级别": "内部",
+        "更新规则": "创建时生成，之后不变",
+        "来源要求": "系统生成",
+        "示例": "uuid",
+        "类型": "uuid"
+      }
+    },
+    {
+      "confidence": "medium",
+      "current_field_ids": [
+        "DATA-PROFILE-001",
+        "DATA-PROFILE-002",
+        "DATA-PROFILE-003"
+      ],
+      "entity_code": "enterprise_profile_version",
+      "human_decision_required": true,
+      "natural_key_candidates_requiring_review": [],
+      "rationale": "统一的不可变UUID代理主键可避免把可变业务代码、复合字段或展示属性升级为实体身份；领域负责人仍须确认自然键和唯一约束。",
+      "recommended_action": "add_primary_key_field",
+      "recommended_field_contract": {
+        "中文名称": "enterprise_profile_version主键ID",
+        "单位": "不适用",
+        "唯一/索引": "主键",
+        "备注": "AC-001机器建议；仅在正式基线变更评审批准后采用",
+        "字段名": "id",
+        "字段编号": "DATA-D0-PK-004",
+        "实体": "enterprise_profile_version",
+        "必填": "是",
+        "敏感级别": "内部",
+        "更新规则": "创建时生成，之后不变",
+        "来源要求": "系统生成",
+        "示例": "uuid",
+        "类型": "uuid"
+      }
+    },
+    {
+      "confidence": "medium",
+      "current_field_ids": [
+        "DATA-D4-014",
+        "DATA-D4-015"
+      ],
+      "entity_code": "field_provenance",
+      "human_decision_required": true,
+      "natural_key_candidates_requiring_review": [],
+      "rationale": "统一的不可变UUID代理主键可避免把可变业务代码、复合字段或展示属性升级为实体身份；领域负责人仍须确认自然键和唯一约束。",
+      "recommended_action": "add_primary_key_field",
+      "recommended_field_contract": {
+        "中文名称": "field_provenance主键ID",
+        "单位": "不适用",
+        "唯一/索引": "主键",
+        "备注": "AC-001机器建议；仅在正式基线变更评审批准后采用",
+        "字段名": "id",
+        "字段编号": "DATA-D0-PK-005",
+        "实体": "field_provenance",
+        "必填": "是",
+        "敏感级别": "内部",
+        "更新规则": "创建时生成，之后不变",
+        "来源要求": "系统生成",
+        "示例": "uuid",
+        "类型": "uuid"
+      }
+    },
+    {
+      "confidence": "medium",
+      "current_field_ids": [],
+      "entity_code": "legal_entity",
+      "human_decision_required": true,
+      "natural_key_candidates_requiring_review": [],
+      "rationale": "统一的不可变UUID代理主键可避免把可变业务代码、复合字段或展示属性升级为实体身份；领域负责人仍须确认自然键和唯一约束。",
+      "recommended_action": "add_primary_key_field",
+      "recommended_field_contract": {
+        "中文名称": "legal_entity主键ID",
+        "单位": "不适用",
+        "唯一/索引": "主键",
+        "备注": "AC-001机器建议；仅在正式基线变更评审批准后采用",
+        "字段名": "id",
+        "字段编号": "DATA-D0-PK-006",
+        "实体": "legal_entity",
+        "必填": "是",
+        "敏感级别": "内部",
+        "更新规则": "创建时生成，之后不变",
+        "来源要求": "系统生成",
+        "示例": "uuid",
+        "类型": "uuid"
+      }
+    },
+    {
+      "confidence": "medium",
+      "current_field_ids": [],
+      "entity_code": "metric_definition",
+      "human_decision_required": true,
+      "natural_key_candidates_requiring_review": [],
+      "rationale": "统一的不可变UUID代理主键可避免把可变业务代码、复合字段或展示属性升级为实体身份；领域负责人仍须确认自然键和唯一约束。",
+      "recommended_action": "add_primary_key_field",
+      "recommended_field_contract": {
+        "中文名称": "metric_definition主键ID",
+        "单位": "不适用",
+        "唯一/索引": "主键",
+        "备注": "AC-001机器建议；仅在正式基线变更评审批准后采用",
+        "字段名": "id",
+        "字段编号": "DATA-D0-PK-007",
+        "实体": "metric_definition",
+        "必填": "是",
+        "敏感级别": "内部",
+        "更新规则": "创建时生成，之后不变",
+        "来源要求": "系统生成",
+        "示例": "uuid",
+        "类型": "uuid"
+      }
+    },
+    {
+      "confidence": "medium",
+      "current_field_ids": [
+        "DATA-PARTNER-001",
+        "DATA-PARTNER-002"
+      ],
+      "entity_code": "partner",
+      "human_decision_required": true,
+      "natural_key_candidates_requiring_review": [],
+      "rationale": "统一的不可变UUID代理主键可避免把可变业务代码、复合字段或展示属性升级为实体身份；领域负责人仍须确认自然键和唯一约束。",
+      "recommended_action": "add_primary_key_field",
+      "recommended_field_contract": {
+        "中文名称": "partner主键ID",
+        "单位": "不适用",
+        "唯一/索引": "主键",
+        "备注": "AC-001机器建议；仅在正式基线变更评审批准后采用",
+        "字段名": "id",
+        "字段编号": "DATA-D0-PK-008",
+        "实体": "partner",
+        "必填": "是",
+        "敏感级别": "内部",
+        "更新规则": "创建时生成，之后不变",
+        "来源要求": "系统生成",
+        "示例": "uuid",
+        "类型": "uuid"
+      }
+    },
+    {
+      "confidence": "medium",
+      "current_field_ids": [
+        "DATA-PARTNER-003"
+      ],
+      "entity_code": "partner_recommendation",
+      "human_decision_required": true,
+      "natural_key_candidates_requiring_review": [],
+      "rationale": "统一的不可变UUID代理主键可避免把可变业务代码、复合字段或展示属性升级为实体身份；领域负责人仍须确认自然键和唯一约束。",
+      "recommended_action": "add_primary_key_field",
+      "recommended_field_contract": {
+        "中文名称": "partner_recommendation主键ID",
+        "单位": "不适用",
+        "唯一/索引": "主键",
+        "备注": "AC-001机器建议；仅在正式基线变更评审批准后采用",
+        "字段名": "id",
+        "字段编号": "DATA-D0-PK-009",
+        "实体": "partner_recommendation",
+        "必填": "是",
+        "敏感级别": "内部",
+        "更新规则": "创建时生成，之后不变",
+        "来源要求": "系统生成",
+        "示例": "uuid",
+        "类型": "uuid"
+      }
+    },
+    {
+      "confidence": "medium",
+      "current_field_ids": [
+        "DATA-POLICY-001",
+        "DATA-POLICY-002",
+        "DATA-POLICY-003"
+      ],
+      "entity_code": "policy",
+      "human_decision_required": true,
+      "natural_key_candidates_requiring_review": [],
+      "rationale": "统一的不可变UUID代理主键可避免把可变业务代码、复合字段或展示属性升级为实体身份；领域负责人仍须确认自然键和唯一约束。",
+      "recommended_action": "add_primary_key_field",
+      "recommended_field_contract": {
+        "中文名称": "policy主键ID",
+        "单位": "不适用",
+        "唯一/索引": "主键",
+        "备注": "AC-001机器建议；仅在正式基线变更评审批准后采用",
+        "字段名": "id",
+        "字段编号": "DATA-D0-PK-010",
+        "实体": "policy",
+        "必填": "是",
+        "敏感级别": "内部",
+        "更新规则": "创建时生成，之后不变",
+        "来源要求": "系统生成",
+        "示例": "uuid",
+        "类型": "uuid"
+      }
+    },
+    {
+      "confidence": "medium",
+      "current_field_ids": [],
+      "entity_code": "policy_version",
+      "human_decision_required": true,
+      "natural_key_candidates_requiring_review": [],
+      "rationale": "统一的不可变UUID代理主键可避免把可变业务代码、复合字段或展示属性升级为实体身份；领域负责人仍须确认自然键和唯一约束。",
+      "recommended_action": "add_primary_key_field",
+      "recommended_field_contract": {
+        "中文名称": "policy_version主键ID",
+        "单位": "不适用",
+        "唯一/索引": "主键",
+        "备注": "AC-001机器建议；仅在正式基线变更评审批准后采用",
+        "字段名": "id",
+        "字段编号": "DATA-D0-PK-011",
+        "实体": "policy_version",
+        "必填": "是",
+        "敏感级别": "内部",
+        "更新规则": "创建时生成，之后不变",
+        "来源要求": "系统生成",
+        "示例": "uuid",
+        "类型": "uuid"
+      }
+    },
+    {
+      "confidence": "medium",
+      "current_field_ids": [
+        "DATA-PROJECT-001",
+        "DATA-PROJECT-002",
+        "DATA-PROJECT-003",
+        "DATA-PROJECT-004",
+        "DATA-PROJECT-005",
+        "DATA-PROJECT-006",
+        "DATA-PROJECT-007"
+      ],
+      "entity_code": "project",
+      "human_decision_required": true,
+      "natural_key_candidates_requiring_review": [],
+      "rationale": "统一的不可变UUID代理主键可避免把可变业务代码、复合字段或展示属性升级为实体身份；领域负责人仍须确认自然键和唯一约束。",
+      "recommended_action": "add_primary_key_field",
+      "recommended_field_contract": {
+        "中文名称": "project主键ID",
+        "单位": "不适用",
+        "唯一/索引": "主键",
+        "备注": "AC-001机器建议；仅在正式基线变更评审批准后采用",
+        "字段名": "id",
+        "字段编号": "DATA-D0-PK-012",
+        "实体": "project",
+        "必填": "是",
+        "敏感级别": "内部",
+        "更新规则": "创建时生成，之后不变",
+        "来源要求": "系统生成",
+        "示例": "uuid",
+        "类型": "uuid"
+      }
+    },
+    {
+      "confidence": "medium",
+      "current_field_ids": [
+        "DATA-D4-016",
+        "DATA-D4-017",
+        "DATA-D4-018"
+      ],
+      "entity_code": "project_opportunity_assessment",
+      "human_decision_required": true,
+      "natural_key_candidates_requiring_review": [
+        {
+          "current_index_contract": "联合唯一/外键",
+          "field_id": "DATA-D4-018",
+          "field_name": "rule_version/scoring_result_id"
+        }
+      ],
+      "rationale": "统一的不可变UUID代理主键可避免把可变业务代码、复合字段或展示属性升级为实体身份；领域负责人仍须确认自然键和唯一约束。",
+      "recommended_action": "add_primary_key_field",
+      "recommended_field_contract": {
+        "中文名称": "project_opportunity_assessment主键ID",
+        "单位": "不适用",
+        "唯一/索引": "主键",
+        "备注": "AC-001机器建议；仅在正式基线变更评审批准后采用",
+        "字段名": "id",
+        "字段编号": "DATA-D0-PK-013",
+        "实体": "project_opportunity_assessment",
+        "必填": "是",
+        "敏感级别": "内部",
+        "更新规则": "创建时生成，之后不变",
+        "来源要求": "系统生成",
+        "示例": "uuid",
+        "类型": "uuid"
+      }
+    },
+    {
+      "confidence": "medium",
+      "current_field_ids": [],
+      "entity_code": "project_version",
+      "human_decision_required": true,
+      "natural_key_candidates_requiring_review": [],
+      "rationale": "统一的不可变UUID代理主键可避免把可变业务代码、复合字段或展示属性升级为实体身份；领域负责人仍须确认自然键和唯一约束。",
+      "recommended_action": "add_primary_key_field",
+      "recommended_field_contract": {
+        "中文名称": "project_version主键ID",
+        "单位": "不适用",
+        "唯一/索引": "主键",
+        "备注": "AC-001机器建议；仅在正式基线变更评审批准后采用",
+        "字段名": "id",
+        "字段编号": "DATA-D0-PK-014",
+        "实体": "project_version",
+        "必填": "是",
+        "敏感级别": "内部",
+        "更新规则": "创建时生成，之后不变",
+        "来源要求": "系统生成",
+        "示例": "uuid",
+        "类型": "uuid"
+      }
+    },
+    {
+      "confidence": "medium",
+      "current_field_ids": [
+        "DATA-D4-028",
+        "DATA-D4-029"
+      ],
+      "entity_code": "quality_issue",
+      "human_decision_required": true,
+      "natural_key_candidates_requiring_review": [],
+      "rationale": "统一的不可变UUID代理主键可避免把可变业务代码、复合字段或展示属性升级为实体身份；领域负责人仍须确认自然键和唯一约束。",
+      "recommended_action": "add_primary_key_field",
+      "recommended_field_contract": {
+        "中文名称": "quality_issue主键ID",
+        "单位": "不适用",
+        "唯一/索引": "主键",
+        "备注": "AC-001机器建议；仅在正式基线变更评审批准后采用",
+        "字段名": "id",
+        "字段编号": "DATA-D0-PK-015",
+        "实体": "quality_issue",
+        "必填": "是",
+        "敏感级别": "内部",
+        "更新规则": "创建时生成，之后不变",
+        "来源要求": "系统生成",
+        "示例": "uuid",
+        "类型": "uuid"
+      }
+    },
+    {
+      "confidence": "medium",
+      "current_field_ids": [
+        "DATA-D4-013"
+      ],
+      "entity_code": "raw_record",
+      "human_decision_required": true,
+      "natural_key_candidates_requiring_review": [],
+      "rationale": "统一的不可变UUID代理主键可避免把可变业务代码、复合字段或展示属性升级为实体身份；领域负责人仍须确认自然键和唯一约束。",
+      "recommended_action": "add_primary_key_field",
+      "recommended_field_contract": {
+        "中文名称": "raw_record主键ID",
+        "单位": "不适用",
+        "唯一/索引": "主键",
+        "备注": "AC-001机器建议；仅在正式基线变更评审批准后采用",
+        "字段名": "id",
+        "字段编号": "DATA-D0-PK-016",
+        "实体": "raw_record",
+        "必填": "是",
+        "敏感级别": "内部",
+        "更新规则": "创建时生成，之后不变",
+        "来源要求": "系统生成",
+        "示例": "uuid",
+        "类型": "uuid"
+      }
+    },
+    {
+      "confidence": "medium",
+      "current_field_ids": [],
+      "entity_code": "region",
+      "human_decision_required": true,
+      "natural_key_candidates_requiring_review": [],
+      "rationale": "统一的不可变UUID代理主键可避免把可变业务代码、复合字段或展示属性升级为实体身份；领域负责人仍须确认自然键和唯一约束。",
+      "recommended_action": "add_primary_key_field",
+      "recommended_field_contract": {
+        "中文名称": "region主键ID",
+        "单位": "不适用",
+        "唯一/索引": "主键",
+        "备注": "AC-001机器建议；仅在正式基线变更评审批准后采用",
+        "字段名": "id",
+        "字段编号": "DATA-D0-PK-017",
+        "实体": "region",
+        "必填": "是",
+        "敏感级别": "内部",
+        "更新规则": "创建时生成，之后不变",
+        "来源要求": "系统生成",
+        "示例": "uuid",
+        "类型": "uuid"
+      }
+    },
+    {
+      "confidence": "medium",
+      "current_field_ids": [
+        "DATA-REPORT-002",
+        "DATA-REPORT-003"
+      ],
+      "entity_code": "report",
+      "human_decision_required": true,
+      "natural_key_candidates_requiring_review": [],
+      "rationale": "统一的不可变UUID代理主键可避免把可变业务代码、复合字段或展示属性升级为实体身份；领域负责人仍须确认自然键和唯一约束。",
+      "recommended_action": "add_primary_key_field",
+      "recommended_field_contract": {
+        "中文名称": "report主键ID",
+        "单位": "不适用",
+        "唯一/索引": "主键",
+        "备注": "AC-001机器建议；仅在正式基线变更评审批准后采用",
+        "字段名": "id",
+        "字段编号": "DATA-D0-PK-018",
+        "实体": "report",
+        "必填": "是",
+        "敏感级别": "内部",
+        "更新规则": "创建时生成，之后不变",
+        "来源要求": "系统生成",
+        "示例": "uuid",
+        "类型": "uuid"
+      }
+    },
+    {
+      "confidence": "medium",
+      "current_field_ids": [],
+      "entity_code": "retrieval_run",
+      "human_decision_required": true,
+      "natural_key_candidates_requiring_review": [],
+      "rationale": "统一的不可变UUID代理主键可避免把可变业务代码、复合字段或展示属性升级为实体身份；领域负责人仍须确认自然键和唯一约束。",
+      "recommended_action": "add_primary_key_field",
+      "recommended_field_contract": {
+        "中文名称": "retrieval_run主键ID",
+        "单位": "不适用",
+        "唯一/索引": "主键",
+        "备注": "AC-001机器建议；仅在正式基线变更评审批准后采用",
+        "字段名": "id",
+        "字段编号": "DATA-D0-PK-019",
+        "实体": "retrieval_run",
+        "必填": "是",
+        "敏感级别": "内部",
+        "更新规则": "创建时生成，之后不变",
+        "来源要求": "系统生成",
+        "示例": "uuid",
+        "类型": "uuid"
+      }
+    },
+    {
+      "confidence": "medium",
+      "current_field_ids": [
+        "DATA-REVIEW-001"
+      ],
+      "entity_code": "review_task",
+      "human_decision_required": true,
+      "natural_key_candidates_requiring_review": [],
+      "rationale": "统一的不可变UUID代理主键可避免把可变业务代码、复合字段或展示属性升级为实体身份；领域负责人仍须确认自然键和唯一约束。",
+      "recommended_action": "add_primary_key_field",
+      "recommended_field_contract": {
+        "中文名称": "review_task主键ID",
+        "单位": "不适用",
+        "唯一/索引": "主键",
+        "备注": "AC-001机器建议；仅在正式基线变更评审批准后采用",
+        "字段名": "id",
+        "字段编号": "DATA-D0-PK-020",
+        "实体": "review_task",
+        "必填": "是",
+        "敏感级别": "内部",
+        "更新规则": "创建时生成，之后不变",
+        "来源要求": "系统生成",
+        "示例": "uuid",
+        "类型": "uuid"
+      }
+    },
+    {
+      "confidence": "medium",
+      "current_field_ids": [
+        "DATA-RISK-001",
+        "DATA-RISK-002",
+        "DATA-RISK-003"
+      ],
+      "entity_code": "risk",
+      "human_decision_required": true,
+      "natural_key_candidates_requiring_review": [],
+      "rationale": "统一的不可变UUID代理主键可避免把可变业务代码、复合字段或展示属性升级为实体身份；领域负责人仍须确认自然键和唯一约束。",
+      "recommended_action": "add_primary_key_field",
+      "recommended_field_contract": {
+        "中文名称": "risk主键ID",
+        "单位": "不适用",
+        "唯一/索引": "主键",
+        "备注": "AC-001机器建议；仅在正式基线变更评审批准后采用",
+        "字段名": "id",
+        "字段编号": "DATA-D0-PK-021",
+        "实体": "risk",
+        "必填": "是",
+        "敏感级别": "内部",
+        "更新规则": "创建时生成，之后不变",
+        "来源要求": "系统生成",
+        "示例": "uuid",
+        "类型": "uuid"
+      }
+    },
+    {
+      "confidence": "medium",
+      "current_field_ids": [],
+      "entity_code": "risk_assessment",
+      "human_decision_required": true,
+      "natural_key_candidates_requiring_review": [],
+      "rationale": "统一的不可变UUID代理主键可避免把可变业务代码、复合字段或展示属性升级为实体身份；领域负责人仍须确认自然键和唯一约束。",
+      "recommended_action": "add_primary_key_field",
+      "recommended_field_contract": {
+        "中文名称": "risk_assessment主键ID",
+        "单位": "不适用",
+        "唯一/索引": "主键",
+        "备注": "AC-001机器建议；仅在正式基线变更评审批准后采用",
+        "字段名": "id",
+        "字段编号": "DATA-D0-PK-022",
+        "实体": "risk_assessment",
+        "必填": "是",
+        "敏感级别": "内部",
+        "更新规则": "创建时生成，之后不变",
+        "来源要求": "系统生成",
+        "示例": "uuid",
+        "类型": "uuid"
+      }
+    },
+    {
+      "confidence": "medium",
+      "current_field_ids": [
+        "DATA-D4-027"
+      ],
+      "entity_code": "scoring_adjustment",
+      "human_decision_required": true,
+      "natural_key_candidates_requiring_review": [],
+      "rationale": "统一的不可变UUID代理主键可避免把可变业务代码、复合字段或展示属性升级为实体身份；领域负责人仍须确认自然键和唯一约束。",
+      "recommended_action": "add_primary_key_field",
+      "recommended_field_contract": {
+        "中文名称": "scoring_adjustment主键ID",
+        "单位": "不适用",
+        "唯一/索引": "主键",
+        "备注": "AC-001机器建议；仅在正式基线变更评审批准后采用",
+        "字段名": "id",
+        "字段编号": "DATA-D0-PK-023",
+        "实体": "scoring_adjustment",
+        "必填": "是",
+        "敏感级别": "内部",
+        "更新规则": "创建时生成，之后不变",
+        "来源要求": "系统生成",
+        "示例": "uuid",
+        "类型": "uuid"
+      }
+    },
+    {
+      "confidence": "medium",
+      "current_field_ids": [
+        "DATA-D4-019"
+      ],
+      "entity_code": "scoring_model_version",
+      "human_decision_required": true,
+      "natural_key_candidates_requiring_review": [
+        {
+          "current_index_contract": "联合唯一/索引",
+          "field_id": "DATA-D4-019",
+          "field_name": "model_code/version/status"
+        }
+      ],
+      "rationale": "统一的不可变UUID代理主键可避免把可变业务代码、复合字段或展示属性升级为实体身份；领域负责人仍须确认自然键和唯一约束。",
+      "recommended_action": "add_primary_key_field",
+      "recommended_field_contract": {
+        "中文名称": "scoring_model_version主键ID",
+        "单位": "不适用",
+        "唯一/索引": "主键",
+        "备注": "AC-001机器建议；仅在正式基线变更评审批准后采用",
+        "字段名": "id",
+        "字段编号": "DATA-D0-PK-024",
+        "实体": "scoring_model_version",
+        "必填": "是",
+        "敏感级别": "内部",
+        "更新规则": "创建时生成，之后不变",
+        "来源要求": "系统生成",
+        "示例": "uuid",
+        "类型": "uuid"
+      }
+    },
+    {
+      "confidence": "medium",
+      "current_field_ids": [
+        "DATA-D4-024",
+        "DATA-D4-025",
+        "DATA-D4-026"
+      ],
+      "entity_code": "scoring_result",
+      "human_decision_required": true,
+      "natural_key_candidates_requiring_review": [],
+      "rationale": "统一的不可变UUID代理主键可避免把可变业务代码、复合字段或展示属性升级为实体身份；领域负责人仍须确认自然键和唯一约束。",
+      "recommended_action": "add_primary_key_field",
+      "recommended_field_contract": {
+        "中文名称": "scoring_result主键ID",
+        "单位": "不适用",
+        "唯一/索引": "主键",
+        "备注": "AC-001机器建议；仅在正式基线变更评审批准后采用",
+        "字段名": "id",
+        "字段编号": "DATA-D0-PK-025",
+        "实体": "scoring_result",
+        "必填": "是",
+        "敏感级别": "内部",
+        "更新规则": "创建时生成，之后不变",
+        "来源要求": "系统生成",
+        "示例": "uuid",
+        "类型": "uuid"
+      }
+    },
+    {
+      "confidence": "medium",
+      "current_field_ids": [
+        "DATA-D4-020",
+        "DATA-D4-021"
+      ],
+      "entity_code": "scoring_rule",
+      "human_decision_required": true,
+      "natural_key_candidates_requiring_review": [
+        {
+          "current_index_contract": "外键/联合唯一",
+          "field_id": "DATA-D4-020",
+          "field_name": "model_version_id/indicator_code/weight"
+        }
+      ],
+      "rationale": "统一的不可变UUID代理主键可避免把可变业务代码、复合字段或展示属性升级为实体身份；领域负责人仍须确认自然键和唯一约束。",
+      "recommended_action": "add_primary_key_field",
+      "recommended_field_contract": {
+        "中文名称": "scoring_rule主键ID",
+        "单位": "不适用",
+        "唯一/索引": "主键",
+        "备注": "AC-001机器建议；仅在正式基线变更评审批准后采用",
+        "字段名": "id",
+        "字段编号": "DATA-D0-PK-026",
+        "实体": "scoring_rule",
+        "必填": "是",
+        "敏感级别": "内部",
+        "更新规则": "创建时生成，之后不变",
+        "来源要求": "系统生成",
+        "示例": "uuid",
+        "类型": "uuid"
+      }
+    },
+    {
+      "confidence": "medium",
+      "current_field_ids": [],
+      "entity_code": "source_family",
+      "human_decision_required": true,
+      "natural_key_candidates_requiring_review": [],
+      "rationale": "统一的不可变UUID代理主键可避免把可变业务代码、复合字段或展示属性升级为实体身份；领域负责人仍须确认自然键和唯一约束。",
+      "recommended_action": "add_primary_key_field",
+      "recommended_field_contract": {
+        "中文名称": "source_family主键ID",
+        "单位": "不适用",
+        "唯一/索引": "主键",
+        "备注": "AC-001机器建议；仅在正式基线变更评审批准后采用",
+        "字段名": "id",
+        "字段编号": "DATA-D0-PK-027",
+        "实体": "source_family",
+        "必填": "是",
+        "敏感级别": "内部",
+        "更新规则": "创建时生成，之后不变",
+        "来源要求": "系统生成",
+        "示例": "uuid",
+        "类型": "uuid"
+      }
+    },
+    {
+      "confidence": "medium",
+      "current_field_ids": [
+        "DATA-D4-011",
+        "DATA-D4-012"
+      ],
+      "entity_code": "source_snapshot",
+      "human_decision_required": true,
+      "natural_key_candidates_requiring_review": [],
+      "rationale": "统一的不可变UUID代理主键可避免把可变业务代码、复合字段或展示属性升级为实体身份；领域负责人仍须确认自然键和唯一约束。",
+      "recommended_action": "add_primary_key_field",
+      "recommended_field_contract": {
+        "中文名称": "source_snapshot主键ID",
+        "单位": "不适用",
+        "唯一/索引": "主键",
+        "备注": "AC-001机器建议；仅在正式基线变更评审批准后采用",
+        "字段名": "id",
+        "字段编号": "DATA-D0-PK-028",
+        "实体": "source_snapshot",
+        "必填": "是",
+        "敏感级别": "内部",
+        "更新规则": "创建时生成，之后不变",
+        "来源要求": "系统生成",
+        "示例": "uuid",
+        "类型": "uuid"
+      }
+    },
+    {
+      "confidence": "medium",
+      "current_field_ids": [
+        "DATA-TENDER-003",
+        "DATA-TENDER-004"
+      ],
+      "entity_code": "tender",
+      "human_decision_required": true,
+      "natural_key_candidates_requiring_review": [],
+      "rationale": "统一的不可变UUID代理主键可避免把可变业务代码、复合字段或展示属性升级为实体身份；领域负责人仍须确认自然键和唯一约束。",
+      "recommended_action": "add_primary_key_field",
+      "recommended_field_contract": {
+        "中文名称": "tender主键ID",
+        "单位": "不适用",
+        "唯一/索引": "主键",
+        "备注": "AC-001机器建议；仅在正式基线变更评审批准后采用",
+        "字段名": "id",
+        "字段编号": "DATA-D0-PK-029",
+        "实体": "tender",
+        "必填": "是",
+        "敏感级别": "内部",
+        "更新规则": "创建时生成，之后不变",
+        "来源要求": "系统生成",
+        "示例": "uuid",
+        "类型": "uuid"
+      }
+    }
+  ],
+  "field_unit_recommendations": [
+    {
+      "confidence": "high",
+      "data_type": "uuid",
+      "entity_code": "ai_conversation",
+      "field_id": "DATA-AI-001",
+      "field_name": "enterprise_id",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "medium",
+      "data_type": "json",
+      "entity_code": "ai_message",
+      "field_id": "DATA-AI-002",
+      "field_name": "citation_ids",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "enum",
+      "entity_code": "ai_message",
+      "field_id": "DATA-AI-003",
+      "field_name": "answer_status",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "medium",
+      "data_type": "json",
+      "entity_code": "audit_log",
+      "field_id": "DATA-AUDIT-001",
+      "field_name": "before_after",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "medium",
+      "data_type": "json",
+      "entity_code": "attribution",
+      "field_id": "DATA-CHANNEL-001",
+      "field_name": "first_touch",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "medium",
+      "data_type": "json",
+      "entity_code": "attribution",
+      "field_id": "DATA-CHANNEL-002",
+      "field_name": "last_touch",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "varchar(3)",
+      "entity_code": "country",
+      "field_id": "DATA-COUNTRY-001",
+      "field_name": "iso_code",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "enum",
+      "entity_code": "country",
+      "field_id": "DATA-COUNTRY-002",
+      "field_name": "coverage_level",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "enum",
+      "entity_code": "country",
+      "field_id": "DATA-COUNTRY-003",
+      "field_name": "opportunity_level",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "enum",
+      "entity_code": "country",
+      "field_id": "DATA-COUNTRY-004",
+      "field_name": "risk_level",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "datetime",
+      "entity_code": "country",
+      "field_id": "DATA-COUNTRY-005",
+      "field_name": "last_reviewed_at",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "enum",
+      "entity_code": "country",
+      "field_id": "DATA-COUNTRY-006",
+      "field_name": "policy_friendliness_level",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "enum",
+      "entity_code": "country",
+      "field_id": "DATA-COUNTRY-007",
+      "field_name": "risk_assessment_status",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "varchar",
+      "entity_code": "country_metric",
+      "field_id": "DATA-COUNTRY-METRIC-001",
+      "field_name": "metric_code",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "enum",
+      "entity_code": "country_metric",
+      "field_id": "DATA-COUNTRY-METRIC-002",
+      "field_name": "value_status",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "enum",
+      "entity_code": "country",
+      "field_id": "DATA-D4-001",
+      "field_name": "coverage_status",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "uuid",
+      "entity_code": "data_record_version",
+      "field_id": "DATA-D4-002",
+      "field_name": "id",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "varchar/uuid/integer",
+      "entity_code": "data_record_version",
+      "field_id": "DATA-D4-003",
+      "field_name": "entity_type/entity_id/version_no",
+      "human_decision_required": true,
+      "rationale": "该合同条目把多个子字段合并在一行，子字段可能具有不同单位语义；应先决定是否拆分合同，再逐子字段判定单位。",
+      "recommendation_kind": "compound_contract_requires_human_analysis",
+      "recommended_resolution": null
+    },
+    {
+      "confidence": "high",
+      "data_type": "enum",
+      "entity_code": "data_record_version",
+      "field_id": "DATA-D4-004",
+      "field_name": "publication_status",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "enum",
+      "entity_code": "data_record_version",
+      "field_id": "DATA-D4-005",
+      "field_name": "quality_status",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "enum",
+      "entity_code": "data_record_version",
+      "field_id": "DATA-D4-006",
+      "field_name": "freshness_status",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "datetime",
+      "entity_code": "data_record_version",
+      "field_id": "DATA-D4-007",
+      "field_name": "next_review_at",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "uuid/enum/enum",
+      "entity_code": "source_registry",
+      "field_id": "DATA-D4-008",
+      "field_name": "id/authority_level/status",
+      "human_decision_required": true,
+      "rationale": "该合同条目把多个子字段合并在一行，子字段可能具有不同单位语义；应先决定是否拆分合同，再逐子字段判定单位。",
+      "recommendation_kind": "compound_contract_requires_human_analysis",
+      "recommended_resolution": null
+    },
+    {
+      "confidence": "medium",
+      "data_type": "text",
+      "entity_code": "source_registry",
+      "field_id": "DATA-D4-009",
+      "field_name": "usage_basis",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "uuid",
+      "entity_code": "source_registry",
+      "field_id": "DATA-D4-010",
+      "field_name": "source_family_id",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "uuid/char(64)/text",
+      "entity_code": "source_snapshot",
+      "field_id": "DATA-D4-011",
+      "field_name": "source_id/content_hash/object_uri",
+      "human_decision_required": true,
+      "rationale": "该合同条目把多个子字段合并在一行，子字段可能具有不同单位语义；应先决定是否拆分合同，再逐子字段判定单位。",
+      "recommendation_kind": "compound_contract_requires_human_analysis",
+      "recommended_resolution": null
+    },
+    {
+      "confidence": "high",
+      "data_type": "datetime/datetime",
+      "entity_code": "source_snapshot",
+      "field_id": "DATA-D4-012",
+      "field_name": "published_at/captured_at",
+      "human_decision_required": true,
+      "rationale": "该合同条目把多个子字段合并在一行，子字段可能具有不同单位语义；应先决定是否拆分合同，再逐子字段判定单位。",
+      "recommendation_kind": "compound_contract_requires_human_analysis",
+      "recommended_resolution": null
+    },
+    {
+      "confidence": "high",
+      "data_type": "uuid/json/enum",
+      "entity_code": "raw_record",
+      "field_id": "DATA-D4-013",
+      "field_name": "snapshot_id/raw_payload/parse_status",
+      "human_decision_required": true,
+      "rationale": "该合同条目把多个子字段合并在一行，子字段可能具有不同单位语义；应先决定是否拆分合同，再逐子字段判定单位。",
+      "recommendation_kind": "compound_contract_requires_human_analysis",
+      "recommended_resolution": null
+    },
+    {
+      "confidence": "high",
+      "data_type": "uuid/uuid/varchar",
+      "entity_code": "field_provenance",
+      "field_id": "DATA-D4-014",
+      "field_name": "data_record_version_id/raw_record_id/field_path",
+      "human_decision_required": true,
+      "rationale": "该合同条目把多个子字段合并在一行，子字段可能具有不同单位语义；应先决定是否拆分合同，再逐子字段判定单位。",
+      "recommendation_kind": "compound_contract_requires_human_analysis",
+      "recommended_resolution": null
+    },
+    {
+      "confidence": "high",
+      "data_type": "json/varchar",
+      "entity_code": "field_provenance",
+      "field_id": "DATA-D4-015",
+      "field_name": "source_locator/transformation_rule_id",
+      "human_decision_required": true,
+      "rationale": "该合同条目把多个子字段合并在一行，子字段可能具有不同单位语义；应先决定是否拆分合同，再逐子字段判定单位。",
+      "recommendation_kind": "compound_contract_requires_human_analysis",
+      "recommended_resolution": null
+    },
+    {
+      "confidence": "high",
+      "data_type": "enum",
+      "entity_code": "project_opportunity_assessment",
+      "field_id": "DATA-D4-016",
+      "field_name": "context_type",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "uuid/uuid/uuid",
+      "entity_code": "project_opportunity_assessment",
+      "field_id": "DATA-D4-017",
+      "field_name": "enterprise_id/profile_snapshot_id/task_context_id",
+      "human_decision_required": true,
+      "rationale": "该合同条目把多个子字段合并在一行，子字段可能具有不同单位语义；应先决定是否拆分合同，再逐子字段判定单位。",
+      "recommendation_kind": "compound_contract_requires_human_analysis",
+      "recommended_resolution": null
+    },
+    {
+      "confidence": "high",
+      "data_type": "varchar/uuid",
+      "entity_code": "project_opportunity_assessment",
+      "field_id": "DATA-D4-018",
+      "field_name": "rule_version/scoring_result_id",
+      "human_decision_required": true,
+      "rationale": "该合同条目把多个子字段合并在一行，子字段可能具有不同单位语义；应先决定是否拆分合同，再逐子字段判定单位。",
+      "recommendation_kind": "compound_contract_requires_human_analysis",
+      "recommended_resolution": null
+    },
+    {
+      "confidence": "high",
+      "data_type": "varchar/varchar/enum",
+      "entity_code": "scoring_model_version",
+      "field_id": "DATA-D4-019",
+      "field_name": "model_code/version/status",
+      "human_decision_required": true,
+      "rationale": "该合同条目把多个子字段合并在一行，子字段可能具有不同单位语义；应先决定是否拆分合同，再逐子字段判定单位。",
+      "recommendation_kind": "compound_contract_requires_human_analysis",
+      "recommended_resolution": null
+    },
+    {
+      "confidence": "high",
+      "data_type": "uuid/varchar/decimal",
+      "entity_code": "scoring_rule",
+      "field_id": "DATA-D4-020",
+      "field_name": "model_version_id/indicator_code/weight",
+      "human_decision_required": true,
+      "rationale": "该合同条目把多个子字段合并在一行，子字段可能具有不同单位语义；应先决定是否拆分合同，再逐子字段判定单位。",
+      "recommendation_kind": "compound_contract_requires_human_analysis",
+      "recommended_resolution": null
+    },
+    {
+      "confidence": "high",
+      "data_type": "enum/json/json",
+      "entity_code": "scoring_rule",
+      "field_id": "DATA-D4-021",
+      "field_name": "direction/missing_rule/threshold_gate",
+      "human_decision_required": true,
+      "rationale": "该合同条目把多个子字段合并在一行，子字段可能具有不同单位语义；应先决定是否拆分合同，再逐子字段判定单位。",
+      "recommendation_kind": "compound_contract_requires_human_analysis",
+      "recommended_resolution": null
+    },
+    {
+      "confidence": "high",
+      "data_type": "uuid/uuid/char(64)",
+      "entity_code": "scoring_run",
+      "field_id": "DATA-D4-022",
+      "field_name": "id/model_version_id/idempotency_key",
+      "human_decision_required": true,
+      "rationale": "该合同条目把多个子字段合并在一行，子字段可能具有不同单位语义；应先决定是否拆分合同，再逐子字段判定单位。",
+      "recommendation_kind": "compound_contract_requires_human_analysis",
+      "recommended_resolution": null
+    },
+    {
+      "confidence": "high",
+      "data_type": "json/datetime",
+      "entity_code": "scoring_run",
+      "field_id": "DATA-D4-023",
+      "field_name": "input_snapshot/data_cutoff_at",
+      "human_decision_required": true,
+      "rationale": "该合同条目把多个子字段合并在一行，子字段可能具有不同单位语义；应先决定是否拆分合同，再逐子字段判定单位。",
+      "recommendation_kind": "compound_contract_requires_human_analysis",
+      "recommended_resolution": null
+    },
+    {
+      "confidence": "high",
+      "data_type": "enum/decimal/decimal",
+      "entity_code": "scoring_result",
+      "field_id": "DATA-D4-024",
+      "field_name": "status/raw_score/adjusted_score",
+      "human_decision_required": true,
+      "rationale": "该合同条目把多个子字段合并在一行，子字段可能具有不同单位语义；应先决定是否拆分合同，再逐子字段判定单位。",
+      "recommendation_kind": "compound_contract_requires_human_analysis",
+      "recommended_resolution": null
+    },
+    {
+      "confidence": "high",
+      "data_type": "decimal/decimal/varchar",
+      "entity_code": "scoring_result",
+      "field_id": "DATA-D4-025",
+      "field_name": "coverage_ratio/confidence/grade_code",
+      "human_decision_required": true,
+      "rationale": "该合同条目把多个子字段合并在一行，子字段可能具有不同单位语义；应先决定是否拆分合同，再逐子字段判定单位。",
+      "recommendation_kind": "compound_contract_requires_human_analysis",
+      "recommended_resolution": null
+    },
+    {
+      "confidence": "high",
+      "data_type": "enum/json/json",
+      "entity_code": "scoring_result",
+      "field_id": "DATA-D4-026",
+      "field_name": "recommendation_status/gate_hits/explanation",
+      "human_decision_required": true,
+      "rationale": "该合同条目把多个子字段合并在一行，子字段可能具有不同单位语义；应先决定是否拆分合同，再逐子字段判定单位。",
+      "recommendation_kind": "compound_contract_requires_human_analysis",
+      "recommended_resolution": null
+    },
+    {
+      "confidence": "high",
+      "data_type": "uuid/json/datetime/uuid",
+      "entity_code": "scoring_adjustment",
+      "field_id": "DATA-D4-027",
+      "field_name": "result_id/adjustment/valid_to/approved_by",
+      "human_decision_required": true,
+      "rationale": "该合同条目把多个子字段合并在一行，子字段可能具有不同单位语义；应先决定是否拆分合同，再逐子字段判定单位。",
+      "recommendation_kind": "compound_contract_requires_human_analysis",
+      "recommended_resolution": null
+    },
+    {
+      "confidence": "high",
+      "data_type": "varchar/enum/enum",
+      "entity_code": "quality_issue",
+      "field_id": "DATA-D4-028",
+      "field_name": "rule_code/severity/status",
+      "human_decision_required": true,
+      "rationale": "该合同条目把多个子字段合并在一行，子字段可能具有不同单位语义；应先决定是否拆分合同，再逐子字段判定单位。",
+      "recommendation_kind": "compound_contract_requires_human_analysis",
+      "recommended_resolution": null
+    },
+    {
+      "confidence": "high",
+      "data_type": "datetime",
+      "entity_code": "quality_issue",
+      "field_id": "DATA-D4-029",
+      "field_name": "waiver_expires_at",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "varchar/enum/char(64)",
+      "entity_code": "localized_text",
+      "field_id": "DATA-D4-030",
+      "field_name": "locale/translation_status/source_text_hash",
+      "human_decision_required": true,
+      "rationale": "该合同条目把多个子字段合并在一行，子字段可能具有不同单位语义；应先决定是否拆分合同，再逐子字段判定单位。",
+      "recommendation_kind": "compound_contract_requires_human_analysis",
+      "recommended_resolution": null
+    },
+    {
+      "confidence": "high",
+      "data_type": "uuid",
+      "entity_code": "enterprise",
+      "field_id": "DATA-ENTERPRISE-001",
+      "field_name": "id",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "enum",
+      "entity_code": "enterprise",
+      "field_id": "DATA-ENTERPRISE-002",
+      "field_name": "verification_status",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "integer",
+      "entity_code": "entitlement",
+      "field_id": "DATA-ENTITLEMENT-001",
+      "field_name": "quota_remaining",
+      "human_decision_required": true,
+      "rationale": "数值类型不足以区分计数、比例、评分、货币或物理量；必须由数据负责人选择单位代码、量纲和登记来源。",
+      "recommendation_kind": "numeric_semantics_requires_human_analysis",
+      "recommended_resolution": null
+    },
+    {
+      "confidence": "high",
+      "data_type": "enum",
+      "entity_code": "lead",
+      "field_id": "DATA-LEAD-001",
+      "field_name": "source_type",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "enum",
+      "entity_code": "lead",
+      "field_id": "DATA-LEAD-002",
+      "field_name": "grade",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "uuid",
+      "entity_code": "lead",
+      "field_id": "DATA-LEAD-003",
+      "field_name": "owner_user_id",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "decimal(5,2)",
+      "entity_code": "lead",
+      "field_id": "DATA-LEAD-004",
+      "field_name": "behavior_score",
+      "human_decision_required": true,
+      "rationale": "数值类型不足以区分计数、比例、评分、货币或物理量；必须由数据负责人选择单位代码、量纲和登记来源。",
+      "recommendation_kind": "numeric_semantics_requires_human_analysis",
+      "recommended_resolution": null
+    },
+    {
+      "confidence": "high",
+      "data_type": "enum",
+      "entity_code": "partner",
+      "field_id": "DATA-PARTNER-001",
+      "field_name": "review_status",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "medium",
+      "data_type": "json",
+      "entity_code": "partner",
+      "field_id": "DATA-PARTNER-002",
+      "field_name": "contact_info",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "enum",
+      "entity_code": "partner_recommendation",
+      "field_id": "DATA-PARTNER-003",
+      "field_name": "grade",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "enum",
+      "entity_code": "policy",
+      "field_id": "DATA-POLICY-001",
+      "field_name": "effective_status",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "date",
+      "entity_code": "policy",
+      "field_id": "DATA-POLICY-002",
+      "field_name": "effective_date",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "uuid",
+      "entity_code": "policy",
+      "field_id": "DATA-POLICY-003",
+      "field_name": "supersedes_policy_id",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "medium",
+      "data_type": "json",
+      "entity_code": "enterprise_profile_version",
+      "field_id": "DATA-PROFILE-001",
+      "field_name": "technology_tags",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "medium",
+      "data_type": "json",
+      "entity_code": "enterprise_profile_version",
+      "field_id": "DATA-PROFILE-002",
+      "field_name": "target_country_codes",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "enum",
+      "entity_code": "enterprise_profile_version",
+      "field_id": "DATA-PROFILE-003",
+      "field_name": "overseas_stage",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "enum",
+      "entity_code": "project",
+      "field_id": "DATA-PROJECT-001",
+      "field_name": "verification_status",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "enum",
+      "entity_code": "project",
+      "field_id": "DATA-PROJECT-002",
+      "field_name": "stage",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "decimal(5,2)",
+      "entity_code": "project",
+      "field_id": "DATA-PROJECT-003",
+      "field_name": "opportunity_score",
+      "human_decision_required": true,
+      "rationale": "数值类型不足以区分计数、比例、评分、货币或物理量；必须由数据负责人选择单位代码、量纲和登记来源。",
+      "recommendation_kind": "numeric_semantics_requires_human_analysis",
+      "recommended_resolution": null
+    },
+    {
+      "confidence": "high",
+      "data_type": "enum",
+      "entity_code": "project",
+      "field_id": "DATA-PROJECT-004",
+      "field_name": "sensitivity_level",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "enum",
+      "entity_code": "project",
+      "field_id": "DATA-PROJECT-005",
+      "field_name": "business_status",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "enum",
+      "entity_code": "project",
+      "field_id": "DATA-PROJECT-006",
+      "field_name": "opportunity_window",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "enum",
+      "entity_code": "project",
+      "field_id": "DATA-PROJECT-007",
+      "field_name": "opportunity_grade",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "enum",
+      "entity_code": "report_task",
+      "field_id": "DATA-REPORT-001",
+      "field_name": "status",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "medium",
+      "data_type": "json",
+      "entity_code": "report",
+      "field_id": "DATA-REPORT-002",
+      "field_name": "input_snapshot",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "enum",
+      "entity_code": "report",
+      "field_id": "DATA-REPORT-003",
+      "field_name": "business_status",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "enum",
+      "entity_code": "service_request",
+      "field_id": "DATA-REQUEST-001",
+      "field_name": "status",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "enum",
+      "entity_code": "review_task",
+      "field_id": "DATA-REVIEW-001",
+      "field_name": "status",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "enum",
+      "entity_code": "risk",
+      "field_id": "DATA-RISK-001",
+      "field_name": "risk_level",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "medium",
+      "data_type": "json",
+      "entity_code": "risk",
+      "field_id": "DATA-RISK-002",
+      "field_name": "impact_scope",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "enum",
+      "entity_code": "risk",
+      "field_id": "DATA-RISK-003",
+      "field_name": "assessment_status",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "medium",
+      "data_type": "text",
+      "entity_code": "source",
+      "field_id": "DATA-SOURCE-001",
+      "field_name": "source_url",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "enum",
+      "entity_code": "source",
+      "field_id": "DATA-SOURCE-002",
+      "field_name": "authority_level",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "datetime",
+      "entity_code": "source",
+      "field_id": "DATA-SOURCE-003",
+      "field_name": "captured_at",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "enum",
+      "entity_code": "tender_document",
+      "field_id": "DATA-TENDER-001",
+      "field_name": "extraction_status",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "medium",
+      "data_type": "json",
+      "entity_code": "tender_document",
+      "field_id": "DATA-TENDER-002",
+      "field_name": "source_locator",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "enum",
+      "entity_code": "tender",
+      "field_id": "DATA-TENDER-003",
+      "field_name": "official_status",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "enum",
+      "entity_code": "tender",
+      "field_id": "DATA-TENDER-004",
+      "field_name": "opportunity_window",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "varchar",
+      "entity_code": "user_preference",
+      "field_id": "DATA-UI-001",
+      "field_name": "preference_key",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "medium",
+      "data_type": "json",
+      "entity_code": "user_preference",
+      "field_id": "DATA-UI-002",
+      "field_name": "preference_value",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "medium",
+      "data_type": "json",
+      "entity_code": "saved_view",
+      "field_id": "DATA-UI-003",
+      "field_name": "query_state",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "medium",
+      "data_type": "json",
+      "entity_code": "form_draft",
+      "field_id": "DATA-UI-004",
+      "field_name": "payload_encrypted",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "varchar",
+      "entity_code": "product_event",
+      "field_id": "DATA-UI-005",
+      "field_name": "page_id",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "varchar",
+      "entity_code": "product_event",
+      "field_id": "DATA-UI-006",
+      "field_name": "consent_version",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "uuid",
+      "entity_code": "app_user",
+      "field_id": "DATA-USER-001",
+      "field_name": "id",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "enum",
+      "entity_code": "app_user",
+      "field_id": "DATA-USER-002",
+      "field_name": "status",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    },
+    {
+      "confidence": "high",
+      "data_type": "varchar",
+      "entity_code": "app_user",
+      "field_id": "DATA-USER-003",
+      "field_name": "mobile_email",
+      "human_decision_required": true,
+      "rationale": "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。",
+      "recommendation_kind": "not_applicable_candidate",
+      "recommended_resolution": {
+        "unit_applicability": "not_applicable",
+        "unit_code": null,
+        "unit_dimension": null,
+        "unit_registry_reference": null
+      }
+    }
+  ],
+  "human_decision_required": true,
+  "schema_version": 1,
+  "source_binding": {
+    "baseline_version": "V1.0-BASELINE",
+    "d0_workbook": {
+      "path": "doc/doc/新能源企业出海导航仪_D0数据标准冻结执行台账.xlsx",
+      "sha256": "224e9a35bcbb363cf41c007499ba32aa6394cfdbf06331830c02d994e1c7ddff"
+    },
+    "resolution_template": {
+      "path": "data/d0/candidates/core_contract_resolution.template.json",
+      "sha256": "9b0e77d9ba5b365923a5f316207aadf39f120d6076647fd6bf2f0508e8b63727"
+    },
+    "technical_workbook": {
+      "path": "doc/doc/新能源企业出海导航仪_V1.0技术附件_BASELINE.xlsx",
+      "sha256": "8b36f7cad337d72713f09c2b36d7eaf6ebe0bc2cd13f2bf0c05c45edbd065fb8"
+    }
+  },
+  "stage": "D0",
+  "summary": {
+    "entity_primary_key_recommendation_count": 29,
+    "field_unit_recommendation_count": 92,
+    "unit_recommendation_counts": {
+      "compound_contract_requires_human_analysis": 20,
+      "not_applicable_candidate": 69,
+      "numeric_semantics_requires_human_analysis": 3
+    }
+  },
+  "usage": [
+    "逐项复核建议、替代方案和领域语义",
+    "把人工确认后的决定填写到core_contract_resolution.template.json的独立副本",
+    "在独立副本中补齐实名、时间、变更单和证据后运行正式校验器"
+  ],
+  "warning": "本文件不是整改副本、审核记录或批准证据；不得添加签名后直接提交，也不得据此修改冻结Excel或启动用户侧开发。"
+}

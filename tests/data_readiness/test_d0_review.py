@@ -236,6 +236,7 @@ def test_review_template_covers_every_hard_gate_and_open_decision() -> None:
     assert all(item["hard_gate"] is True for item in packet["acceptance_items"])
     assert packet["baseline"]["sources"]["d0_workbook"]["sha256"]
     assert len(packet["baseline"]["candidate_hashes"]) == 12
+    assert "core_contract_recommendations.json" not in packet["baseline"]["candidate_hashes"]
 
 
 def test_unfilled_review_template_reports_all_pending_categories() -> None:

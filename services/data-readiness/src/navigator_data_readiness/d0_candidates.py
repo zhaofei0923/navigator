@@ -479,6 +479,148 @@ def build_core_contract_resolution_template(
     }
 
 
+def build_core_contract_recommendations(
+    contracts: dict[str, Any],
+    *,
+    source_binding: dict[str, Any],
+    resolution_template: dict[str, Any],
+) -> dict[str, Any]:
+    """Build conservative, unsigned suggestions for the AC-001/002 reviewer packet."""
+    fields_by_id = {
+        str(field.get("字段编号") or "").strip(): field
+        for field in contracts["fields"]
+        if str(field.get("字段编号") or "").strip()
+    }
+    primary_key_recommendations: list[dict[str, Any]] = []
+    for index, item in enumerate(resolution_template["entity_primary_key_resolutions"], start=1):
+        entity_code = str(item["entity_code"])
+        current_fields = [
+            fields_by_id[field_id]
+            for field_id in item["current_field_ids"]
+            if field_id in fields_by_id
+        ]
+        natural_key_candidates = [
+            {
+                "field_id": str(field["字段编号"]),
+                "field_name": str(field.get("字段名") or ""),
+                "current_index_contract": str(field.get("唯一/索引") or ""),
+            }
+            for field in current_fields
+            if "唯一" in str(field.get("唯一/索引") or "")
+        ]
+        primary_key_recommendations.append(
+            {
+                "entity_code": entity_code,
+                "current_field_ids": list(item["current_field_ids"]),
+                "recommended_action": "add_primary_key_field",
+                "confidence": "medium",
+                "human_decision_required": True,
+                "rationale": (
+                    "统一的不可变UUID代理主键可避免把可变业务代码、复合字段或展示属性"
+                    "升级为实体身份；领域负责人仍须确认自然键和唯一约束。"
+                ),
+                "recommended_field_contract": {
+                    "字段编号": f"DATA-D0-PK-{index:03d}",
+                    "实体": entity_code,
+                    "字段名": "id",
+                    "中文名称": f"{entity_code}主键ID",
+                    "类型": "uuid",
+                    "单位": "不适用",
+                    "必填": "是",
+                    "唯一/索引": "主键",
+                    "敏感级别": "内部",
+                    "来源要求": "系统生成",
+                    "更新规则": "创建时生成，之后不变",
+                    "示例": "uuid",
+                    "备注": "AC-001机器建议；仅在正式基线变更评审批准后采用",
+                },
+                "natural_key_candidates_requiring_review": natural_key_candidates,
+            }
+        )
+
+    field_unit_recommendations: list[dict[str, Any]] = []
+    unit_counts: Counter[str] = Counter()
+    numeric_markers = ("integer", "decimal", "numeric", "float", "double", "real")
+    for item in resolution_template["field_unit_resolutions"]:
+        field_name = str(item["field_name"])
+        data_type = str(item["data_type"])
+        lowered_type = data_type.lower()
+        if "/" in field_name or "/" in data_type:
+            recommendation_kind = "compound_contract_requires_human_analysis"
+            recommended_resolution = None
+            confidence = "high"
+            rationale = (
+                "该合同条目把多个子字段合并在一行，子字段可能具有不同单位语义；"
+                "应先决定是否拆分合同，再逐子字段判定单位。"
+            )
+        elif any(marker in lowered_type for marker in numeric_markers):
+            recommendation_kind = "numeric_semantics_requires_human_analysis"
+            recommended_resolution = None
+            confidence = "high"
+            rationale = (
+                "数值类型不足以区分计数、比例、评分、货币或物理量；"
+                "必须由数据负责人选择单位代码、量纲和登记来源。"
+            )
+        else:
+            recommendation_kind = "not_applicable_candidate"
+            recommended_resolution = {
+                "unit_applicability": "not_applicable",
+                "unit_code": None,
+                "unit_dimension": None,
+                "unit_registry_reference": None,
+            }
+            confidence = "medium" if lowered_type in {"json", "text"} else "high"
+            rationale = (
+                "该字段的当前顶层类型不表达可度量数值，建议在字段级标记单位不适用；"
+                "若JSON或文本内部承载数值，仍须在其子结构合同中单独定义单位。"
+            )
+        unit_counts[recommendation_kind] += 1
+        field_unit_recommendations.append(
+            {
+                "field_id": str(item["field_id"]),
+                "entity_code": str(item["entity_code"]),
+                "field_name": field_name,
+                "data_type": data_type,
+                "recommendation_kind": recommendation_kind,
+                "recommended_resolution": recommended_resolution,
+                "confidence": confidence,
+                "human_decision_required": True,
+                "rationale": rationale,
+            }
+        )
+
+    template_sha256 = hashlib.sha256(_candidate_json_bytes(resolution_template)).hexdigest()
+    return {
+        "schema_version": 1,
+        "stage": "D0",
+        "advisory_only": True,
+        "human_decision_required": True,
+        "warning": (
+            "本文件不是整改副本、审核记录或批准证据；不得添加签名后直接提交，"
+            "也不得据此修改冻结Excel或启动用户侧开发。"
+        ),
+        "usage": [
+            "逐项复核建议、替代方案和领域语义",
+            "把人工确认后的决定填写到core_contract_resolution.template.json的独立副本",
+            "在独立副本中补齐实名、时间、变更单和证据后运行正式校验器",
+        ],
+        "source_binding": {
+            **source_binding,
+            "resolution_template": {
+                "path": "data/d0/candidates/core_contract_resolution.template.json",
+                "sha256": template_sha256,
+            },
+        },
+        "summary": {
+            "entity_primary_key_recommendation_count": len(primary_key_recommendations),
+            "field_unit_recommendation_count": len(field_unit_recommendations),
+            "unit_recommendation_counts": dict(sorted(unit_counts.items())),
+        },
+        "entity_primary_key_recommendations": primary_key_recommendations,
+        "field_unit_recommendations": field_unit_recommendations,
+    }
+
+
 def build_machine_evidence_review_queue(
     evidence_payloads: dict[str, dict[str, Any]],
 ) -> dict[str, Any]:
@@ -1100,6 +1242,11 @@ def candidate_payloads(paths: RepositoryPaths) -> dict[str, dict[str, Any]]:
         core_entity_evidence=core_evidence_payloads["core_entity_evidence.json"],
         core_field_evidence=core_evidence_payloads["core_field_evidence.json"],
     )
+    contract_recommendations = build_core_contract_recommendations(
+        contracts,
+        source_binding=source_binding,
+        resolution_template=contract_resolution,
+    )
     payloads = {
         "acceptance_assessment.json": build_acceptance_assessment(
             contracts,
@@ -1111,6 +1258,7 @@ def candidate_payloads(paths: RepositoryPaths) -> dict[str, dict[str, Any]]:
         ),
         "conventions.json": build_conventions_candidate(),
         **core_evidence_payloads,
+        "core_contract_recommendations.json": contract_recommendations,
         "core_contract_resolution.template.json": contract_resolution,
         "machine_evidence_review_queue.json": build_machine_evidence_review_queue(
             core_evidence_payloads

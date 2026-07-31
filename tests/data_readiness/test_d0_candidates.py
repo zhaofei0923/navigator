@@ -10,6 +10,8 @@ from navigator_data_readiness.baseline import extract_contracts
 from navigator_data_readiness.d0_candidates import (
     build_acceptance_assessment,
     build_conventions_candidate,
+    build_core_contract_recommendations,
+    build_core_contract_resolution_template,
     build_core_entity_evidence,
     build_core_field_evidence,
     build_enum_migration_evidence,
@@ -231,6 +233,80 @@ def test_core_field_evidence_rejects_partial_unit_metadata() -> None:
     assert unit_check["findings"][0]["field_count"] == 91
 
 
+def test_core_contract_recommendations_are_complete_conservative_and_unsigned() -> None:
+    paths = discover_repository()
+    contracts = extract_contracts(paths)
+    source_binding = {
+        "baseline_version": "test",
+        "d0_workbook": {"path": "d0.xlsx", "sha256": "a" * 64},
+        "technical_workbook": {"path": "technical.xlsx", "sha256": "b" * 64},
+    }
+    entity_evidence = build_core_entity_evidence(contracts, source_binding=source_binding)
+    field_evidence = build_core_field_evidence(contracts, source_binding=source_binding)
+    template = build_core_contract_resolution_template(
+        contracts,
+        source_binding=source_binding,
+        core_entity_evidence=entity_evidence,
+        core_field_evidence=field_evidence,
+    )
+
+    recommendations = build_core_contract_recommendations(
+        contracts,
+        source_binding=source_binding,
+        resolution_template=template,
+    )
+
+    assert recommendations["advisory_only"] is True
+    assert recommendations["human_decision_required"] is True
+    assert recommendations["summary"] == {
+        "entity_primary_key_recommendation_count": 29,
+        "field_unit_recommendation_count": 92,
+        "unit_recommendation_counts": {
+            "compound_contract_requires_human_analysis": 20,
+            "not_applicable_candidate": 69,
+            "numeric_semantics_requires_human_analysis": 3,
+        },
+    }
+    primary_keys = recommendations["entity_primary_key_recommendations"]
+    assert all(item["recommended_action"] == "add_primary_key_field" for item in primary_keys)
+    assert all(item["human_decision_required"] is True for item in primary_keys)
+    new_field_ids = [item["recommended_field_contract"]["字段编号"] for item in primary_keys]
+    existing_field_ids = {str(item["字段编号"]) for item in contracts["fields"]}
+    assert len(new_field_ids) == len(set(new_field_ids)) == 29
+    assert not set(new_field_ids) & existing_field_ids
+    assert all(item["recommended_field_contract"]["单位"] == "不适用" for item in primary_keys)
+
+    unit_items = recommendations["field_unit_recommendations"]
+    by_field_id = {item["field_id"]: item for item in unit_items}
+    assert by_field_id["DATA-ENTITLEMENT-001"]["recommended_resolution"] is None
+    assert by_field_id["DATA-D4-020"]["recommended_resolution"] is None
+    assert by_field_id["DATA-COUNTRY-001"]["recommended_resolution"] == {
+        "unit_applicability": "not_applicable",
+        "unit_code": None,
+        "unit_dimension": None,
+        "unit_registry_reference": None,
+    }
+
+    signing_keys = {
+        "status",
+        "change_request_id",
+        "proposed_by",
+        "proposed_at",
+        "reviewed_by",
+        "reviewed_at",
+        "evidence_ids",
+    }
+
+    def keys(value: object) -> set[str]:
+        if isinstance(value, dict):
+            return set(value) | {key for item in value.values() for key in keys(item)}
+        if isinstance(value, list):
+            return {key for item in value for key in keys(item)}
+        return set()
+
+    assert not keys(recommendations) & signing_keys
+
+
 def test_enum_evidence_checks_structural_migration_contract_without_approving_semantics() -> None:
     contracts = extract_contracts(discover_repository())
 
@@ -276,11 +352,21 @@ def test_write_candidates_exports_review_package(tmp_path: Path) -> None:
             encoding="utf-8"
         )
     )
+    recommendations = json.loads(
+        (paths.d0_candidates_dir / "core_contract_recommendations.json").read_text(encoding="utf-8")
+    )
 
-    assert len(written) == 12
+    assert len(written) == 13
     assert assessment["automated_assessment_only"] is True
     assert len(resolution["entity_primary_key_resolutions"]) == 29
     assert len(resolution["field_unit_resolutions"]) == 92
+    assert recommendations["advisory_only"] is True
+    resolution_bytes = (
+        json.dumps(resolution, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    ).encode()
+    assert recommendations["source_binding"]["resolution_template"]["sha256"] == (
+        hashlib.sha256(resolution_bytes).hexdigest()
+    )
     assert len(queue["items"]) == 3
     assert {item["machine_status"] for item in queue["items"]} == {"fail", "pass"}
     for item in queue["items"]:
