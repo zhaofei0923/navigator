@@ -20,6 +20,8 @@ D0 数据标准冻结；D4 数据就绪评审正式通过之前，只建设数�
   11项MVP验收，并生成P0需求追踪预检矩阵；
 - 对独立的候选技术附件执行提案一致性、越权差异和P0追踪归零验证，不修改或激活
   权威工作簿；
+- 从已完成P0追踪整改包原子生成独立候选技术附件；禁止覆盖、禁止写入权威`doc`
+  目录，自动验证失败时不发布候选文件；
 - 生成并校验P0实现、测试、ACC验收、发布指标及构建/部署/回滚/恢复/移交证据包，
   校验时重放完整D4上游链。
 
@@ -54,6 +56,14 @@ uv run navigator-data prepare-d4
 uv run navigator-data prepare-p0-traceability
 uv run navigator-data assess-p0-traceability
 uv run navigator-data prepare-p0-resolution
+uv run navigator-data prepare-p0-baseline-change \
+  --resolution data/p0/review/p0_traceability_resolution.<date>.json \
+  --output /safe/path/technical-candidate.xlsx \
+  --assessment-output /safe/path/p0-generation-assessment.json
+uv run navigator-data validate-p0-baseline-change \
+  --resolution data/p0/review/p0_traceability_resolution.<date>.json \
+  --workbook /safe/path/technical-candidate.xlsx \
+  --output /safe/path/p0-change-assessment.json
 uv run navigator-data prepare-p0-delivery
 uv run navigator-data report
 uv run pytest --cov
@@ -145,11 +155,12 @@ P0追踪预检候选包位于
 整改模板已把27个需求测试缺口、98个页面映射整改项和105种权限代码逐项列出；
 `validate-p0-resolution`校验提案的冻结哈希、稳定编号、变更请求和复核元数据，
 并要求每个新增需求、API、测试或权限编号同时附带完整合同记录；不会自动应用或批准
-任何基线变更。提案填写完成后，可用
-`validate-p0-baseline-change`检查一份独立候选技术附件是否精确实现提案、未删除
-原记录或夹带未评审字段。新增合同记录会逐字段匹配评审包的完整行定义，而不是只
-核对编号和必填字段；随后在候选附件上重算P0追踪阻断是否归零。通过仍只表示候选
-附件可以进入正式基线评审，D4继续使用`doc/doc`中的权威附件。
+任何基线变更。提案填写完成后，可用`prepare-p0-baseline-change`原子生成独立候选
+技术附件，或用`validate-p0-baseline-change`检查独立制作的候选。两者都核对所有
+单元格和公式，只允许评审包声明的合同、页面和权限映射变更。新增合同记录会逐字段
+匹配评审包的完整行定义，而不是只核对编号和必填字段；随后在候选附件上重算P0追踪
+阻断是否归零。生成器拒绝覆盖现有文件或写入`doc`，验证失败或异常不会发布候选。
+通过仍只表示候选附件可以进入正式基线评审，D4继续使用`doc/doc`中的权威附件。
 
 P0交付证据模板进一步逐项冻结90项需求、125个页面、56个API、89项产品测试、
 17项工程测试和ACC-001至ACC-011，并固化缺陷、关键任务、泄漏、AI引用、性能、

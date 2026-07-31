@@ -2,18 +2,31 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
+import shutil
+import tempfile
+from copy import copy
 from dataclasses import replace
 from pathlib import Path
 from typing import Any, cast
 
+from openpyxl import load_workbook
+from openpyxl.utils import get_column_letter, range_boundaries
+from openpyxl.worksheet.table import TableColumn
+from openpyxl.worksheet.worksheet import Worksheet
+
 from .baseline import TECH_SHEETS, extract_contracts, sha256_file
 from .models import CheckResult
 from .p0_resolution import PROPOSED_CONTRACT_SPECS, validate_p0_resolution_packet
-from .p0_traceability import build_p0_traceability_report, extract_references
+from .p0_traceability import (
+    EXPECTED_P0_REQUIREMENT_COUNT,
+    build_p0_traceability_report,
+    extract_references,
+)
 from .paths import RepositoryPaths
 from .validation import validate_structure
-from .workbook import load_read_only
+from .workbook import load_read_only, normalized_value
 
 _PERMISSION_SEPARATOR = re.compile(r"[;；,，、\n]+")
 
@@ -56,6 +69,7 @@ _NEW_ROW_REQUIRED_FIELDS = {
 }
 _NOT_APPLICABLE_MARKERS = {"不适用", "无需API", "N/A", "NA"}
 _REVIEWED_HEADER_EXTENSIONS = {"role_permissions": {"权限代码"}}
+_CONTRACT_SHEETS = {contract_name: sheet_name for sheet_name, contract_name in TECH_SHEETS.items()}
 
 
 def _payload_sha256(payload: Any) -> str:
@@ -134,8 +148,14 @@ def _validate_header_delta(
         }
         added = {column: header for column, header in after.items() if column not in before}
         allowed_extensions = _REVIEWED_HEADER_EXTENSIONS.get(contract_name, set())
+        expected_extension_columns = {
+            max(before, default=0) + offset: header
+            for offset, header in enumerate(sorted(allowed_extensions), start=1)
+        }
         unexpected_added = {
-            column: header for column, header in added.items() if header not in allowed_extensions
+            column: header
+            for column, header in added.items()
+            if expected_extension_columns.get(column) != header
         }
         duplicate_extensions = {
             header
@@ -168,6 +188,158 @@ def _validate_header_delta(
                         f"{contract_name} contains unreviewed header changes: " + "; ".join(details)
                     ),
                     location=contract_name,
+                )
+            )
+
+
+def _workbook_row_lookups(workbook_path: Path) -> dict[str, dict[str, int]]:
+    workbook = load_workbook(workbook_path, read_only=False, data_only=False)
+    try:
+        result: dict[str, dict[str, int]] = {}
+        for contract_name in _CHANGEABLE_CONTRACTS:
+            sheet = workbook[_CONTRACT_SHEETS[contract_name]]
+            headers = _editable_headers(sheet)
+            identifier_column = headers.get(_CONTRACT_IDS[contract_name])
+            if identifier_column is None:
+                result[contract_name] = {}
+                continue
+            result[contract_name] = _editable_rows(sheet, identifier_column)
+        return result
+    finally:
+        workbook.close()
+
+
+def _cell_values(workbook_path: Path) -> tuple[list[str], dict[str, dict[tuple[int, int], Any]]]:
+    workbook = load_workbook(workbook_path, read_only=False, data_only=False)
+    try:
+        values: dict[str, dict[tuple[int, int], Any]] = {}
+        for sheet in workbook.worksheets:
+            cells: dict[tuple[int, int], Any] = {}
+            for row in sheet.iter_rows():
+                for cell in row:
+                    value = normalized_value(cell.value)
+                    if (
+                        value is not None
+                        and str(value).strip()
+                        and cell.row is not None
+                        and cell.column is not None
+                    ):
+                        cells[(int(cell.row), int(cell.column))] = value
+            values[sheet.title] = cells
+        return list(workbook.sheetnames), values
+    finally:
+        workbook.close()
+
+
+def _validate_cell_delta(
+    checks: list[CheckResult],
+    source_workbook: Path,
+    candidate_workbook: Path,
+    resolution: dict[str, Any],
+) -> None:
+    source_sheets, source_values = _cell_values(source_workbook)
+    candidate_sheets, candidate_values = _cell_values(candidate_workbook)
+    if source_sheets != candidate_sheets:
+        checks.append(
+            CheckResult(
+                code="P0_CHANGE_SHEET_SET_INVALID",
+                message="Candidate workbook sheet names or order differ from the frozen workbook",
+                location=str(candidate_workbook),
+            )
+        )
+        return
+
+    headers = _header_contract(candidate_workbook)
+    rows = _workbook_row_lookups(candidate_workbook)
+    allowed: set[tuple[str, int, int]] = set()
+
+    permission_headers = headers.get("role_permissions", {})
+    permission_code_column = next(
+        (column for column, header in permission_headers.items() if header == "权限代码"),
+        None,
+    )
+    if permission_code_column is not None:
+        allowed.add((_CONTRACT_SHEETS["role_permissions"], 4, permission_code_column))
+
+    proposed_rows = _proposed_rows(resolution)
+    for category, (contract_name, _identifier_field) in _PROPOSED_CONTRACTS.items():
+        sheet_name = _CONTRACT_SHEETS[contract_name]
+        for identifier in proposed_rows[category]:
+            row = rows.get(contract_name, {}).get(identifier)
+            if row is not None:
+                allowed.update((sheet_name, row, column) for column in headers[contract_name])
+
+    requirement_items = resolution.get("requirement_test_resolutions")
+    if isinstance(requirement_items, list):
+        requirement_column = next(
+            (
+                column
+                for column, header in headers.get("test_cases", {}).items()
+                if header == "需求编号"
+            ),
+            None,
+        )
+        if requirement_column is not None:
+            for item in requirement_items:
+                if not isinstance(item, dict):
+                    continue
+                for test_id in _string_list(item.get("proposed_test_case_ids")):
+                    row = rows.get("test_cases", {}).get(test_id)
+                    if row is not None:
+                        allowed.add((_CONTRACT_SHEETS["test_cases"], row, requirement_column))
+
+    route_items = resolution.get("route_mapping_resolutions")
+    if isinstance(route_items, list):
+        route_headers = {
+            header: column for column, header in headers.get("page_routes", {}).items()
+        }
+        for item in route_items:
+            if not isinstance(item, dict):
+                continue
+            row = rows.get("page_routes", {}).get(_text(item, "page_id"))
+            if row is None:
+                continue
+            for dimension in _string_list(item.get("unresolved_dimensions")):
+                if dimension in _ROUTE_DIMENSIONS:
+                    field = _ROUTE_DIMENSIONS[dimension][0]
+                    if field in route_headers:
+                        allowed.add((_CONTRACT_SHEETS["page_routes"], row, route_headers[field]))
+
+    permission_items = resolution.get("permission_code_resolutions")
+    if isinstance(permission_items, list) and permission_code_column is not None:
+        for item in permission_items:
+            if not isinstance(item, dict):
+                continue
+            for permission_id in _string_list(item.get("proposed_perm_ids")):
+                row = rows.get("role_permissions", {}).get(permission_id)
+                if row is not None:
+                    allowed.add(
+                        (
+                            _CONTRACT_SHEETS["role_permissions"],
+                            row,
+                            permission_code_column,
+                        )
+                    )
+
+    for sheet_name in source_sheets:
+        before = source_values.get(sheet_name, {})
+        after = candidate_values.get(sheet_name, {})
+        changed = {
+            coordinate
+            for coordinate in set(before) | set(after)
+            if before.get(coordinate) != after.get(coordinate)
+            and (sheet_name, coordinate[0], coordinate[1]) not in allowed
+        }
+        if changed:
+            preview = ", ".join(f"R{row}C{column}" for row, column in sorted(changed)[:10])
+            checks.append(
+                CheckResult(
+                    code="P0_CHANGE_UNAUTHORIZED_CELL_CHANGE",
+                    message=(
+                        f"{sheet_name} contains {len(changed)} unreviewed cell value/formula "
+                        f"change(s): {preview}"
+                    ),
+                    location=sheet_name,
                 )
             )
 
@@ -383,6 +555,7 @@ def _validate_requirement_test_resolutions(
     resolution: dict[str, Any],
 ) -> None:
     original_tests = _index(_records(original, "test_cases"), "用例编号")
+    reviewed_new_tests = _proposed_rows(resolution)["tests"]
     tests = _index(_records(candidate, "test_cases"), "用例编号")
     items = resolution.get("requirement_test_resolutions")
     if not isinstance(items, list):
@@ -397,7 +570,9 @@ def _validate_requirement_test_resolutions(
                 test_id,
                 set(
                     extract_references(
-                        original_tests.get(test_id, {}).get("需求编号"),
+                        reviewed_new_tests.get(test_id, original_tests.get(test_id, {})).get(
+                            "需求编号"
+                        ),
                         ("FR-",),
                     )
                 ),
@@ -593,6 +768,12 @@ def assess_p0_baseline_change(
         _validate_header_delta(checks, source_workbook, candidate_path)
         original_contracts = extract_contracts(paths, data_only=False)
         candidate_contracts = extract_contracts(candidate_paths, data_only=False)
+        _validate_cell_delta(
+            checks,
+            source_workbook,
+            candidate_path,
+            resolution,
+        )
     except Exception as error:
         checks.append(
             CheckResult(
@@ -614,7 +795,12 @@ def assess_p0_baseline_change(
     _validate_route_resolutions(checks, candidate_contracts, resolution)
     _validate_permission_resolutions(checks, candidate_contracts, resolution)
 
-    traceability = build_p0_traceability_report(candidate_paths)
+    traceability = build_p0_traceability_report(
+        candidate_paths,
+        expected_p0_requirement_count=(
+            EXPECTED_P0_REQUIREMENT_COUNT + len(_proposed_ids(resolution)["requirements"])
+        ),
+    )
     report["traceability_assessment"] = traceability
     if traceability.get("traceability_ready") is not True:
         blocker_count = sum(
@@ -645,35 +831,377 @@ def load_and_assess_p0_baseline_change(
     try:
         payload = json.loads(resolution_path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError) as error:
-        return {
-            "schema_version": 1,
-            "stage": "P0",
-            "assessment_scope": "P0 candidate technical workbook baseline-change verification",
-            "automated_assessment_only": True,
-            "does_not_activate_baseline": True,
-            "candidate_ready_for_formal_baseline_review": False,
-            "checks": [
-                CheckResult(
-                    code="P0_CHANGE_RESOLUTION_INVALID",
-                    message=f"Cannot read resolution packet: {error}",
-                    location=str(resolution_path),
-                ).to_dict()
-            ],
-        }
+        return _invalid_resolution_report(
+            f"Cannot read resolution packet: {error}", resolution_path
+        )
     if not isinstance(payload, dict):
-        return {
-            "schema_version": 1,
-            "stage": "P0",
-            "assessment_scope": "P0 candidate technical workbook baseline-change verification",
-            "automated_assessment_only": True,
-            "does_not_activate_baseline": True,
-            "candidate_ready_for_formal_baseline_review": False,
-            "checks": [
-                CheckResult(
-                    code="P0_CHANGE_RESOLUTION_INVALID",
-                    message="Resolution packet root must be an object",
-                    location=str(resolution_path),
-                ).to_dict()
-            ],
-        }
+        return _invalid_resolution_report(
+            "Resolution packet root must be an object", resolution_path
+        )
     return assess_p0_baseline_change(paths, payload, candidate_workbook)
+
+
+def _invalid_resolution_report(message: str, path: Path) -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "stage": "P0",
+        "assessment_scope": "P0 candidate technical workbook baseline-change verification",
+        "automated_assessment_only": True,
+        "does_not_activate_baseline": True,
+        "candidate_ready_for_formal_baseline_review": False,
+        "checks": [
+            CheckResult(
+                code="P0_CHANGE_RESOLUTION_INVALID",
+                message=message,
+                location=str(path),
+            ).to_dict()
+        ],
+    }
+
+
+def _editable_headers(sheet: Worksheet) -> dict[str, int]:
+    return {
+        str(cell.value).strip(): int(cell.column)
+        for cell in sheet[4]
+        if cell.value is not None and str(cell.value).strip() and cell.column is not None
+    }
+
+
+def _editable_rows(sheet: Worksheet, identifier_column: int) -> dict[str, int]:
+    return {
+        str(sheet.cell(row, identifier_column).value).strip(): row
+        for row in range(5, sheet.max_row + 1)
+        if sheet.cell(row, identifier_column).value is not None
+        and str(sheet.cell(row, identifier_column).value).strip()
+    }
+
+
+def _copy_cell_style(source: Any, target: Any) -> None:
+    if source.has_style:
+        target._style = copy(source._style)
+    if source.number_format:
+        target.number_format = source.number_format
+    target.alignment = copy(source.alignment)
+    target.protection = copy(source.protection)
+
+
+def _ordered_union(*groups: list[str]) -> list[str]:
+    return list(dict.fromkeys(value for group in groups for value in group if value))
+
+
+def _ensure_permission_code_header(sheet: Worksheet) -> dict[str, int]:
+    headers = _editable_headers(sheet)
+    if "权限代码" in headers:
+        return headers
+
+    column = max(headers.values()) + 1
+    previous_column = column - 1
+    header_cell = sheet.cell(4, column)
+    _copy_cell_style(sheet.cell(4, previous_column), header_cell)
+    header_cell.value = "权限代码"
+    previous_letter = get_column_letter(previous_column)
+    column_letter = get_column_letter(column)
+    sheet.column_dimensions[column_letter].width = sheet.column_dimensions[previous_letter].width
+
+    identifier_column = headers[_CONTRACT_IDS["role_permissions"]]
+    rows = _editable_rows(sheet, identifier_column)
+    for row in rows.values():
+        _copy_cell_style(sheet.cell(row, previous_column), sheet.cell(row, column))
+
+    for table_name in sheet.tables:
+        table = sheet.tables[table_name]
+        if not any(table_column.name == "权限代码" for table_column in table.tableColumns):
+            next_id = max((table_column.id for table_column in table.tableColumns), default=0) + 1
+            table.tableColumns.append(TableColumn(id=next_id, name="权限代码"))
+    headers["权限代码"] = column
+    return headers
+
+
+def _resize_sheet_tables(sheet: Worksheet, last_row: int, last_column: int) -> None:
+    for table_name in sheet.tables:
+        table = sheet.tables[table_name]
+        min_column, min_row, _max_column, _max_row = range_boundaries(table.ref)
+        if min_column is None or min_row is None:
+            raise ValueError(f"Cannot resize invalid table range: {table.ref}")
+        table.ref = (
+            f"{get_column_letter(min_column)}{min_row}:{get_column_letter(last_column)}{last_row}"
+        )
+
+
+def _append_proposed_rows(
+    workbook: Any,
+    resolution: dict[str, Any],
+) -> dict[str, dict[str, int]]:
+    proposed = resolution.get("proposed_contract_rows")
+    if not isinstance(proposed, dict):
+        proposed = {}
+
+    row_lookups: dict[str, dict[str, int]] = {}
+    for category, (contract_name, identifier_field) in _PROPOSED_CONTRACTS.items():
+        sheet = workbook[_CONTRACT_SHEETS[contract_name]]
+        headers = (
+            _ensure_permission_code_header(sheet)
+            if contract_name == "role_permissions"
+            else _editable_headers(sheet)
+        )
+        rows = _editable_rows(sheet, headers[identifier_field])
+        last_original_row = max(rows.values())
+        values = proposed.get(category)
+        records = values if isinstance(values, list) else []
+        for offset, record in enumerate(records, start=1):
+            if not isinstance(record, dict):
+                continue
+            row = last_original_row + offset
+            if sheet.row_dimensions[last_original_row].height is not None:
+                sheet.row_dimensions[row].height = sheet.row_dimensions[last_original_row].height
+            for field, column in headers.items():
+                target = sheet.cell(row, column)
+                _copy_cell_style(sheet.cell(last_original_row, column), target)
+                target.value = record.get(field)
+            identifier = _text(record, identifier_field)
+            if identifier:
+                rows[identifier] = row
+        _resize_sheet_tables(sheet, max(rows.values()), max(headers.values()))
+        row_lookups[contract_name] = rows
+    for contract_name in _CHANGEABLE_CONTRACTS - set(row_lookups):
+        sheet = workbook[_CONTRACT_SHEETS[contract_name]]
+        headers = _editable_headers(sheet)
+        row_lookups[contract_name] = _editable_rows(
+            sheet,
+            headers[_CONTRACT_IDS[contract_name]],
+        )
+    return row_lookups
+
+
+def _apply_requirement_test_mappings(
+    workbook: Any,
+    resolution: dict[str, Any],
+    rows: dict[str, dict[str, int]],
+) -> None:
+    sheet = workbook[_CONTRACT_SHEETS["test_cases"]]
+    requirement_column = _editable_headers(sheet)["需求编号"]
+    items = resolution.get("requirement_test_resolutions")
+    if not isinstance(items, list):
+        return
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        requirement_id = _text(item, "requirement_id")
+        for test_id in _string_list(item.get("proposed_test_case_ids")):
+            row = rows["test_cases"][test_id]
+            cell = sheet.cell(row, requirement_column)
+            current = extract_references(cell.value, ("FR-",))
+            if requirement_id not in current:
+                raw = str(cell.value or "").strip()
+                cell.value = f"{raw};{requirement_id}" if raw else requirement_id
+
+
+def _apply_route_mappings(
+    workbook: Any,
+    resolution: dict[str, Any],
+    rows: dict[str, dict[str, int]],
+) -> None:
+    sheet = workbook[_CONTRACT_SHEETS["page_routes"]]
+    headers = _editable_headers(sheet)
+    current_fields = {
+        "requirement": "current_requirement_ids",
+        "api": "current_api_ids",
+        "test": "current_test_case_ids",
+    }
+    items = resolution.get("route_mapping_resolutions")
+    if not isinstance(items, list):
+        return
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        row = rows["page_routes"][_text(item, "page_id")]
+        for dimension in _string_list(item.get("unresolved_dimensions")):
+            if dimension not in _ROUTE_DIMENSIONS:
+                continue
+            field, proposed_field, _prefixes = _ROUTE_DIMENSIONS[dimension]
+            cell = sheet.cell(row, headers[field])
+            if dimension == "api" and item.get("api_not_applicable") is True:
+                cell.value = "不适用"
+                continue
+            identifiers = _ordered_union(
+                _string_list(item.get(current_fields[dimension])),
+                _string_list(item.get(proposed_field)),
+            )
+            cell.value = ";".join(identifiers)
+
+
+def _apply_permission_mappings(
+    workbook: Any,
+    resolution: dict[str, Any],
+    rows: dict[str, dict[str, int]],
+) -> None:
+    sheet = workbook[_CONTRACT_SHEETS["role_permissions"]]
+    permission_code_column = _editable_headers(sheet)["权限代码"]
+    items = resolution.get("permission_code_resolutions")
+    if not isinstance(items, list):
+        return
+    for item in items:
+        if not isinstance(item, dict) or item.get("permission_not_applicable") is True:
+            continue
+        permission_code = _text(item, "permission_code")
+        for permission_id in _string_list(item.get("proposed_perm_ids")):
+            row = rows["role_permissions"][permission_id]
+            cell = sheet.cell(row, permission_code_column)
+            if permission_code not in _permission_codes(cell.value):
+                raw = str(cell.value or "").strip()
+                cell.value = f"{raw};{permission_code}" if raw else permission_code
+
+
+def _apply_resolution_to_workbook(
+    candidate_workbook: Path,
+    resolution: dict[str, Any],
+) -> None:
+    workbook = load_workbook(candidate_workbook, read_only=False, data_only=False)
+    try:
+        rows = _append_proposed_rows(workbook, resolution)
+        _apply_requirement_test_mappings(workbook, resolution, rows)
+        _apply_route_mappings(workbook, resolution, rows)
+        _apply_permission_mappings(workbook, resolution, rows)
+        workbook.save(candidate_workbook)
+    finally:
+        workbook.close()
+
+
+def _generation_report(
+    paths: RepositoryPaths,
+    resolution: dict[str, Any],
+    output_path: Path,
+    checks: list[CheckResult],
+) -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "stage": "P0",
+        "operation": "generate validated P0 candidate technical workbook",
+        "automated_assessment_only": True,
+        "does_not_activate_baseline": True,
+        "source_workbook": {
+            "path": paths.technical_workbook.relative_to(paths.root).as_posix(),
+            "sha256": sha256_file(paths.technical_workbook),
+        },
+        "candidate_workbook": {"path": str(output_path), "sha256": None},
+        "resolution_sha256": _payload_sha256(resolution),
+        "candidate_written": False,
+        "candidate_ready_for_formal_baseline_review": False,
+        "checks": [check.to_dict() for check in checks],
+        "warning": (
+            "Generation never overwrites or activates the authoritative technical workbook. "
+            "A written candidate still requires formal baseline review and cannot authorize "
+            "user-facing development."
+        ),
+    }
+
+
+def generate_p0_candidate_workbook(
+    paths: RepositoryPaths,
+    resolution: dict[str, Any],
+    candidate_output: Path,
+) -> dict[str, Any]:
+    output_path = candidate_output.resolve()
+    checks = validate_p0_resolution_packet(paths, resolution)
+    source_path = paths.technical_workbook.resolve()
+    if output_path == source_path:
+        checks.append(
+            CheckResult(
+                code="P0_CHANGE_SOURCE_WORKBOOK_FORBIDDEN",
+                message="The authoritative technical workbook cannot be overwritten",
+                location=str(output_path),
+            )
+        )
+    try:
+        output_path.relative_to((paths.root / "doc").resolve())
+    except ValueError:
+        pass
+    else:
+        checks.append(
+            CheckResult(
+                code="P0_CHANGE_OUTPUT_LOCATION_FORBIDDEN",
+                message="Candidate workbooks must be written outside the authoritative doc tree",
+                location=str(output_path),
+            )
+        )
+    if output_path.suffix.lower() != ".xlsx":
+        checks.append(
+            CheckResult(
+                code="P0_CHANGE_OUTPUT_EXTENSION_INVALID",
+                message="Candidate output must use the .xlsx extension",
+                location=str(output_path),
+            )
+        )
+    if output_path.exists():
+        checks.append(
+            CheckResult(
+                code="P0_CHANGE_OUTPUT_EXISTS",
+                message="Candidate output already exists and will not be overwritten",
+                location=str(output_path),
+            )
+        )
+    if checks:
+        return _generation_report(paths, resolution, output_path, checks)
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    temporary_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            dir=output_path.parent,
+            prefix=f".{output_path.stem}.",
+            suffix=".xlsx",
+            delete=False,
+        ) as temporary:
+            temporary_path = Path(temporary.name)
+        shutil.copy2(source_path, temporary_path)
+        _apply_resolution_to_workbook(temporary_path, resolution)
+        assessment = assess_p0_baseline_change(paths, resolution, temporary_path)
+        assessment["operation"] = "generate validated P0 candidate technical workbook"
+        assessment["candidate_written"] = False
+        cast(dict[str, Any], assessment["candidate_workbook"])["path"] = str(output_path)
+        if assessment.get("candidate_ready_for_formal_baseline_review") is not True:
+            return assessment
+        os.replace(temporary_path, output_path)
+        temporary_path = None
+        assessment["candidate_written"] = True
+        return assessment
+    except Exception as error:
+        return _generation_report(
+            paths,
+            resolution,
+            output_path,
+            [
+                CheckResult(
+                    code="P0_CHANGE_GENERATION_FAILED",
+                    message=f"Could not generate candidate workbook: {error}",
+                    location=str(output_path),
+                )
+            ],
+        )
+    finally:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
+
+
+def load_and_generate_p0_candidate_workbook(
+    paths: RepositoryPaths,
+    resolution_path: Path,
+    candidate_output: Path,
+) -> dict[str, Any]:
+    try:
+        payload = json.loads(resolution_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as error:
+        report = _invalid_resolution_report(
+            f"Cannot read resolution packet: {error}", resolution_path
+        )
+        report["operation"] = "generate validated P0 candidate technical workbook"
+        report["candidate_written"] = False
+        return report
+    if not isinstance(payload, dict):
+        report = _invalid_resolution_report(
+            "Resolution packet root must be an object", resolution_path
+        )
+        report["operation"] = "generate validated P0 candidate technical workbook"
+        report["candidate_written"] = False
+        return report
+    return generate_p0_candidate_workbook(paths, payload, candidate_output)

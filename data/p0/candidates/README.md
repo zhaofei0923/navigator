@@ -46,20 +46,27 @@ uv run navigator-data validate-p0-resolution \
 校验通过只表示提案的编号、引用、冻结输入和复核元数据完整，可以进入正式基线变更
 评审；不表示技术附件已经变更，也不表示整改已经生效。
 
-拿到单独保存的候选技术附件后，可执行：
+整改包校验通过后，可生成候选技术附件；已有独立候选时也可单独验证：
 
 ```bash
+uv run navigator-data prepare-p0-baseline-change \
+  --resolution data/p0/review/p0_traceability_resolution.<date>.json \
+  --output /安全的评审工作区/新能源企业出海导航仪_V1.0技术附件_CANDIDATE.xlsx \
+  --assessment-output /安全的评审工作区/p0_generation_assessment.json
+
 uv run navigator-data validate-p0-baseline-change \
   --resolution data/p0/review/p0_traceability_resolution.<date>.json \
   --workbook /安全的评审工作区/新能源企业出海导航仪_V1.0技术附件_CANDIDATE.xlsx \
   --output /安全的评审工作区/p0_baseline_change_assessment.json
 ```
 
-该命令拒绝把权威源工作簿本身作为候选，比较公式合同以区分语义变更与缓存刷新，
-核对新增编号、禁止删除原记录、增加未授权列或夹带未评审字段，逐项验证需求—测试、
-页面—需求/API/测试和权限代码—`PERM-*`映射。新增合同记录必须与评审包中的完整
-行定义逐字段一致；仅满足必填字段但内容不同也会失败。最后在候选附件上重新计算
-P0追踪报告，只有所有提案精确落地且追踪阻断为0时才返回成功。
+生成器拒绝覆盖现有文件或写入权威`doc`目录，经同一验证器确认后才使用同目录原子
+替换发布，验证失败或异常会清理临时文件。验证器拒绝把权威源工作簿本身作为候选，
+逐单元格比较值和公式，核对新增编号、禁止删除原记录、增加未授权列或夹带未评审
+字段，逐项验证需求—测试、页面—需求/API/测试和权限代码—`PERM-*`映射。新增合同
+记录必须与评审包中的完整行定义逐字段一致；仅满足必填字段但内容不同也会失败。
+最后在候选附件上重新计算P0追踪报告，只有所有提案精确落地且追踪阻断为0时才返回
+成功。
 
 机器报告不能修改工作簿状态、代替D0—D4正式签署，也不能授权启动V0.1/P0用户侧开发。
 

@@ -74,7 +74,11 @@ def _issue(code: str, count: int, ids: list[str] | None = None) -> dict[str, Any
     return payload
 
 
-def _build_payloads(contracts: dict[str, Any]) -> dict[str, Any]:
+def _build_payloads(
+    contracts: dict[str, Any],
+    *,
+    expected_p0_requirement_count: int = EXPECTED_P0_REQUIREMENT_COUNT,
+) -> dict[str, Any]:
     requirements: list[dict[str, Any]] = contracts["feature_requirements"]
     permissions: list[dict[str, Any]] = contracts["role_permissions"]
     routes: list[dict[str, Any]] = contracts["page_routes"]
@@ -187,7 +191,7 @@ def _build_payloads(contracts: dict[str, Any]) -> dict[str, Any]:
     unexpected_acceptance_ids = sorted(actual_acceptance_ids - EXPECTED_MVP_ACCEPTANCE_IDS)
 
     traceability_blockers: list[dict[str, Any]] = []
-    if len(p0_requirements) != EXPECTED_P0_REQUIREMENT_COUNT:
+    if len(p0_requirements) != expected_p0_requirement_count:
         traceability_blockers.append(_issue("P0_REQUIREMENT_COUNT_MISMATCH", len(p0_requirements)))
     if requirements_without_tests:
         traceability_blockers.append(
@@ -318,14 +322,28 @@ def _build_payloads(contracts: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def p0_candidate_payloads(paths: RepositoryPaths) -> dict[str, Any]:
-    return _build_payloads(extract_contracts(paths))
+def p0_candidate_payloads(
+    paths: RepositoryPaths,
+    *,
+    expected_p0_requirement_count: int = EXPECTED_P0_REQUIREMENT_COUNT,
+) -> dict[str, Any]:
+    return _build_payloads(
+        extract_contracts(paths),
+        expected_p0_requirement_count=expected_p0_requirement_count,
+    )
 
 
-def build_p0_traceability_report(paths: RepositoryPaths) -> dict[str, Any]:
+def build_p0_traceability_report(
+    paths: RepositoryPaths,
+    *,
+    expected_p0_requirement_count: int = EXPECTED_P0_REQUIREMENT_COUNT,
+) -> dict[str, Any]:
     return cast(
         dict[str, Any],
-        p0_candidate_payloads(paths)["p0_traceability_assessment.json"],
+        p0_candidate_payloads(
+            paths,
+            expected_p0_requirement_count=expected_p0_requirement_count,
+        )["p0_traceability_assessment.json"],
     )
 
 

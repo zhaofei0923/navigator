@@ -19,7 +19,10 @@ from .d2_collection import load_and_validate_d2_bundle, write_d2_candidates
 from .d3_processing import load_and_validate_d3_bundle, write_d3_candidates
 from .d4_acceptance import load_and_validate_d4_bundle, write_d4_candidates
 from .models import CheckResult
-from .p0_baseline_change import load_and_assess_p0_baseline_change
+from .p0_baseline_change import (
+    load_and_assess_p0_baseline_change,
+    load_and_generate_p0_candidate_workbook,
+)
 from .p0_delivery import (
     load_and_validate_p0_delivery_bundle,
     write_p0_delivery_template,
@@ -172,6 +175,16 @@ def _parser() -> argparse.ArgumentParser:
     p0_change_validation.add_argument("--resolution", type=Path, required=True)
     p0_change_validation.add_argument("--workbook", type=Path, required=True)
     p0_change_validation.add_argument("--output", type=Path)
+    p0_change_generation = commands.add_parser(
+        "prepare-p0-baseline-change",
+        help=(
+            "Generate a new, separately validated P0 candidate technical workbook from a "
+            "completed traceability resolution."
+        ),
+    )
+    p0_change_generation.add_argument("--resolution", type=Path, required=True)
+    p0_change_generation.add_argument("--output", type=Path, required=True)
+    p0_change_generation.add_argument("--assessment-output", type=Path)
     commands.add_parser(
         "prepare-p0-delivery",
         help=(
@@ -477,6 +490,50 @@ def main(argv: list[str] | None = None) -> int:
         else:
             print(output, end="")
         return 0 if assessment.get("candidate_ready_for_formal_baseline_review") else 1
+
+    if args.command == "prepare-p0-baseline-change":
+        resolution_path = (
+            args.resolution if args.resolution.is_absolute() else paths.root / args.resolution
+        )
+        candidate_output = args.output if args.output.is_absolute() else paths.root / args.output
+        assessment_output = (
+            args.assessment_output
+            if args.assessment_output is None or args.assessment_output.is_absolute()
+            else paths.root / args.assessment_output
+        )
+        if (
+            assessment_output is not None
+            and assessment_output.resolve() == candidate_output.resolve()
+        ):
+            print(
+                "Assessment output must be different from the candidate workbook path",
+                file=sys.stderr,
+            )
+            return 1
+        if assessment_output is not None and assessment_output.exists():
+            print(
+                f"Assessment output already exists and will not be overwritten: "
+                f"{assessment_output}",
+                file=sys.stderr,
+            )
+            return 1
+        assessment = load_and_generate_p0_candidate_workbook(
+            paths,
+            resolution_path,
+            candidate_output,
+        )
+        serialized = json.dumps(assessment, ensure_ascii=False, indent=2) + "\n"
+        if assessment_output is not None:
+            assessment_output.parent.mkdir(parents=True, exist_ok=True)
+            with assessment_output.open("x", encoding="utf-8") as destination:
+                destination.write(serialized)
+            print(str(assessment_output))
+        else:
+            print(serialized, end="")
+        if assessment.get("candidate_written") is True:
+            print(str(candidate_output))
+            return 0
+        return 1
 
     if args.command == "prepare-p0-delivery":
         path = write_p0_delivery_template(paths)

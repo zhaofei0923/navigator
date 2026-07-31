@@ -528,6 +528,84 @@ def test_validate_p0_baseline_change_command_writes_assessment(
     assert str(output) in captured.out
 
 
+def test_prepare_p0_baseline_change_command_reports_generated_candidate(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: CaptureFixture[str],
+) -> None:
+    resolution = tmp_path / "resolution.json"
+    candidate = tmp_path / "candidate.xlsx"
+    assessment = tmp_path / "assessment.json"
+    resolution.write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(
+        "navigator_data_readiness.cli.load_and_generate_p0_candidate_workbook",
+        lambda *_args: {
+            "candidate_written": True,
+            "candidate_ready_for_formal_baseline_review": True,
+            "checks": [],
+        },
+    )
+
+    exit_code = main(
+        [
+            "prepare-p0-baseline-change",
+            "--resolution",
+            str(resolution),
+            "--output",
+            str(candidate),
+            "--assessment-output",
+            str(assessment),
+        ]
+    )
+
+    assert exit_code == 0
+    assert '"candidate_written": true' in assessment.read_text(encoding="utf-8")
+    captured = capsys.readouterr()
+    assert str(candidate) in captured.out
+    assert str(assessment) in captured.out
+
+
+def test_prepare_p0_baseline_change_rejects_conflicting_outputs(
+    tmp_path: Path,
+    capsys: CaptureFixture[str],
+) -> None:
+    resolution = tmp_path / "resolution.json"
+    output = tmp_path / "candidate.xlsx"
+    resolution.write_text("{}", encoding="utf-8")
+
+    same_path_exit = main(
+        [
+            "prepare-p0-baseline-change",
+            "--resolution",
+            str(resolution),
+            "--output",
+            str(output),
+            "--assessment-output",
+            str(output),
+        ]
+    )
+    report = tmp_path / "existing.json"
+    report.write_text("keep", encoding="utf-8")
+    existing_exit = main(
+        [
+            "prepare-p0-baseline-change",
+            "--resolution",
+            str(resolution),
+            "--output",
+            str(output),
+            "--assessment-output",
+            str(report),
+        ]
+    )
+
+    assert same_path_exit == 1
+    assert existing_exit == 1
+    assert report.read_text(encoding="utf-8") == "keep"
+    captured = capsys.readouterr()
+    assert "must be different" in captured.err
+    assert "will not be overwritten" in captured.err
+
+
 def test_prepare_p0_delivery_command_lists_template(
     monkeypatch: MonkeyPatch,
     capsys: CaptureFixture[str],

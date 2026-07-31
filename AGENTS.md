@@ -81,6 +81,11 @@
   Candidate generation must refuse existing outputs and the authoritative `doc` tree, write via a
   same-directory temporary file, publish atomically only after baseline-change verification passes,
   and clean up failed or exceptional temporary outputs.
+- P0 baseline-change verification and generation must target a separate technical workbook, replay
+  a complete traceability resolution, preserve every unreviewed cell and formula, extend only the
+  reviewed contracts and permission-code header, recompute P0 traceability, and never replace or
+  activate the authoritative workbook. Generation follows the same no-overwrite, outside-`doc`,
+  same-directory temporary-file, verified atomic-publish, and cleanup rules as D0 generation.
 - Generated D1 source-onboarding templates belong in `data/d1/candidates`; no source may become
   `active` before D0 passes and all access, license, usage-boundary, evidence, and owner fields pass.
 - Generated D2 collection templates belong in `data/d2/candidates`; L0 objects are append-only,
