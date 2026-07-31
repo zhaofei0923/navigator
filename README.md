@@ -13,6 +13,8 @@ D0 数据标准冻结；D4 数据就绪评审正式通过之前，只建设数�
 - 校验验收证据文件的哈希和关联关系；
 - 生成并校验AC-001/002的29个主键合同和92个字段单位/不适用逐项整改提案；
 - 对独立候选D0工作簿执行整改包精确应用、全单元格越权差异和AC-001/002重算验证；
+- 从已完成整改包原子生成独立候选D0工作簿；禁止覆盖、禁止写入权威`doc`目录，
+  生成后验证不通过则不发布候选文件；
 - 生成并校验 D1 来源准入、哈希证据、D2 不可变采集和 D3 可重放处理候选合同；
 - 只读提取103项需求、166个页面、70个API、29条角色权限、109个产品/工程测试和
   11项MVP验收，并生成P0需求追踪预检矩阵；
@@ -37,6 +39,10 @@ uv run navigator-data assess-d0
 uv run navigator-data prepare-d0-review
 uv run navigator-data validate-d0-contract-resolution \
   --input data/d0/candidates/core_contract_resolution.review.json
+uv run navigator-data prepare-d0-baseline-change \
+  --resolution data/d0/candidates/core_contract_resolution.review.json \
+  --output /safe/path/d0-candidate.xlsx \
+  --assessment-output /safe/path/d0-generation-assessment.json
 uv run navigator-data validate-d0-baseline-change \
   --resolution data/d0/candidates/core_contract_resolution.review.json \
   --workbook /path/to/d0-candidate.xlsx \
@@ -94,6 +100,8 @@ AC-001和AC-002机器状态现为`fail`，不得仅靠人工签名覆盖。AC-00
 在授权人员形成完整整改副本后，`validate-d0-baseline-change`可验证独立候选D0
 工作簿是否精确应用全部决定。它保持原字段顺序，只允许追加已评审主键字段和`单位`
 列，逐单元格拒绝其他值或公式改动，并重算AC-001/002。验证成功仍不替换权威文件。
+`prepare-d0-baseline-change`可直接从完成的整改副本生成该候选文件，并在原子发布前
+运行同一验证器；输出已存在、位于`doc`目录、扩展名错误或验证失败时均不会写出候选。
 
 正式责任人可按
 [`data/d0/review`](data/d0/review/README.md)中的流程复制评审模板，填写角色、映射、

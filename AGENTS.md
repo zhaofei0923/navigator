@@ -78,6 +78,9 @@
   D0 baseline-change verification must target a separate candidate workbook, replay the completed
   resolution, preserve every unreviewed cell and formula, allow only the reviewed field rows and
   unit header, recompute AC-001/002, and never replace or activate the authoritative workbook.
+  Candidate generation must refuse existing outputs and the authoritative `doc` tree, write via a
+  same-directory temporary file, publish atomically only after baseline-change verification passes,
+  and clean up failed or exceptional temporary outputs.
 - Generated D1 source-onboarding templates belong in `data/d1/candidates`; no source may become
   `active` before D0 passes and all access, license, usage-boundary, evidence, and owner fields pass.
 - Generated D2 collection templates belong in `data/d2/candidates`; L0 objects are append-only,

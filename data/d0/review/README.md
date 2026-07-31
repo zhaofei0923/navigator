@@ -20,17 +20,23 @@
      --input data/d0/candidates/core_contract_resolution.review.json
    ```
 
-   该命令通过后，只在权威Excel之外建立候选D0工作簿，再执行：
+   该命令通过后，用下列命令在权威Excel之外原子生成并验证候选D0工作簿：
 
    ```bash
+   uv run navigator-data prepare-d0-baseline-change \
+     --resolution data/d0/candidates/core_contract_resolution.review.json \
+     --output /safe/path/d0-candidate.xlsx \
+     --assessment-output /safe/path/d0-generation-assessment.json
+
    uv run navigator-data validate-d0-baseline-change \
      --resolution data/d0/candidates/core_contract_resolution.review.json \
-     --workbook /path/to/d0-candidate.xlsx \
-     --output /path/to/d0-change-assessment.json
+     --workbook /safe/path/d0-candidate.xlsx \
+     --output /safe/path/d0-change-assessment.json
    ```
 
-   两个命令通过都只说明提案和候选工作簿可进入正式基线变更评审，不会更新本评审包
-   的机器状态，也不会替换权威Excel。
+   生成器拒绝覆盖现有文件或写入权威`doc`目录，并在验证失败时清理临时文件。以上
+   命令通过都只说明提案和候选工作簿可进入正式基线变更评审，不会更新本评审包的
+   机器状态，也不会替换权威Excel。
 
 2. 复制模板，文件名必须明确包含实际评审批次，例如：
 

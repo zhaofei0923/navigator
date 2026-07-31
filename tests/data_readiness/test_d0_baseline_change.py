@@ -6,9 +6,12 @@ import shutil
 from pathlib import Path
 from typing import Any
 
+from navigator_data_readiness.baseline import sha256_file
 from navigator_data_readiness.d0_baseline_change import (
     assess_d0_baseline_change,
+    generate_d0_candidate_workbook,
     load_and_assess_d0_baseline_change,
+    load_and_generate_d0_candidate_workbook,
 )
 from navigator_data_readiness.d0_candidates import candidate_payloads
 from navigator_data_readiness.d0_contract_resolution import (
@@ -17,6 +20,7 @@ from navigator_data_readiness.d0_contract_resolution import (
 from navigator_data_readiness.paths import RepositoryPaths, discover_repository
 from openpyxl import load_workbook
 from openpyxl.worksheet.worksheet import Worksheet
+from pytest import MonkeyPatch
 
 
 def _completed_resolution(paths: RepositoryPaths) -> dict[str, Any]:
@@ -374,3 +378,116 @@ def test_assessment_can_be_serialized(tmp_path: Path) -> None:
     )
 
     assert "candidate_ready_for_formal_baseline_review" in payload
+
+
+def test_generator_writes_only_a_validated_separate_candidate(tmp_path: Path) -> None:
+    paths = discover_repository()
+    packet = _completed_resolution(paths)
+    output = tmp_path / "generated-d0-candidate.xlsx"
+    source_hash = sha256_file(paths.d0_workbook)
+
+    report = generate_d0_candidate_workbook(paths, packet, output)
+
+    assert report["candidate_written"] is True, report["checks"]
+    assert report["candidate_ready_for_formal_baseline_review"] is True
+    assert output.is_file()
+    assert sha256_file(paths.d0_workbook) == source_hash
+    assert assess_d0_baseline_change(paths, packet, output)[
+        "candidate_ready_for_formal_baseline_review"
+    ]
+    workbook = load_workbook(output)
+    try:
+        sheet = workbook["核心字段冻结"]
+        headers = _headers(sheet)
+        assert headers["单位"] == max(headers.values())
+        assert (
+            sheet.cell(4, headers["单位"]).style_id == sheet.cell(4, headers["单位"] - 1).style_id
+        )
+    finally:
+        workbook.close()
+
+
+def test_generator_refuses_overwrite_authority_doc_tree_and_bad_extension(
+    tmp_path: Path,
+) -> None:
+    paths = discover_repository()
+    packet = _completed_resolution(paths)
+    existing = tmp_path / "existing.xlsx"
+    existing.write_bytes(b"keep")
+
+    existing_report = generate_d0_candidate_workbook(paths, packet, existing)
+    source_report = generate_d0_candidate_workbook(paths, packet, paths.d0_workbook)
+    doc_report = generate_d0_candidate_workbook(
+        paths,
+        packet,
+        paths.root / "doc" / "candidate.xlsx",
+    )
+    extension_report = generate_d0_candidate_workbook(
+        paths,
+        packet,
+        tmp_path / "candidate.xls",
+    )
+
+    assert existing.read_bytes() == b"keep"
+    assert "D0_CHANGE_OUTPUT_EXISTS" in _codes(existing_report)
+    assert "D0_CHANGE_SOURCE_WORKBOOK_FORBIDDEN" in _codes(source_report)
+    assert "D0_CHANGE_OUTPUT_LOCATION_FORBIDDEN" in _codes(source_report)
+    assert "D0_CHANGE_OUTPUT_LOCATION_FORBIDDEN" in _codes(doc_report)
+    assert "D0_CHANGE_OUTPUT_EXTENSION_INVALID" in _codes(extension_report)
+
+
+def test_generator_does_not_publish_a_failed_candidate(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    paths = discover_repository()
+    packet = _completed_resolution(paths)
+    output = tmp_path / "failed-candidate.xlsx"
+    monkeypatch.setattr(
+        "navigator_data_readiness.d0_baseline_change._apply_resolution_to_workbook",
+        lambda *_args: None,
+    )
+
+    report = generate_d0_candidate_workbook(paths, packet, output)
+
+    assert report["candidate_written"] is False
+    assert report["candidate_ready_for_formal_baseline_review"] is False
+    assert not output.exists()
+    assert list(tmp_path.glob(".failed-candidate.*.xlsx")) == []
+
+
+def test_generator_cleans_up_after_generation_exception(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    paths = discover_repository()
+    packet = _completed_resolution(paths)
+    output = tmp_path / "broken-candidate.xlsx"
+
+    def fail_generation(*_args: Any) -> None:
+        raise RuntimeError("synthetic failure")
+
+    monkeypatch.setattr(
+        "navigator_data_readiness.d0_baseline_change._apply_resolution_to_workbook",
+        fail_generation,
+    )
+
+    report = generate_d0_candidate_workbook(paths, packet, output)
+
+    assert _codes(report) == {"D0_CHANGE_GENERATION_FAILED"}
+    assert report["candidate_written"] is False
+    assert not output.exists()
+    assert list(tmp_path.glob(".broken-candidate.*.xlsx")) == []
+
+
+def test_generator_loader_rejects_invalid_resolution_without_writing(tmp_path: Path) -> None:
+    paths = discover_repository()
+    resolution = tmp_path / "resolution.json"
+    resolution.write_text("[]", encoding="utf-8")
+    output = tmp_path / "candidate.xlsx"
+
+    report = load_and_generate_d0_candidate_workbook(paths, resolution, output)
+
+    assert _codes(report) == {"D0_CHANGE_RESOLUTION_INVALID"}
+    assert report["candidate_written"] is False
+    assert not output.exists()
