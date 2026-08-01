@@ -12,6 +12,7 @@ from .d0_baseline_change import (
     load_and_generate_d0_candidate_workbook,
 )
 from .d0_candidates import candidate_payloads, write_candidates
+from .d0_confirmation import write_confirmed_packets
 from .d0_contract_resolution import load_and_validate_d0_contract_resolution
 from .d0_review import load_and_validate_review_packet, write_review_template
 from .d1_sources import load_and_validate_d1_admission, write_d1_candidates
@@ -77,6 +78,17 @@ def _parser() -> argparse.ArgumentParser:
         ),
     )
     contract_resolution_validation.add_argument("--input", type=Path, required=True)
+    confirmation = commands.add_parser(
+        "apply-d0-confirmation",
+        help=(
+            "Expand an authorized structured D0 confirmation into a formal review copy and "
+            "complete AC-001/002 resolution without changing the frozen workbook."
+        ),
+    )
+    confirmation.add_argument("--input", type=Path, required=True)
+    confirmation.add_argument("--previous-review", type=Path, required=True)
+    confirmation.add_argument("--resolution-output", type=Path, required=True)
+    confirmation.add_argument("--review-output", type=Path, required=True)
     d0_change_validation = commands.add_parser(
         "validate-d0-baseline-change",
         help=(
@@ -264,6 +276,31 @@ def main(argv: list[str] | None = None) -> int:
         checks = load_and_validate_d0_contract_resolution(paths, packet_path)
         _print_checks(checks)
         return 1 if checks else 0
+
+    if args.command == "apply-d0-confirmation":
+        inputs = {
+            name: value if value.is_absolute() else paths.root / value
+            for name, value in (
+                ("confirmation", args.input),
+                ("previous_review", args.previous_review),
+                ("resolution_output", args.resolution_output),
+                ("review_output", args.review_output),
+            )
+        }
+        try:
+            confirmed_paths = write_confirmed_packets(
+                paths,
+                inputs["confirmation"],
+                inputs["previous_review"],
+                inputs["resolution_output"],
+                inputs["review_output"],
+            )
+        except (OSError, ValueError) as error:
+            print(str(error), file=sys.stderr)
+            return 1
+        for path in confirmed_paths:
+            print(path.relative_to(paths.root).as_posix())
+        return 0
 
     if args.command == "validate-d0-baseline-change":
         resolution_path = (

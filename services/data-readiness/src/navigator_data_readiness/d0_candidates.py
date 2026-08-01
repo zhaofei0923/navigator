@@ -394,6 +394,12 @@ def build_core_contract_resolution_template(
             _candidate_json_bytes(core_field_evidence)
         ).hexdigest(),
     }
+    compound_fields = [
+        field
+        for field in fields
+        if len(str(field.get("字段名") or "").split("/")) > 1
+        or len(str(field.get("类型") or "").split("/")) > 1
+    ]
     return {
         "schema_version": 1,
         "stage": "D0",
@@ -415,6 +421,7 @@ def build_core_contract_resolution_template(
             "model_composite_key",
             "add_primary_key_field",
         ],
+        "allowed_compound_actions": ["split_field_contract"],
         "proposed_field_contract_schema": {
             "allowed_fields": field_columns,
             "required_fields": required_field_columns,
@@ -467,6 +474,32 @@ def build_core_contract_resolution_template(
                 "status": "pending",
             }
             for field in sorted(fields, key=lambda item: str(item.get("字段编号") or ""))
+        ],
+        "compound_field_resolutions": [
+            {
+                "source_field_id": str(field.get("字段编号") or "").strip(),
+                "entity_code": str(field.get("实体") or "").strip(),
+                "source_field_contract": {
+                    column: field.get(column) for column in field_columns if column != "单位"
+                },
+                "action": None,
+                "proposed_field_contracts": [],
+                "proposed_field_unit_resolutions": [],
+                "change_request_id": None,
+                "rationale": None,
+                "proposed_by_role": "后端/数据架构负责人",
+                "proposed_by": None,
+                "proposed_at": None,
+                "reviewed_by_role": "数据负责人",
+                "reviewed_by": None,
+                "reviewed_at": None,
+                "evidence_ids": [],
+                "status": "pending",
+            }
+            for field in sorted(
+                compound_fields,
+                key=lambda item: str(item.get("字段编号") or ""),
+            )
         ],
         "final_review": {
             "status": "pending",

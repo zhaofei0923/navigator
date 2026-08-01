@@ -51,6 +51,46 @@
       "recorded_at": "2026-07-31T12:16:57+08:00",
       "reviewer": "kevin",
       "status": "已批准"
+    },
+    {
+      "evidence_id": "EVD-D0-CORE-CONTRACT-AC001-20260801",
+      "acceptance_id": "D0-AC-001",
+      "path": "data/d0/evidence/kevin_confirmation_20260801.json",
+      "sha256": "60af5defbf82b0899bd4dd0d5ec81a69051e10c4f28cfb75c644cea4d141756c",
+      "recorded_by": "codex (authorized transcription)",
+      "recorded_at": "2026-08-01",
+      "reviewer": "kevin",
+      "status": "已批准"
+    },
+    {
+      "evidence_id": "EVD-D0-CORE-CONTRACT-AC002-20260801",
+      "acceptance_id": "D0-AC-002",
+      "path": "data/d0/evidence/kevin_confirmation_20260801.json",
+      "sha256": "60af5defbf82b0899bd4dd0d5ec81a69051e10c4f28cfb75c644cea4d141756c",
+      "recorded_by": "codex (authorized transcription)",
+      "recorded_at": "2026-08-01",
+      "reviewer": "kevin",
+      "status": "已批准"
+    },
+    {
+      "evidence_id": "EVD-D0-SAMPLE-COMPLIANCE-20260801",
+      "acceptance_id": "D0-AC-005",
+      "path": "data/d0/evidence/kevin_confirmation_20260801.json",
+      "sha256": "60af5defbf82b0899bd4dd0d5ec81a69051e10c4f28cfb75c644cea4d141756c",
+      "recorded_by": "codex (authorized transcription)",
+      "recorded_at": "2026-08-01",
+      "reviewer": "kevin",
+      "status": "已批准"
+    },
+    {
+      "evidence_id": "EVD-D0-SAMPLE-PROFESSIONAL-20260801",
+      "acceptance_id": "D0-AC-006",
+      "path": "data/d0/evidence/kevin_confirmation_20260801.json",
+      "sha256": "60af5defbf82b0899bd4dd0d5ec81a69051e10c4f28cfb75c644cea4d141756c",
+      "recorded_by": "codex (authorized transcription)",
+      "recorded_at": "2026-08-01",
+      "reviewer": "kevin",
+      "status": "已批准"
     }
   ]
 }

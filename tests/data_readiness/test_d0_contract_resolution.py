@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 import json
-from copy import deepcopy
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
 from navigator_data_readiness.d0_candidates import candidate_payloads
+from navigator_data_readiness.d0_confirmation import (
+    build_confirmed_contract_resolution,
+    load_confirmation,
+)
 from navigator_data_readiness.d0_contract_resolution import (
-    READY_FOR_BASELINE_CHANGE_REVIEW,
     load_and_validate_d0_contract_resolution,
     validate_d0_contract_resolution,
 )
@@ -16,67 +18,10 @@ from navigator_data_readiness.paths import RepositoryPaths, discover_repository
 
 
 def _completed_packet(paths: RepositoryPaths) -> dict[str, Any]:
-    packet = deepcopy(candidate_payloads(paths)["core_contract_resolution.template.json"])
-    packet["template_only"] = False
-    for index, item in enumerate(packet["entity_primary_key_resolutions"], start=1):
-        if item["current_field_ids"]:
-            item["action"] = "promote_existing_field"
-            item["primary_key_field_ids"] = [item["current_field_ids"][0]]
-        else:
-            item["action"] = "add_primary_key_field"
-            contract = dict.fromkeys(
-                packet["proposed_field_contract_schema"]["allowed_fields"], "test"
-            )
-            contract.update(
-                {
-                    "字段编号": f"DATA-PK-{index:03d}",
-                    "实体": item["entity_code"],
-                    "字段名": "id",
-                    "中文名称": "主键",
-                    "类型": "uuid",
-                    "必填": "是",
-                    "来源要求": "系统生成",
-                    "唯一/索引": "主键",
-                    "单位": "不适用",
-                }
-            )
-            item["proposed_field_contract"] = contract
-        item.update(
-            {
-                "change_request_id": f"CR-D0-ENTITY-{index:03d}",
-                "rationale": "补齐显式主键合同",
-                "proposed_by": "kevin",
-                "proposed_at": "2026-07-31",
-                "reviewed_by": "kevin",
-                "reviewed_at": "2026-07-31T18:00:00+08:00",
-                "evidence_ids": [f"EVD-D0-ENTITY-{index:03d}"],
-                "status": "proposed",
-            }
-        )
-    for index, item in enumerate(packet["field_unit_resolutions"], start=1):
-        item.update(
-            {
-                "unit_applicability": "not_applicable",
-                "change_request_id": f"CR-D0-UNIT-{index:03d}",
-                "rationale": "该字段为标识、文本或枚举，不适用计量单位",
-                "proposed_by": "kevin",
-                "proposed_at": "2026-07-31",
-                "reviewed_by": "kevin",
-                "reviewed_at": "2026-07-31T18:00:00+08:00",
-                "evidence_ids": [f"EVD-D0-UNIT-{index:03d}"],
-                "status": "proposed",
-            }
-        )
-    packet["final_review"].update(
-        {
-            "status": READY_FOR_BASELINE_CHANGE_REVIEW,
-            "change_set_id": "CR-D0-CORE-CONTRACT-001",
-            "reviewed_by": "kevin",
-            "reviewed_at": "2026-07-31T19:00:00+08:00",
-            "evidence_ids": ["EVD-D0-CORE-CONTRACT-RESOLUTION"],
-        }
+    return build_confirmed_contract_resolution(
+        paths,
+        load_confirmation(paths.root / "data/d0/evidence/kevin_confirmation_20260801.json"),
     )
-    return packet
 
 
 def test_template_covers_every_machine_gap() -> None:
@@ -86,6 +31,7 @@ def test_template_covers_every_machine_gap() -> None:
     assert packet["template_only"] is True
     assert len(packet["entity_primary_key_resolutions"]) == 29
     assert len(packet["field_unit_resolutions"]) == 92
+    assert len(packet["compound_field_resolutions"]) == 20
     assert set(packet["baseline"]["evidence_candidate_hashes"]) == {
         "core_entity_evidence.json",
         "core_field_evidence.json",
@@ -111,6 +57,7 @@ def test_unfilled_template_reports_all_pending_sections() -> None:
         "D0_CONTRACT_RESOLUTION_TEMPLATE_UNCOPIED",
         "D0_CONTRACT_RESOLUTION_ENTITY_PENDING",
         "D0_CONTRACT_RESOLUTION_UNIT_PENDING",
+        "D0_CONTRACT_RESOLUTION_COMPOUND_PENDING",
         "D0_CONTRACT_RESOLUTION_FINAL_PENDING",
     } <= codes
 
@@ -124,6 +71,7 @@ def test_resolution_rejects_tampered_baseline_schema_and_sets() -> None:
     packet["field_unit_resolutions"].append(
         dict(packet["field_unit_resolutions"][0], field_id="DATA-UNKNOWN")
     )
+    packet["compound_field_resolutions"].pop()
 
     codes = {check.code for check in validate_d0_contract_resolution(paths, packet)}
 
@@ -132,6 +80,7 @@ def test_resolution_rejects_tampered_baseline_schema_and_sets() -> None:
         "D0_CONTRACT_RESOLUTION_SCHEMA_CHANGED",
         "D0_CONTRACT_RESOLUTION_ENTITY_SET_INVALID",
         "D0_CONTRACT_RESOLUTION_FIELD_SET_INVALID",
+        "D0_CONTRACT_RESOLUTION_COMPOUND_SET_INVALID",
     } <= codes
 
 
@@ -144,8 +93,10 @@ def test_resolution_rejects_invalid_existing_key_actions() -> None:
     entries[0]["action"] = "model_composite_key"
     entries[0]["primary_key_field_ids"] = [entries[0]["current_field_ids"][0]]
     entries[0]["proposed_field_contract"] = {}
+    entries[1]["action"] = "promote_existing_field"
     entries[1]["primary_key_field_ids"] = ["DATA-USER-001"]
     entries[1]["current_field_ids"] = ["DATA-USER-001"]
+    entries[1]["proposed_field_contract"] = None
 
     codes = {check.code for check in validate_d0_contract_resolution(paths, packet)}
 
@@ -191,6 +142,22 @@ def test_resolution_rejects_invalid_unit_decisions() -> None:
         "D0_CONTRACT_RESOLUTION_UNIT_METADATA_INCOMPLETE",
         "D0_CONTRACT_RESOLUTION_UNIT_METADATA_CONFLICT",
         "D0_CONTRACT_RESOLUTION_UNIT_INVALID",
+    } <= codes
+
+
+def test_resolution_rejects_incomplete_compound_split() -> None:
+    paths = discover_repository()
+    packet = _completed_packet(paths)
+    compound = packet["compound_field_resolutions"][0]
+    compound["proposed_field_contracts"].pop()
+    compound["proposed_field_unit_resolutions"][0]["unit_applicability"] = "unit_code"
+
+    codes = {check.code for check in validate_d0_contract_resolution(paths, packet)}
+
+    assert {
+        "D0_CONTRACT_RESOLUTION_COMPOUND_ARITY_INVALID",
+        "D0_CONTRACT_RESOLUTION_COMPOUND_UNIT_SET_INVALID",
+        "D0_CONTRACT_RESOLUTION_COMPOUND_UNIT_METADATA_INCOMPLETE",
     } <= codes
 
 

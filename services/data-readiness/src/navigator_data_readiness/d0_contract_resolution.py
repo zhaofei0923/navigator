@@ -175,9 +175,13 @@ def _latest_formal_review(paths: RepositoryPaths) -> Path | None:
     return candidates[-1] if candidates else None
 
 
-def _role_holders(paths: RepositoryPaths, checks: list[CheckResult]) -> dict[str, str]:
-    review_path = _latest_formal_review(paths)
-    if review_path is None:
+def _role_holders(
+    paths: RepositoryPaths,
+    checks: list[CheckResult],
+    authority_packet: dict[str, Any] | None = None,
+) -> dict[str, str]:
+    review_path = _latest_formal_review(paths) if authority_packet is None else None
+    if review_path is None and authority_packet is None:
         checks.append(
             CheckResult(
                 code="D0_CONTRACT_RESOLUTION_AUTHORITY_MISSING",
@@ -186,16 +190,25 @@ def _role_holders(paths: RepositoryPaths, checks: list[CheckResult]) -> dict[str
             )
         )
         return {}
-    try:
-        payload = json.loads(review_path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
-        payload = None
+    if authority_packet is not None:
+        payload: Any = authority_packet
+        authority_location = "authority_packet"
+    else:
+        assert review_path is not None
+        try:
+            payload = json.loads(review_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            payload = None
+        try:
+            authority_location = review_path.relative_to(paths.root).as_posix()
+        except ValueError:
+            authority_location = str(review_path)
     if not isinstance(payload, dict):
         checks.append(
             CheckResult(
                 code="D0_CONTRACT_RESOLUTION_AUTHORITY_INVALID",
                 message="The formal D0 review packet is not a valid JSON object",
-                location=review_path.relative_to(paths.root).as_posix(),
+                location=authority_location,
             )
         )
         return {}
@@ -311,6 +324,8 @@ def _id_list(
 def validate_d0_contract_resolution(
     paths: RepositoryPaths,
     payload: dict[str, Any],
+    *,
+    authority_packet: dict[str, Any] | None = None,
 ) -> list[CheckResult]:
     checks: list[CheckResult] = []
     if payload.get("schema_version") != 1 or payload.get("stage") != "D0":
@@ -339,7 +354,11 @@ def validate_d0_contract_resolution(
                 location="baseline",
             )
         )
-    for field in ("allowed_entity_actions", "proposed_field_contract_schema"):
+    for field in (
+        "allowed_entity_actions",
+        "allowed_compound_actions",
+        "proposed_field_contract_schema",
+    ):
         if payload.get(field) != template[field]:
             checks.append(
                 CheckResult(
@@ -349,7 +368,7 @@ def validate_d0_contract_resolution(
                 )
             )
 
-    role_holders = _role_holders(paths, checks)
+    role_holders = _role_holders(paths, checks, authority_packet)
     contracts = extract_contracts(paths)
     existing_fields = {
         str(item.get("字段编号") or "").strip(): item
@@ -517,6 +536,251 @@ def validate_d0_contract_resolution(
                     )
                 )
 
+    compounds = _indexed_items(
+        checks,
+        payload,
+        "compound_field_resolutions",
+        "source_field_id",
+    )
+    template_compounds = {
+        str(item["source_field_id"]): item for item in template["compound_field_resolutions"]
+    }
+    _check_exact_ids(
+        checks,
+        set(compounds),
+        set(template_compounds),
+        code="D0_CONTRACT_RESOLUTION_COMPOUND_SET_INVALID",
+        location="compound_field_resolutions",
+    )
+    resolved_compound_ids: set[str] = set()
+    allowed_compound_actions = set(template["allowed_compound_actions"])
+    immutable_compound_fields = (
+        "source_field_id",
+        "entity_code",
+        "source_field_contract",
+        "proposed_by_role",
+        "reviewed_by_role",
+    )
+    for source_field_id, item in compounds.items():
+        location = f"compound_field_resolutions.{source_field_id}"
+        expected = template_compounds.get(source_field_id)
+        if expected and any(
+            item.get(field) != expected.get(field) for field in immutable_compound_fields
+        ):
+            checks.append(
+                CheckResult(
+                    code="D0_CONTRACT_RESOLUTION_COMPOUND_INPUT_CHANGED",
+                    message=f"{source_field_id} immutable inputs differ from the template",
+                    location=location,
+                )
+            )
+        action = item.get("action")
+        if action is None and item.get("status") == "pending":
+            checks.append(
+                CheckResult(
+                    code="D0_CONTRACT_RESOLUTION_COMPOUND_PENDING",
+                    message=f"{source_field_id} has no atomic-field resolution",
+                    location=location,
+                )
+            )
+            continue
+        if action not in allowed_compound_actions:
+            checks.append(
+                CheckResult(
+                    code="D0_CONTRACT_RESOLUTION_COMPOUND_ACTION_INVALID",
+                    message=f"{source_field_id} has an invalid compound action",
+                    location=location,
+                )
+            )
+            continue
+        if item.get("status") != PROPOSED:
+            checks.append(
+                CheckResult(
+                    code="D0_CONTRACT_RESOLUTION_STATUS_INVALID",
+                    message=f"{source_field_id} status must be {PROPOSED}",
+                    location=location,
+                )
+            )
+        _decision_metadata(checks, item, location=location, role_holders=role_holders)
+
+        raw_contracts = item.get("proposed_field_contracts")
+        if not isinstance(raw_contracts, list) or len(raw_contracts) < 2:
+            checks.append(
+                CheckResult(
+                    code="D0_CONTRACT_RESOLUTION_COMPOUND_FIELDS_INVALID",
+                    message="split_field_contract requires at least two complete child contracts",
+                    location=location,
+                )
+            )
+            continue
+        source_contract = expected.get("source_field_contract", {}) if expected else {}
+        source_names = str(source_contract.get("字段名") or "").split("/")
+        source_types = str(source_contract.get("类型") or "").split("/")
+        if len(source_names) != len(source_types) or len(raw_contracts) != len(source_names):
+            checks.append(
+                CheckResult(
+                    code="D0_CONTRACT_RESOLUTION_COMPOUND_ARITY_INVALID",
+                    message=(
+                        "Child contract count must exactly match the source field-name and "
+                        "data-type components"
+                    ),
+                    location=location,
+                )
+            )
+
+        child_ids: list[str] = []
+        contracts_by_id: dict[str, dict[str, Any]] = {}
+        for index, contract in enumerate(raw_contracts):
+            child_location = f"{location}.proposed_field_contracts.{index}"
+            if not isinstance(contract, dict):
+                checks.append(
+                    CheckResult(
+                        code="D0_CONTRACT_RESOLUTION_COMPOUND_FIELD_INVALID",
+                        message="Each child field contract must be an object",
+                        location=child_location,
+                    )
+                )
+                continue
+            contract_fields = set(contract)
+            missing_fields = sorted(
+                field
+                for field in required_contract_fields
+                if not str(contract.get(field) or "").strip()
+            )
+            if contract_fields != allowed_contract_fields or missing_fields:
+                checks.append(
+                    CheckResult(
+                        code="D0_CONTRACT_RESOLUTION_COMPOUND_FIELD_INCOMPLETE",
+                        message=(
+                            "Child field contract must contain exactly the approved schema with "
+                            f"non-empty values; missing: {', '.join(missing_fields) or 'none'}"
+                        ),
+                        location=child_location,
+                    )
+                )
+            child_id = _text(contract, "字段编号")
+            if (
+                not child_id
+                or child_id in existing_fields
+                or child_id in proposed_field_ids
+                or child_id in contracts_by_id
+            ):
+                checks.append(
+                    CheckResult(
+                        code="D0_CONTRACT_RESOLUTION_COMPOUND_FIELD_ID_INVALID",
+                        message=f"Child field ID {child_id or 'missing'} is empty or already used",
+                        location=child_location,
+                    )
+                )
+            elif child_id:
+                proposed_field_ids.add(child_id)
+                child_ids.append(child_id)
+                contracts_by_id[child_id] = contract
+            if (
+                _text(contract, "实体") != _text(item, "entity_code")
+                or index >= len(source_names)
+                or _text(contract, "字段名") != source_names[index]
+                or index >= len(source_types)
+                or _text(contract, "类型") != source_types[index]
+            ):
+                checks.append(
+                    CheckResult(
+                        code="D0_CONTRACT_RESOLUTION_COMPOUND_COMPONENT_INVALID",
+                        message=(
+                            "Each child must preserve the source entity and the ordered "
+                            "field-name/data-type component"
+                        ),
+                        location=child_location,
+                    )
+                )
+
+        raw_child_units = item.get("proposed_field_unit_resolutions")
+        if not isinstance(raw_child_units, list):
+            checks.append(
+                CheckResult(
+                    code="D0_CONTRACT_RESOLUTION_COMPOUND_UNIT_SET_INVALID",
+                    message="proposed_field_unit_resolutions must be a list",
+                    location=location,
+                )
+            )
+            raw_child_units = []
+        child_units: dict[str, dict[str, Any]] = {}
+        for index, child_unit in enumerate(raw_child_units):
+            child_location = f"{location}.proposed_field_unit_resolutions.{index}"
+            if not isinstance(child_unit, dict) or not _text(child_unit, "field_id"):
+                checks.append(
+                    CheckResult(
+                        code="D0_CONTRACT_RESOLUTION_COMPOUND_UNIT_INVALID",
+                        message="Each child unit entry requires a field_id",
+                        location=child_location,
+                    )
+                )
+                continue
+            child_id = _text(child_unit, "field_id")
+            if child_id in child_units:
+                checks.append(
+                    CheckResult(
+                        code="D0_CONTRACT_RESOLUTION_COMPOUND_UNIT_INVALID",
+                        message=f"Duplicate child unit entry: {child_id}",
+                        location=child_location,
+                    )
+                )
+                continue
+            child_units[child_id] = child_unit
+        if set(child_units) != set(child_ids):
+            checks.append(
+                CheckResult(
+                    code="D0_CONTRACT_RESOLUTION_COMPOUND_UNIT_SET_INVALID",
+                    message=(
+                        "Child unit IDs must exactly match the proposed child contracts; "
+                        f"missing={sorted(set(child_ids) - set(child_units))}, "
+                        f"unexpected={sorted(set(child_units) - set(child_ids))}"
+                    ),
+                    location=location,
+                )
+            )
+        for child_id, child_unit in child_units.items():
+            child_location = f"{location}.proposed_field_unit_resolutions.{child_id}"
+            applicability = child_unit.get("unit_applicability")
+            unit_values = tuple(
+                _text(child_unit, field)
+                for field in ("unit_code", "unit_dimension", "unit_registry_reference")
+            )
+            contract_unit = _text(contracts_by_id.get(child_id, {}), "单位")
+            if applicability == "unit_code":
+                if not all(unit_values) or contract_unit != unit_values[0]:
+                    checks.append(
+                        CheckResult(
+                            code="D0_CONTRACT_RESOLUTION_COMPOUND_UNIT_METADATA_INCOMPLETE",
+                            message=(
+                                "Child unit_code requires code, dimension, registry reference, "
+                                "and the same code in the child contract"
+                            ),
+                            location=child_location,
+                        )
+                    )
+            elif applicability == "not_applicable":
+                if any(unit_values) or contract_unit != "不适用":
+                    checks.append(
+                        CheckResult(
+                            code="D0_CONTRACT_RESOLUTION_COMPOUND_UNIT_METADATA_CONFLICT",
+                            message=(
+                                "A not-applicable child cannot include unit metadata and must "
+                                "state 不适用 in its field contract"
+                            ),
+                            location=child_location,
+                        )
+                    )
+            else:
+                checks.append(
+                    CheckResult(
+                        code="D0_CONTRACT_RESOLUTION_COMPOUND_UNIT_INVALID",
+                        message=f"{child_id} has an invalid unit_applicability",
+                        location=child_location,
+                    )
+                )
+        resolved_compound_ids.add(source_field_id)
+
     units = _indexed_items(checks, payload, "field_unit_resolutions", "field_id")
     template_units = {str(item["field_id"]): item for item in template["field_unit_resolutions"]}
     _check_exact_ids(
@@ -559,6 +823,40 @@ def validate_d0_contract_resolution(
                 )
             )
             continue
+        if applicability == "replaced_by_split":
+            unit_values = tuple(
+                _text(item, field)
+                for field in ("unit_code", "unit_dimension", "unit_registry_reference")
+            )
+            if field_id not in resolved_compound_ids or any(unit_values):
+                checks.append(
+                    CheckResult(
+                        code="D0_CONTRACT_RESOLUTION_REPLACED_UNIT_INVALID",
+                        message=(
+                            "replaced_by_split is allowed only for a resolved compound source "
+                            "and cannot include unit metadata"
+                        ),
+                        location=location,
+                    )
+                )
+            if item.get("status") != PROPOSED:
+                checks.append(
+                    CheckResult(
+                        code="D0_CONTRACT_RESOLUTION_STATUS_INVALID",
+                        message=f"{field_id} status must be {PROPOSED}",
+                        location=location,
+                    )
+                )
+            _decision_metadata(checks, item, location=location, role_holders=role_holders)
+            continue
+        if field_id in resolved_compound_ids:
+            checks.append(
+                CheckResult(
+                    code="D0_CONTRACT_RESOLUTION_REPLACED_UNIT_INVALID",
+                    message="A split compound source must use replaced_by_split",
+                    location=location,
+                )
+            )
         if applicability not in {"unit_code", "not_applicable"}:
             checks.append(
                 CheckResult(

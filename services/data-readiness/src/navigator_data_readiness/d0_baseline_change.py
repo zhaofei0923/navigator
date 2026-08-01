@@ -38,6 +38,13 @@ def _payload_sha256(payload: Any) -> str:
     return hashlib.sha256(serialized).hexdigest()
 
 
+def _display_path(paths: RepositoryPaths, path: Path) -> str:
+    try:
+        return path.relative_to(paths.root.resolve()).as_posix()
+    except ValueError:
+        return str(path)
+
+
 def _text(record: dict[str, Any], field: str) -> str:
     return str(record.get(field) or "").strip()
 
@@ -118,7 +125,12 @@ def _unit_value(resolution: dict[str, Any]) -> str:
 
 def _reviewed_changes(
     resolution: dict[str, Any],
-) -> tuple[set[str], list[dict[str, Any]], dict[str, str]]:
+) -> tuple[
+    set[str],
+    list[dict[str, Any]],
+    dict[str, str],
+    dict[str, list[dict[str, Any]]],
+]:
     key_field_ids: set[str] = set()
     added_fields: list[dict[str, Any]] = []
     entity_items = resolution.get("entity_primary_key_resolutions")
@@ -142,20 +154,40 @@ def _reviewed_changes(
     unit_items = resolution.get("field_unit_resolutions")
     if isinstance(unit_items, list):
         for item in unit_items:
-            if isinstance(item, dict) and _text(item, "field_id"):
+            if (
+                isinstance(item, dict)
+                and _text(item, "field_id")
+                and item.get("unit_applicability") != "replaced_by_split"
+            ):
                 unit_values[_text(item, "field_id")] = _unit_value(item)
-    return key_field_ids, added_fields, unit_values
+
+    replacements: dict[str, list[dict[str, Any]]] = {}
+    compound_items = resolution.get("compound_field_resolutions")
+    if isinstance(compound_items, list):
+        for item in compound_items:
+            if not isinstance(item, dict) or item.get("action") != "split_field_contract":
+                continue
+            source_field_id = _text(item, "source_field_id")
+            contracts = item.get("proposed_field_contracts")
+            if source_field_id and isinstance(contracts, list):
+                replacements[source_field_id] = [
+                    contract for contract in contracts if isinstance(contract, dict)
+                ]
+    return key_field_ids, added_fields, unit_values, replacements
 
 
 def _expected_fields(
     original_fields: list[dict[str, Any]],
     resolution: dict[str, Any],
 ) -> list[dict[str, Any]]:
-    key_field_ids, added_fields, unit_values = _reviewed_changes(resolution)
+    key_field_ids, added_fields, unit_values, replacements = _reviewed_changes(resolution)
     expected: list[dict[str, Any]] = []
     for original in original_fields:
         record = dict(original)
         field_id = _text(record, _FIELD_ID)
+        if field_id in replacements:
+            expected.extend(dict(child) for child in replacements[field_id])
+            continue
         record[_UNIT_HEADER] = unit_values.get(field_id, "")
         if field_id in key_field_ids:
             record["唯一/索引"] = _expected_key_marker(record.get("唯一/索引"))
@@ -191,6 +223,7 @@ def _validate_contract_delta(
     original_fields = _records(original, _FIELD_CONTRACT)
     actual_fields = _records(candidate, _FIELD_CONTRACT)
     expected_fields = _expected_fields(original_fields, resolution)
+    _key_ids, _added, _units, replacements = _reviewed_changes(resolution)
     original_ids = [_text(record, _FIELD_ID) for record in original_fields]
     expected_ids = [_text(record, _FIELD_ID) for record in expected_fields]
     actual_ids = [_text(record, _FIELD_ID) for record in actual_fields]
@@ -233,11 +266,15 @@ def _validate_contract_delta(
                 )
             )
 
-    if actual_ids[: len(original_ids)] != original_ids:
+    preserved_original_ids = [field_id for field_id in original_ids if field_id not in replacements]
+    preserved_actual_ids = [
+        field_id for field_id in actual_ids if field_id in set(preserved_original_ids)
+    ]
+    if preserved_actual_ids != preserved_original_ids:
         checks.append(
             CheckResult(
                 code="D0_CHANGE_FROZEN_FIELD_ORDER_CHANGED",
-                message="Existing frozen field rows were removed, inserted into, or reordered",
+                message="Unreviewed frozen field rows were removed or reordered",
                 location=_FIELD_CONTRACT,
             )
         )
@@ -308,38 +345,16 @@ def _validate_cell_delta(
 
     source_rows = _row_lookup(source_workbook)
     candidate_rows = _row_lookup(candidate_workbook)
-    key_field_ids, added_fields, unit_values = _reviewed_changes(resolution)
-    allowed: set[tuple[str, int, int]] = set()
-    unit_column = candidate_headers.get(_UNIT_HEADER)
-    key_column = candidate_headers.get("唯一/索引")
-    if unit_column is not None:
-        allowed.add((_FIELD_SHEET, 4, unit_column))
-        for field_id in unit_values:
-            row = candidate_rows.get(field_id)
-            if row is not None:
-                allowed.add((_FIELD_SHEET, row, unit_column))
-    if key_column is not None:
-        for field_id in key_field_ids:
-            row = source_rows.get(field_id)
-            if row is not None:
-                allowed.add((_FIELD_SHEET, row, key_column))
-    for contract in added_fields:
-        row = candidate_rows.get(_text(contract, _FIELD_ID))
-        if row is not None:
-            allowed.update(
-                (_FIELD_SHEET, row, column)
-                for column in candidate_headers.values()
-                if (row, column) not in source_values.get(_FIELD_SHEET, {})
-            )
-
+    key_field_ids, _added_fields, unit_values, replacements = _reviewed_changes(resolution)
     for sheet_name in source_sheets:
+        if sheet_name == _FIELD_SHEET:
+            continue
         before = source_values.get(sheet_name, {})
         after = candidate_values.get(sheet_name, {})
         changed = {
             coordinate
             for coordinate in set(before) | set(after)
             if before.get(coordinate) != after.get(coordinate)
-            and (sheet_name, coordinate[0], coordinate[1]) not in allowed
         }
         if changed:
             preview = ", ".join(f"R{row}C{column}" for row, column in sorted(changed)[:10])
@@ -351,6 +366,66 @@ def _validate_cell_delta(
                         f"change(s): {preview}"
                     ),
                     location=sheet_name,
+                )
+            )
+
+    source_field_values = source_values.get(_FIELD_SHEET, {})
+    candidate_field_values = candidate_values.get(_FIELD_SHEET, {})
+    unit_column = candidate_headers.get(_UNIT_HEADER)
+    allowed_header = {(_FIELD_SHEET, 4, unit_column)} if unit_column is not None else set()
+    header_changes = {
+        coordinate
+        for coordinate in set(source_field_values) | set(candidate_field_values)
+        if coordinate[0] <= 4
+        and source_field_values.get(coordinate) != candidate_field_values.get(coordinate)
+        and (_FIELD_SHEET, coordinate[0], coordinate[1]) not in allowed_header
+    }
+    if header_changes:
+        preview = ", ".join(f"R{row}C{column}" for row, column in sorted(header_changes)[:10])
+        checks.append(
+            CheckResult(
+                code="D0_CHANGE_UNAUTHORIZED_CELL_CHANGE",
+                message=f"{_FIELD_SHEET} contains unreviewed header change(s): {preview}",
+                location=_FIELD_SHEET,
+            )
+        )
+
+    source_headers = {
+        header: column for column, header in _headers(source_workbook)[_FIELD_CONTRACT].items()
+    }
+    for field_id, source_row in source_rows.items():
+        if field_id in replacements:
+            continue
+        candidate_row = candidate_rows.get(field_id)
+        if candidate_row is None:
+            continue
+        changed_fields: list[str] = []
+        for header, source_column in source_headers.items():
+            expected = source_field_values.get((source_row, source_column))
+            if header == "唯一/索引" and field_id in key_field_ids:
+                expected = _expected_key_marker(expected)
+            candidate_column = candidate_headers.get(header)
+            actual = (
+                candidate_field_values.get((candidate_row, candidate_column))
+                if candidate_column is not None
+                else None
+            )
+            if actual != expected:
+                changed_fields.append(header)
+        if unit_column is not None:
+            expected_unit = unit_values.get(field_id, "")
+            actual_unit = candidate_field_values.get((candidate_row, unit_column), "")
+            if actual_unit != expected_unit:
+                changed_fields.append(_UNIT_HEADER)
+        if changed_fields:
+            checks.append(
+                CheckResult(
+                    code="D0_CHANGE_UNAUTHORIZED_CELL_CHANGE",
+                    message=(
+                        f"{field_id} contains unreviewed value/formula changes: "
+                        f"{', '.join(sorted(set(changed_fields)))}"
+                    ),
+                    location=f"{_FIELD_CONTRACT}.{field_id}",
                 )
             )
 
@@ -541,6 +616,11 @@ def _apply_resolution_to_workbook(
         field_rows = _editable_field_rows(sheet, identifier_column)
         last_original_row = max(field_rows.values())
 
+        original_fields = [
+            {field: sheet.cell(row, column).value for field, column in headers.items()}
+            for _field_id, row in sorted(field_rows.items(), key=lambda item: item[1])
+        ]
+
         unit_column = max(headers.values()) + 1
         unit_header = sheet.cell(4, unit_column)
         _copy_cell_style(sheet.cell(4, unit_column - 1), unit_header)
@@ -550,26 +630,36 @@ def _apply_resolution_to_workbook(
         unit_letter = get_column_letter(unit_column)
         sheet.column_dimensions[unit_letter].width = sheet.column_dimensions[previous_letter].width
 
-        key_field_ids, added_fields, unit_values = _reviewed_changes(resolution)
-        for field_id, value in unit_values.items():
-            row = field_rows[field_id]
-            unit_cell = sheet.cell(row, unit_column)
-            _copy_cell_style(sheet.cell(row, unit_column - 1), unit_cell)
-            unit_cell.value = value
+        expected_fields = _expected_fields(original_fields, resolution)
+        _key_field_ids, added_fields, _unit_values, replacements = _reviewed_changes(resolution)
+        added_field_ids = {_text(contract, _FIELD_ID) for contract in added_fields}
+        child_sources = {
+            _text(contract, _FIELD_ID): source_field_id
+            for source_field_id, contracts in replacements.items()
+            for contract in contracts
+        }
+        additional_rows = len(expected_fields) - len(original_fields)
+        if additional_rows > 0:
+            sheet.insert_rows(last_original_row + 1, amount=additional_rows)
 
-        key_column = headers["唯一/索引"]
-        for field_id in key_field_ids:
-            row = field_rows[field_id]
-            key_cell = sheet.cell(row, key_column)
-            key_cell.value = _expected_key_marker(key_cell.value)
-
-        for offset, contract in enumerate(added_fields, start=1):
-            row = last_original_row + offset
-            if sheet.row_dimensions[last_original_row].height is not None:
-                sheet.row_dimensions[row].height = sheet.row_dimensions[last_original_row].height
+        for offset in range(len(expected_fields) - 1, -1, -1):
+            contract = expected_fields[offset]
+            target_row = 5 + offset
+            field_id = _text(contract, _FIELD_ID)
+            if field_id in field_rows:
+                style_row = field_rows[field_id]
+            elif field_id in child_sources:
+                style_row = field_rows[child_sources[field_id]]
+            elif field_id in added_field_ids:
+                style_row = last_original_row
+            else:
+                style_row = last_original_row
+            if sheet.row_dimensions[style_row].height is not None:
+                sheet.row_dimensions[target_row].height = sheet.row_dimensions[style_row].height
             for field, column in headers.items():
-                target = sheet.cell(row, column)
-                _copy_cell_style(sheet.cell(last_original_row, column), target)
+                target = sheet.cell(target_row, column)
+                source_column = min(column, unit_column - 1)
+                _copy_cell_style(sheet.cell(style_row, source_column), target)
                 target.value = contract.get(field)
         workbook.save(candidate_workbook)
     finally:
@@ -592,7 +682,7 @@ def _generation_report(
             "path": paths.d0_workbook.relative_to(paths.root).as_posix(),
             "sha256": sha256_file(paths.d0_workbook),
         },
-        "candidate_workbook": {"path": str(output_path), "sha256": None},
+        "candidate_workbook": {"path": _display_path(paths, output_path), "sha256": None},
         "resolution_sha256": _payload_sha256(resolution),
         "candidate_written": False,
         "candidate_ready_for_formal_baseline_review": False,
@@ -666,7 +756,9 @@ def generate_d0_candidate_workbook(
         assessment = assess_d0_baseline_change(paths, resolution, temporary_path)
         assessment["operation"] = "generate validated AC-001/002 candidate workbook"
         assessment["candidate_written"] = False
-        cast(dict[str, Any], assessment["candidate_workbook"])["path"] = str(output_path)
+        cast(dict[str, Any], assessment["candidate_workbook"])["path"] = _display_path(
+            paths, output_path
+        )
         if assessment.get("candidate_ready_for_formal_baseline_review") is not True:
             return assessment
         os.replace(temporary_path, output_path)

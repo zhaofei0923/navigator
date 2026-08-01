@@ -1,0 +1,221 @@
+{
+  "schema_version": 1,
+  "stage": "D0",
+  "assessment_scope": "D0 AC-001/002 candidate workbook baseline-change verification",
+  "automated_assessment_only": true,
+  "does_not_activate_baseline": true,
+  "source_workbook": {
+    "path": "doc/doc/新能源企业出海导航仪_D0数据标准冻结执行台账.xlsx",
+    "sha256": "224e9a35bcbb363cf41c007499ba32aa6394cfdbf06331830c02d994e1c7ddff"
+  },
+  "candidate_workbook": {
+    "path": "data/d0/candidates/d0_core_contract_candidate.2026-08-01.xlsx",
+    "sha256": "123394d0ee1744edf86e201bd1c683cafdd222d1ff5c55221eb1f0798e2f0712"
+  },
+  "resolution_sha256": "3ddefbdf04ce051c7d22dacc289083e73c241d006e15b9dc9d9a563f3910b69e",
+  "core_entity_assessment": {
+    "schema_version": 1,
+    "stage": "D0",
+    "acceptance_id": "D0-AC-001",
+    "candidate_only": true,
+    "automated_assessment_only": true,
+    "machine_status": "pass",
+    "human_status": "pending",
+    "required_reviewer_roles": [
+      "数据负责人",
+      "后端/数据架构负责人"
+    ],
+    "warning": "机器证据不能代替实名责任人复核、批准或冻结基线变更",
+    "source_binding": {},
+    "checks": [
+      {
+        "check_id": "ENTITY-RELATIONSHIP-ID-UNIQUE",
+        "description": "关系编号必须非空且唯一",
+        "status": "pass",
+        "findings": []
+      },
+      {
+        "check_id": "ENTITY-CODE-PRESENT",
+        "description": "每条关系必须引用非空父实体和子实体代码",
+        "status": "pass",
+        "findings": []
+      },
+      {
+        "check_id": "ENTITY-PRIMARY-KEY-COVERAGE",
+        "description": "每个关系实体必须在字段合同中显式标记主键",
+        "status": "pass",
+        "findings": []
+      },
+      {
+        "check_id": "ENTITY-RELATION-KEY-PRESENT",
+        "description": "每条关系必须给出外键或唯一键合同",
+        "status": "pass",
+        "findings": []
+      },
+      {
+        "check_id": "ENTITY-AUTHORITY-PRESENT",
+        "description": "每条关系必须给出权威记录",
+        "status": "pass",
+        "findings": []
+      },
+      {
+        "check_id": "ENTITY-CARDINALITY-CONSTRAINT-PRESENT",
+        "description": "每条关系必须给出基数和关键约束",
+        "status": "pass",
+        "findings": []
+      }
+    ],
+    "findings": [],
+    "inventory": {
+      "relationship_count": 25,
+      "entity_code_count": 34,
+      "entity_codes": [
+        "app_user",
+        "country",
+        "country_metric_value",
+        "data_record_version",
+        "enterprise",
+        "enterprise_member",
+        "enterprise_profile_version",
+        "field_provenance",
+        "legal_entity",
+        "metric_definition",
+        "partner",
+        "partner_recommendation",
+        "policy",
+        "policy_version",
+        "project",
+        "project_opportunity_assessment",
+        "project_version",
+        "quality_issue",
+        "raw_record",
+        "region",
+        "report",
+        "retrieval_run",
+        "review_task",
+        "risk",
+        "risk_assessment",
+        "scoring_adjustment",
+        "scoring_model_version",
+        "scoring_result",
+        "scoring_rule",
+        "scoring_run",
+        "source_family",
+        "source_registry",
+        "source_snapshot",
+        "tender"
+      ],
+      "primary_key_entity_count": 34,
+      "primary_key_entities": [
+        "app_user",
+        "country",
+        "country_metric_value",
+        "data_record_version",
+        "enterprise",
+        "enterprise_member",
+        "enterprise_profile_version",
+        "field_provenance",
+        "legal_entity",
+        "metric_definition",
+        "partner",
+        "partner_recommendation",
+        "policy",
+        "policy_version",
+        "project",
+        "project_opportunity_assessment",
+        "project_version",
+        "quality_issue",
+        "raw_record",
+        "region",
+        "report",
+        "retrieval_run",
+        "review_task",
+        "risk",
+        "risk_assessment",
+        "scoring_adjustment",
+        "scoring_model_version",
+        "scoring_result",
+        "scoring_rule",
+        "scoring_run",
+        "source_family",
+        "source_registry",
+        "source_snapshot",
+        "tender"
+      ]
+    },
+    "human_review_scope": [
+      "确认关系表中的实体代码覆盖全部核心实体",
+      "确认每个核心实体的主键合同；缺失项必须补充基线或记录正式例外",
+      "确认外键、唯一键、权威记录、基数和关键约束的业务语义"
+    ]
+  },
+  "core_field_assessment": {
+    "schema_version": 1,
+    "stage": "D0",
+    "acceptance_id": "D0-AC-002",
+    "candidate_only": true,
+    "automated_assessment_only": true,
+    "machine_status": "pass",
+    "human_status": "pending",
+    "required_reviewer_roles": [
+      "数据负责人",
+      "数据质量负责人"
+    ],
+    "warning": "机器证据不能代替实名责任人复核、批准或冻结基线变更",
+    "source_binding": {},
+    "checks": [
+      {
+        "check_id": "FIELD-ID-UNIQUE",
+        "description": "字段编号必须非空且唯一",
+        "status": "pass",
+        "findings": []
+      },
+      {
+        "check_id": "FIELD-ENTITY-NAME-UNIQUE",
+        "description": "实体与字段名组合必须唯一",
+        "status": "pass",
+        "findings": []
+      },
+      {
+        "check_id": "FIELD-METADATA-COMPLETE",
+        "description": "字段必须给出代码、实体、名称、类型、空值和来源规则",
+        "status": "pass",
+        "findings": []
+      },
+      {
+        "check_id": "FIELD-NULLABILITY-VALID",
+        "description": "必填值必须明确为是、否或条件必填",
+        "status": "pass",
+        "findings": []
+      },
+      {
+        "check_id": "FIELD-UNIT-METADATA-PRESENT",
+        "description": "字段合同必须显式记录单位代码或不适用",
+        "status": "pass",
+        "findings": []
+      }
+    ],
+    "findings": [],
+    "inventory": {
+      "field_count": 158,
+      "entity_count": 50,
+      "required_value_counts": {
+        "否": 11,
+        "是": 123,
+        "条件必填": 24
+      },
+      "unit_metadata_column_present": true,
+      "fields_with_explicit_unit_or_not_applicable": 158
+    },
+    "human_review_scope": [
+      "确认字段代码、实体字段名、类型、空值和来源规则",
+      "补充单位代码或明确不适用，禁止仅从备注或展示文案推断单位",
+      "确认条件必填规则可由后续质量校验实现"
+    ]
+  },
+  "candidate_ready_for_formal_baseline_review": true,
+  "checks": [],
+  "warning": "Passing this verifier does not modify or approve the frozen D0 baseline, does not complete D0/D4, and does not authorize user-facing development.",
+  "operation": "generate validated AC-001/002 candidate workbook",
+  "candidate_written": true
+}

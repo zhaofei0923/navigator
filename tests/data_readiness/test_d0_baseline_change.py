@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import copy
 import json
 import shutil
 from pathlib import Path
@@ -13,9 +12,9 @@ from navigator_data_readiness.d0_baseline_change import (
     load_and_assess_d0_baseline_change,
     load_and_generate_d0_candidate_workbook,
 )
-from navigator_data_readiness.d0_candidates import candidate_payloads
-from navigator_data_readiness.d0_contract_resolution import (
-    READY_FOR_BASELINE_CHANGE_REVIEW,
+from navigator_data_readiness.d0_confirmation import (
+    build_confirmed_contract_resolution,
+    load_confirmation,
 )
 from navigator_data_readiness.paths import RepositoryPaths, discover_repository
 from openpyxl import load_workbook
@@ -24,67 +23,10 @@ from pytest import MonkeyPatch
 
 
 def _completed_resolution(paths: RepositoryPaths) -> dict[str, Any]:
-    packet = copy.deepcopy(candidate_payloads(paths)["core_contract_resolution.template.json"])
-    packet["template_only"] = False
-    for index, item in enumerate(packet["entity_primary_key_resolutions"], start=1):
-        if item["current_field_ids"]:
-            item["action"] = "promote_existing_field"
-            item["primary_key_field_ids"] = [item["current_field_ids"][0]]
-        else:
-            item["action"] = "add_primary_key_field"
-            contract = dict.fromkeys(
-                packet["proposed_field_contract_schema"]["allowed_fields"], "test"
-            )
-            contract.update(
-                {
-                    "字段编号": f"DATA-PK-{index:03d}",
-                    "实体": item["entity_code"],
-                    "字段名": "id",
-                    "中文名称": "主键",
-                    "类型": "uuid",
-                    "必填": "是",
-                    "来源要求": "系统生成",
-                    "唯一/索引": "主键",
-                    "单位": "不适用",
-                }
-            )
-            item["proposed_field_contract"] = contract
-        item.update(
-            {
-                "change_request_id": f"CR-D0-ENTITY-{index:03d}",
-                "rationale": "补齐显式主键合同",
-                "proposed_by": "kevin",
-                "proposed_at": "2026-07-31",
-                "reviewed_by": "kevin",
-                "reviewed_at": "2026-07-31T18:00:00+08:00",
-                "evidence_ids": [f"EVD-D0-ENTITY-{index:03d}"],
-                "status": "proposed",
-            }
-        )
-    for index, item in enumerate(packet["field_unit_resolutions"], start=1):
-        item.update(
-            {
-                "unit_applicability": "not_applicable",
-                "change_request_id": f"CR-D0-UNIT-{index:03d}",
-                "rationale": "该字段不适用计量单位",
-                "proposed_by": "kevin",
-                "proposed_at": "2026-07-31",
-                "reviewed_by": "kevin",
-                "reviewed_at": "2026-07-31T18:00:00+08:00",
-                "evidence_ids": [f"EVD-D0-UNIT-{index:03d}"],
-                "status": "proposed",
-            }
-        )
-    packet["final_review"].update(
-        {
-            "status": READY_FOR_BASELINE_CHANGE_REVIEW,
-            "change_set_id": "CR-D0-CORE-CONTRACT-001",
-            "reviewed_by": "kevin",
-            "reviewed_at": "2026-07-31T19:00:00+08:00",
-            "evidence_ids": ["EVD-D0-CORE-CONTRACT-RESOLUTION"],
-        }
+    return build_confirmed_contract_resolution(
+        paths,
+        load_confirmation(paths.root / "data/d0/evidence/kevin_confirmation_20260801.json"),
     )
-    return packet
 
 
 def _headers(sheet: Worksheet) -> dict[str, int]:
@@ -111,59 +53,14 @@ def _next_record_row(sheet: Worksheet) -> int:
     return row
 
 
-def _key_marker(value: Any) -> str:
-    current = str(value or "").strip()
-    if "主键" in current:
-        return current
-    return f"{current}/主键" if current else "主键"
-
-
-def _apply_resolution(candidate: Path, packet: dict[str, Any]) -> None:
-    workbook = load_workbook(candidate)
-    try:
-        sheet = workbook["核心字段冻结"]
-        headers = _headers(sheet)
-        unit_column = headers.get("单位")
-        if unit_column is None:
-            unit_column = max(headers.values()) + 1
-            sheet.cell(4, unit_column, "单位")
-            headers["单位"] = unit_column
-
-        for item in packet["field_unit_resolutions"]:
-            row = _row_index(sheet, item["field_id"])
-            value = (
-                "不适用" if item["unit_applicability"] == "not_applicable" else item["unit_code"]
-            )
-            sheet.cell(row, unit_column, value)
-
-        for item in packet["entity_primary_key_resolutions"]:
-            if item["action"] in {"promote_existing_field", "model_composite_key"}:
-                for field_id in item["primary_key_field_ids"]:
-                    row = _row_index(sheet, field_id)
-                    column = headers["唯一/索引"]
-                    sheet.cell(row, column, _key_marker(sheet.cell(row, column).value))
-
-        next_row = _next_record_row(sheet)
-        for item in packet["entity_primary_key_resolutions"]:
-            contract = item.get("proposed_field_contract")
-            if item["action"] != "add_primary_key_field" or not isinstance(contract, dict):
-                continue
-            for field, value in contract.items():
-                sheet.cell(next_row, headers[field], value)
-            next_row += 1
-        workbook.save(candidate)
-    finally:
-        workbook.close()
-
-
 def _candidate_workbook(
     tmp_path: Path,
     packet: dict[str, Any],
 ) -> Path:
     paths = discover_repository()
     candidate = tmp_path / "d0-candidate.xlsx"
-    shutil.copy2(paths.d0_workbook, candidate)
-    _apply_resolution(candidate, packet)
+    report = generate_d0_candidate_workbook(paths, packet, candidate)
+    assert report["candidate_written"] is True, report["checks"]
     return candidate
 
 
@@ -209,6 +106,7 @@ def test_candidate_applies_registered_unit_and_composite_key(tmp_path: Path) -> 
     )
     composite["action"] = "model_composite_key"
     composite["primary_key_field_ids"] = composite["current_field_ids"][:2]
+    composite["proposed_field_contract"] = None
     candidate = _candidate_workbook(tmp_path, packet)
 
     report = assess_d0_baseline_change(paths, packet, candidate)
@@ -252,17 +150,18 @@ def test_unreviewed_field_change_is_rejected(tmp_path: Path) -> None:
 def test_unit_and_primary_key_must_be_applied_exactly(tmp_path: Path) -> None:
     paths = discover_repository()
     packet = _completed_resolution(paths)
+    key_item = next(
+        item for item in packet["entity_primary_key_resolutions"] if item["current_field_ids"]
+    )
+    key_item["action"] = "promote_existing_field"
+    key_item["primary_key_field_ids"] = [key_item["current_field_ids"][0]]
+    key_item["proposed_field_contract"] = None
     candidate = _candidate_workbook(tmp_path, packet)
     workbook = load_workbook(candidate)
     try:
         sheet = workbook["核心字段冻结"]
         unit_row = _row_index(sheet, "DATA-USER-001")
         sheet.cell(unit_row, _headers(sheet)["单位"], "MW")
-        key_item = next(
-            item
-            for item in packet["entity_primary_key_resolutions"]
-            if item["primary_key_field_ids"]
-        )
         key_row = _row_index(sheet, key_item["primary_key_field_ids"][0])
         sheet.cell(key_row, _headers(sheet)["唯一/索引"], "索引")
         workbook.save(candidate)

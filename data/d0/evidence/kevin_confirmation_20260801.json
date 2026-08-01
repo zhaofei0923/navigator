@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "stage": "D0",
+  "confirmation_id": "D0-CONFIRMATION-KEVIN-20260801",
+  "reviewer": "kevin",
+  "reviewed_at": "2026-07-31",
+  "recorded_at": "2026-08-01",
+  "recorded_by": "codex (authorized transcription)",
+  "authorization": "The reviewer explicitly authorized repository transcription of the review decisions.",
+  "primary_key_decision": {
+    "count": 29,
+    "strategy": "add_uuid_primary_key_field"
+  },
+  "non_measurement_unit_decision": {
+    "count": 69,
+    "unit_applicability": "not_applicable"
+  },
+  "numeric_unit_decisions": {
+    "DATA-ENTITLEMENT-001": {
+      "unit_applicability": "unit_code",
+      "unit_code": "count",
+      "unit_dimension": "count",
+      "unit_registry_reference": "NAV-UNIT-COUNT-v1"
+    },
+    "DATA-LEAD-004": {
+      "unit_applicability": "unit_code",
+      "unit_code": "score_point",
+      "unit_dimension": "dimensionless",
+      "unit_registry_reference": "NAV-SCORE-0-100-v1"
+    },
+    "DATA-PROJECT-003": {
+      "unit_applicability": "unit_code",
+      "unit_code": "score_point",
+      "unit_dimension": "dimensionless",
+      "unit_registry_reference": "NAV-SCORE-0-100-v1"
+    }
+  },
+  "compound_field_decision": {
+    "count": 20,
+    "strategy": "split_all"
+  },
+  "sample_decisions": [
+    {
+      "raw_id": "RAW-EXAMPLE-001",
+      "license_decision": "limited",
+      "redistribution_allowed": false,
+      "ai_index_allowed": false,
+      "professional_review_status": "approved"
+    },
+    {
+      "raw_id": "RAW-EXAMPLE-002",
+      "license_decision": "limited",
+      "redistribution_allowed": false,
+      "ai_index_allowed": false,
+      "professional_review_status": "approved"
+    },
+    {
+      "raw_id": "RAW-EXAMPLE-003",
+      "license_decision": "limited",
+      "redistribution_allowed": false,
+      "ai_index_allowed": false,
+      "professional_review_status": "approved"
+    }
+  ],
+  "contract_evidence_ids": [
+    "EVD-D0-CORE-CONTRACT-AC001-20260801",
+    "EVD-D0-CORE-CONTRACT-AC002-20260801"
+  ],
+  "sample_compliance_evidence_ids": [
+    "EVD-D0-SAMPLE-COMPLIANCE-20260801"
+  ],
+  "sample_professional_evidence_ids": [
+    "EVD-D0-SAMPLE-PROFESSIONAL-20260801"
+  ],
+  "scope_limit": "This confirmation authorizes proposed D0 remediation and sample decisions only; it does not activate a workbook baseline, approve D0, approve D4, or authorize user-facing development."
+}
