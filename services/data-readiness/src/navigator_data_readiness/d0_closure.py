@@ -390,12 +390,38 @@ def build_d0_ac009_review_bundle(
 
     ac009 = acceptance["D0-AC-009"]
     required_roles = [str(role) for role in ac009["required_roles"]]
-    evidence_id = f"EVD-D0-AC-009-CLOSURE-{evidence_date}"
     bundle_relative = _relative_path(
         paths,
         bundle_output,
         label="D0 AC-009 review bundle",
     )
+    signature_templates: list[dict[str, Any]] = []
+    evidence_templates: list[dict[str, Any]] = []
+    for index, role in enumerate(required_roles, start=1):
+        evidence_id = f"EVD-D0-AC-009-CLOSURE-R{index:02d}-{evidence_date}"
+        signature_templates.append(
+            {
+                "role": role,
+                "person_name": role_holders[role],
+                "signed_at": None,
+                "evidence_ids": [evidence_id],
+            }
+        )
+        evidence_templates.append(
+            {
+                "evidence_id": evidence_id,
+                "acceptance_id": "D0-AC-009",
+                "path": None,
+                "sha256": None,
+                "recorded_by": "codex (authorized transcription)",
+                "recorded_at": None,
+                "reviewer": role_holders[role],
+                "reviewer_role": role,
+                "status": "待复核",
+                "subject_path": bundle_relative,
+                "subject_sha256": None,
+            }
+        )
     return {
         "schema_version": 1,
         "stage": "D0",
@@ -432,29 +458,12 @@ def build_d0_ac009_review_bundle(
             "hard_gate": ac009["hard_gate"],
             "current_review_status": ac009["review_status"],
             "required_roles": required_roles,
-            "evidence_candidate_id": evidence_id,
-            "reviewer_signature_template": [
-                {
-                    "role": role,
-                    "person_name": role_holders[role],
-                    "signed_at": None,
-                    "evidence_ids": [evidence_id],
-                }
-                for role in required_roles
+            "evidence_candidate_ids": [
+                template["evidence_ids"][0] for template in signature_templates
             ],
+            "reviewer_signature_template": signature_templates,
         },
-        "evidence_manifest_template": {
-            "evidence_id": evidence_id,
-            "acceptance_id": "D0-AC-009",
-            "path": None,
-            "sha256": None,
-            "recorded_by": "codex (authorized transcription)",
-            "recorded_at": None,
-            "reviewer": role_holders[required_roles[0]],
-            "status": "待复核",
-            "subject_path": bundle_relative,
-            "subject_sha256": None,
-        },
+        "evidence_manifest_templates": evidence_templates,
         "ready_for_named_human_review": True,
         "next_required_action": (
             "The signed D0-AC-009 role holders must review the exact bundle SHA-256. "

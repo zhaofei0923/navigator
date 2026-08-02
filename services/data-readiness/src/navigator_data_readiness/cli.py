@@ -7,6 +7,10 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from .baseline import write_snapshot
+from .d0_ac009_confirmation import (
+    apply_d0_ac009_confirmation,
+    write_d0_ac009_confirmation_template,
+)
 from .d0_acceptance_confirmation import (
     apply_d0_acceptance_confirmation,
     write_d0_acceptance_confirmation_template,
@@ -252,6 +256,31 @@ def _parser() -> argparse.ArgumentParser:
     d0_ac009_review.add_argument("--authorization", type=Path, required=True)
     d0_ac009_review.add_argument("--review", type=Path, required=True)
     d0_ac009_review.add_argument("--output", type=Path, required=True)
+    d0_ac009_confirmation = commands.add_parser(
+        "prepare-d0-ac009-confirmation",
+        help=(
+            "Prepare an empty named-signature confirmation template for an exact D0-AC-009 "
+            "closure review bundle."
+        ),
+    )
+    d0_ac009_confirmation.add_argument("--authorization", type=Path, required=True)
+    d0_ac009_confirmation.add_argument("--review", type=Path, required=True)
+    d0_ac009_confirmation.add_argument("--bundle", type=Path, required=True)
+    d0_ac009_confirmation.add_argument("--review-output", type=Path, required=True)
+    d0_ac009_confirmation.add_argument("--output", type=Path, required=True)
+    d0_ac009_apply = commands.add_parser(
+        "apply-d0-ac009-confirmation",
+        help=(
+            "Transcribe an approved exact D0-AC-009 confirmation into a new review packet "
+            "and the current evidence manifest."
+        ),
+    )
+    d0_ac009_apply.add_argument("--input", type=Path, required=True)
+    d0_ac009_apply.add_argument("--authorization", type=Path, required=True)
+    d0_ac009_apply.add_argument("--review", type=Path, required=True)
+    d0_ac009_apply.add_argument("--bundle", type=Path, required=True)
+    d0_ac009_apply.add_argument("--review-output", type=Path, required=True)
+    d0_ac009_apply.add_argument("--manifest-output", type=Path, required=True)
     commands.add_parser(
         "prepare-d1",
         help="Generate D1 source-admission, country-coverage, and domain-alternative templates.",
@@ -807,6 +836,61 @@ def main(argv: list[str] | None = None) -> int:
             print(str(error), file=sys.stderr)
             return 1
         print(bundle_output.relative_to(paths.root).as_posix())
+        return 0
+
+    if args.command == "prepare-d0-ac009-confirmation":
+        inputs = {
+            name: value if value.is_absolute() else paths.root / value
+            for name, value in (
+                ("authorization", args.authorization),
+                ("review", args.review),
+                ("bundle", args.bundle),
+                ("review_output", args.review_output),
+                ("output", args.output),
+            )
+        }
+        try:
+            confirmation_output = write_d0_ac009_confirmation_template(
+                paths,
+                inputs["authorization"],
+                inputs["review"],
+                inputs["bundle"],
+                inputs["review_output"],
+                inputs["output"],
+            )
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError) as error:
+            print(str(error), file=sys.stderr)
+            return 1
+        print(confirmation_output.relative_to(paths.root).as_posix())
+        return 0
+
+    if args.command == "apply-d0-ac009-confirmation":
+        inputs = {
+            name: value if value.is_absolute() else paths.root / value
+            for name, value in (
+                ("confirmation", args.input),
+                ("authorization", args.authorization),
+                ("review", args.review),
+                ("bundle", args.bundle),
+                ("review_output", args.review_output),
+                ("manifest_output", args.manifest_output),
+            )
+        }
+        try:
+            applied_outputs = apply_d0_ac009_confirmation(
+                paths,
+                inputs["confirmation"],
+                inputs["authorization"],
+                inputs["review"],
+                inputs["bundle"],
+                inputs["review_output"],
+                inputs["manifest_output"],
+            )
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError) as error:
+            print(str(error), file=sys.stderr)
+            return 1
+        for output in applied_outputs:
+            print(output.relative_to(paths.root).as_posix())
         return 0
 
     if args.command == "prepare-d1":

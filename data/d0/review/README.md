@@ -161,6 +161,35 @@
    各自的待批准与缺证据四项自引用门禁，D0四项任务必须全部完成。生成包会列出AC-009所需
    的数据负责人和项目批准人实名签署模板，但不会写签名、登记证据、批准AC-009/010或完成D0。
 
+   为该精确候选包生成空白实名确认模板，并绑定唯一的下一版评审路径：
+
+   ```bash
+   uv run navigator-data prepare-d0-ac009-confirmation \
+     --authorization data/d0/candidates/d0_baseline_publication_authorization.<date>.json \
+     --review data/d0/review/d0_review_packet.<date>.json \
+     --bundle data/d0/candidates/d0_ac009_review_bundle.<date>.json \
+     --review-output data/d0/review/d0_review_packet.<later-date>.json \
+     --output data/d0/review/d0_ac009_confirmation.template.<later-date>.json
+   ```
+
+   数据负责人和项目批准人分别审核候选包精确SHA-256；即使由同一人兼任，也要保留两条
+   角色签署。完成副本放入`data/d0/evidence`，设置明确决定、意见、每个角色的ISO签署时间
+   和转录授权；签署日期必须与目标评审文件日期一致。批准时执行：
+
+   ```bash
+   uv run navigator-data apply-d0-ac009-confirmation \
+     --input data/d0/evidence/<completed-ac009-confirmation>.json \
+     --authorization data/d0/candidates/d0_baseline_publication_authorization.<date>.json \
+     --review data/d0/review/d0_review_packet.<date>.json \
+     --bundle data/d0/candidates/d0_ac009_review_bundle.<date>.json \
+     --review-output data/d0/review/d0_review_packet.<later-date>.json \
+     --manifest-output data/d0/evidence/manifest.json
+   ```
+
+   应用器为两个角色分别登记证据，临时重验AC-009签署及整份证据清单后，才原子发布新版
+   评审并更新当前清单。拒绝决定、签署不全、错误人员/日期、额外字段、重复证据、哈希漂移、
+   非当前证据清单或已有输出都会失败且不落库。成功后只剩AC-010和最终D0决定待审。
+
 2. 复制模板，文件名必须明确包含实际评审批次，例如：
 
    ```bash

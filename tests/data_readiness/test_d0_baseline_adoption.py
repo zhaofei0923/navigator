@@ -11,6 +11,11 @@ from typing import Any
 import pytest
 from navigator_data_readiness.baseline import write_snapshot
 from navigator_data_readiness.cli import main
+from navigator_data_readiness.d0_ac009_confirmation import (
+    apply_d0_ac009_confirmation,
+    validate_d0_ac009_confirmation,
+    write_d0_ac009_confirmation_template,
+)
 from navigator_data_readiness.d0_baseline_adoption import (
     apply_d0_post_adoption_confirmation,
     assess_d0_baseline_adoption,
@@ -27,7 +32,9 @@ from navigator_data_readiness.d0_closure import (
     load_and_validate_d0_ac009_review_bundle,
     write_d0_ac009_review_bundle,
 )
+from navigator_data_readiness.d0_review import validate_review_packet
 from navigator_data_readiness.paths import RepositoryPaths, discover_repository
+from navigator_data_readiness.readiness import build_readiness_report
 
 
 def _load(path: Path) -> dict[str, Any]:
@@ -170,6 +177,42 @@ def _prepare_committed_post_adoption_state(
 
 def _ac009_output(paths: RepositoryPaths) -> Path:
     return paths.d0_candidates_dir / "d0_ac009_review_bundle.2026-08-04.json"
+
+
+def _prepare_ac009_review_state(
+    paths: RepositoryPaths,
+    approval_commit: str,
+) -> tuple[Path, Path, Path]:
+    authorization, review_path, _current_head = _prepare_committed_post_adoption_state(
+        paths,
+        approval_commit,
+    )
+    bundle_path = _ac009_output(paths)
+    write_d0_ac009_review_bundle(paths, authorization, review_path, bundle_path)
+    return authorization, review_path, bundle_path
+
+
+def _ac009_confirmation_paths(paths: RepositoryPaths) -> tuple[Path, Path, Path]:
+    return (
+        paths.d0_review_dir / "d0_ac009_confirmation.template.2026-08-05.json",
+        paths.d0_review_dir / "d0_review_packet.2026-08-05.json",
+        paths.evidence_manifest.parent / "kevin_ac009_confirmation_20260805.json",
+    )
+
+
+def _completed_ac009_confirmation(template_path: Path) -> dict[str, Any]:
+    confirmation = _load(template_path)
+    confirmation.update(
+        {
+            "template_only": False,
+            "authorized_transcription": True,
+            "decision": "approved",
+            "comments": "同意",
+        }
+    )
+    for signature in confirmation["signatures"]:
+        signature["signed_at"] = "2026-08-05"
+    return confirmation
 
 
 def test_repository_authorization_is_current_and_waiting_for_publication() -> None:
@@ -614,14 +657,18 @@ def test_ac009_review_bundle_binds_committed_post_adoption_state(
             "role": "数据负责人",
             "person_name": "kevin",
             "signed_at": None,
-            "evidence_ids": ["EVD-D0-AC-009-CLOSURE-20260804"],
+            "evidence_ids": ["EVD-D0-AC-009-CLOSURE-R01-20260804"],
         },
         {
             "role": "项目批准人",
             "person_name": "kevin",
             "signed_at": None,
-            "evidence_ids": ["EVD-D0-AC-009-CLOSURE-20260804"],
+            "evidence_ids": ["EVD-D0-AC-009-CLOSURE-R02-20260804"],
         },
+    ]
+    assert [item["reviewer_role"] for item in bundle["evidence_manifest_templates"]] == [
+        "数据负责人",
+        "项目批准人",
     ]
     assert len(bundle["inputs"]["contract_snapshot"]["contracts"]) == 25
     assert all(
@@ -728,3 +775,274 @@ def test_cli_prepares_d0_ac009_review_bundle(tmp_path: Path) -> None:
 
     assert exit_code == 0
     assert _load(output)["ready_for_named_human_review"] is True
+
+
+def test_ac009_confirmation_template_binds_roles_hash_and_output(
+    tmp_path: Path,
+) -> None:
+    paths, approval_commit = _isolated_repository(tmp_path)
+    authorization, review_path, bundle_path = _prepare_ac009_review_state(
+        paths,
+        approval_commit,
+    )
+    template_path, review_output, _confirmation_path = _ac009_confirmation_paths(paths)
+
+    written = write_d0_ac009_confirmation_template(
+        paths,
+        authorization,
+        review_path,
+        bundle_path,
+        review_output,
+        template_path,
+    )
+    template = _load(written)
+
+    assert template["template_only"] is True
+    assert template["authorized_transcription"] is False
+    assert template["decision"] is None
+    assert template["review_output"] == review_output.relative_to(paths.root).as_posix()
+    assert template["bundle"]["sha256"] == hashlib.sha256(bundle_path.read_bytes()).hexdigest()
+    assert template["expected_signatures"] == [
+        {"role": "数据负责人", "person_name": "kevin"},
+        {"role": "项目批准人", "person_name": "kevin"},
+    ]
+    assert template["signatures"] == [
+        {"role": "数据负责人", "person_name": "kevin", "signed_at": None},
+        {"role": "项目批准人", "person_name": "kevin", "signed_at": None},
+    ]
+    assert review_output.exists() is False
+    assert written.stat().st_mode & 0o777 == 0o644
+    assert list(written.parent.glob(f".{written.name}.*.tmp")) == []
+    with pytest.raises(FileExistsError, match="Refusing to overwrite"):
+        write_d0_ac009_confirmation_template(
+            paths,
+            authorization,
+            review_path,
+            bundle_path,
+            review_output,
+            template_path,
+        )
+
+
+def test_ac009_confirmation_applies_review_and_evidence_atomically(
+    tmp_path: Path,
+) -> None:
+    paths, approval_commit = _isolated_repository(tmp_path)
+    authorization, review_path, bundle_path = _prepare_ac009_review_state(
+        paths,
+        approval_commit,
+    )
+    template_path, review_output, confirmation_path = _ac009_confirmation_paths(paths)
+    write_d0_ac009_confirmation_template(
+        paths,
+        authorization,
+        review_path,
+        bundle_path,
+        review_output,
+        template_path,
+    )
+    confirmation = _completed_ac009_confirmation(template_path)
+    _write(confirmation_path, confirmation)
+
+    written = apply_d0_ac009_confirmation(
+        paths,
+        confirmation_path,
+        authorization,
+        review_path,
+        bundle_path,
+        review_output,
+        paths.evidence_manifest,
+    )
+    packet = _load(review_output)
+    acceptance = {item["acceptance_id"]: item for item in packet["acceptance_items"]}
+    ac009 = acceptance["D0-AC-009"]
+    checks = validate_review_packet(paths, packet)
+    new_evidence_ids = {
+        "EVD-D0-AC-009-CLOSURE-R01-20260804",
+        "EVD-D0-AC-009-CLOSURE-R02-20260804",
+    }
+    entries = [
+        item
+        for item in _load(paths.evidence_manifest)["evidence"]
+        if item["evidence_id"] in new_evidence_ids
+    ]
+
+    assert written == (review_output, paths.evidence_manifest)
+    assert ac009["review_status"] == "approved"
+    assert ac009["comments"] == "同意"
+    assert {item["role"] for item in ac009["reviewer_signatures"]} == {
+        "数据负责人",
+        "项目批准人",
+    }
+    assert {item["evidence_ids"][0] for item in ac009["reviewer_signatures"]} == new_evidence_ids
+    assert {(check.code, check.location) for check in checks} == {
+        ("D0_REVIEW_ACCEPTANCE_PENDING", "acceptance_items.D0-AC-010"),
+        ("D0_REVIEW_FINAL_PENDING", "final_decision"),
+    }
+    assert len(entries) == 2
+    assert {item["reviewer_role"] for item in entries} == {
+        "数据负责人",
+        "项目批准人",
+    }
+    assert all(item["reviewer"] == "kevin" for item in entries)
+    assert all(
+        item["path"] == confirmation_path.relative_to(paths.root).as_posix() for item in entries
+    )
+    assert all(
+        item["sha256"] == hashlib.sha256(confirmation_path.read_bytes()).hexdigest()
+        for item in entries
+    )
+    assert all(item["subject_sha256"] == confirmation["bundle"]["sha256"] for item in entries)
+    readiness = build_readiness_report(paths)
+    assert {(check.code, check.message.rsplit(" ", 1)[-1]) for check in readiness.blockers} == {
+        ("D0_ACCEPTANCE_PENDING", "pending"),
+        ("EVIDENCE_ACCEPTANCE_MISSING", "D0-AC-010"),
+    }
+    assert review_output.stat().st_mode & 0o777 == 0o644
+    assert paths.evidence_manifest.stat().st_mode & 0o777 == 0o644
+    assert list(review_output.parent.glob(".*.tmp")) == []
+    assert list(paths.evidence_manifest.parent.glob(".*.tmp")) == []
+    with pytest.raises(FileExistsError, match="Refusing to overwrite"):
+        apply_d0_ac009_confirmation(
+            paths,
+            confirmation_path,
+            authorization,
+            review_path,
+            bundle_path,
+            review_output,
+            paths.evidence_manifest,
+        )
+
+
+def test_ac009_confirmation_rejects_tampering_dates_and_rejection(
+    tmp_path: Path,
+) -> None:
+    paths, approval_commit = _isolated_repository(tmp_path)
+    authorization, review_path, bundle_path = _prepare_ac009_review_state(
+        paths,
+        approval_commit,
+    )
+    template_path, review_output, confirmation_path = _ac009_confirmation_paths(paths)
+    write_d0_ac009_confirmation_template(
+        paths,
+        authorization,
+        review_path,
+        bundle_path,
+        review_output,
+        template_path,
+    )
+    valid = _completed_ac009_confirmation(template_path)
+
+    wrong_signer = copy.deepcopy(valid)
+    wrong_signer["signatures"][0]["person_name"] = "peter"
+    with pytest.raises(ValueError, match="signed holder"):
+        validate_d0_ac009_confirmation(
+            paths,
+            wrong_signer,
+            authorization,
+            review_path,
+            bundle_path,
+            review_output,
+        )
+
+    wrong_date = copy.deepcopy(valid)
+    wrong_date["signatures"][0]["signed_at"] = "2026-08-04"
+    with pytest.raises(ValueError, match="must match the review output date"):
+        validate_d0_ac009_confirmation(
+            paths,
+            wrong_date,
+            authorization,
+            review_path,
+            bundle_path,
+            review_output,
+        )
+
+    extra_field = {**valid, "email": "private@example.invalid"}
+    with pytest.raises(ValueError, match="unexpected fields"):
+        validate_d0_ac009_confirmation(
+            paths,
+            extra_field,
+            authorization,
+            review_path,
+            bundle_path,
+            review_output,
+        )
+
+    rejected = copy.deepcopy(valid)
+    rejected.update({"decision": "rejected", "comments": "需要整改"})
+    _write(confirmation_path, rejected)
+    with pytest.raises(ValueError, match="was rejected"):
+        apply_d0_ac009_confirmation(
+            paths,
+            confirmation_path,
+            authorization,
+            review_path,
+            bundle_path,
+            review_output,
+            paths.evidence_manifest,
+        )
+    assert review_output.exists() is False
+
+    _write(confirmation_path, valid)
+    alternate_manifest = paths.evidence_manifest.parent / "alternate-manifest.json"
+    with pytest.raises(ValueError, match="current evidence manifest"):
+        apply_d0_ac009_confirmation(
+            paths,
+            confirmation_path,
+            authorization,
+            review_path,
+            bundle_path,
+            review_output,
+            alternate_manifest,
+        )
+
+
+def test_cli_prepares_and_applies_ac009_confirmation(tmp_path: Path) -> None:
+    paths, approval_commit = _isolated_repository(tmp_path)
+    authorization, review_path, bundle_path = _prepare_ac009_review_state(
+        paths,
+        approval_commit,
+    )
+    template_path, review_output, confirmation_path = _ac009_confirmation_paths(paths)
+
+    prepare_exit = main(
+        [
+            "--repo",
+            str(paths.root),
+            "prepare-d0-ac009-confirmation",
+            "--authorization",
+            str(authorization),
+            "--review",
+            str(review_path),
+            "--bundle",
+            str(bundle_path),
+            "--review-output",
+            str(review_output),
+            "--output",
+            str(template_path),
+        ]
+    )
+    _write(confirmation_path, _completed_ac009_confirmation(template_path))
+    apply_exit = main(
+        [
+            "--repo",
+            str(paths.root),
+            "apply-d0-ac009-confirmation",
+            "--input",
+            str(confirmation_path),
+            "--authorization",
+            str(authorization),
+            "--review",
+            str(review_path),
+            "--bundle",
+            str(bundle_path),
+            "--review-output",
+            str(review_output),
+            "--manifest-output",
+            str(paths.evidence_manifest),
+        ]
+    )
+
+    assert prepare_exit == 0
+    assert apply_exit == 0
+    assert _load(review_output)["acceptance_items"][8]["review_status"] == "approved"
