@@ -1,0 +1,52 @@
+{
+  "authorized_transcription": true,
+  "bundle": {
+    "path": "data/d0/candidates/d0_acceptance_review_bundle.2026-08-02.json",
+    "sha256": "9ae32733d9ae3c973a63f382952f057b20d8a82a2bccb28d11a13a3be8bd86b7"
+  },
+  "confirmation_type": "acceptance_review",
+  "decisions": [
+    {
+      "acceptance_id": "D0-AC-001",
+      "comments": "同意",
+      "decision": "approved"
+    },
+    {
+      "acceptance_id": "D0-AC-002",
+      "comments": "同意",
+      "decision": "approved"
+    },
+    {
+      "acceptance_id": "D0-AC-003",
+      "comments": "同意",
+      "decision": "approved"
+    },
+    {
+      "acceptance_id": "D0-AC-004",
+      "comments": "同意",
+      "decision": "approved"
+    },
+    {
+      "acceptance_id": "D0-AC-005",
+      "comments": "同意",
+      "decision": "approved"
+    },
+    {
+      "acceptance_id": "D0-AC-006",
+      "comments": "同意",
+      "decision": "approved"
+    },
+    {
+      "acceptance_id": "D0-AC-008",
+      "comments": "同意",
+      "decision": "approved"
+    }
+  ],
+  "expected_reviewer": "kevin",
+  "reviewed_at": "2026-08-02",
+  "reviewer": "kevin",
+  "schema_version": 1,
+  "stage": "D0",
+  "template_only": false,
+  "warning": "Complete only after the named reviewer has reviewed the exact bundle SHA-256. This confirmation cannot approve AC-009/010, activate the authoritative workbook, complete D0/D4, or authorize user-facing development."
+}

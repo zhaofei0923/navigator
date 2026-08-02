@@ -69,7 +69,23 @@ def _isolated_paths(tmp_path: Path) -> RepositoryPaths:
     evidence_dir = tmp_path / "data" / "d0" / "evidence"
     evidence_dir.mkdir(parents=True)
     shutil.copy2(source.evidence_manifest, evidence_dir / "manifest.json")
-    for entry in _load(source.evidence_manifest)["evidence"]:
+    applied_review = tmp_path / "data" / "d0" / "review" / "d0_review_packet.2026-08-02.json"
+    applied_review.unlink(missing_ok=True)
+    bundle = _load(tmp_path / "data" / "d0" / "candidates" / _bundle_path(source).name)
+    candidate_evidence_ids = {
+        str(item["evidence_candidate_id"]) for item in bundle["acceptance_items"]
+    }
+    manifest = _load(evidence_dir / "manifest.json")
+    manifest["evidence"] = [
+        entry
+        for entry in manifest["evidence"]
+        if str(entry["evidence_id"]) not in candidate_evidence_ids
+    ]
+    (evidence_dir / "manifest.json").write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    for entry in manifest["evidence"]:
         relative = Path(str(entry["path"]))
         destination = tmp_path / relative
         destination.parent.mkdir(parents=True, exist_ok=True)

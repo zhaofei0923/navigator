@@ -10,7 +10,7 @@ def test_current_d0_gate_fails_honestly() -> None:
 
     assert report.ready is False
     assert "D0_RESPONSIBILITY_UNSIGNED" not in codes
-    assert "D0_TASK_INCOMPLETE" in codes
+    assert "D0_TASK_INCOMPLETE" not in codes
     assert "D0_ACCEPTANCE_PENDING" in codes
     assert "EVIDENCE_ACCEPTANCE_MISSING" in codes
     assert "D0_ENTITY_PRIMARY_KEY_COVERAGE" in codes
@@ -18,10 +18,19 @@ def test_current_d0_gate_fails_honestly() -> None:
     assert "D0_ENUM_GROUP_CODE_UNIQUE" not in codes
     assert "D0_TRIAL_MAPPING_TARGET" not in codes
     assert not any(
-        "D0-AC-007" in blocker.message
+        any(f"D0-AC-{index:03d}" in blocker.message for index in range(1, 9))
         for blocker in report.blockers
         if blocker.code == "D0_ACCEPTANCE_PENDING"
     )
+    assert {
+        acceptance_id
+        for acceptance_id in ("D0-AC-009", "D0-AC-010")
+        if any(
+            acceptance_id in blocker.message
+            for blocker in report.blockers
+            if blocker.code == "D0_ACCEPTANCE_PENDING"
+        )
+    } == {"D0-AC-009", "D0-AC-010"}
     assert any(warning.code == "D0_REVIEW_PROGRESS_APPLIED" for warning in report.warnings)
 
 
@@ -31,4 +40,4 @@ def test_report_contains_stage_counts_and_gate_result() -> None:
 
     assert "# D0 数据就绪报告" in markdown
     assert "门禁结论：未通过" in markdown
-    assert "| D0 | 未完成 | 0 | 4 |" in markdown
+    assert "| D0 | 已完成 | 4 | 4 |" in markdown
