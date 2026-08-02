@@ -3,9 +3,11 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import subprocess
 import tempfile
 from copy import deepcopy
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -22,12 +24,50 @@ _POST_ADOPTION_PENDING_CODES = {
 _EXPECTED_CARRIED_ACCEPTANCE_IDS = {f"D0-AC-{number:03d}" for number in range(1, 9)}
 _EXPECTED_REMAINING_ACCEPTANCE_IDS = {"D0-AC-009", "D0-AC-010"}
 _MACHINE_PASS_REQUIRED_CARRIED_IDS = {"D0-AC-001", "D0-AC-002", "D0-AC-003"}
+_POST_ADOPTION_CONFIRMATION_FIELDS = {
+    "schema_version",
+    "stage",
+    "confirmation_type",
+    "template_only",
+    "authorized_transcription",
+    "bundle",
+    "proposed_review_packet_sha256",
+    "expected_reviewer",
+    "review_output",
+    "reviewer",
+    "reviewed_at",
+    "decision",
+    "comments",
+    "warning",
+}
 
 
 def _payload_bytes(payload: dict[str, Any]) -> bytes:
     return (json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode(
         "utf-8"
     )
+
+
+def _write_new_payload(output_path: Path, payload: dict[str, Any]) -> Path:
+    if output_path.exists():
+        raise FileExistsError(f"Refusing to overwrite {output_path}")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(
+        dir=output_path.parent,
+        prefix=f".{output_path.name}.",
+        suffix=".tmp",
+        delete=False,
+    ) as temporary:
+        temporary.write(_payload_bytes(payload))
+        temporary_path = Path(temporary.name)
+    temporary_path.chmod(0o644)
+    try:
+        if output_path.exists():
+            raise FileExistsError(f"Refusing to overwrite {output_path}")
+        os.link(temporary_path, output_path)
+    finally:
+        temporary_path.unlink(missing_ok=True)
+    return output_path
 
 
 def _load_object_bytes(content: bytes, *, label: str) -> dict[str, Any]:
@@ -422,23 +462,7 @@ def write_d0_baseline_publication_authorization(
         readiness_path,
         staged_workbook,
     )
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.NamedTemporaryFile(
-        dir=output_path.parent,
-        prefix=f".{output_path.name}.",
-        suffix=".tmp",
-        delete=False,
-    ) as temporary:
-        temporary.write(_payload_bytes(packet))
-        temporary_path = Path(temporary.name)
-    temporary_path.chmod(0o644)
-    try:
-        if output_path.exists():
-            raise FileExistsError(f"Refusing to overwrite {output_path}")
-        os.link(temporary_path, output_path)
-    finally:
-        temporary_path.unlink(missing_ok=True)
-    return output_path
+    return _write_new_payload(output_path, packet)
 
 
 def load_and_validate_d0_baseline_publication_authorization(
@@ -954,20 +978,249 @@ def write_d0_post_adoption_review_bundle(
     if output_path.exists():
         raise FileExistsError(f"Refusing to overwrite {output_path}")
     bundle = build_d0_post_adoption_review_bundle(paths, authorization_path)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.NamedTemporaryFile(
-        dir=output_path.parent,
-        prefix=f".{output_path.name}.",
-        suffix=".tmp",
-        delete=False,
-    ) as temporary:
-        temporary.write(_payload_bytes(bundle))
-        temporary_path = Path(temporary.name)
-    temporary_path.chmod(0o644)
+    return _write_new_payload(output_path, bundle)
+
+
+def _resolve_current_binding(
+    paths: RepositoryPaths,
+    binding: Any,
+    *,
+    label: str,
+) -> Path:
+    if not isinstance(binding, dict):
+        raise ValueError(f"{label} binding must be an object")
+    relative = _canonical_relative(binding.get("path"), label=label)
+    path = (paths.root / relative).resolve()
+    if not path.is_file() or _relative_path(paths, path, label=label) != relative:
+        raise ValueError(f"{label} binding path is missing or non-canonical")
+    expected_hash = binding.get("sha256")
+    if not isinstance(expected_hash, str) or sha256_file(path) != expected_hash:
+        raise ValueError(f"{label} binding SHA-256 does not match the current file")
+    return path
+
+
+def load_and_validate_d0_post_adoption_review_bundle(
+    paths: RepositoryPaths,
+    bundle_path: Path,
+) -> dict[str, Any]:
+    _require_directory(
+        bundle_path,
+        paths.d0_candidates_dir,
+        label="D0 post-adoption review bundle",
+    )
+    bundle = _load_object(bundle_path, label="D0 post-adoption review bundle")
+    if (
+        bundle.get("schema_version") != 1
+        or bundle.get("stage") != "D0"
+        or bundle.get("bundle_type") != "post_adoption_review_migration_candidate"
+        or bundle.get("automated_assessment_only") is not True
+        or bundle.get("does_not_approve_decisions") is not True
+        or bundle.get("does_not_write_review_packet") is not True
+        or bundle.get("does_not_complete_d0") is not True
+        or bundle.get("ready_for_named_human_review") is not True
+    ):
+        raise ValueError("D0 post-adoption review bundle header or safety boundary is invalid")
+    authorization_path = _resolve_current_binding(
+        paths,
+        bundle.get("authorization"),
+        label="D0 publication authorization",
+    )
+    expected = build_d0_post_adoption_review_bundle(paths, authorization_path)
+    if bundle != expected:
+        raise ValueError(
+            "D0 post-adoption review bundle does not match a deterministic current replay"
+        )
+    return bundle
+
+
+def _dated_artifact(path: Path, *, label: str) -> tuple[str, date]:
+    match = re.search(r"(?<!\d)(\d{4}-\d{2}-\d{2})(?!\d)", path.name)
+    if match is None:
+        raise ValueError(f"{label} filename must contain an ISO date")
+    token = match.group(1)
+    return token, date.fromisoformat(token)
+
+
+def _reviewed_date(value: Any) -> date | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    text = value.strip()
     try:
-        if output_path.exists():
-            raise FileExistsError(f"Refusing to overwrite {output_path}")
-        os.link(temporary_path, output_path)
-    finally:
-        temporary_path.unlink(missing_ok=True)
-    return output_path
+        if "T" not in text:
+            return date.fromisoformat(text)
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+        if parsed.tzinfo is None or parsed.utcoffset() is None:
+            return None
+        return parsed.date()
+    except ValueError:
+        return None
+
+
+def _validate_post_adoption_review_output(
+    paths: RepositoryPaths,
+    review_output: Path,
+    *,
+    date_token: str,
+) -> str:
+    _require_directory(
+        review_output,
+        paths.d0_review_dir,
+        label="D0 migrated review output",
+    )
+    expected_name = f"d0_review_packet.{date_token}.json"
+    if review_output.name != expected_name:
+        raise ValueError(f"D0 migrated review output must be named {expected_name}")
+    return _relative_path(paths, review_output, label="D0 migrated review output")
+
+
+def build_d0_post_adoption_confirmation_template(
+    paths: RepositoryPaths,
+    bundle_path: Path,
+    review_output: Path,
+) -> dict[str, Any]:
+    bundle = load_and_validate_d0_post_adoption_review_bundle(paths, bundle_path)
+    date_token, _ = _dated_artifact(bundle_path, label="D0 post-adoption review bundle")
+    review_relative = _validate_post_adoption_review_output(
+        paths,
+        review_output,
+        date_token=date_token,
+    )
+    if review_output.exists():
+        raise FileExistsError(f"Refusing to overwrite {review_output}")
+    return {
+        "schema_version": 1,
+        "stage": "D0",
+        "confirmation_type": "post_adoption_review_migration",
+        "template_only": True,
+        "authorized_transcription": False,
+        "bundle": {
+            "path": _relative_path(
+                paths,
+                bundle_path,
+                label="D0 post-adoption review bundle",
+            ),
+            "sha256": sha256_file(bundle_path),
+        },
+        "proposed_review_packet_sha256": bundle["proposed_review_packet_sha256"],
+        "expected_reviewer": bundle["expected_reviewer"],
+        "review_output": review_relative,
+        "reviewer": None,
+        "reviewed_at": None,
+        "decision": None,
+        "comments": None,
+        "warning": (
+            "Complete only after the signed project approver reviews the exact bundle SHA-256. "
+            "Approval authorizes transcription of only the proposed review packet and does not "
+            "approve D0-AC-009/010, the final D0 decision, D4, or user-facing development."
+        ),
+    }
+
+
+def write_d0_post_adoption_confirmation_template(
+    paths: RepositoryPaths,
+    bundle_path: Path,
+    review_output: Path,
+    confirmation_output: Path,
+) -> Path:
+    _require_directory(
+        confirmation_output,
+        paths.d0_review_dir,
+        label="D0 post-adoption confirmation template output",
+    )
+    if confirmation_output.suffix.lower() != ".json":
+        raise ValueError("D0 post-adoption confirmation template must be a JSON file")
+    template = build_d0_post_adoption_confirmation_template(
+        paths,
+        bundle_path,
+        review_output,
+    )
+    return _write_new_payload(confirmation_output, template)
+
+
+def validate_d0_post_adoption_confirmation(
+    paths: RepositoryPaths,
+    confirmation: dict[str, Any],
+    bundle_path: Path,
+    review_output: Path,
+) -> dict[str, Any]:
+    template = build_d0_post_adoption_confirmation_template(
+        paths,
+        bundle_path,
+        review_output,
+    )
+    if set(confirmation) != _POST_ADOPTION_CONFIRMATION_FIELDS:
+        raise ValueError("D0 post-adoption confirmation has missing or unexpected fields")
+    if (
+        confirmation.get("schema_version") != 1
+        or confirmation.get("stage") != "D0"
+        or confirmation.get("confirmation_type") != "post_adoption_review_migration"
+    ):
+        raise ValueError("D0 post-adoption confirmation header is invalid")
+    if confirmation.get("template_only") is not False:
+        raise ValueError("D0 post-adoption confirmation must be a completed copy")
+    if confirmation.get("authorized_transcription") is not True:
+        raise ValueError("D0 post-adoption confirmation requires transcription authorization")
+    for field in (
+        "bundle",
+        "proposed_review_packet_sha256",
+        "expected_reviewer",
+        "review_output",
+        "warning",
+    ):
+        if confirmation.get(field) != template[field]:
+            raise ValueError(f"D0 post-adoption confirmation changed the bound {field}")
+    reviewer = str(template["expected_reviewer"])
+    if confirmation.get("reviewer") != reviewer:
+        raise ValueError("D0 post-adoption confirmation reviewer is not the project approver")
+    reviewed_at = _reviewed_date(confirmation.get("reviewed_at"))
+    if reviewed_at is None:
+        raise ValueError(
+            "D0 post-adoption confirmation reviewed_at must be an ISO date or aware datetime"
+        )
+    _, bundle_date = _dated_artifact(bundle_path, label="D0 post-adoption review bundle")
+    if reviewed_at < bundle_date:
+        raise ValueError("D0 post-adoption confirmation cannot predate the reviewed bundle")
+    decision = confirmation.get("decision")
+    if decision not in {"approved", "rejected"}:
+        raise ValueError("D0 post-adoption confirmation decision must be approved or rejected")
+    if decision == "rejected" and not str(confirmation.get("comments") or "").strip():
+        raise ValueError("Rejected D0 post-adoption confirmation requires comments")
+    return load_and_validate_d0_post_adoption_review_bundle(paths, bundle_path)
+
+
+def apply_d0_post_adoption_confirmation(
+    paths: RepositoryPaths,
+    confirmation_path: Path,
+    bundle_path: Path,
+    review_output: Path,
+) -> Path:
+    _require_directory(
+        confirmation_path,
+        paths.evidence_manifest.parent,
+        label="D0 post-adoption completed confirmation",
+    )
+    if not confirmation_path.is_file():
+        raise ValueError("D0 post-adoption completed confirmation is missing")
+    confirmation = _load_object(
+        confirmation_path,
+        label="D0 post-adoption completed confirmation",
+    )
+    bundle = validate_d0_post_adoption_confirmation(
+        paths,
+        confirmation,
+        bundle_path,
+        review_output,
+    )
+    if confirmation["decision"] != "approved":
+        raise ValueError("D0 post-adoption review migration was rejected")
+    proposed = bundle.get("proposed_review_packet")
+    if not isinstance(proposed, dict):
+        raise ValueError("D0 post-adoption bundle proposed review packet is invalid")
+    proposed_hash = hashlib.sha256(_payload_bytes(proposed)).hexdigest()
+    if proposed_hash != bundle.get("proposed_review_packet_sha256"):
+        raise ValueError("D0 post-adoption proposed review packet SHA-256 is invalid")
+    checks = validate_review_packet(paths, proposed)
+    unexpected = [check for check in checks if check.code not in _POST_ADOPTION_PENDING_CODES]
+    if unexpected:
+        raise ValueError("D0 post-adoption proposed review packet no longer validates")
+    return _write_new_payload(review_output, proposed)

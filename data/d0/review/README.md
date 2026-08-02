@@ -122,6 +122,30 @@
    D0决定为待审。候选包不会写入正式评审记录，必须由已签项目批准人审核其精确SHA-256
    并明确授权转录后，才能形成新的评审副本。
 
+   为该精确迁移包生成待填确认模板，并预先绑定唯一评审输出路径：
+
+   ```bash
+   uv run navigator-data prepare-d0-post-adoption-confirmation \
+     --bundle data/d0/candidates/d0_post_adoption_review_bundle.<date>.json \
+     --review-output data/d0/review/d0_review_packet.<date>.json \
+     --output data/d0/review/d0_post_adoption_review_confirmation.template.<date>.json
+   ```
+
+   项目批准人审核迁移包SHA-256后，将已完成确认副本保存到`data/d0/evidence`。副本必须
+   保持绑定字段不变，填写本人姓名、ISO日期或带时区时间、`approved`/`rejected`决定和
+   显式转录授权；拒绝时必须填写意见。批准后执行：
+
+   ```bash
+   uv run navigator-data apply-d0-post-adoption-review \
+     --input data/d0/evidence/<completed-post-adoption-confirmation>.json \
+     --bundle data/d0/candidates/d0_post_adoption_review_bundle.<date>.json \
+     --review-output data/d0/review/d0_review_packet.<date>.json
+   ```
+
+   应用命令会重新生成并逐字节比较迁移包，只写出包内已经审核的拟副本。错误审核人、
+   回溯日期、额外字段、包或拟副本哈希变化、拒绝决定和已有目标均失败且不产生输出。
+   写出的副本仍只保留既有AC-001至008签署，AC-009/010及最终D0结论继续待审。
+
 2. 复制模板，文件名必须明确包含实际评审批次，例如：
 
    ```bash

@@ -82,6 +82,14 @@ uv run navigator-data validate-d0-baseline-adoption \
 uv run navigator-data prepare-d0-post-adoption-review \
   --authorization data/d0/candidates/d0_baseline_publication_authorization.<date>.json \
   --output data/d0/candidates/d0_post_adoption_review_bundle.<date>.json
+uv run navigator-data prepare-d0-post-adoption-confirmation \
+  --bundle data/d0/candidates/d0_post_adoption_review_bundle.<date>.json \
+  --review-output data/d0/review/d0_review_packet.<date>.json \
+  --output data/d0/review/d0_post_adoption_review_confirmation.template.<date>.json
+uv run navigator-data apply-d0-post-adoption-review \
+  --input data/d0/evidence/<completed-post-adoption-confirmation>.json \
+  --bundle data/d0/candidates/d0_post_adoption_review_bundle.<date>.json \
+  --review-output data/d0/review/d0_review_packet.<date>.json
 uv run navigator-data prepare-d1
 uv run navigator-data prepare-d2
 uv run navigator-data prepare-d3
@@ -173,6 +181,11 @@ AC-001/002两条采用证据、候选哈希和整改包，并要求待发布副�
 并生成包含候选哈希变化及拟迁移评审包的实名复核候选。它拒绝未提交发布、技术附件变化、
 静态输入变化和任何超出AC-009/010及最终决定的意外阻塞；输出本身不写正式评审副本、
 不新增批准，也不完成D0。项目批准人仍须审核该候选包的精确SHA-256并明确授权转录。
+`prepare-d0-post-adoption-confirmation`据此生成只含空结论的实名确认模板，绑定迁移包、
+拟评审副本哈希和唯一目标路径。项目批准人完成的确认副本必须位于`data/d0/evidence`，
+使用ISO日期或带时区时间，并明确`approved`或`rejected`；`apply-d0-post-adoption-review`
+仅在审核人、日期、包哈希、拟副本哈希和转录授权全部匹配时原子写出拟副本。拒绝、
+额外字段、旧日期、目标已存在或任何当前重放变化都不会产生正式评审文件。
 
 正式责任人可按
 [`data/d0/review`](data/d0/review/README.md)中的流程复制评审模板，填写角色、映射、

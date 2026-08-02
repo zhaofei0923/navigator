@@ -13,8 +13,10 @@ from .d0_acceptance_confirmation import (
 )
 from .d0_acceptance_review import write_d0_acceptance_review_bundle
 from .d0_baseline_adoption import (
+    apply_d0_post_adoption_confirmation,
     assess_d0_baseline_adoption,
     write_d0_baseline_publication_authorization,
+    write_d0_post_adoption_confirmation_template,
     write_d0_post_adoption_review_bundle,
 )
 from .d0_baseline_change import (
@@ -219,6 +221,26 @@ def _parser() -> argparse.ArgumentParser:
     )
     d0_post_adoption_review.add_argument("--authorization", type=Path, required=True)
     d0_post_adoption_review.add_argument("--output", type=Path, required=True)
+    d0_post_adoption_confirmation = commands.add_parser(
+        "prepare-d0-post-adoption-confirmation",
+        help=(
+            "Prepare a named project-approver confirmation template for an exact D0 "
+            "post-adoption review migration bundle."
+        ),
+    )
+    d0_post_adoption_confirmation.add_argument("--bundle", type=Path, required=True)
+    d0_post_adoption_confirmation.add_argument("--review-output", type=Path, required=True)
+    d0_post_adoption_confirmation.add_argument("--output", type=Path, required=True)
+    d0_post_adoption_apply = commands.add_parser(
+        "apply-d0-post-adoption-review",
+        help=(
+            "Transcribe the exact proposed D0 review packet after a completed named "
+            "project-approver confirmation."
+        ),
+    )
+    d0_post_adoption_apply.add_argument("--input", type=Path, required=True)
+    d0_post_adoption_apply.add_argument("--bundle", type=Path, required=True)
+    d0_post_adoption_apply.add_argument("--review-output", type=Path, required=True)
     commands.add_parser(
         "prepare-d1",
         help="Generate D1 source-admission, country-coverage, and domain-alternative templates.",
@@ -711,6 +733,48 @@ def main(argv: list[str] | None = None) -> int:
             print(str(error), file=sys.stderr)
             return 1
         print(review_output.relative_to(paths.root).as_posix())
+        return 0
+
+    if args.command == "prepare-d0-post-adoption-confirmation":
+        bundle_path = args.bundle if args.bundle.is_absolute() else paths.root / args.bundle
+        review_output = (
+            args.review_output
+            if args.review_output.is_absolute()
+            else paths.root / args.review_output
+        )
+        confirmation_output = args.output if args.output.is_absolute() else paths.root / args.output
+        try:
+            template_output = write_d0_post_adoption_confirmation_template(
+                paths,
+                bundle_path,
+                review_output,
+                confirmation_output,
+            )
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError) as error:
+            print(str(error), file=sys.stderr)
+            return 1
+        print(template_output.relative_to(paths.root).as_posix())
+        return 0
+
+    if args.command == "apply-d0-post-adoption-review":
+        confirmation_path = args.input if args.input.is_absolute() else paths.root / args.input
+        bundle_path = args.bundle if args.bundle.is_absolute() else paths.root / args.bundle
+        review_output = (
+            args.review_output
+            if args.review_output.is_absolute()
+            else paths.root / args.review_output
+        )
+        try:
+            migrated_output = apply_d0_post_adoption_confirmation(
+                paths,
+                confirmation_path,
+                bundle_path,
+                review_output,
+            )
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError) as error:
+            print(str(error), file=sys.stderr)
+            return 1
+        print(migrated_output.relative_to(paths.root).as_posix())
         return 0
 
     if args.command == "prepare-d1":

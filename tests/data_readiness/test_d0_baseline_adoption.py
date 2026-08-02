@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import copy
+import hashlib
 import json
 import shutil
 import subprocess
@@ -9,10 +11,14 @@ from typing import Any
 import pytest
 from navigator_data_readiness.cli import main
 from navigator_data_readiness.d0_baseline_adoption import (
+    apply_d0_post_adoption_confirmation,
     assess_d0_baseline_adoption,
     build_d0_post_adoption_review_bundle,
     load_and_validate_d0_baseline_publication_authorization,
+    load_and_validate_d0_post_adoption_review_bundle,
+    validate_d0_post_adoption_confirmation,
     write_d0_baseline_publication_authorization,
+    write_d0_post_adoption_confirmation_template,
     write_d0_post_adoption_review_bundle,
 )
 from navigator_data_readiness.paths import RepositoryPaths, discover_repository
@@ -103,6 +109,30 @@ def _publish_approved_workbook(paths: RepositoryPaths) -> str:
 
 def _codes(report: dict[str, Any]) -> set[str]:
     return {str(check["code"]) for check in report["checks"]}
+
+
+def _post_adoption_paths(paths: RepositoryPaths) -> tuple[Path, Path, Path, Path]:
+    return (
+        paths.d0_candidates_dir / "d0_post_adoption_review_bundle.2026-08-03.json",
+        paths.d0_review_dir / "d0_post_adoption_review_confirmation.template.2026-08-03.json",
+        paths.d0_review_dir / "d0_review_packet.2026-08-03.json",
+        paths.evidence_manifest.parent / "kevin_post_adoption_confirmation_20260803.json",
+    )
+
+
+def _completed_post_adoption_confirmation(template_path: Path) -> dict[str, Any]:
+    confirmation = _load(template_path)
+    confirmation.update(
+        {
+            "template_only": False,
+            "authorized_transcription": True,
+            "reviewer": "kevin",
+            "reviewed_at": "2026-08-03",
+            "decision": "approved",
+            "comments": "同意",
+        }
+    )
+    return confirmation
 
 
 def test_repository_authorization_is_current_and_waiting_for_publication() -> None:
@@ -320,3 +350,171 @@ def test_cli_prepares_post_adoption_review_bundle(tmp_path: Path) -> None:
 
     assert exit_code == 0
     assert _load(output)["ready_for_named_human_review"] is True
+
+
+def test_post_adoption_confirmation_template_binds_exact_outputs(tmp_path: Path) -> None:
+    paths, approval_commit = _isolated_repository(tmp_path)
+    authorization = _prepare(paths, approval_commit)
+    _publish_approved_workbook(paths)
+    bundle_path, template_path, review_output, _confirmation_path = _post_adoption_paths(paths)
+    write_d0_post_adoption_review_bundle(paths, authorization, bundle_path)
+
+    written = write_d0_post_adoption_confirmation_template(
+        paths,
+        bundle_path,
+        review_output,
+        template_path,
+    )
+    template = _load(written)
+    bundle = load_and_validate_d0_post_adoption_review_bundle(paths, bundle_path)
+
+    assert template["template_only"] is True
+    assert template["authorized_transcription"] is False
+    assert template["expected_reviewer"] == "kevin"
+    assert template["reviewer"] is None
+    assert template["decision"] is None
+    assert template["bundle"]["sha256"] == hashlib.sha256(bundle_path.read_bytes()).hexdigest()
+    assert template["proposed_review_packet_sha256"] == bundle["proposed_review_packet_sha256"]
+    assert template["review_output"] == review_output.relative_to(paths.root).as_posix()
+    assert review_output.exists() is False
+    assert template_path.stat().st_mode & 0o777 == 0o644
+    assert list(template_path.parent.glob(f".{template_path.name}.*.tmp")) == []
+    with pytest.raises(FileExistsError, match="Refusing to overwrite"):
+        write_d0_post_adoption_confirmation_template(
+            paths,
+            bundle_path,
+            review_output,
+            template_path,
+        )
+
+
+def test_post_adoption_confirmation_transcribes_exact_proposed_packet(
+    tmp_path: Path,
+) -> None:
+    paths, approval_commit = _isolated_repository(tmp_path)
+    authorization = _prepare(paths, approval_commit)
+    _publish_approved_workbook(paths)
+    bundle_path, template_path, review_output, confirmation_path = _post_adoption_paths(paths)
+    write_d0_post_adoption_review_bundle(paths, authorization, bundle_path)
+    write_d0_post_adoption_confirmation_template(
+        paths,
+        bundle_path,
+        review_output,
+        template_path,
+    )
+    _write(confirmation_path, _completed_post_adoption_confirmation(template_path))
+
+    written = apply_d0_post_adoption_confirmation(
+        paths,
+        confirmation_path,
+        bundle_path,
+        review_output,
+    )
+    bundle = _load(bundle_path)
+    migrated = _load(written)
+    acceptance = {item["acceptance_id"]: item for item in migrated["acceptance_items"]}
+
+    assert (
+        hashlib.sha256(written.read_bytes()).hexdigest() == bundle["proposed_review_packet_sha256"]
+    )
+    assert [acceptance[f"D0-AC-{number:03d}"]["review_status"] for number in range(1, 9)] == [
+        "approved"
+    ] * 8
+    assert acceptance["D0-AC-009"]["review_status"] == "pending"
+    assert acceptance["D0-AC-010"]["review_status"] == "pending"
+    assert migrated["final_decision"]["status"] == "pending"
+    assert written.stat().st_mode & 0o777 == 0o644
+    with pytest.raises(FileExistsError, match="Refusing to overwrite"):
+        apply_d0_post_adoption_confirmation(
+            paths,
+            confirmation_path,
+            bundle_path,
+            review_output,
+        )
+
+
+def test_post_adoption_confirmation_rejects_tampering_and_rejection(
+    tmp_path: Path,
+) -> None:
+    paths, approval_commit = _isolated_repository(tmp_path)
+    authorization = _prepare(paths, approval_commit)
+    _publish_approved_workbook(paths)
+    bundle_path, template_path, review_output, confirmation_path = _post_adoption_paths(paths)
+    write_d0_post_adoption_review_bundle(paths, authorization, bundle_path)
+    write_d0_post_adoption_confirmation_template(
+        paths,
+        bundle_path,
+        review_output,
+        template_path,
+    )
+    valid = _completed_post_adoption_confirmation(template_path)
+
+    mutations = [
+        ({**valid, "reviewer": "someone-else"}, "not the project approver"),
+        ({**valid, "reviewed_at": "2026-08-02"}, "cannot predate"),
+        ({**valid, "email": "private@example.invalid"}, "unexpected fields"),
+        (
+            {**valid, "bundle": {**valid["bundle"], "sha256": "0" * 64}},
+            "changed the bound bundle",
+        ),
+    ]
+    for confirmation, message in mutations:
+        with pytest.raises(ValueError, match=message):
+            validate_d0_post_adoption_confirmation(
+                paths,
+                confirmation,
+                bundle_path,
+                review_output,
+            )
+
+    rejected = copy.deepcopy(valid)
+    rejected.update({"decision": "rejected", "comments": "需要整改"})
+    _write(confirmation_path, rejected)
+    with pytest.raises(ValueError, match="was rejected"):
+        apply_d0_post_adoption_confirmation(
+            paths,
+            confirmation_path,
+            bundle_path,
+            review_output,
+        )
+    assert review_output.exists() is False
+
+
+def test_cli_prepares_and_applies_post_adoption_confirmation(tmp_path: Path) -> None:
+    paths, approval_commit = _isolated_repository(tmp_path)
+    authorization = _prepare(paths, approval_commit)
+    _publish_approved_workbook(paths)
+    bundle_path, template_path, review_output, confirmation_path = _post_adoption_paths(paths)
+    write_d0_post_adoption_review_bundle(paths, authorization, bundle_path)
+
+    prepare_exit = main(
+        [
+            "--repo",
+            str(paths.root),
+            "prepare-d0-post-adoption-confirmation",
+            "--bundle",
+            str(bundle_path),
+            "--review-output",
+            str(review_output),
+            "--output",
+            str(template_path),
+        ]
+    )
+    _write(confirmation_path, _completed_post_adoption_confirmation(template_path))
+    apply_exit = main(
+        [
+            "--repo",
+            str(paths.root),
+            "apply-d0-post-adoption-review",
+            "--input",
+            str(confirmation_path),
+            "--bundle",
+            str(bundle_path),
+            "--review-output",
+            str(review_output),
+        ]
+    )
+
+    assert prepare_exit == 0
+    assert apply_exit == 0
+    assert review_output.is_file()
