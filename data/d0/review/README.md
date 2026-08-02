@@ -71,6 +71,20 @@
    `approved`、回溯日期、错误清单位置和任何覆盖；`approved_for_manual_adoption`仅
    授权后续人工基线流程，不会在本命令中改写权威文件。
 
+   决定写入且为`approved_for_manual_adoption`后，基线责任人应先把已批准候选复制到
+   `doc`目录之外的安全暂存位置，并使用权威工作簿的原文件名，再执行只读交接复核：
+
+   ```bash
+   uv run navigator-data validate-d0-baseline-publication \
+     --decision data/d0/review/d0_baseline_adoption_decision.<date>.json \
+     --workbook /safe/staging/新能源企业出海导航仪_D0数据标准冻结执行台账.xlsx \
+     --output data/d0/candidates/d0_baseline_publication_readiness.<date>.json
+   ```
+
+   该命令会重放决定与AC-001/002证据、复算整改包并核对暂存副本的精确哈希；它只生成
+   就绪报告，不会发布、替换或激活权威工作簿。正式发布仍必须由人工基线责任流程完成，
+   随后重建合同并运行完整D0门禁。
+
 2. 复制模板，文件名必须明确包含实际评审批次，例如：
 
    ```bash

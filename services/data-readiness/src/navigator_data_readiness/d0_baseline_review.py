@@ -14,7 +14,7 @@ from .baseline import sha256_file
 from .d0_baseline_change import assess_d0_baseline_change
 from .d0_review import validate_review_packet
 from .paths import RepositoryPaths
-from .validation import validate_evidence
+from .validation import APPROVED_EVIDENCE_STATES, validate_evidence
 
 _EXPECTED_PENDING_REVIEW_CODES = {
     "D0_REVIEW_ACCEPTANCE_PENDING",
@@ -476,6 +476,10 @@ def _evidence_ids(reviewed_at: Any) -> dict[str, str]:
     }
 
 
+def _decision_evidence_status(decision: str) -> str:
+    return "已批准" if decision == "approved_for_manual_adoption" else "已复核"
+
+
 def _build_baseline_decision_record(
     paths: RepositoryPaths,
     bundle: dict[str, Any],
@@ -563,7 +567,7 @@ def _build_baseline_decision_manifest(
                 "recorded_by": "codex (authorized transcription)",
                 "recorded_at": confirmation["reviewed_at"],
                 "reviewer": confirmation["reviewer"],
-                "status": "已批准" if decision == "approved_for_manual_adoption" else "已复核",
+                "status": _decision_evidence_status(decision),
                 "subject_path": bundle_relative,
                 "subject_sha256": bundle_hash,
                 "decision": decision,
@@ -647,3 +651,96 @@ def apply_d0_baseline_confirmation(
         if not manifest_published:
             manifest_temporary.unlink(missing_ok=True)
     return decision_output, manifest_output
+
+
+def load_and_validate_d0_baseline_decision(
+    paths: RepositoryPaths,
+    decision_path: Path,
+) -> dict[str, Any]:
+    """Replay a recorded baseline decision and its two acceptance evidence bindings."""
+    _require_directory(decision_path, paths.d0_review_dir, label="D0 baseline decision record")
+    record = _load_object(decision_path, label="D0 baseline decision record")
+    if (
+        record.get("schema_version") != 1
+        or record.get("stage") != "D0"
+        or record.get("record_type") != "baseline_adoption_decision"
+        or record.get("does_not_activate_baseline") is not True
+        or record.get("does_not_complete_d0") is not True
+    ):
+        raise ValueError("D0 baseline decision record header or safety boundary is invalid")
+
+    bundle_path = _resolve_binding(
+        paths,
+        record.get("bundle"),
+        label="D0 baseline review bundle",
+    )
+    _require_directory(bundle_path, paths.d0_candidates_dir, label="D0 baseline review bundle")
+    confirmation_path = _resolve_binding(
+        paths,
+        record.get("confirmation"),
+        label="D0 baseline confirmation evidence",
+    )
+    _require_directory(
+        confirmation_path,
+        paths.evidence_manifest.parent,
+        label="D0 baseline confirmation evidence",
+    )
+    confirmation = _load_object(confirmation_path, label="D0 baseline confirmation evidence")
+    bundle, decision = validate_d0_baseline_confirmation(paths, confirmation, bundle_path)
+    reviewed_date = _temporal_date(confirmation.get("reviewed_at"))
+    if reviewed_date is None or _iso_date_token(decision_path) != reviewed_date.isoformat():
+        raise ValueError("D0 baseline decision record date must match reviewed_at")
+
+    expected_record = _build_baseline_decision_record(
+        paths,
+        bundle,
+        bundle_path,
+        confirmation,
+        confirmation_path,
+        decision,
+    )
+    if record != expected_record:
+        raise ValueError("D0 baseline decision record does not match a deterministic replay")
+
+    evidence_checks = validate_evidence(paths)
+    if evidence_checks:
+        raise ValueError(
+            "D0 baseline decision evidence failed validation: "
+            + "; ".join(f"{check.code}: {check.message}" for check in evidence_checks)
+        )
+    manifest = _load_object(paths.evidence_manifest, label="D0 evidence manifest")
+    entries = manifest.get("evidence")
+    if not isinstance(entries, list):
+        raise ValueError("D0 evidence manifest evidence must be a list")
+    expected_ids = _evidence_ids(confirmation["reviewed_at"])
+    confirmation_binding = record["confirmation"]
+    bundle_binding = record["bundle"]
+    expected_status = _decision_evidence_status(decision)
+    for acceptance_id, evidence_id in expected_ids.items():
+        matches = [
+            item
+            for item in entries
+            if isinstance(item, dict) and item.get("evidence_id") == evidence_id
+        ]
+        if len(matches) != 1:
+            raise ValueError(
+                f"D0 baseline decision evidence must contain exactly one {evidence_id}"
+            )
+        entry = matches[0]
+        expected_fields = {
+            "acceptance_id": acceptance_id,
+            "path": confirmation_binding["path"],
+            "sha256": confirmation_binding["sha256"],
+            "reviewer": confirmation["reviewer"],
+            "status": expected_status,
+            "subject_path": bundle_binding["path"],
+            "subject_sha256": bundle_binding["sha256"],
+            "decision": decision,
+        }
+        if any(entry.get(key) != value for key, value in expected_fields.items()):
+            raise ValueError(f"D0 baseline decision evidence binding is invalid: {evidence_id}")
+        if entry.get("status") not in APPROVED_EVIDENCE_STATES:
+            raise ValueError(
+                f"D0 baseline decision evidence is not in a reviewed state: {evidence_id}"
+            )
+    return record

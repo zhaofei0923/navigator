@@ -66,6 +66,10 @@ uv run navigator-data apply-d0-baseline-decision \
   --bundle data/d0/candidates/d0_baseline_adoption_review_bundle.<date>.json \
   --decision-output data/d0/review/d0_baseline_adoption_decision.<date>.json \
   --manifest-output data/d0/evidence/manifest.json
+uv run navigator-data validate-d0-baseline-publication \
+  --decision data/d0/review/d0_baseline_adoption_decision.<date>.json \
+  --workbook /safe/staging/新能源企业出海导航仪_D0数据标准冻结执行台账.xlsx \
+  --output data/d0/candidates/d0_baseline_publication_readiness.<date>.json
 uv run navigator-data prepare-d1
 uv run navigator-data prepare-d2
 uv run navigator-data prepare-d3
@@ -144,6 +148,10 @@ D0合同深度审计进一步发现，原先对AC-001/002的简化机器检查�
 明确决定和落库授权。它原子写入基线采用决定记录，并为AC-001/002各登记一条绑定同一
 确认文件及审核包哈希的证据；错误哈希、错误人员、追溯日期、重复输出或非标准证据清单
 位置都会失败。即使决定为`approved_for_manual_adoption`，该命令也不会改写权威Excel。
+`validate-d0-baseline-publication`用于批准后的只读交接复核：它确定性重放决定记录，核对
+AC-001/002两条采用证据、候选哈希和整改包，并要求待发布副本与权威工作簿同名、位于
+`doc`目录之外且字节级匹配已批准候选。通过只表示副本可交给正式基线责任流程人工发布；
+命令本身不复制、不替换也不激活任何工作簿。
 
 正式责任人可按
 [`data/d0/review`](data/d0/review/README.md)中的流程复制评审模板，填写角色、映射、

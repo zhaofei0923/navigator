@@ -16,6 +16,7 @@ from .d0_baseline_change import (
     load_and_assess_d0_baseline_change,
     load_and_generate_d0_candidate_workbook,
 )
+from .d0_baseline_publication import assess_d0_baseline_publication
 from .d0_baseline_review import (
     apply_d0_baseline_confirmation,
     write_d0_baseline_review_package,
@@ -173,6 +174,16 @@ def _parser() -> argparse.ArgumentParser:
     d0_baseline_application.add_argument("--bundle", type=Path, required=True)
     d0_baseline_application.add_argument("--decision-output", type=Path, required=True)
     d0_baseline_application.add_argument("--manifest-output", type=Path, required=True)
+    d0_baseline_publication = commands.add_parser(
+        "validate-d0-baseline-publication",
+        help=(
+            "Read-only verification of an approved baseline decision and a staged "
+            "would-be authoritative D0 workbook."
+        ),
+    )
+    d0_baseline_publication.add_argument("--decision", type=Path, required=True)
+    d0_baseline_publication.add_argument("--workbook", type=Path, required=True)
+    d0_baseline_publication.add_argument("--output", type=Path)
     commands.add_parser(
         "prepare-d1",
         help="Generate D1 source-admission, country-coverage, and domain-alternative templates.",
@@ -552,6 +563,45 @@ def main(argv: list[str] | None = None) -> int:
         for path in baseline_decision_paths:
             print(path.relative_to(paths.root).as_posix())
         return 0
+
+    if args.command == "validate-d0-baseline-publication":
+        decision_path = args.decision if args.decision.is_absolute() else paths.root / args.decision
+        workbook_path = args.workbook if args.workbook.is_absolute() else paths.root / args.workbook
+        assessment = assess_d0_baseline_publication(
+            paths,
+            decision_path,
+            workbook_path,
+        )
+        serialized = json.dumps(assessment, ensure_ascii=False, indent=2) + "\n"
+        if args.output:
+            destination = args.output if args.output.is_absolute() else paths.root / args.output
+            forbidden_outputs = {
+                decision_path.resolve(),
+                workbook_path.resolve(),
+                paths.d0_workbook.resolve(),
+                paths.technical_workbook.resolve(),
+                paths.evidence_manifest.resolve(),
+            }
+            if (
+                destination.resolve() in forbidden_outputs
+                or destination.resolve().is_relative_to((paths.root / "doc").resolve())
+                or destination.suffix.lower() != ".json"
+            ):
+                print(
+                    "Publication readiness output must be a separate JSON file",
+                    file=sys.stderr,
+                )
+                return 1
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_text(serialized, encoding="utf-8")
+            try:
+                display_path = destination.relative_to(paths.root).as_posix()
+            except ValueError:
+                display_path = str(destination)
+            print(display_path)
+        else:
+            print(serialized, end="")
+        return 0 if assessment.get("ready_for_manual_baseline_publication") else 1
 
     if args.command == "prepare-d1":
         written = write_d1_candidates(paths)
