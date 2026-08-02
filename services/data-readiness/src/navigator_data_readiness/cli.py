@@ -7,6 +7,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from .baseline import write_snapshot
+from .d0_acceptance_review import write_d0_acceptance_review_bundle
 from .d0_baseline_change import (
     load_and_assess_d0_baseline_change,
     load_and_generate_d0_candidate_workbook,
@@ -89,6 +90,18 @@ def _parser() -> argparse.ArgumentParser:
     confirmation.add_argument("--previous-review", type=Path, required=True)
     confirmation.add_argument("--resolution-output", type=Path, required=True)
     confirmation.add_argument("--review-output", type=Path, required=True)
+    acceptance_review = commands.add_parser(
+        "prepare-d0-acceptance-review",
+        help=(
+            "Build a hash-bound worksheet for every D0 acceptance item whose current "
+            "machine and signed-input prerequisites are ready for human review."
+        ),
+    )
+    acceptance_review.add_argument("--review", type=Path, required=True)
+    acceptance_review.add_argument("--resolution", type=Path, required=True)
+    acceptance_review.add_argument("--workbook", type=Path, required=True)
+    acceptance_review.add_argument("--bundle-output", type=Path, required=True)
+    acceptance_review.add_argument("--worksheet-output", type=Path, required=True)
     d0_change_validation = commands.add_parser(
         "validate-d0-baseline-change",
         help=(
@@ -299,6 +312,33 @@ def main(argv: list[str] | None = None) -> int:
             print(str(error), file=sys.stderr)
             return 1
         for path in confirmed_paths:
+            print(path.relative_to(paths.root).as_posix())
+        return 0
+
+    if args.command == "prepare-d0-acceptance-review":
+        inputs = {
+            name: value if value.is_absolute() else paths.root / value
+            for name, value in (
+                ("review", args.review),
+                ("resolution", args.resolution),
+                ("workbook", args.workbook),
+                ("bundle_output", args.bundle_output),
+                ("worksheet_output", args.worksheet_output),
+            )
+        }
+        try:
+            review_paths = write_d0_acceptance_review_bundle(
+                paths,
+                inputs["review"],
+                inputs["resolution"],
+                inputs["workbook"],
+                inputs["bundle_output"],
+                inputs["worksheet_output"],
+            )
+        except (OSError, ValueError) as error:
+            print(str(error), file=sys.stderr)
+            return 1
+        for path in review_paths:
             print(path.relative_to(paths.root).as_posix())
         return 0
 

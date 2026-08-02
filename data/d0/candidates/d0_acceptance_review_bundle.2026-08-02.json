@@ -1,0 +1,868 @@
+{
+  "acceptance_items": [
+    {
+      "acceptance_id": "D0-AC-001",
+      "current_review_status": "pending",
+      "evidence_bindings": [
+        {
+          "path": "data/d0/candidates/d0_core_contract_candidate.2026-08-01.xlsx",
+          "sha256": "123394d0ee1744edf86e201bd1c683cafdd222d1ff5c55221eb1f0798e2f0712",
+          "subject": "candidate core-entity contract"
+        },
+        {
+          "path": "data/d0/review/core_contract_resolution.2026-08-01.json",
+          "sha256": "bac2d22c2cdc6019ec01e86c223428e0720cdd16b22fe3b1f08a569fe0a440b8",
+          "subject": "reviewed AC-001/002 resolution packet"
+        }
+      ],
+      "evidence_candidate_id": "EVD-D0-AC-001-REVIEW-20260802",
+      "required_roles": [
+        "数据负责人",
+        "后端/数据架构负责人"
+      ],
+      "review_state": "ready_for_human_review",
+      "reviewer_signature_template": [
+        {
+          "evidence_ids": [
+            "EVD-D0-AC-001-REVIEW-20260802"
+          ],
+          "person_name": "kevin",
+          "role": "数据负责人",
+          "signed_at": null
+        },
+        {
+          "evidence_ids": [
+            "EVD-D0-AC-001-REVIEW-20260802"
+          ],
+          "person_name": "kevin",
+          "role": "后端/数据架构负责人",
+          "signed_at": null
+        }
+      ],
+      "title": "核心实体有唯一代码、主键和权威关系"
+    },
+    {
+      "acceptance_id": "D0-AC-002",
+      "current_review_status": "pending",
+      "evidence_bindings": [
+        {
+          "path": "data/d0/candidates/d0_core_contract_candidate.2026-08-01.xlsx",
+          "sha256": "123394d0ee1744edf86e201bd1c683cafdd222d1ff5c55221eb1f0798e2f0712",
+          "subject": "candidate core-field contract"
+        },
+        {
+          "path": "data/d0/review/core_contract_resolution.2026-08-01.json",
+          "sha256": "bac2d22c2cdc6019ec01e86c223428e0720cdd16b22fe3b1f08a569fe0a440b8",
+          "subject": "reviewed AC-001/002 resolution packet"
+        }
+      ],
+      "evidence_candidate_id": "EVD-D0-AC-002-REVIEW-20260802",
+      "required_roles": [
+        "数据负责人",
+        "数据质量负责人"
+      ],
+      "review_state": "ready_for_human_review",
+      "reviewer_signature_template": [
+        {
+          "evidence_ids": [
+            "EVD-D0-AC-002-REVIEW-20260802"
+          ],
+          "person_name": "kevin",
+          "role": "数据负责人",
+          "signed_at": null
+        },
+        {
+          "evidence_ids": [
+            "EVD-D0-AC-002-REVIEW-20260802"
+          ],
+          "person_name": "kevin",
+          "role": "数据质量负责人",
+          "signed_at": null
+        }
+      ],
+      "title": "核心字段有唯一代码、类型、单位、空值和来源规则"
+    },
+    {
+      "acceptance_id": "D0-AC-003",
+      "current_review_status": "pending",
+      "evidence_bindings": [
+        {
+          "path": "data/d0/candidates/enum_migration_evidence.json",
+          "sha256": "2631d3ef2cff7ed5de7952877c07779565608e4de05601d7508ebb0f70472283",
+          "subject": "enum and migration machine evidence"
+        }
+      ],
+      "evidence_candidate_id": "EVD-D0-AC-003-REVIEW-20260802",
+      "required_roles": [
+        "数据负责人",
+        "产品负责人"
+      ],
+      "review_state": "ready_for_human_review",
+      "reviewer_signature_template": [
+        {
+          "evidence_ids": [
+            "EVD-D0-AC-003-REVIEW-20260802"
+          ],
+          "person_name": "kevin",
+          "role": "数据负责人",
+          "signed_at": null
+        },
+        {
+          "evidence_ids": [
+            "EVD-D0-AC-003-REVIEW-20260802"
+          ],
+          "person_name": "kevin",
+          "role": "产品负责人",
+          "signed_at": null
+        }
+      ],
+      "title": "状态枚举中文、代码、互斥关系和迁移规则一致"
+    },
+    {
+      "acceptance_id": "D0-AC-004",
+      "current_review_status": "pending",
+      "evidence_bindings": [
+        {
+          "path": "data/d0/candidates/conventions.json",
+          "sha256": "137410a9eeeeb971e1187dc150f42360772539605cf31f0ac3126bffc57fbc9d",
+          "subject": "approved convention candidate"
+        }
+      ],
+      "evidence_candidate_id": "EVD-D0-AC-004-REVIEW-20260802",
+      "required_roles": [
+        "产品负责人",
+        "数据负责人",
+        "语言审校负责人"
+      ],
+      "review_state": "ready_for_human_review",
+      "reviewer_signature_template": [
+        {
+          "evidence_ids": [
+            "EVD-D0-AC-004-REVIEW-20260802"
+          ],
+          "person_name": "kevin",
+          "role": "产品负责人",
+          "signed_at": null
+        },
+        {
+          "evidence_ids": [
+            "EVD-D0-AC-004-REVIEW-20260802"
+          ],
+          "person_name": "kevin",
+          "role": "数据负责人",
+          "signed_at": null
+        },
+        {
+          "evidence_ids": [
+            "EVD-D0-AC-004-REVIEW-20260802"
+          ],
+          "person_name": "kevin",
+          "role": "语言审校负责人",
+          "signed_at": null
+        }
+      ],
+      "title": "时区、货币、单位、精度和多语言规则已批准"
+    },
+    {
+      "acceptance_id": "D0-AC-005",
+      "current_review_status": "pending",
+      "evidence_bindings": [
+        {
+          "path": "embedded:effective_template_trial",
+          "sha256": "1e7e794f46ab75eb1ce7115ca4c3478e05934bb5b057dea9955f2ba45e7d5b4d",
+          "subject": "mapping-aware D4 template trial"
+        },
+        {
+          "path": "embedded:effective_gold_standard",
+          "sha256": "91385044494b13879b1f3ced2c7b9b391827bb6c2ee6fef129cd02ef9f0ad31a",
+          "subject": "review-aware gold-standard assessment"
+        }
+      ],
+      "evidence_candidate_id": "EVD-D0-AC-005-REVIEW-20260802",
+      "required_roles": [
+        "数据质量负责人",
+        "数据工程负责人"
+      ],
+      "review_state": "ready_for_human_review",
+      "reviewer_signature_template": [
+        {
+          "evidence_ids": [
+            "EVD-D0-AC-005-REVIEW-20260802"
+          ],
+          "person_name": "kevin",
+          "role": "数据质量负责人",
+          "signed_at": null
+        },
+        {
+          "evidence_ids": [
+            "EVD-D0-AC-005-REVIEW-20260802"
+          ],
+          "person_name": "kevin",
+          "role": "数据工程负责人",
+          "signed_at": null
+        }
+      ],
+      "title": "来源、原始资料、字段映射、审核和D4模板试填通过"
+    },
+    {
+      "acceptance_id": "D0-AC-006",
+      "current_review_status": "pending",
+      "evidence_bindings": [
+        {
+          "path": "data/d0/candidates/terminology_review_queue.json",
+          "sha256": "9778fb039d980f62470f72e9d2eb45ea9a9575ffa0e4ff9f48485ea25af01c37",
+          "subject": "approved terminology candidate"
+        },
+        {
+          "path": "embedded:effective_gold_standard",
+          "sha256": "91385044494b13879b1f3ced2c7b9b391827bb6c2ee6fef129cd02ef9f0ad31a",
+          "subject": "professionally reviewed gold-standard assessment"
+        }
+      ],
+      "evidence_candidate_id": "EVD-D0-AC-006-REVIEW-20260802",
+      "required_roles": [
+        "国家研究负责人",
+        "语言审校负责人"
+      ],
+      "review_state": "ready_for_human_review",
+      "reviewer_signature_template": [
+        {
+          "evidence_ids": [
+            "EVD-D0-AC-006-REVIEW-20260802"
+          ],
+          "person_name": "kevin",
+          "role": "国家研究负责人",
+          "signed_at": null
+        },
+        {
+          "evidence_ids": [
+            "EVD-D0-AC-006-REVIEW-20260802"
+          ],
+          "person_name": "kevin",
+          "role": "语言审校负责人",
+          "signed_at": null
+        }
+      ],
+      "title": "金标准样本与术语表由专业人员复核"
+    },
+    {
+      "acceptance_id": "D0-AC-007",
+      "current_review_status": "approved",
+      "evidence_bindings": [],
+      "evidence_candidate_id": null,
+      "required_roles": [
+        "项目批准人"
+      ],
+      "review_state": "approved",
+      "reviewer_signature_template": [],
+      "title": "责任人、替补、升级链和审批权限已签署"
+    },
+    {
+      "acceptance_id": "D0-AC-008",
+      "current_review_status": "pending",
+      "evidence_bindings": [
+        {
+          "path": "data/d0/candidates/file_rules.json",
+          "sha256": "f659ad3b577080736881ec9412592e64b699d0b197b3a09b858b3921eee53b85",
+          "subject": "approved file and evidence rules"
+        }
+      ],
+      "evidence_candidate_id": "EVD-D0-AC-008-REVIEW-20260802",
+      "required_roles": [
+        "数据负责人",
+        "合规负责人"
+      ],
+      "review_state": "ready_for_human_review",
+      "reviewer_signature_template": [
+        {
+          "evidence_ids": [
+            "EVD-D0-AC-008-REVIEW-20260802"
+          ],
+          "person_name": "kevin",
+          "role": "数据负责人",
+          "signed_at": null
+        },
+        {
+          "evidence_ids": [
+            "EVD-D0-AC-008-REVIEW-20260802"
+          ],
+          "person_name": "kevin",
+          "role": "合规负责人",
+          "signed_at": null
+        }
+      ],
+      "title": "变更、版本、证据目录和文件命名规则可执行"
+    },
+    {
+      "acceptance_id": "D0-AC-009",
+      "current_review_status": "pending",
+      "evidence_bindings": [],
+      "evidence_candidate_id": null,
+      "required_roles": [
+        "数据负责人",
+        "项目批准人"
+      ],
+      "review_state": "blocked",
+      "reviewer_signature_template": [],
+      "title": "D0阻塞项为0，遗留问题均有责任人和目标日期"
+    },
+    {
+      "acceptance_id": "D0-AC-010",
+      "current_review_status": "pending",
+      "evidence_bindings": [],
+      "evidence_candidate_id": null,
+      "required_roles": [
+        "项目批准人"
+      ],
+      "review_state": "blocked",
+      "reviewer_signature_template": [],
+      "title": "项目批准人签署D0通过结论"
+    }
+  ],
+  "automated_assessment_only": true,
+  "bundle_type": "acceptance_review_candidate",
+  "does_not_activate_baseline": true,
+  "does_not_approve_acceptance": true,
+  "effective_machine_results": {
+    "candidate_ac001": {
+      "acceptance_id": "D0-AC-001",
+      "automated_assessment_only": true,
+      "candidate_only": true,
+      "checks": [
+        {
+          "check_id": "ENTITY-RELATIONSHIP-ID-UNIQUE",
+          "description": "关系编号必须非空且唯一",
+          "findings": [],
+          "status": "pass"
+        },
+        {
+          "check_id": "ENTITY-CODE-PRESENT",
+          "description": "每条关系必须引用非空父实体和子实体代码",
+          "findings": [],
+          "status": "pass"
+        },
+        {
+          "check_id": "ENTITY-PRIMARY-KEY-COVERAGE",
+          "description": "每个关系实体必须在字段合同中显式标记主键",
+          "findings": [],
+          "status": "pass"
+        },
+        {
+          "check_id": "ENTITY-RELATION-KEY-PRESENT",
+          "description": "每条关系必须给出外键或唯一键合同",
+          "findings": [],
+          "status": "pass"
+        },
+        {
+          "check_id": "ENTITY-AUTHORITY-PRESENT",
+          "description": "每条关系必须给出权威记录",
+          "findings": [],
+          "status": "pass"
+        },
+        {
+          "check_id": "ENTITY-CARDINALITY-CONSTRAINT-PRESENT",
+          "description": "每条关系必须给出基数和关键约束",
+          "findings": [],
+          "status": "pass"
+        }
+      ],
+      "findings": [],
+      "human_review_scope": [
+        "确认关系表中的实体代码覆盖全部核心实体",
+        "确认每个核心实体的主键合同；缺失项必须补充基线或记录正式例外",
+        "确认外键、唯一键、权威记录、基数和关键约束的业务语义"
+      ],
+      "human_status": "pending",
+      "inventory": {
+        "entity_code_count": 34,
+        "entity_codes": [
+          "app_user",
+          "country",
+          "country_metric_value",
+          "data_record_version",
+          "enterprise",
+          "enterprise_member",
+          "enterprise_profile_version",
+          "field_provenance",
+          "legal_entity",
+          "metric_definition",
+          "partner",
+          "partner_recommendation",
+          "policy",
+          "policy_version",
+          "project",
+          "project_opportunity_assessment",
+          "project_version",
+          "quality_issue",
+          "raw_record",
+          "region",
+          "report",
+          "retrieval_run",
+          "review_task",
+          "risk",
+          "risk_assessment",
+          "scoring_adjustment",
+          "scoring_model_version",
+          "scoring_result",
+          "scoring_rule",
+          "scoring_run",
+          "source_family",
+          "source_registry",
+          "source_snapshot",
+          "tender"
+        ],
+        "primary_key_entities": [
+          "app_user",
+          "country",
+          "country_metric_value",
+          "data_record_version",
+          "enterprise",
+          "enterprise_member",
+          "enterprise_profile_version",
+          "field_provenance",
+          "legal_entity",
+          "metric_definition",
+          "partner",
+          "partner_recommendation",
+          "policy",
+          "policy_version",
+          "project",
+          "project_opportunity_assessment",
+          "project_version",
+          "quality_issue",
+          "raw_record",
+          "region",
+          "report",
+          "retrieval_run",
+          "review_task",
+          "risk",
+          "risk_assessment",
+          "scoring_adjustment",
+          "scoring_model_version",
+          "scoring_result",
+          "scoring_rule",
+          "scoring_run",
+          "source_family",
+          "source_registry",
+          "source_snapshot",
+          "tender"
+        ],
+        "primary_key_entity_count": 34,
+        "relationship_count": 25
+      },
+      "machine_status": "pass",
+      "required_reviewer_roles": [
+        "数据负责人",
+        "后端/数据架构负责人"
+      ],
+      "schema_version": 1,
+      "source_binding": {},
+      "stage": "D0",
+      "warning": "机器证据不能代替实名责任人复核、批准或冻结基线变更"
+    },
+    "candidate_ac002": {
+      "acceptance_id": "D0-AC-002",
+      "automated_assessment_only": true,
+      "candidate_only": true,
+      "checks": [
+        {
+          "check_id": "FIELD-ID-UNIQUE",
+          "description": "字段编号必须非空且唯一",
+          "findings": [],
+          "status": "pass"
+        },
+        {
+          "check_id": "FIELD-ENTITY-NAME-UNIQUE",
+          "description": "实体与字段名组合必须唯一",
+          "findings": [],
+          "status": "pass"
+        },
+        {
+          "check_id": "FIELD-METADATA-COMPLETE",
+          "description": "字段必须给出代码、实体、名称、类型、空值和来源规则",
+          "findings": [],
+          "status": "pass"
+        },
+        {
+          "check_id": "FIELD-NULLABILITY-VALID",
+          "description": "必填值必须明确为是、否或条件必填",
+          "findings": [],
+          "status": "pass"
+        },
+        {
+          "check_id": "FIELD-UNIT-METADATA-PRESENT",
+          "description": "字段合同必须显式记录单位代码或不适用",
+          "findings": [],
+          "status": "pass"
+        }
+      ],
+      "findings": [],
+      "human_review_scope": [
+        "确认字段代码、实体字段名、类型、空值和来源规则",
+        "补充单位代码或明确不适用，禁止仅从备注或展示文案推断单位",
+        "确认条件必填规则可由后续质量校验实现"
+      ],
+      "human_status": "pending",
+      "inventory": {
+        "entity_count": 50,
+        "field_count": 158,
+        "fields_with_explicit_unit_or_not_applicable": 158,
+        "required_value_counts": {
+          "否": 11,
+          "是": 123,
+          "条件必填": 24
+        },
+        "unit_metadata_column_present": true
+      },
+      "machine_status": "pass",
+      "required_reviewer_roles": [
+        "数据负责人",
+        "数据质量负责人"
+      ],
+      "schema_version": 1,
+      "source_binding": {},
+      "stage": "D0",
+      "warning": "机器证据不能代替实名责任人复核、批准或冻结基线变更"
+    },
+    "effective_gold_standard": {
+      "candidates": [
+        {
+          "capture_record": "D0-CAPTURE-IDN-HEESI-2024",
+          "country": "IDN",
+          "license_snapshot_id": "LIC-IDN-ESDM-HEESI-2024-20260731",
+          "license_snapshot_verified": true,
+          "raw_id": "RAW-EXAMPLE-001",
+          "source_id": "SRC-IDN-ESDM",
+          "status": "candidate_ready_for_review",
+          "unresolved": [],
+          "verified_capture": true
+        },
+        {
+          "capture_record": "D0-CAPTURE-VNM-EVN-2024-2025",
+          "country": "VNM",
+          "license_snapshot_id": "LIC-VNM-EVN-ANNUAL-REPORT-2024-2025-20260731",
+          "license_snapshot_verified": true,
+          "raw_id": "RAW-EXAMPLE-002",
+          "source_id": "SRC-VNM-EVN",
+          "status": "candidate_ready_for_review",
+          "unresolved": [],
+          "verified_capture": true
+        },
+        {
+          "capture_record": "D0-CAPTURE-SAU-PB-ROUND7-QUALIFIED-DEVELOPERS-2025",
+          "country": "SAU",
+          "license_snapshot_id": "LIC-SAU-PB-ROUND7-QUALIFIED-DEVELOPERS-2025-20260731",
+          "license_snapshot_verified": true,
+          "raw_id": "RAW-EXAMPLE-003",
+          "source_id": "SRC-SAU-PB",
+          "status": "candidate_ready_for_review",
+          "unresolved": [],
+          "verified_capture": true
+        }
+      ],
+      "purpose": "D0金标准样本缺口清单；禁止把示例行当作已复核事实",
+      "required_professional_review": true,
+      "schema_version": 1,
+      "status": "candidate_ready_for_review"
+    },
+    "effective_template_trial": {
+      "checks": [
+        {
+          "check_id": "TRIAL-BATCH-COUNTRY",
+          "description": "采集批次国家必须存在于首批国家范围",
+          "failures": [],
+          "status": "pass"
+        },
+        {
+          "check_id": "TRIAL-BATCH-SOURCE",
+          "description": "采集批次来源必须存在于来源起始清单",
+          "failures": [],
+          "status": "pass"
+        },
+        {
+          "check_id": "TRIAL-RAW-REFERENCES",
+          "description": "原始资料示例必须引用已登记国家、来源和批次",
+          "failures": [],
+          "status": "pass"
+        },
+        {
+          "check_id": "TRIAL-MAPPING-TARGET",
+          "description": "字段映射目标必须存在于冻结字段清单或具有已批准的新增字段/实体建模决定",
+          "failures": [],
+          "status": "pass"
+        }
+      ],
+      "purpose": "D0模板交叉试填；不进入正式库，不代表来源准入或数据发布",
+      "resolved_mappings": [
+        {
+          "decision": "model_entity",
+          "effective_target": "localized_text",
+          "mapping_id": "MAP-COUNTRY-NAME",
+          "original_target": "country.name_zh"
+        },
+        {
+          "decision": "replace_target",
+          "effective_target": "country.iso_code",
+          "mapping_id": "MAP-ISO3",
+          "original_target": "country.iso3"
+        },
+        {
+          "decision": "add_field",
+          "effective_target": "policy_version.published_at",
+          "mapping_id": "MAP-POLICY-DATE",
+          "original_target": "policy.published_at"
+        },
+        {
+          "decision": "add_field",
+          "effective_target": "project_version.capacity_value",
+          "mapping_id": "MAP-PROJECT-CAP",
+          "original_target": "project.capacity_mw"
+        },
+        {
+          "decision": "add_field",
+          "effective_target": "tender.budget_original_value",
+          "mapping_id": "MAP-AMOUNT",
+          "original_target": "tender.budget_original"
+        },
+        {
+          "decision": "model_entity",
+          "effective_target": "legal_entity_name",
+          "mapping_id": "MAP-ENTITY",
+          "original_target": "partner.legal_name"
+        }
+      ],
+      "schema_version": 1,
+      "status": "pass"
+    },
+    "enum_ac003": {
+      "acceptance_id": "D0-AC-003",
+      "automated_assessment_only": true,
+      "candidate_only": true,
+      "checks": [
+        {
+          "check_id": "ENUM-ID-UNIQUE",
+          "description": "枚举编号必须非空且唯一",
+          "findings": [],
+          "status": "pass"
+        },
+        {
+          "check_id": "ENUM-GROUP-CODE-UNIQUE",
+          "description": "同一对象字段内代码必须互斥且唯一",
+          "findings": [],
+          "status": "pass"
+        },
+        {
+          "check_id": "ENUM-METADATA-COMPLETE",
+          "description": "枚举必须给出中文、代码、转向和进入条件",
+          "findings": [],
+          "status": "pass"
+        },
+        {
+          "check_id": "MIGRATION-HISTORICAL-ID-UNIQUE",
+          "description": "历史编号必须非空且唯一",
+          "findings": [],
+          "status": "pass"
+        },
+        {
+          "check_id": "MIGRATION-METADATA-COMPLETE",
+          "description": "迁移记录必须给出现行编号、冲突类型、处理规则和状态",
+          "findings": [],
+          "status": "pass"
+        }
+      ],
+      "findings": [],
+      "human_review_scope": [
+        "确认中文名称、代码和业务含义一致",
+        "确认可转向表达式中的业务宏、重开事件和终态语义",
+        "确认13条历史编号、实体和枚举迁移规则没有语义冲突"
+      ],
+      "human_status": "pending",
+      "inventory": {
+        "enum_count": 251,
+        "enum_group_count": 45,
+        "enum_group_counts": {
+          "*.freshness_status": 4,
+          "*.recommendation_status": 4,
+          "*.value_status": 5,
+          "ai_message.answer_status": 6,
+          "country.coverage_level": 3,
+          "country.coverage_status": 2,
+          "country.opportunity_level": 4,
+          "country.policy_friendliness_level": 4,
+          "country.risk_assessment_status": 2,
+          "country.risk_level": 4,
+          "crm_opportunity.stage": 8,
+          "data_record_version.publication_status": 7,
+          "data_record_version.quality_status": 4,
+          "enterprise.verification_status": 6,
+          "lead.status": 8,
+          "localized_text.translation_status": 4,
+          "membership.status": 5,
+          "partner.review_status": 5,
+          "partner_recommendation.grade": 5,
+          "policy.content_status": 8,
+          "policy.effective_status": 9,
+          "project.business_status": 7,
+          "project.opportunity_window": 8,
+          "project.stage": 12,
+          "project.verification_status": 4,
+          "project_opportunity_assessment.context_type": 2,
+          "quality_issue.severity": 4,
+          "quality_issue.status": 6,
+          "report.business_status": 10,
+          "report_task.status": 6,
+          "review_task.status": 7,
+          "risk.assessment_status": 2,
+          "risk.risk_level": 4,
+          "scoring_model_version.status": 6,
+          "scoring_result.grade_code[DATA_TRUST]": 4,
+          "scoring_result.grade_code[PROJECT_OPPORTUNITY_*]": 5,
+          "scoring_result.grade_code[RECOMMEND_PRIORITY]": 5,
+          "scoring_result.status": 4,
+          "service_request.status": 12,
+          "source_registry.authority_level": 4,
+          "source_registry.status": 5,
+          "tender.official_status": 9,
+          "tender.opportunity_window": 8,
+          "ui.async_state": 6,
+          "ui.form_state": 4
+        },
+        "migration_count": 13,
+        "migration_status_counts": {
+          "已确认": 6,
+          "已纠错": 7
+        }
+      },
+      "machine_status": "pass",
+      "required_reviewer_roles": [
+        "产品负责人",
+        "数据负责人"
+      ],
+      "schema_version": 1,
+      "source_binding": {
+        "baseline_version": "V1.0-BASELINE",
+        "d0_workbook": {
+          "path": "doc/doc/新能源企业出海导航仪_D0数据标准冻结执行台账.xlsx",
+          "sha256": "224e9a35bcbb363cf41c007499ba32aa6394cfdbf06331830c02d994e1c7ddff"
+        },
+        "technical_workbook": {
+          "path": "doc/doc/新能源企业出海导航仪_V1.0技术附件_BASELINE.xlsx",
+          "sha256": "8b36f7cad337d72713f09c2b36d7eaf6ebe0bc2cd13f2bf0c05c45edbd065fb8"
+        }
+      },
+      "stage": "D0",
+      "warning": "机器证据不能代替实名责任人复核、批准或冻结基线变更"
+    }
+  },
+  "evidence_manifest_templates": [
+    {
+      "acceptance_id": "D0-AC-001",
+      "evidence_id": "EVD-D0-AC-001-REVIEW-20260802",
+      "path": "data/d0/candidates/d0_acceptance_review_bundle.2026-08-02.json",
+      "recorded_at": null,
+      "recorded_by": "codex (authorized transcription)",
+      "reviewer": "kevin",
+      "sha256": null,
+      "status": "待复核"
+    },
+    {
+      "acceptance_id": "D0-AC-002",
+      "evidence_id": "EVD-D0-AC-002-REVIEW-20260802",
+      "path": "data/d0/candidates/d0_acceptance_review_bundle.2026-08-02.json",
+      "recorded_at": null,
+      "recorded_by": "codex (authorized transcription)",
+      "reviewer": "kevin",
+      "sha256": null,
+      "status": "待复核"
+    },
+    {
+      "acceptance_id": "D0-AC-003",
+      "evidence_id": "EVD-D0-AC-003-REVIEW-20260802",
+      "path": "data/d0/candidates/d0_acceptance_review_bundle.2026-08-02.json",
+      "recorded_at": null,
+      "recorded_by": "codex (authorized transcription)",
+      "reviewer": "kevin",
+      "sha256": null,
+      "status": "待复核"
+    },
+    {
+      "acceptance_id": "D0-AC-004",
+      "evidence_id": "EVD-D0-AC-004-REVIEW-20260802",
+      "path": "data/d0/candidates/d0_acceptance_review_bundle.2026-08-02.json",
+      "recorded_at": null,
+      "recorded_by": "codex (authorized transcription)",
+      "reviewer": "kevin",
+      "sha256": null,
+      "status": "待复核"
+    },
+    {
+      "acceptance_id": "D0-AC-005",
+      "evidence_id": "EVD-D0-AC-005-REVIEW-20260802",
+      "path": "data/d0/candidates/d0_acceptance_review_bundle.2026-08-02.json",
+      "recorded_at": null,
+      "recorded_by": "codex (authorized transcription)",
+      "reviewer": "kevin",
+      "sha256": null,
+      "status": "待复核"
+    },
+    {
+      "acceptance_id": "D0-AC-006",
+      "evidence_id": "EVD-D0-AC-006-REVIEW-20260802",
+      "path": "data/d0/candidates/d0_acceptance_review_bundle.2026-08-02.json",
+      "recorded_at": null,
+      "recorded_by": "codex (authorized transcription)",
+      "reviewer": "kevin",
+      "sha256": null,
+      "status": "待复核"
+    },
+    {
+      "acceptance_id": "D0-AC-008",
+      "evidence_id": "EVD-D0-AC-008-REVIEW-20260802",
+      "path": "data/d0/candidates/d0_acceptance_review_bundle.2026-08-02.json",
+      "recorded_at": null,
+      "recorded_by": "codex (authorized transcription)",
+      "reviewer": "kevin",
+      "sha256": null,
+      "status": "待复核"
+    }
+  ],
+  "inputs": {
+    "authoritative_workbook": {
+      "path": "doc/doc/新能源企业出海导航仪_D0数据标准冻结执行台账.xlsx",
+      "sha256": "224e9a35bcbb363cf41c007499ba32aa6394cfdbf06331830c02d994e1c7ddff"
+    },
+    "candidate_workbook": {
+      "path": "data/d0/candidates/d0_core_contract_candidate.2026-08-01.xlsx",
+      "sha256": "123394d0ee1744edf86e201bd1c683cafdd222d1ff5c55221eb1f0798e2f0712"
+    },
+    "resolution": {
+      "path": "data/d0/review/core_contract_resolution.2026-08-01.json",
+      "sha256": "bac2d22c2cdc6019ec01e86c223428e0720cdd16b22fe3b1f08a569fe0a440b8"
+    },
+    "review_packet": {
+      "path": "data/d0/review/d0_review_packet.2026-08-01.json",
+      "sha256": "b420f6d66a00107be0610aaaee4b13f34edda257734dad185c085182975ba116"
+    }
+  },
+  "schema_version": 1,
+  "stage": "D0",
+  "summary": {
+    "already_approved": [
+      "D0-AC-007"
+    ],
+    "blocked": [
+      "D0-AC-009",
+      "D0-AC-010"
+    ],
+    "ready_for_human_review": [
+      "D0-AC-001",
+      "D0-AC-002",
+      "D0-AC-003",
+      "D0-AC-004",
+      "D0-AC-005",
+      "D0-AC-006",
+      "D0-AC-008"
+    ]
+  },
+  "warning": "Only the authorized named reviewers may approve the exact bundle hash. Approval of review-ready items does not complete AC-009/010, activate the authoritative workbook, complete D0/D4, or authorize user-facing development."
+}

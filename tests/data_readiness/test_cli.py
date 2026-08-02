@@ -121,6 +121,43 @@ def test_prepare_d0_review_command_lists_template(
     assert "data/d0/review/d0_review_packet.template.json" in captured.out
 
 
+def test_prepare_d0_acceptance_review_command_lists_outputs(
+    monkeypatch: MonkeyPatch,
+    capsys: CaptureFixture[str],
+) -> None:
+    paths = discover_repository()
+    review = paths.d0_review_dir / "review.json"
+    resolution = paths.d0_review_dir / "resolution.json"
+    workbook = paths.d0_candidates_dir / "candidate.xlsx"
+    bundle = paths.d0_candidates_dir / "acceptance-review.2026-08-02.json"
+    worksheet = paths.d0_review_dir / "acceptance-review.2026-08-02.md"
+    monkeypatch.setattr(
+        "navigator_data_readiness.cli.write_d0_acceptance_review_bundle",
+        lambda *_args: (bundle, worksheet),
+    )
+
+    exit_code = main(
+        [
+            "prepare-d0-acceptance-review",
+            "--review",
+            str(review),
+            "--resolution",
+            str(resolution),
+            "--workbook",
+            str(workbook),
+            "--bundle-output",
+            str(bundle),
+            "--worksheet-output",
+            str(worksheet),
+        ]
+    )
+
+    assert exit_code == 0
+    captured = capsys.readouterr()
+    assert "data/d0/candidates/acceptance-review.2026-08-02.json" in captured.out
+    assert "data/d0/review/acceptance-review.2026-08-02.md" in captured.out
+
+
 def test_validate_d0_review_command_reports_blockers(
     tmp_path: Path,
     capsys: CaptureFixture[str],
