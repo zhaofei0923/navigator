@@ -16,6 +16,7 @@ from .d0_baseline_change import (
     load_and_assess_d0_baseline_change,
     load_and_generate_d0_candidate_workbook,
 )
+from .d0_baseline_review import write_d0_baseline_review_package
 from .d0_candidates import candidate_payloads, write_candidates
 from .d0_confirmation import write_confirmed_packets
 from .d0_contract_resolution import load_and_validate_d0_contract_resolution
@@ -146,6 +147,18 @@ def _parser() -> argparse.ArgumentParser:
     d0_change_generation.add_argument("--resolution", type=Path, required=True)
     d0_change_generation.add_argument("--output", type=Path, required=True)
     d0_change_generation.add_argument("--assessment-output", type=Path)
+    d0_baseline_review = commands.add_parser(
+        "prepare-d0-baseline-review",
+        help=(
+            "Generate a hash-bound project-approver package for manual adoption of a validated "
+            "D0 candidate workbook without activating it."
+        ),
+    )
+    d0_baseline_review.add_argument("--review", type=Path, required=True)
+    d0_baseline_review.add_argument("--resolution", type=Path, required=True)
+    d0_baseline_review.add_argument("--workbook", type=Path, required=True)
+    d0_baseline_review.add_argument("--bundle-output", type=Path, required=True)
+    d0_baseline_review.add_argument("--confirmation-output", type=Path, required=True)
     commands.add_parser(
         "prepare-d1",
         help="Generate D1 source-admission, country-coverage, and domain-alternative templates.",
@@ -473,6 +486,33 @@ def main(argv: list[str] | None = None) -> int:
             print(str(candidate_output))
             return 0
         return 1
+
+    if args.command == "prepare-d0-baseline-review":
+        inputs = {
+            name: value if value.is_absolute() else paths.root / value
+            for name, value in (
+                ("review", args.review),
+                ("resolution", args.resolution),
+                ("workbook", args.workbook),
+                ("bundle_output", args.bundle_output),
+                ("confirmation_output", args.confirmation_output),
+            )
+        }
+        try:
+            baseline_review_paths = write_d0_baseline_review_package(
+                paths,
+                inputs["review"],
+                inputs["resolution"],
+                inputs["workbook"],
+                inputs["bundle_output"],
+                inputs["confirmation_output"],
+            )
+        except (OSError, ValueError) as error:
+            print(str(error), file=sys.stderr)
+            return 1
+        for path in baseline_review_paths:
+            print(path.relative_to(paths.root).as_posix())
+        return 0
 
     if args.command == "prepare-d1":
         written = write_d1_candidates(paths)

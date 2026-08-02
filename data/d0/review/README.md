@@ -38,6 +38,23 @@
    命令通过都只说明提案和候选工作簿可进入正式基线变更评审，不会更新本评审包的
    机器状态，也不会替换权威Excel。
 
+   当最新正式评审已经批准AC-001/002且候选验证通过后，生成项目批准人审核的基线
+   采用交接包：
+
+   ```bash
+   uv run navigator-data prepare-d0-baseline-review \
+     --review data/d0/review/d0_review_packet.2026-08-02.json \
+     --resolution data/d0/review/core_contract_resolution.2026-08-01.json \
+     --workbook data/d0/candidates/d0_core_contract_candidate.2026-08-01.xlsx \
+     --bundle-output data/d0/candidates/d0_baseline_adoption_review_bundle.2026-08-02.json \
+     --confirmation-output data/d0/review/d0_baseline_adoption_confirmation.template.2026-08-02.json
+   ```
+
+   交接包会绑定权威工作簿、独立候选、完整整改包、最新正式评审和AC-001/002签署，
+   并重新执行候选机器验证。项目批准人只能对精确包哈希选择
+   `approved_for_manual_adoption`或`rejected`。即使批准，工具也不会修改或激活权威
+   Excel；仍须由正式基线责任流程另行发布修订版，之后重建合同并复算D0门禁。
+
 2. 复制模板，文件名必须明确包含实际评审批次，例如：
 
    ```bash

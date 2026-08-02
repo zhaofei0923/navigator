@@ -55,6 +55,12 @@ uv run navigator-data validate-d0-baseline-change \
   --resolution data/d0/candidates/core_contract_resolution.review.json \
   --workbook /path/to/d0-candidate.xlsx \
   --output /path/to/d0-change-assessment.json
+uv run navigator-data prepare-d0-baseline-review \
+  --review data/d0/review/d0_review_packet.2026-08-02.json \
+  --resolution data/d0/review/core_contract_resolution.2026-08-01.json \
+  --workbook data/d0/candidates/d0_core_contract_candidate.2026-08-01.xlsx \
+  --bundle-output data/d0/candidates/d0_baseline_adoption_review_bundle.2026-08-02.json \
+  --confirmation-output data/d0/review/d0_baseline_adoption_confirmation.template.2026-08-02.json
 uv run navigator-data prepare-d1
 uv run navigator-data prepare-d2
 uv run navigator-data prepare-d3
@@ -81,7 +87,8 @@ uv run pytest --cov
 uv run navigator-data gate --stage D0
 ```
 
-在当前台账尚未完成责任签署和验收的情况下，该命令应返回非零状态；这是正确的门禁行为。
+当前D0任务已完成4/4，D0-AC-001至008已批准；但权威工作簿仍未采用已验证候选，
+且D0-AC-009/010尚未批准，因此该命令仍应返回非零状态。
 
 GitHub Actions会在每次`main`推送和Pull Request上执行同一套校验：锁定依赖、格式、
 静态检查、类型检查、冻结基线、合同快照、D0—D4及P0全部候选生成和测试覆盖率。
@@ -91,15 +98,15 @@ GitHub Actions会在每次`main`推送和Pull Request上执行同一套校验：
 `prepare-d0`生成的候选验收包位于
 [`data/d0/candidates`](data/d0/candidates/README.md)。印尼 ESDM、越南 EVN 和沙特
 Principal Buyer 三份公开原件均已完成来源、日期、文件哈希、PDF安全属性和视觉
-核验；对应官网版权/引用提示也已保存为事实型许可观察快照，原件不入库。许可结论、
-再分发/AI边界和专业复核仍待授权人员明确选择。
+核验；对应官网版权/引用提示也已保存为事实型许可观察快照，原件不入库。三份样本
+均已由授权角色确认`limited / false / false / approved`。
 `prepare-d0`生成的`raw_sample_review_worksheet.md`已把三份样本的核验事实和允许选择
 集中排版；它不构成法律意见，正式结论仍须绑定合规与专业证据。
 
-当前正式评审副本已记录9个角色、6项字段映射、3份候选规范和D0-AC-007的书面批准。
+当前正式评审副本已记录9个角色、6项字段映射、3份候选规范和D0-AC-001至008的书面批准。
 `report`和`gate`会在校验基线哈希与证据引用后应用这部分进度，因此不再把已签角色
-误报为未签，也会按已批准映射执行模板目标试填；未批准的样本、其余验收项和最终
-D0结论仍保持阻断。schema v3把映射决策人、合规/专业复核人、候选规范复核人、
+误报为未签，也会按已批准映射执行模板目标试填；D0-AC-009/010和最终D0结论仍保持
+阻断。schema v3把映射决策人、合规/专业复核人、候选规范复核人、
 每项验收签署人和最终批准人逐项绑定到九角色清单中的实名责任人；本人不能担任自己
 的替补或升级人，日期必须是ISO日期或带时区时间，单独填写角色名不再构成批准。
 每个证据编号还必须在清单中对应正确的D0验收项、同一实名复核人和已批准状态；样本
@@ -108,9 +115,9 @@ D0结论仍保持阻断。schema v3把映射决策人、合规/专业复核人�
 D0合同深度审计进一步发现，原先对AC-001/002的简化机器检查不足以证明验收文本：
 25条关系涉及34个实体代码，但只有5个实体在字段合同中显式标记主键；92个字段虽有
 唯一编号、类型、必填和来源规则，却没有独立的单位代码或“不适用”元数据。因此
-AC-001和AC-002机器状态现为`fail`，不得仅靠人工签名覆盖。AC-003的251条枚举与
-13条迁移记录结构检查通过，但迁移和状态转向语义仍须指定角色复核。三份候选机器
-证据及其SHA-256待审队列由`prepare-d0`确定性生成，机器通过不等于人工批准。
+权威工作簿上的AC-001和AC-002机器状态仍为`fail`，不得仅靠人工签名覆盖。AC-003的
+251条枚举与13条迁移记录结构检查通过，相关验收现已完成实名复核。三份候选机器
+证据及其SHA-256待审队列由`prepare-d0`确定性生成，机器通过不等于基线采用。
 同一命令还生成`core_contract_resolution.template.json`，固定全部29个主键缺口和
 92个字段单位决策，并生成`core_contract_recommendations.json`降低逐项分析成本：
 29个缺口统一建议新增UUID代理主键，69个明显非度量字段建议单位不适用，3个数值字段
@@ -124,6 +131,10 @@ AC-001和AC-002机器状态现为`fail`，不得仅靠人工签名覆盖。AC-00
 列，逐单元格拒绝其他值或公式改动，并重算AC-001/002。验证成功仍不替换权威文件。
 `prepare-d0-baseline-change`可直接从完成的整改副本生成该候选文件，并在原子发布前
 运行同一验证器；输出已存在、位于`doc`目录、扩展名错误或验证失败时均不会写出候选。
+当前独立候选已经通过AC-001/002复算并完成对应验收。`prepare-d0-baseline-review`
+进一步重放最新正式评审、整改包和候选验证，将权威源、候选、决策、签署及变更规模
+绑定为项目批准人审核包和待填确认模板。该包仍不修改或激活权威工作簿；批准后必须由
+基线责任流程另行发布正式修订版，再重新生成合同并复算D0门禁。
 
 正式责任人可按
 [`data/d0/review`](data/d0/review/README.md)中的流程复制评审模板，填写角色、映射、

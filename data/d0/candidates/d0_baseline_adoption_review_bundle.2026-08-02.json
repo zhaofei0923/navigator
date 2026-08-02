@@ -1,0 +1,102 @@
+{
+  "approved_acceptance_items": [
+    {
+      "acceptance_id": "D0-AC-001",
+      "review_status": "approved",
+      "reviewer_signatures": [
+        {
+          "evidence_ids": [
+            "EVD-D0-AC-001-REVIEW-20260802"
+          ],
+          "person_name": "kevin",
+          "role": "数据负责人",
+          "signed_at": "2026-08-02"
+        },
+        {
+          "evidence_ids": [
+            "EVD-D0-AC-001-REVIEW-20260802"
+          ],
+          "person_name": "kevin",
+          "role": "后端/数据架构负责人",
+          "signed_at": "2026-08-02"
+        }
+      ]
+    },
+    {
+      "acceptance_id": "D0-AC-002",
+      "review_status": "approved",
+      "reviewer_signatures": [
+        {
+          "evidence_ids": [
+            "EVD-D0-AC-002-REVIEW-20260802"
+          ],
+          "person_name": "kevin",
+          "role": "数据负责人",
+          "signed_at": "2026-08-02"
+        },
+        {
+          "evidence_ids": [
+            "EVD-D0-AC-002-REVIEW-20260802"
+          ],
+          "person_name": "kevin",
+          "role": "数据质量负责人",
+          "signed_at": "2026-08-02"
+        }
+      ]
+    }
+  ],
+  "automated_assessment_only": true,
+  "bundle_type": "baseline_adoption_review_candidate",
+  "candidate_assessment": {
+    "candidate_ready_for_formal_baseline_review": true,
+    "checks": [],
+    "core_entity_machine_status": "pass",
+    "core_field_machine_status": "pass",
+    "resolution_sha256": "3ddefbdf04ce051c7d22dacc289083e73c241d006e15b9dc9d9a563f3910b69e"
+  },
+  "change_summary": {
+    "added_primary_key_fields": 29,
+    "candidate_field_count": 158,
+    "compound_fields_split": 20,
+    "entity_primary_key_decisions": 29,
+    "field_unit_decisions": 92,
+    "generated_atomic_fields": 57
+  },
+  "does_not_activate_baseline": true,
+  "does_not_complete_d0": true,
+  "inputs": {
+    "authoritative_workbook": {
+      "path": "doc/doc/新能源企业出海导航仪_D0数据标准冻结执行台账.xlsx",
+      "sha256": "224e9a35bcbb363cf41c007499ba32aa6394cfdbf06331830c02d994e1c7ddff"
+    },
+    "candidate_workbook": {
+      "path": "data/d0/candidates/d0_core_contract_candidate.2026-08-01.xlsx",
+      "sha256": "123394d0ee1744edf86e201bd1c683cafdd222d1ff5c55221eb1f0798e2f0712"
+    },
+    "resolution": {
+      "path": "data/d0/review/core_contract_resolution.2026-08-01.json",
+      "sha256": "bac2d22c2cdc6019ec01e86c223428e0720cdd16b22fe3b1f08a569fe0a440b8"
+    },
+    "review_packet": {
+      "path": "data/d0/review/d0_review_packet.2026-08-02.json",
+      "sha256": "b479361510dc2cc9549dd6deb8798eacc5143275dea4d1e8906f455952618547"
+    }
+  },
+  "manual_handover": [
+    "Review and approve or reject this exact bundle SHA-256.",
+    "If approved, a baseline steward must publish a formally revised authoritative workbook outside this command; this tool never overwrites or activates it.",
+    "After publication, regenerate contracts and rerun the complete D0 gate before reviewing AC-009/010 or the final D0 decision."
+  ],
+  "required_decision": {
+    "decision_values": [
+      "approved_for_manual_adoption",
+      "rejected"
+    ],
+    "person_name": "kevin",
+    "role": "项目批准人"
+  },
+  "review_state": "ready_for_project_baseline_decision",
+  "schema_version": 1,
+  "stage": "D0",
+  "warning": "This candidate package is not a baseline approval, does not modify the frozen workbook, does not approve AC-009/010, and does not authorize D1-D4 or user-facing development."
+}

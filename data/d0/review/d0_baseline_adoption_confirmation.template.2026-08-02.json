@@ -1,0 +1,17 @@
+{
+  "authorized_transcription": false,
+  "bundle": {
+    "path": "data/d0/candidates/d0_baseline_adoption_review_bundle.2026-08-02.json",
+    "sha256": "b128177436355394b5a271c307f388020904b252c232b64be5fd7cb5e0ec82e2"
+  },
+  "comments": null,
+  "confirmation_type": "baseline_adoption_review",
+  "decision": null,
+  "expected_reviewer": "kevin",
+  "reviewed_at": null,
+  "reviewer": null,
+  "schema_version": 1,
+  "stage": "D0",
+  "template_only": true,
+  "warning": "Complete only after the project approver has reviewed the exact bundle SHA-256. Approval authorizes a separate manual baseline-adoption process but this record does not itself replace or activate the authoritative workbook."
+}
