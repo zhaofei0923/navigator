@@ -85,6 +85,29 @@
    就绪报告，不会发布、替换或激活权威工作簿。正式发布仍必须由人工基线责任流程完成，
    随后重建合同并运行完整D0门禁。
 
+   在人工发布前，把完整交接状态绑定到包含决定和就绪报告的批准Git提交：
+
+   ```bash
+   uv run navigator-data prepare-d0-baseline-publication-authorization \
+     --approval-commit <commit-containing-decision-and-readiness> \
+     --decision data/d0/review/d0_baseline_adoption_decision.<date>.json \
+     --readiness data/d0/candidates/d0_baseline_publication_readiness.<date>.json \
+     --workbook /safe/staging/新能源企业出海导航仪_D0数据标准冻结执行台账.xlsx \
+     --output data/d0/candidates/d0_baseline_publication_authorization.<date>.json
+   ```
+
+   人工流程发布并将权威工作簿提交到该批准提交的后继Git提交后，执行：
+
+   ```bash
+   uv run navigator-data validate-d0-baseline-adoption \
+     --authorization data/d0/candidates/d0_baseline_publication_authorization.<date>.json \
+     --output data/d0/candidates/d0_baseline_adoption_assessment.<date>.json
+   ```
+
+   发布后验证器从批准提交读取旧权威文件及全部审核对象，因此不依赖被替换后的现场旧
+   文件；它要求新权威文件哈希、Git对象和提交祖先关系同时正确。只替换工作区文件但未
+   提交、采用未知哈希或游离提交都会失败。通过后才能重建合同并准备AC-009/010复核。
+
 2. 复制模板，文件名必须明确包含实际评审批次，例如：
 
    ```bash

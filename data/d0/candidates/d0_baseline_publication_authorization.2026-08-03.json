@@ -1,0 +1,81 @@
+{
+  "approval_commit": "70de3b3001a8b556393a17dcf6c1c13ff7756539",
+  "authorized_decision": "approved_for_manual_adoption",
+  "automated_assessment_only": true,
+  "bindings": {
+    "approved_candidate_workbook": {
+      "git_blob": "01e7bc88f8a067c016d20b2cb499d56b531a1618",
+      "path": "data/d0/candidates/d0_core_contract_candidate.2026-08-01.xlsx",
+      "sha256": "123394d0ee1744edf86e201bd1c683cafdd222d1ff5c55221eb1f0798e2f0712"
+    },
+    "confirmation": {
+      "git_blob": "a56221a192e8d0fb328631943b5d1e9e6f2e2673",
+      "path": "data/d0/evidence/kevin_baseline_adoption_confirmation_20260802.json",
+      "sha256": "9596ed8643a9500b7a0b8b025ffc3c7f16da87bbdf872174422d9b59c1cdcfaf"
+    },
+    "contract_resolution": {
+      "git_blob": "60b1d5b17bbccce6b43573e6112693d4f538858c",
+      "path": "data/d0/review/core_contract_resolution.2026-08-01.json",
+      "sha256": "bac2d22c2cdc6019ec01e86c223428e0720cdd16b22fe3b1f08a569fe0a440b8"
+    },
+    "decision_record": {
+      "git_blob": "a87d35898490dcc0071a776e409a0ce0df973559",
+      "path": "data/d0/review/d0_baseline_adoption_decision.2026-08-02.json",
+      "sha256": "b3be6e8fcef9cb3a12f0fa8f37602aa68c5789b3bf61106d68567ec195fa8748"
+    },
+    "evidence_manifest": {
+      "git_blob": "d4aee9a5c27f8a3e9d94b99e73cd0802b25f72f3",
+      "path": "data/d0/evidence/manifest.json",
+      "sha256": "0232376d590e2311bf6ef4a0c087db0155c16a0a78d970e82da2e3c46e99dc37"
+    },
+    "formal_review_packet": {
+      "git_blob": "6fc0f8cd86e0ccaf9b7d12ef8cdc9365b09c2954",
+      "path": "data/d0/review/d0_review_packet.2026-08-02.json",
+      "sha256": "b479361510dc2cc9549dd6deb8798eacc5143275dea4d1e8906f455952618547"
+    },
+    "previous_authoritative_workbook": {
+      "git_blob": "635dcfb378f391c8ee192f0ac540dd122af0dcec",
+      "path": "doc/doc/新能源企业出海导航仪_D0数据标准冻结执行台账.xlsx",
+      "sha256": "224e9a35bcbb363cf41c007499ba32aa6394cfdbf06331830c02d994e1c7ddff"
+    },
+    "readiness_report": {
+      "git_blob": "1fd35419c4f34e4f717fe1b85d7c043bcac8d536",
+      "path": "data/d0/candidates/d0_baseline_publication_readiness.2026-08-02.json",
+      "sha256": "fe2a6c8e8fa6abcc800adc4a80533b35dc67b087290d3ac2157c994772b80989"
+    },
+    "review_bundle": {
+      "git_blob": "0bffca77a85ac8ce1703960f2934a2d26c44347f",
+      "path": "data/d0/candidates/d0_baseline_adoption_review_bundle.2026-08-02.json",
+      "sha256": "b128177436355394b5a271c307f388020904b252c232b64be5fd7cb5e0ec82e2"
+    },
+    "staged_workbook": {
+      "git_blob": "01e7bc88f8a067c016d20b2cb499d56b531a1618",
+      "path": "data/d0/candidates/publication-staging/2026-08-02/新能源企业出海导航仪_D0数据标准冻结执行台账.xlsx",
+      "sha256": "123394d0ee1744edf86e201bd1c683cafdd222d1ff5c55221eb1f0798e2f0712"
+    }
+  },
+  "does_not_complete_d0": true,
+  "does_not_publish_baseline": true,
+  "expected_publication": {
+    "adopted_sha256": "123394d0ee1744edf86e201bd1c683cafdd222d1ff5c55221eb1f0798e2f0712",
+    "path": "doc/doc/新能源企业出海导航仪_D0数据标准冻结执行台账.xlsx",
+    "previous_sha256": "224e9a35bcbb363cf41c007499ba32aa6394cfdbf06331830c02d994e1c7ddff",
+    "required_git_mode": "100644",
+    "requires_descendant_commit": true
+  },
+  "next_required_action": "A baseline steward must publish the staged workbook as the authoritative path in a descendant Git commit, then run the read-only post-publication verifier.",
+  "packet_type": "baseline_publication_authorization",
+  "publication_state_at_authorization": "authorized_not_published",
+  "reviewer_signature": {
+    "evidence_ids": [
+      "EVD-D0-BASELINE-ADOPTION-001-20260802",
+      "EVD-D0-BASELINE-ADOPTION-002-20260802"
+    ],
+    "person_name": "kevin",
+    "role": "项目批准人",
+    "signed_at": "2026-08-02"
+  },
+  "schema_version": 1,
+  "stage": "D0",
+  "warning": "This Git-bound packet preserves the pre-publication audit chain but does not copy, replace, or activate the authoritative workbook; it does not approve AC-009/010, complete D0/D4, or authorize user-facing development."
+}

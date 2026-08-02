@@ -70,6 +70,15 @@ uv run navigator-data validate-d0-baseline-publication \
   --decision data/d0/review/d0_baseline_adoption_decision.<date>.json \
   --workbook /safe/staging/新能源企业出海导航仪_D0数据标准冻结执行台账.xlsx \
   --output data/d0/candidates/d0_baseline_publication_readiness.<date>.json
+uv run navigator-data prepare-d0-baseline-publication-authorization \
+  --approval-commit <commit-containing-decision-and-readiness> \
+  --decision data/d0/review/d0_baseline_adoption_decision.<date>.json \
+  --readiness data/d0/candidates/d0_baseline_publication_readiness.<date>.json \
+  --workbook /safe/staging/新能源企业出海导航仪_D0数据标准冻结执行台账.xlsx \
+  --output data/d0/candidates/d0_baseline_publication_authorization.<date>.json
+uv run navigator-data validate-d0-baseline-adoption \
+  --authorization data/d0/candidates/d0_baseline_publication_authorization.<date>.json \
+  --output data/d0/candidates/d0_baseline_adoption_assessment.<date>.json
 uv run navigator-data prepare-d1
 uv run navigator-data prepare-d2
 uv run navigator-data prepare-d3
@@ -152,6 +161,10 @@ D0合同深度审计进一步发现，原先对AC-001/002的简化机器检查�
 AC-001/002两条采用证据、候选哈希和整改包，并要求待发布副本与权威工作簿同名、位于
 `doc`目录之外且字节级匹配已批准候选。通过只表示副本可交给正式基线责任流程人工发布；
 命令本身不复制、不替换也不激活任何工作簿。
+人工发布前，`prepare-d0-baseline-publication-authorization`把旧权威工作簿、候选、暂存
+副本、整改包、审核包、确认、决定、证据清单和就绪报告绑定到同一批准Git提交。发布后
+`validate-d0-baseline-adoption`从该提交重放旧基线，并要求新权威文件既匹配批准哈希又
+已写入后继Git提交；工作区内仅替换但未提交也会失败。两条命令均不执行文件替换。
 
 正式责任人可按
 [`data/d0/review`](data/d0/review/README.md)中的流程复制评审模板，填写角色、映射、

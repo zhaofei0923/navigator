@@ -12,6 +12,10 @@ from .d0_acceptance_confirmation import (
     write_d0_acceptance_confirmation_template,
 )
 from .d0_acceptance_review import write_d0_acceptance_review_bundle
+from .d0_baseline_adoption import (
+    assess_d0_baseline_adoption,
+    write_d0_baseline_publication_authorization,
+)
 from .d0_baseline_change import (
     load_and_assess_d0_baseline_change,
     load_and_generate_d0_candidate_workbook,
@@ -184,6 +188,27 @@ def _parser() -> argparse.ArgumentParser:
     d0_baseline_publication.add_argument("--decision", type=Path, required=True)
     d0_baseline_publication.add_argument("--workbook", type=Path, required=True)
     d0_baseline_publication.add_argument("--output", type=Path)
+    d0_publication_authorization = commands.add_parser(
+        "prepare-d0-baseline-publication-authorization",
+        help=(
+            "Bind the approved D0 publication handoff to immutable Git objects without "
+            "publishing the authoritative workbook."
+        ),
+    )
+    d0_publication_authorization.add_argument("--approval-commit", required=True)
+    d0_publication_authorization.add_argument("--decision", type=Path, required=True)
+    d0_publication_authorization.add_argument("--readiness", type=Path, required=True)
+    d0_publication_authorization.add_argument("--workbook", type=Path, required=True)
+    d0_publication_authorization.add_argument("--output", type=Path, required=True)
+    d0_adoption_validation = commands.add_parser(
+        "validate-d0-baseline-adoption",
+        help=(
+            "Read-only verification that the approved D0 workbook was published and committed "
+            "after its Git-bound authorization."
+        ),
+    )
+    d0_adoption_validation.add_argument("--authorization", type=Path, required=True)
+    d0_adoption_validation.add_argument("--output", type=Path)
     commands.add_parser(
         "prepare-d1",
         help="Generate D1 source-admission, country-coverage, and domain-alternative templates.",
@@ -602,6 +627,62 @@ def main(argv: list[str] | None = None) -> int:
         else:
             print(serialized, end="")
         return 0 if assessment.get("ready_for_manual_baseline_publication") else 1
+
+    if args.command == "prepare-d0-baseline-publication-authorization":
+        decision_path = args.decision if args.decision.is_absolute() else paths.root / args.decision
+        readiness_path = (
+            args.readiness if args.readiness.is_absolute() else paths.root / args.readiness
+        )
+        workbook_path = args.workbook if args.workbook.is_absolute() else paths.root / args.workbook
+        output_path = args.output if args.output.is_absolute() else paths.root / args.output
+        try:
+            authorization_output = write_d0_baseline_publication_authorization(
+                paths,
+                args.approval_commit,
+                decision_path,
+                readiness_path,
+                workbook_path,
+                output_path,
+            )
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError) as error:
+            print(str(error), file=sys.stderr)
+            return 1
+        print(authorization_output.relative_to(paths.root).as_posix())
+        return 0
+
+    if args.command == "validate-d0-baseline-adoption":
+        authorization_path = (
+            args.authorization
+            if args.authorization.is_absolute()
+            else paths.root / args.authorization
+        )
+        assessment = assess_d0_baseline_adoption(paths, authorization_path)
+        serialized = json.dumps(assessment, ensure_ascii=False, indent=2) + "\n"
+        if args.output:
+            destination = args.output if args.output.is_absolute() else paths.root / args.output
+            if (
+                destination.resolve()
+                in {
+                    authorization_path.resolve(),
+                    paths.d0_workbook.resolve(),
+                    paths.technical_workbook.resolve(),
+                    paths.evidence_manifest.resolve(),
+                }
+                or destination.resolve().is_relative_to((paths.root / "doc").resolve())
+                or destination.suffix.lower() != ".json"
+            ):
+                print("Adoption assessment output must be a separate JSON file", file=sys.stderr)
+                return 1
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_text(serialized, encoding="utf-8")
+            try:
+                display_path = destination.relative_to(paths.root).as_posix()
+            except ValueError:
+                display_path = str(destination)
+            print(display_path)
+        else:
+            print(serialized, end="")
+        return 0 if assessment.get("ready_for_post_publication_d0_rebuild") else 1
 
     if args.command == "prepare-d1":
         written = write_d1_candidates(paths)
