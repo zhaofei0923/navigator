@@ -61,6 +61,11 @@ uv run navigator-data prepare-d0-baseline-review \
   --workbook data/d0/candidates/d0_core_contract_candidate.2026-08-01.xlsx \
   --bundle-output data/d0/candidates/d0_baseline_adoption_review_bundle.2026-08-02.json \
   --confirmation-output data/d0/review/d0_baseline_adoption_confirmation.template.2026-08-02.json
+uv run navigator-data apply-d0-baseline-decision \
+  --input data/d0/evidence/kevin_baseline_adoption_confirmation_<date>.json \
+  --bundle data/d0/candidates/d0_baseline_adoption_review_bundle.<date>.json \
+  --decision-output data/d0/review/d0_baseline_adoption_decision.<date>.json \
+  --manifest-output data/d0/evidence/manifest.json
 uv run navigator-data prepare-d1
 uv run navigator-data prepare-d2
 uv run navigator-data prepare-d3
@@ -135,6 +140,10 @@ D0合同深度审计进一步发现，原先对AC-001/002的简化机器检查�
 进一步重放最新正式评审、整改包和候选验证，将权威源、候选、决策、签署及变更规模
 绑定为项目批准人审核包和待填确认模板。该包仍不修改或激活权威工作簿；批准后必须由
 基线责任流程另行发布正式修订版，再重新生成合同并复算D0门禁。
+`apply-d0-baseline-decision`只接受项目批准人对精确审核包哈希的实名确认、ISO日期、
+明确决定和落库授权。它原子写入基线采用决定记录，并为AC-001/002各登记一条绑定同一
+确认文件及审核包哈希的证据；错误哈希、错误人员、追溯日期、重复输出或非标准证据清单
+位置都会失败。即使决定为`approved_for_manual_adoption`，该命令也不会改写权威Excel。
 
 正式责任人可按
 [`data/d0/review`](data/d0/review/README.md)中的流程复制评审模板，填写角色、映射、

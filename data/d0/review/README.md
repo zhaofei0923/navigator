@@ -55,6 +55,22 @@
    `approved_for_manual_adoption`或`rejected`。即使批准，工具也不会修改或激活权威
    Excel；仍须由正式基线责任流程另行发布修订版，之后重建合同并复算D0门禁。
 
+   项目批准人完成精确哈希确认后，将授权原文整理为`data/d0/evidence`下的结构化确认
+   文件，再执行：
+
+   ```bash
+   uv run navigator-data apply-d0-baseline-decision \
+     --input data/d0/evidence/kevin_baseline_adoption_confirmation_<date>.json \
+     --bundle data/d0/candidates/d0_baseline_adoption_review_bundle.<date>.json \
+     --decision-output data/d0/review/d0_baseline_adoption_decision.<date>.json \
+     --manifest-output data/d0/evidence/manifest.json
+   ```
+
+   应用命令会重新生成并比对审核包、核对项目批准人和ISO日期，原子发布决定记录和
+   证据清单，并为AC-001/002生成两个不同证据编号。它拒绝模板、未授权转录、普通
+   `approved`、回溯日期、错误清单位置和任何覆盖；`approved_for_manual_adoption`仅
+   授权后续人工基线流程，不会在本命令中改写权威文件。
+
 2. 复制模板，文件名必须明确包含实际评审批次，例如：
 
    ```bash

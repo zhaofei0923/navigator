@@ -23,4 +23,7 @@
 - `data/d0/candidates/machine_evidence_review_queue.json`中的条目只是待审模板；机器状态
   为`fail`时必须先修复冻结合同，状态为`pass`也必须由指定实名角色检查文件和哈希；
 - 只有人工明确批准后，才可补齐复核人、时间和批准状态并登记候选机器证据；
+- 基线采用确认必须绑定`d0_baseline_adoption_review_bundle.<date>.json`的精确SHA-256，
+  由登记的项目批准人选择`approved_for_manual_adoption`或`rejected`；应用工具为
+  AC-001/002分别登记证据，批准记录仍不代表权威工作簿已经替换；
 - 工具验证证据完整性，但不能代替有权人员签署。

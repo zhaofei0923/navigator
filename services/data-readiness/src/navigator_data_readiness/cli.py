@@ -16,7 +16,10 @@ from .d0_baseline_change import (
     load_and_assess_d0_baseline_change,
     load_and_generate_d0_candidate_workbook,
 )
-from .d0_baseline_review import write_d0_baseline_review_package
+from .d0_baseline_review import (
+    apply_d0_baseline_confirmation,
+    write_d0_baseline_review_package,
+)
 from .d0_candidates import candidate_payloads, write_candidates
 from .d0_confirmation import write_confirmed_packets
 from .d0_contract_resolution import load_and_validate_d0_contract_resolution
@@ -159,6 +162,17 @@ def _parser() -> argparse.ArgumentParser:
     d0_baseline_review.add_argument("--workbook", type=Path, required=True)
     d0_baseline_review.add_argument("--bundle-output", type=Path, required=True)
     d0_baseline_review.add_argument("--confirmation-output", type=Path, required=True)
+    d0_baseline_application = commands.add_parser(
+        "apply-d0-baseline-decision",
+        help=(
+            "Apply an authorized, hash-bound project-approver decision to a baseline-adoption "
+            "record and evidence manifest without activating the authoritative workbook."
+        ),
+    )
+    d0_baseline_application.add_argument("--input", type=Path, required=True)
+    d0_baseline_application.add_argument("--bundle", type=Path, required=True)
+    d0_baseline_application.add_argument("--decision-output", type=Path, required=True)
+    d0_baseline_application.add_argument("--manifest-output", type=Path, required=True)
     commands.add_parser(
         "prepare-d1",
         help="Generate D1 source-admission, country-coverage, and domain-alternative templates.",
@@ -511,6 +525,31 @@ def main(argv: list[str] | None = None) -> int:
             print(str(error), file=sys.stderr)
             return 1
         for path in baseline_review_paths:
+            print(path.relative_to(paths.root).as_posix())
+        return 0
+
+    if args.command == "apply-d0-baseline-decision":
+        inputs = {
+            name: value if value.is_absolute() else paths.root / value
+            for name, value in (
+                ("confirmation", args.input),
+                ("bundle", args.bundle),
+                ("decision_output", args.decision_output),
+                ("manifest_output", args.manifest_output),
+            )
+        }
+        try:
+            baseline_decision_paths = apply_d0_baseline_confirmation(
+                paths,
+                inputs["confirmation"],
+                inputs["bundle"],
+                inputs["decision_output"],
+                inputs["manifest_output"],
+            )
+        except (OSError, ValueError) as error:
+            print(str(error), file=sys.stderr)
+            return 1
+        for path in baseline_decision_paths:
             print(path.relative_to(paths.root).as_posix())
         return 0
 

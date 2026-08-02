@@ -89,6 +89,11 @@
   批准人`kevin`对该精确哈希选择`approved_for_manual_adoption`或`rejected`。配套模板
   位于`data/d0/review/d0_baseline_adoption_confirmation.template.2026-08-02.json`；无论
   决定为何，工具都不会改写或激活权威工作簿，也不会提前批准AC-009/010或D0最终结论。
+  基线采用决定落库器也已建立：只接受`kevin`对上述精确包哈希的实名决定、ISO日期和
+  显式转录授权，允许值仅为`approved_for_manual_adoption`或`rejected`；它会重新播放
+  审核包，原子写入正式决定记录和证据清单，为AC-001/002生成独立证据编号，并在错误
+  人员、错误哈希、回溯日期、日期不匹配、重复输出、清单并发变化或非标准清单路径时
+  拒绝操作。决定记录仍明确标记`does_not_activate_baseline`和`does_not_complete_d0`。
 - D1来源准入候选包已经建立：在18个冻结起始来源之外，已登记41个五国官方研究
   候选，国家候选数量达到印尼20、越南8、沙特8、南非8、巴西8。59个候选全部保持
   `under_review`，active数量仍为0；条款、许可、robots、访问和AI边界尚未批准，
