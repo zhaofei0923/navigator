@@ -29,6 +29,7 @@ from .d0_baseline_review import (
     write_d0_baseline_review_package,
 )
 from .d0_candidates import candidate_payloads, write_candidates
+from .d0_closure import write_d0_ac009_review_bundle
 from .d0_confirmation import write_confirmed_packets
 from .d0_contract_resolution import load_and_validate_d0_contract_resolution
 from .d0_review import load_and_validate_review_packet, write_review_template
@@ -241,6 +242,16 @@ def _parser() -> argparse.ArgumentParser:
     d0_post_adoption_apply.add_argument("--input", type=Path, required=True)
     d0_post_adoption_apply.add_argument("--bundle", type=Path, required=True)
     d0_post_adoption_apply.add_argument("--review-output", type=Path, required=True)
+    d0_ac009_review = commands.add_parser(
+        "prepare-d0-ac009-review",
+        help=(
+            "Prepare a Git-bound machine replay for named D0-AC-009 closure review while "
+            "leaving AC-009, AC-010, and the final D0 decision pending."
+        ),
+    )
+    d0_ac009_review.add_argument("--authorization", type=Path, required=True)
+    d0_ac009_review.add_argument("--review", type=Path, required=True)
+    d0_ac009_review.add_argument("--output", type=Path, required=True)
     commands.add_parser(
         "prepare-d1",
         help="Generate D1 source-admission, country-coverage, and domain-alternative templates.",
@@ -775,6 +786,27 @@ def main(argv: list[str] | None = None) -> int:
             print(str(error), file=sys.stderr)
             return 1
         print(migrated_output.relative_to(paths.root).as_posix())
+        return 0
+
+    if args.command == "prepare-d0-ac009-review":
+        authorization_path = (
+            args.authorization
+            if args.authorization.is_absolute()
+            else paths.root / args.authorization
+        )
+        review_path = args.review if args.review.is_absolute() else paths.root / args.review
+        output_path = args.output if args.output.is_absolute() else paths.root / args.output
+        try:
+            bundle_output = write_d0_ac009_review_bundle(
+                paths,
+                authorization_path,
+                review_path,
+                output_path,
+            )
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError) as error:
+            print(str(error), file=sys.stderr)
+            return 1
+        print(bundle_output.relative_to(paths.root).as_posix())
         return 0
 
     if args.command == "prepare-d1":

@@ -146,6 +146,21 @@
    回溯日期、额外字段、包或拟副本哈希变化、拒绝决定和已有目标均失败且不产生输出。
    写出的副本仍只保留既有AC-001至008签署，AC-009/010及最终D0结论继续待审。
 
+   将新评审副本、重建后的`data/contracts/current`及确认记录提交到Git后，生成AC-009
+   收口复核候选包：
+
+   ```bash
+   uv run navigator-data prepare-d0-ac009-review \
+     --authorization data/d0/candidates/d0_baseline_publication_authorization.<date>.json \
+     --review data/d0/review/d0_review_packet.<date>.json \
+     --output data/d0/candidates/d0_ac009_review_bundle.<date>.json
+   ```
+
+   该命令要求指定评审副本是目录中的最新版，并与发布授权、两份权威工作簿、合同清单、
+   25份合同JSON和证据清单一起逐字节匹配当前Git提交。机器就绪报告只能剩余AC-009/010
+   各自的待批准与缺证据四项自引用门禁，D0四项任务必须全部完成。生成包会列出AC-009所需
+   的数据负责人和项目批准人实名签署模板，但不会写签名、登记证据、批准AC-009/010或完成D0。
+
 2. 复制模板，文件名必须明确包含实际评审批次，例如：
 
    ```bash

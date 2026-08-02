@@ -90,6 +90,10 @@ uv run navigator-data apply-d0-post-adoption-review \
   --input data/d0/evidence/<completed-post-adoption-confirmation>.json \
   --bundle data/d0/candidates/d0_post_adoption_review_bundle.<date>.json \
   --review-output data/d0/review/d0_review_packet.<date>.json
+uv run navigator-data prepare-d0-ac009-review \
+  --authorization data/d0/candidates/d0_baseline_publication_authorization.<date>.json \
+  --review data/d0/review/d0_review_packet.<date>.json \
+  --output data/d0/candidates/d0_ac009_review_bundle.<date>.json
 uv run navigator-data prepare-d1
 uv run navigator-data prepare-d2
 uv run navigator-data prepare-d3
@@ -186,6 +190,11 @@ AC-001/002两条采用证据、候选哈希和整改包，并要求待发布副�
 使用ISO日期或带时区时间，并明确`approved`或`rejected`；`apply-d0-post-adoption-review`
 仅在审核人、日期、包哈希、拟副本哈希和转录授权全部匹配时原子写出拟副本。拒绝、
 额外字段、旧日期、目标已存在或任何当前重放变化都不会产生正式评审文件。
+采用后的评审副本及合同快照写入同一Git提交后，`prepare-d0-ac009-review`会把发布授权、
+最新版评审副本、两份权威工作簿、25份合同JSON及其清单、证据清单和当前`HEAD`逐项绑定。
+它只允许AC-009/010各自的“待批准”和“缺证据”四项自引用门禁存在，并要求D0四项任务
+全部完成；任何未提交文件、快照哈希/条数漂移、旧评审副本或其他阻断项都会失败。输出仅是
+供数据负责人和项目批准人审核AC-009精确哈希的候选包，AC-010与最终D0决定继续待审。
 
 正式责任人可按
 [`data/d0/review`](data/d0/review/README.md)中的流程复制评审模板，填写角色、映射、

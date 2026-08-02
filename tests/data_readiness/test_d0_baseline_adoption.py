@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from navigator_data_readiness.baseline import write_snapshot
 from navigator_data_readiness.cli import main
 from navigator_data_readiness.d0_baseline_adoption import (
     apply_d0_post_adoption_confirmation,
@@ -20,6 +21,11 @@ from navigator_data_readiness.d0_baseline_adoption import (
     write_d0_baseline_publication_authorization,
     write_d0_post_adoption_confirmation_template,
     write_d0_post_adoption_review_bundle,
+)
+from navigator_data_readiness.d0_closure import (
+    build_d0_ac009_review_bundle,
+    load_and_validate_d0_ac009_review_bundle,
+    write_d0_ac009_review_bundle,
 )
 from navigator_data_readiness.paths import RepositoryPaths, discover_repository
 
@@ -133,6 +139,37 @@ def _completed_post_adoption_confirmation(template_path: Path) -> dict[str, Any]
         }
     )
     return confirmation
+
+
+def _prepare_committed_post_adoption_state(
+    paths: RepositoryPaths,
+    approval_commit: str,
+) -> tuple[Path, Path, str]:
+    authorization = _prepare(paths, approval_commit)
+    _publish_approved_workbook(paths)
+    write_snapshot(paths)
+    bundle_path, template_path, review_output, confirmation_path = _post_adoption_paths(paths)
+    write_d0_post_adoption_review_bundle(paths, authorization, bundle_path)
+    write_d0_post_adoption_confirmation_template(
+        paths,
+        bundle_path,
+        review_output,
+        template_path,
+    )
+    _write(confirmation_path, _completed_post_adoption_confirmation(template_path))
+    apply_d0_post_adoption_confirmation(
+        paths,
+        confirmation_path,
+        bundle_path,
+        review_output,
+    )
+    _git(paths.root, "add", "--all")
+    _git(paths.root, "commit", "--quiet", "-m", "commit post-adoption review state")
+    return authorization, review_output, _git(paths.root, "rev-parse", "HEAD")
+
+
+def _ac009_output(paths: RepositoryPaths) -> Path:
+    return paths.d0_candidates_dir / "d0_ac009_review_bundle.2026-08-04.json"
 
 
 def test_repository_authorization_is_current_and_waiting_for_publication() -> None:
@@ -518,3 +555,176 @@ def test_cli_prepares_and_applies_post_adoption_confirmation(tmp_path: Path) -> 
     assert prepare_exit == 0
     assert apply_exit == 0
     assert review_output.is_file()
+
+
+def test_ac009_review_bundle_binds_committed_post_adoption_state(
+    tmp_path: Path,
+) -> None:
+    paths, approval_commit = _isolated_repository(tmp_path)
+    authorization, review_path, current_head = _prepare_committed_post_adoption_state(
+        paths,
+        approval_commit,
+    )
+    output = _ac009_output(paths)
+
+    written = write_d0_ac009_review_bundle(
+        paths,
+        authorization,
+        review_path,
+        output,
+    )
+    bundle = load_and_validate_d0_ac009_review_bundle(
+        paths,
+        authorization,
+        review_path,
+        written,
+    )
+
+    assert bundle["current_head"] == current_head
+    assert bundle["ready_for_named_human_review"] is True
+    assert bundle["does_not_approve_acceptance"] is True
+    assert bundle["review_replay"]["carried_acceptance_ids"] == [
+        f"D0-AC-{number:03d}" for number in range(1, 9)
+    ]
+    assert bundle["review_replay"]["remaining_acceptance_ids"] == [
+        "D0-AC-009",
+        "D0-AC-010",
+    ]
+    assert bundle["readiness_replay"]["preclosure_blockers"] == []
+    assert {
+        (
+            item["code"],
+            item["message"].partition(":")[0]
+            if item["code"] == "D0_ACCEPTANCE_PENDING"
+            else item["message"].removeprefix("No evidence is registered for "),
+        )
+        for item in bundle["readiness_replay"]["excluded_self_gates"]
+    } == {
+        ("D0_ACCEPTANCE_PENDING", "D0-AC-009"),
+        ("D0_ACCEPTANCE_PENDING", "D0-AC-010"),
+        ("EVIDENCE_ACCEPTANCE_MISSING", "D0-AC-009"),
+        ("EVIDENCE_ACCEPTANCE_MISSING", "D0-AC-010"),
+    }
+    assert bundle["acceptance_item"]["required_roles"] == [
+        "数据负责人",
+        "项目批准人",
+    ]
+    assert bundle["acceptance_item"]["reviewer_signature_template"] == [
+        {
+            "role": "数据负责人",
+            "person_name": "kevin",
+            "signed_at": None,
+            "evidence_ids": ["EVD-D0-AC-009-CLOSURE-20260804"],
+        },
+        {
+            "role": "项目批准人",
+            "person_name": "kevin",
+            "signed_at": None,
+            "evidence_ids": ["EVD-D0-AC-009-CLOSURE-20260804"],
+        },
+    ]
+    assert len(bundle["inputs"]["contract_snapshot"]["contracts"]) == 25
+    assert all(
+        binding["git_blob"]
+        for binding in (
+            bundle["inputs"]["publication_authorization"],
+            bundle["inputs"]["review_packet"],
+            bundle["inputs"]["authoritative_d0_workbook"],
+            bundle["inputs"]["authoritative_technical_workbook"],
+            bundle["inputs"]["contract_snapshot"]["manifest"],
+            bundle["inputs"]["evidence_manifest"],
+        )
+    )
+    assert written.stat().st_mode & 0o777 == 0o644
+    assert list(written.parent.glob(f".{written.name}.*.tmp")) == []
+    with pytest.raises(FileExistsError, match="Refusing to overwrite"):
+        write_d0_ac009_review_bundle(paths, authorization, review_path, output)
+
+
+def test_ac009_review_bundle_rejects_uncommitted_inputs(tmp_path: Path) -> None:
+    paths, approval_commit = _isolated_repository(tmp_path)
+    authorization, review_path, _current_head = _prepare_committed_post_adoption_state(
+        paths,
+        approval_commit,
+    )
+    review = _load(review_path)
+    acceptance = {item["acceptance_id"]: item for item in review["acceptance_items"]}
+    acceptance["D0-AC-009"]["comments"] = "uncommitted"
+    _write(review_path, review)
+
+    with pytest.raises(ValueError, match="committed Git blob"):
+        build_d0_ac009_review_bundle(
+            paths,
+            authorization,
+            review_path,
+            _ac009_output(paths),
+        )
+
+
+def test_ac009_review_bundle_rejects_stale_contract_snapshot(tmp_path: Path) -> None:
+    paths, approval_commit = _isolated_repository(tmp_path)
+    authorization, review_path, _current_head = _prepare_committed_post_adoption_state(
+        paths,
+        approval_commit,
+    )
+    contract = paths.contracts_dir / "entities.json"
+    contract.write_bytes(contract.read_bytes() + b" ")
+
+    with pytest.raises(ValueError, match="committed Git blob"):
+        build_d0_ac009_review_bundle(
+            paths,
+            authorization,
+            review_path,
+            _ac009_output(paths),
+        )
+
+
+def test_ac009_review_bundle_rejects_unexpected_readiness_blocker(
+    tmp_path: Path,
+) -> None:
+    paths, approval_commit = _isolated_repository(tmp_path)
+    authorization, review_path, _current_head = _prepare_committed_post_adoption_state(
+        paths,
+        approval_commit,
+    )
+    manifest = _load(paths.evidence_manifest)
+    manifest["evidence"] = [
+        item for item in manifest["evidence"] if item["acceptance_id"] != "D0-AC-008"
+    ]
+    _write(paths.evidence_manifest, manifest)
+    _git(paths.root, "add", "--all")
+    _git(paths.root, "commit", "--quiet", "-m", "remove required evidence")
+
+    with pytest.raises(ValueError, match="requires only AC-009"):
+        build_d0_ac009_review_bundle(
+            paths,
+            authorization,
+            review_path,
+            _ac009_output(paths),
+        )
+
+
+def test_cli_prepares_d0_ac009_review_bundle(tmp_path: Path) -> None:
+    paths, approval_commit = _isolated_repository(tmp_path)
+    authorization, review_path, _current_head = _prepare_committed_post_adoption_state(
+        paths,
+        approval_commit,
+    )
+    output = _ac009_output(paths)
+
+    exit_code = main(
+        [
+            "--repo",
+            str(paths.root),
+            "prepare-d0-ac009-review",
+            "--authorization",
+            str(authorization),
+            "--review",
+            str(review_path),
+            "--output",
+            str(output),
+        ]
+    )
+
+    assert exit_code == 0
+    assert _load(output)["ready_for_named_human_review"] is True
