@@ -158,6 +158,67 @@ def test_prepare_d0_acceptance_review_command_lists_outputs(
     assert "data/d0/review/acceptance-review.2026-08-02.md" in captured.out
 
 
+def test_prepare_d0_acceptance_confirmation_command_lists_template(
+    monkeypatch: MonkeyPatch,
+    capsys: CaptureFixture[str],
+) -> None:
+    paths = discover_repository()
+    bundle = paths.d0_candidates_dir / "acceptance-review.2026-08-02.json"
+    output = paths.d0_review_dir / "acceptance-confirmation.template.2026-08-02.json"
+    monkeypatch.setattr(
+        "navigator_data_readiness.cli.write_d0_acceptance_confirmation_template",
+        lambda *_args: output,
+    )
+
+    exit_code = main(
+        [
+            "prepare-d0-acceptance-confirmation",
+            "--bundle",
+            str(bundle),
+            "--output",
+            str(output),
+        ]
+    )
+
+    assert exit_code == 0
+    captured = capsys.readouterr()
+    assert "data/d0/review/acceptance-confirmation.template.2026-08-02.json" in captured.out
+
+
+def test_apply_d0_acceptance_confirmation_command_lists_outputs(
+    monkeypatch: MonkeyPatch,
+    capsys: CaptureFixture[str],
+) -> None:
+    paths = discover_repository()
+    confirmation = paths.evidence_manifest.parent / "confirmation.json"
+    bundle = paths.d0_candidates_dir / "acceptance-review.2026-08-02.json"
+    review = paths.d0_review_dir / "review.2026-08-02.json"
+    manifest = paths.evidence_manifest
+    monkeypatch.setattr(
+        "navigator_data_readiness.cli.apply_d0_acceptance_confirmation",
+        lambda *_args: (review, manifest),
+    )
+
+    exit_code = main(
+        [
+            "apply-d0-acceptance-confirmation",
+            "--input",
+            str(confirmation),
+            "--bundle",
+            str(bundle),
+            "--review-output",
+            str(review),
+            "--manifest-output",
+            str(manifest),
+        ]
+    )
+
+    assert exit_code == 0
+    captured = capsys.readouterr()
+    assert "data/d0/review/review.2026-08-02.json" in captured.out
+    assert "data/d0/evidence/manifest.json" in captured.out
+
+
 def test_validate_d0_review_command_reports_blockers(
     tmp_path: Path,
     capsys: CaptureFixture[str],

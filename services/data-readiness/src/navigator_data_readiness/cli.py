@@ -7,6 +7,10 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from .baseline import write_snapshot
+from .d0_acceptance_confirmation import (
+    apply_d0_acceptance_confirmation,
+    write_d0_acceptance_confirmation_template,
+)
 from .d0_acceptance_review import write_d0_acceptance_review_bundle
 from .d0_baseline_change import (
     load_and_assess_d0_baseline_change,
@@ -102,6 +106,26 @@ def _parser() -> argparse.ArgumentParser:
     acceptance_review.add_argument("--workbook", type=Path, required=True)
     acceptance_review.add_argument("--bundle-output", type=Path, required=True)
     acceptance_review.add_argument("--worksheet-output", type=Path, required=True)
+    acceptance_confirmation = commands.add_parser(
+        "prepare-d0-acceptance-confirmation",
+        help=(
+            "Generate a reviewer-fillable confirmation template bound to the exact current "
+            "D0 acceptance review bundle hash."
+        ),
+    )
+    acceptance_confirmation.add_argument("--bundle", type=Path, required=True)
+    acceptance_confirmation.add_argument("--output", type=Path, required=True)
+    acceptance_application = commands.add_parser(
+        "apply-d0-acceptance-confirmation",
+        help=(
+            "Apply an authorized, hash-bound D0 acceptance confirmation to a new formal "
+            "review copy and evidence manifest without activating the frozen workbook."
+        ),
+    )
+    acceptance_application.add_argument("--input", type=Path, required=True)
+    acceptance_application.add_argument("--bundle", type=Path, required=True)
+    acceptance_application.add_argument("--review-output", type=Path, required=True)
+    acceptance_application.add_argument("--manifest-output", type=Path, required=True)
     d0_change_validation = commands.add_parser(
         "validate-d0-baseline-change",
         help=(
@@ -339,6 +363,46 @@ def main(argv: list[str] | None = None) -> int:
             print(str(error), file=sys.stderr)
             return 1
         for path in review_paths:
+            print(path.relative_to(paths.root).as_posix())
+        return 0
+
+    if args.command == "prepare-d0-acceptance-confirmation":
+        bundle_path = args.bundle if args.bundle.is_absolute() else paths.root / args.bundle
+        output = args.output if args.output.is_absolute() else paths.root / args.output
+        try:
+            confirmation_path = write_d0_acceptance_confirmation_template(
+                paths,
+                bundle_path,
+                output,
+            )
+        except (OSError, ValueError) as error:
+            print(str(error), file=sys.stderr)
+            return 1
+        print(confirmation_path.relative_to(paths.root).as_posix())
+        return 0
+
+    if args.command == "apply-d0-acceptance-confirmation":
+        inputs = {
+            name: value if value.is_absolute() else paths.root / value
+            for name, value in (
+                ("confirmation", args.input),
+                ("bundle", args.bundle),
+                ("review_output", args.review_output),
+                ("manifest_output", args.manifest_output),
+            )
+        }
+        try:
+            applied_paths = apply_d0_acceptance_confirmation(
+                paths,
+                inputs["confirmation"],
+                inputs["bundle"],
+                inputs["review_output"],
+                inputs["manifest_output"],
+            )
+        except (OSError, ValueError) as error:
+            print(str(error), file=sys.stderr)
+            return 1
+        for path in applied_paths:
             print(path.relative_to(paths.root).as_posix())
         return 0
 
