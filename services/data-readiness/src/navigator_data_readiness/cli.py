@@ -15,6 +15,7 @@ from .d0_acceptance_review import write_d0_acceptance_review_bundle
 from .d0_baseline_adoption import (
     assess_d0_baseline_adoption,
     write_d0_baseline_publication_authorization,
+    write_d0_post_adoption_review_bundle,
 )
 from .d0_baseline_change import (
     load_and_assess_d0_baseline_change,
@@ -209,6 +210,15 @@ def _parser() -> argparse.ArgumentParser:
     )
     d0_adoption_validation.add_argument("--authorization", type=Path, required=True)
     d0_adoption_validation.add_argument("--output", type=Path)
+    d0_post_adoption_review = commands.add_parser(
+        "prepare-d0-post-adoption-review",
+        help=(
+            "Prepare a human-review-only migration candidate for existing named D0 decisions "
+            "after the approved baseline publication is committed."
+        ),
+    )
+    d0_post_adoption_review.add_argument("--authorization", type=Path, required=True)
+    d0_post_adoption_review.add_argument("--output", type=Path, required=True)
     commands.add_parser(
         "prepare-d1",
         help="Generate D1 source-admission, country-coverage, and domain-alternative templates.",
@@ -683,6 +693,25 @@ def main(argv: list[str] | None = None) -> int:
         else:
             print(serialized, end="")
         return 0 if assessment.get("ready_for_post_publication_d0_rebuild") else 1
+
+    if args.command == "prepare-d0-post-adoption-review":
+        authorization_path = (
+            args.authorization
+            if args.authorization.is_absolute()
+            else paths.root / args.authorization
+        )
+        output_path = args.output if args.output.is_absolute() else paths.root / args.output
+        try:
+            review_output = write_d0_post_adoption_review_bundle(
+                paths,
+                authorization_path,
+                output_path,
+            )
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError) as error:
+            print(str(error), file=sys.stderr)
+            return 1
+        print(review_output.relative_to(paths.root).as_posix())
+        return 0
 
     if args.command == "prepare-d1":
         written = write_d1_candidates(paths)

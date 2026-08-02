@@ -5,13 +5,23 @@ import json
 import os
 import subprocess
 import tempfile
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
 from .baseline import sha256_file
+from .d0_review import build_review_packet, validate_review_packet
 from .models import CheckResult
 from .paths import RepositoryPaths
 from .validation import APPROVED_EVIDENCE_STATES, validate_structure
+
+_POST_ADOPTION_PENDING_CODES = {
+    "D0_REVIEW_ACCEPTANCE_PENDING",
+    "D0_REVIEW_FINAL_PENDING",
+}
+_EXPECTED_CARRIED_ACCEPTANCE_IDS = {f"D0-AC-{number:03d}" for number in range(1, 9)}
+_EXPECTED_REMAINING_ACCEPTANCE_IDS = {"D0-AC-009", "D0-AC-010"}
+_MACHINE_PASS_REQUIRED_CARRIED_IDS = {"D0-AC-001", "D0-AC-002", "D0-AC-003"}
 
 
 def _payload_bytes(payload: dict[str, Any]) -> bytes:
@@ -594,3 +604,370 @@ def assess_d0_baseline_adoption(
     report["ready_for_post_publication_d0_rebuild"] = not checks
     report["checks"] = [check.to_dict() for check in checks]
     return report
+
+
+def _indexed_review_items(
+    value: Any,
+    *,
+    identity_field: str,
+    label: str,
+) -> dict[str, dict[str, Any]]:
+    if not isinstance(value, list):
+        raise ValueError(f"{label} must be a list")
+    indexed: dict[str, dict[str, Any]] = {}
+    for index, item in enumerate(value):
+        if not isinstance(item, dict):
+            raise ValueError(f"{label} item {index} must be an object")
+        identity = str(item.get(identity_field) or "").strip()
+        if not identity or identity in indexed:
+            raise ValueError(f"{label} requires unique non-empty {identity_field} values")
+        indexed[identity] = item
+    return indexed
+
+
+def _carry_reviewed_fields(
+    current_items: Any,
+    previous_items: Any,
+    *,
+    identity_field: str,
+    reviewed_fields: set[str],
+    volatile_fields: set[str] | None = None,
+    label: str,
+) -> list[dict[str, Any]]:
+    current = _indexed_review_items(
+        current_items,
+        identity_field=identity_field,
+        label=f"current {label}",
+    )
+    previous = _indexed_review_items(
+        previous_items,
+        identity_field=identity_field,
+        label=f"previous {label}",
+    )
+    if set(current) != set(previous):
+        raise ValueError(f"{label} identities changed during D0 baseline adoption")
+    ignored = reviewed_fields | (volatile_fields or set())
+    migrated: list[dict[str, Any]] = []
+    for identity, current_item in current.items():
+        previous_item = previous[identity]
+        current_static = {key: value for key, value in current_item.items() if key not in ignored}
+        previous_static = {key: value for key, value in previous_item.items() if key not in ignored}
+        if current_static != previous_static:
+            raise ValueError(f"{label} input changed during D0 baseline adoption: {identity}")
+        migrated_item = deepcopy(current_item)
+        for field in reviewed_fields:
+            if field in previous_item:
+                migrated_item[field] = deepcopy(previous_item[field])
+            else:
+                migrated_item.pop(field, None)
+        migrated.append(migrated_item)
+    return migrated
+
+
+def _post_adoption_review_packet(
+    paths: RepositoryPaths,
+    previous: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    current = build_review_packet(paths)
+    if (
+        previous.get("schema_version") != 3
+        or previous.get("stage") != "D0"
+        or previous.get("template_only") is not False
+    ):
+        raise ValueError("The pre-adoption D0 review packet is not a completed schema v3 copy")
+    previous_baseline = previous.get("baseline")
+    current_baseline = current.get("baseline")
+    if not isinstance(previous_baseline, dict) or not isinstance(current_baseline, dict):
+        raise ValueError("D0 review packet baseline bindings are invalid")
+    previous_sources = previous_baseline.get("sources")
+    current_sources = current_baseline.get("sources")
+    if not isinstance(previous_sources, dict) or not isinstance(current_sources, dict):
+        raise ValueError("D0 review packet source bindings are invalid")
+    if previous_sources.get("technical_workbook") != current_sources.get("technical_workbook"):
+        raise ValueError("The technical workbook changed during D0 baseline adoption")
+
+    proposed = deepcopy(current)
+    proposed["template_only"] = False
+    proposed["role_assignments"] = _carry_reviewed_fields(
+        current["role_assignments"],
+        previous.get("role_assignments"),
+        identity_field="role",
+        reviewed_fields={
+            "role_holder",
+            "alternate",
+            "escalation_person",
+            "signature_evidence_id",
+            "signed_at",
+            "status",
+        },
+        label="D0 role assignments",
+    )
+    proposed["mapping_decisions"] = _carry_reviewed_fields(
+        current["mapping_decisions"],
+        previous.get("mapping_decisions"),
+        identity_field="mapping_id",
+        reviewed_fields={
+            "decision",
+            "final_target",
+            "rationale",
+            "change_request_id",
+            "decided_by",
+            "decided_at",
+            "evidence_ids",
+            "review_status",
+        },
+        label="D0 mapping decisions",
+    )
+    proposed["raw_sample_reviews"] = _carry_reviewed_fields(
+        current["raw_sample_reviews"],
+        previous.get("raw_sample_reviews"),
+        identity_field="raw_id",
+        reviewed_fields={
+            "license_decision",
+            "redistribution_allowed",
+            "ai_index_allowed",
+            "compliance_reviewer",
+            "compliance_reviewed_at",
+            "professional_review_status",
+            "professional_reviewer",
+            "professional_reviewed_at",
+            "compliance_evidence_ids",
+            "professional_evidence_ids",
+        },
+        label="D0 raw sample reviews",
+    )
+    proposed["artifact_reviews"] = _carry_reviewed_fields(
+        current["artifact_reviews"],
+        previous.get("artifact_reviews"),
+        identity_field="artifact_id",
+        reviewed_fields={"reviewer_signatures", "review_status", "comments"},
+        label="D0 artifact reviews",
+    )
+    proposed["acceptance_items"] = _carry_reviewed_fields(
+        current["acceptance_items"],
+        previous.get("acceptance_items"),
+        identity_field="acceptance_id",
+        reviewed_fields={"reviewer_signatures", "review_status", "comments"},
+        volatile_fields={"machine_status"},
+        label="D0 acceptance items",
+    )
+    proposed["final_decision"] = deepcopy(current["final_decision"])
+    proposed["warning"] = (
+        "This is a proposed post-adoption migration of existing named D0 decisions. "
+        "It requires the project approver to review the exact migration bundle hash; "
+        "AC-009/010 and the final D0 decision remain pending."
+    )
+
+    roles = _indexed_review_items(
+        proposed["role_assignments"],
+        identity_field="role",
+        label="migrated D0 role assignments",
+    )
+    approver = roles.get("项目批准人")
+    if (
+        not isinstance(approver, dict)
+        or approver.get("status") != "signed"
+        or not str(approver.get("role_holder") or "").strip()
+    ):
+        raise ValueError("The signed D0 project approver is missing")
+    previous_final = previous.get("final_decision")
+    if not isinstance(previous_final, dict) or previous_final.get("status") != "pending":
+        raise ValueError("The pre-adoption final D0 decision must remain pending")
+
+    acceptance = _indexed_review_items(
+        proposed["acceptance_items"],
+        identity_field="acceptance_id",
+        label="migrated D0 acceptance items",
+    )
+    carried_ids = {
+        acceptance_id
+        for acceptance_id, item in acceptance.items()
+        if item.get("review_status") == "approved"
+    }
+    pending_ids = {
+        acceptance_id
+        for acceptance_id, item in acceptance.items()
+        if item.get("review_status") == "pending"
+    }
+    if carried_ids != _EXPECTED_CARRIED_ACCEPTANCE_IDS:
+        raise ValueError("Only the previously approved D0-AC-001 through D0-AC-008 may migrate")
+    if pending_ids != _EXPECTED_REMAINING_ACCEPTANCE_IDS:
+        raise ValueError("D0-AC-009 and D0-AC-010 must remain pending after migration")
+    failed_machine_ids = sorted(
+        acceptance_id
+        for acceptance_id in _MACHINE_PASS_REQUIRED_CARRIED_IDS
+        if acceptance[acceptance_id].get("machine_status") != "pass"
+    )
+    if failed_machine_ids:
+        raise ValueError(
+            "Migrated D0 approvals require passing current machine evidence: "
+            + ", ".join(failed_machine_ids)
+        )
+
+    checks = validate_review_packet(paths, proposed)
+    unexpected = [check for check in checks if check.code not in _POST_ADOPTION_PENDING_CODES]
+    if unexpected:
+        raise ValueError(
+            "Proposed post-adoption review packet has unexpected validation errors: "
+            + "; ".join(f"{check.code}: {check.message}" for check in unexpected)
+        )
+    pending_locations = {
+        check.location for check in checks if check.code == "D0_REVIEW_ACCEPTANCE_PENDING"
+    }
+    if pending_locations != {
+        "acceptance_items.D0-AC-009",
+        "acceptance_items.D0-AC-010",
+    }:
+        raise ValueError("Proposed post-adoption review packet has an unexpected pending scope")
+    final_checks = [check for check in checks if check.code == "D0_REVIEW_FINAL_PENDING"]
+    if len(final_checks) != 1:
+        raise ValueError(
+            "Proposed post-adoption review packet must keep one final decision pending"
+        )
+
+    previous_hashes = previous_baseline.get("candidate_hashes")
+    current_hashes = current_baseline.get("candidate_hashes")
+    if not isinstance(previous_hashes, dict) or not isinstance(current_hashes, dict):
+        raise ValueError("D0 review candidate hash bindings are invalid")
+    if set(previous_hashes) != set(current_hashes):
+        raise ValueError("D0 review candidate inventory changed during baseline adoption")
+    hash_changes = [
+        {
+            "candidate": name,
+            "previous_sha256": previous_hashes[name],
+            "current_sha256": current_hashes[name],
+            "changed": previous_hashes[name] != current_hashes[name],
+        }
+        for name in sorted(current_hashes)
+    ]
+    summary = {
+        "expected_reviewer": str(approver["role_holder"]),
+        "carried_acceptance_ids": sorted(carried_ids),
+        "remaining_acceptance_ids": sorted(pending_ids),
+        "candidate_hash_changes": hash_changes,
+        "validation_checks": [check.to_dict() for check in checks],
+    }
+    return proposed, summary
+
+
+def build_d0_post_adoption_review_bundle(
+    paths: RepositoryPaths,
+    authorization_path: Path,
+) -> dict[str, Any]:
+    adoption = assess_d0_baseline_adoption(paths, authorization_path)
+    if adoption.get("ready_for_post_publication_d0_rebuild") is not True:
+        codes = [str(check.get("code")) for check in adoption.get("checks", [])]
+        raise ValueError(
+            "D0 post-adoption review migration requires a committed approved publication: "
+            + ", ".join(codes or ["unknown adoption failure"])
+        )
+    authorization = load_and_validate_d0_baseline_publication_authorization(
+        paths,
+        authorization_path,
+    )
+    previous_binding, previous_content = _declared_git_binding(
+        paths,
+        authorization["approval_commit"],
+        authorization["bindings"]["formal_review_packet"],
+        label="D0 pre-adoption formal review packet",
+    )
+    previous = _load_object_bytes(
+        previous_content,
+        label="D0 pre-adoption formal review packet",
+    )
+    expected_publication = authorization["expected_publication"]
+    previous_source = previous.get("baseline", {}).get("sources", {}).get("d0_workbook")
+    if previous_source != {
+        "path": expected_publication["path"],
+        "sha256": expected_publication["previous_sha256"],
+    }:
+        raise ValueError("The pre-adoption review packet does not bind the authorized old baseline")
+
+    proposed, migration = _post_adoption_review_packet(paths, previous)
+    proposed_bytes = _payload_bytes(proposed)
+    authorization_relative = _relative_path(
+        paths,
+        authorization_path,
+        label="D0 publication authorization",
+    )
+    current_workbook = adoption["current_authoritative_workbook"]
+    return {
+        "schema_version": 1,
+        "stage": "D0",
+        "bundle_type": "post_adoption_review_migration_candidate",
+        "automated_assessment_only": True,
+        "does_not_approve_decisions": True,
+        "does_not_write_review_packet": True,
+        "does_not_complete_d0": True,
+        "authorization": {
+            "path": authorization_relative,
+            "sha256": sha256_file(authorization_path),
+            "approval_commit": authorization["approval_commit"],
+        },
+        "publication": {
+            "current_head": adoption["current_head"],
+            "authoritative_workbook": current_workbook,
+        },
+        "pre_adoption_review_packet": previous_binding,
+        "expected_reviewer": migration["expected_reviewer"],
+        "migration_scope": {
+            "carried_sections": [
+                "role_assignments",
+                "mapping_decisions",
+                "raw_sample_reviews",
+                "artifact_reviews",
+            ],
+            "carried_acceptance_ids": migration["carried_acceptance_ids"],
+            "remaining_acceptance_ids": migration["remaining_acceptance_ids"],
+            "candidate_hash_changes": migration["candidate_hash_changes"],
+        },
+        "machine_replay": {
+            "status": "pass",
+            "expected_pending_only": True,
+            "checks": migration["validation_checks"],
+        },
+        "proposed_review_packet_sha256": hashlib.sha256(proposed_bytes).hexdigest(),
+        "proposed_review_packet": proposed,
+        "ready_for_named_human_review": True,
+        "required_human_decision": (
+            "The signed project approver must review the exact migration bundle SHA-256 and "
+            "explicitly approve or reject transcription of the proposed review packet."
+        ),
+        "warning": (
+            "This candidate bundle does not write or approve a review packet. It carries no "
+            "new acceptance decision, leaves D0-AC-009/010 and the final D0 decision pending, "
+            "does not complete D0/D4, and does not authorize user-facing development."
+        ),
+    }
+
+
+def write_d0_post_adoption_review_bundle(
+    paths: RepositoryPaths,
+    authorization_path: Path,
+    output_path: Path,
+) -> Path:
+    _require_directory(
+        output_path,
+        paths.d0_candidates_dir,
+        label="D0 post-adoption review bundle output",
+    )
+    if output_path.exists():
+        raise FileExistsError(f"Refusing to overwrite {output_path}")
+    bundle = build_d0_post_adoption_review_bundle(paths, authorization_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(
+        dir=output_path.parent,
+        prefix=f".{output_path.name}.",
+        suffix=".tmp",
+        delete=False,
+    ) as temporary:
+        temporary.write(_payload_bytes(bundle))
+        temporary_path = Path(temporary.name)
+    temporary_path.chmod(0o644)
+    try:
+        if output_path.exists():
+            raise FileExistsError(f"Refusing to overwrite {output_path}")
+        os.link(temporary_path, output_path)
+    finally:
+        temporary_path.unlink(missing_ok=True)
+    return output_path

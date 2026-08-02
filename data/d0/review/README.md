@@ -108,6 +108,20 @@
    文件；它要求新权威文件哈希、Git对象和提交祖先关系同时正确。只替换工作区文件但未
    提交、采用未知哈希或游离提交都会失败。通过后才能重建合同并准备AC-009/010复核。
 
+   重建合同和D0候选后，先生成采用后的评审迁移候选包：
+
+   ```bash
+   uv run navigator-data prepare-d0-post-adoption-review \
+     --authorization data/d0/candidates/d0_baseline_publication_authorization.<date>.json \
+     --output data/d0/candidates/d0_post_adoption_review_bundle.<date>.json
+   ```
+
+   该命令只从批准提交读取旧正式评审，并把已签角色、映射、样本、规范及AC-001至008
+   与当前评审模板逐项比较。它要求AC-001/002/003当前机器证据通过，拒绝技术附件变化、
+   静态输入变化、未提交发布和意外待审项；候选包内的拟迁移副本仍保持AC-009/010及最终
+   D0决定为待审。候选包不会写入正式评审记录，必须由已签项目批准人审核其精确SHA-256
+   并明确授权转录后，才能形成新的评审副本。
+
 2. 复制模板，文件名必须明确包含实际评审批次，例如：
 
    ```bash

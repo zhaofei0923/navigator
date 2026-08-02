@@ -10,8 +10,10 @@ import pytest
 from navigator_data_readiness.cli import main
 from navigator_data_readiness.d0_baseline_adoption import (
     assess_d0_baseline_adoption,
+    build_d0_post_adoption_review_bundle,
     load_and_validate_d0_baseline_publication_authorization,
     write_d0_baseline_publication_authorization,
+    write_d0_post_adoption_review_bundle,
 )
 from navigator_data_readiness.paths import RepositoryPaths, discover_repository
 
@@ -50,6 +52,7 @@ def _isolated_repository(tmp_path: Path) -> tuple[RepositoryPaths, str]:
         Path("data/d0/candidates"),
         Path("data/d0/review"),
         Path("data/d0/evidence"),
+        Path("data/d0/research"),
     ):
         shutil.copytree(source.root / relative, tmp_path / relative)
     for path in (tmp_path / "data" / "d0" / "candidates").glob(
@@ -88,6 +91,14 @@ def _prepare(paths: RepositoryPaths, approval_commit: str) -> Path:
         staged,
         _authorization_output(paths),
     )
+
+
+def _publish_approved_workbook(paths: RepositoryPaths) -> str:
+    _decision, _readiness, staged = _inputs(paths)
+    shutil.copy2(staged, paths.d0_workbook)
+    _git(paths.root, "add", "--all")
+    _git(paths.root, "commit", "--quiet", "-m", "publish approved D0 baseline")
+    return _git(paths.root, "rev-parse", "HEAD")
 
 
 def _codes(report: dict[str, Any]) -> set[str]:
@@ -205,3 +216,107 @@ def test_cli_prepares_authorization_and_reports_pending_adoption(tmp_path: Path)
     assert prepare_exit == 0
     assert validate_exit == 1
     assert _codes(_load(report_output)) == {"D0_ADOPTION_NOT_PUBLISHED"}
+
+
+def test_post_adoption_review_bundle_requires_published_authoritative_workbook() -> None:
+    paths = discover_repository()
+
+    with pytest.raises(ValueError, match="D0_ADOPTION_NOT_PUBLISHED"):
+        build_d0_post_adoption_review_bundle(paths, _authorization_output(paths))
+
+
+def test_post_adoption_review_bundle_carries_only_prior_named_approvals(
+    tmp_path: Path,
+) -> None:
+    paths, approval_commit = _isolated_repository(tmp_path)
+    authorization = _prepare(paths, approval_commit)
+    publication_commit = _publish_approved_workbook(paths)
+
+    bundle = build_d0_post_adoption_review_bundle(paths, authorization)
+    proposed = bundle["proposed_review_packet"]
+    acceptance = {item["acceptance_id"]: item for item in proposed["acceptance_items"]}
+    changed_candidates = {
+        item["candidate"]
+        for item in bundle["migration_scope"]["candidate_hash_changes"]
+        if item["changed"]
+    }
+
+    assert bundle["publication"]["current_head"] == publication_commit
+    assert bundle["ready_for_named_human_review"] is True
+    assert bundle["does_not_write_review_packet"] is True
+    assert bundle["migration_scope"]["carried_acceptance_ids"] == [
+        f"D0-AC-{number:03d}" for number in range(1, 9)
+    ]
+    assert bundle["migration_scope"]["remaining_acceptance_ids"] == [
+        "D0-AC-009",
+        "D0-AC-010",
+    ]
+    assert acceptance["D0-AC-001"]["machine_status"] == "pass"
+    assert acceptance["D0-AC-002"]["machine_status"] == "pass"
+    assert acceptance["D0-AC-009"]["review_status"] == "pending"
+    assert acceptance["D0-AC-010"]["review_status"] == "pending"
+    assert proposed["final_decision"]["status"] == "pending"
+    assert changed_candidates == {
+        "acceptance_assessment.json",
+        "core_contract_resolution.template.json",
+        "core_entity_evidence.json",
+        "core_field_evidence.json",
+        "enum_migration_evidence.json",
+        "machine_evidence_review_queue.json",
+    }
+    assert {check["code"] for check in bundle["machine_replay"]["checks"]} == {
+        "D0_REVIEW_ACCEPTANCE_PENDING",
+        "D0_REVIEW_FINAL_PENDING",
+    }
+
+
+def test_post_adoption_review_writer_is_atomic_and_refuses_overwrite(
+    tmp_path: Path,
+) -> None:
+    paths, approval_commit = _isolated_repository(tmp_path)
+    authorization = _prepare(paths, approval_commit)
+    _publish_approved_workbook(paths)
+    output = paths.d0_candidates_dir / "d0_post_adoption_review_bundle.2026-08-03.json"
+
+    written = write_d0_post_adoption_review_bundle(paths, authorization, output)
+
+    assert written == output
+    assert _load(output)["bundle_type"] == "post_adoption_review_migration_candidate"
+    assert output.stat().st_mode & 0o777 == 0o644
+    assert list(output.parent.glob(f".{output.name}.*.tmp")) == []
+    with pytest.raises(FileExistsError, match="Refusing to overwrite"):
+        write_d0_post_adoption_review_bundle(paths, authorization, output)
+
+
+def test_post_adoption_review_rejects_technical_baseline_change(tmp_path: Path) -> None:
+    paths, approval_commit = _isolated_repository(tmp_path)
+    authorization = _prepare(paths, approval_commit)
+    _publish_approved_workbook(paths)
+    paths.technical_workbook.write_bytes(paths.technical_workbook.read_bytes() + b"unexpected")
+    _git(paths.root, "add", "--all")
+    _git(paths.root, "commit", "--quiet", "-m", "tamper technical baseline")
+
+    with pytest.raises(ValueError, match="technical workbook changed"):
+        build_d0_post_adoption_review_bundle(paths, authorization)
+
+
+def test_cli_prepares_post_adoption_review_bundle(tmp_path: Path) -> None:
+    paths, approval_commit = _isolated_repository(tmp_path)
+    authorization = _prepare(paths, approval_commit)
+    _publish_approved_workbook(paths)
+    output = paths.d0_candidates_dir / "d0_post_adoption_review_bundle.cli.json"
+
+    exit_code = main(
+        [
+            "--repo",
+            str(paths.root),
+            "prepare-d0-post-adoption-review",
+            "--authorization",
+            str(authorization),
+            "--output",
+            str(output),
+        ]
+    )
+
+    assert exit_code == 0
+    assert _load(output)["ready_for_named_human_review"] is True

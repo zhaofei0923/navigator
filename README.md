@@ -79,6 +79,9 @@ uv run navigator-data prepare-d0-baseline-publication-authorization \
 uv run navigator-data validate-d0-baseline-adoption \
   --authorization data/d0/candidates/d0_baseline_publication_authorization.<date>.json \
   --output data/d0/candidates/d0_baseline_adoption_assessment.<date>.json
+uv run navigator-data prepare-d0-post-adoption-review \
+  --authorization data/d0/candidates/d0_baseline_publication_authorization.<date>.json \
+  --output data/d0/candidates/d0_post_adoption_review_bundle.<date>.json
 uv run navigator-data prepare-d1
 uv run navigator-data prepare-d2
 uv run navigator-data prepare-d3
@@ -165,6 +168,11 @@ AC-001/002两条采用证据、候选哈希和整改包，并要求待发布副�
 副本、整改包、审核包、确认、决定、证据清单和就绪报告绑定到同一批准Git提交。发布后
 `validate-d0-baseline-adoption`从该提交重放旧基线，并要求新权威文件既匹配批准哈希又
 已写入后继Git提交；工作区内仅替换但未提交也会失败。两条命令均不执行文件替换。
+采用验证通过并重建当前D0候选后，`prepare-d0-post-adoption-review`会从批准提交读取旧
+正式评审对象，把已签角色、映射、样本、规范和D0-AC-001至008决定与当前模板逐项比较，
+并生成包含候选哈希变化及拟迁移评审包的实名复核候选。它拒绝未提交发布、技术附件变化、
+静态输入变化和任何超出AC-009/010及最终决定的意外阻塞；输出本身不写正式评审副本、
+不新增批准，也不完成D0。项目批准人仍须审核该候选包的精确SHA-256并明确授权转录。
 
 正式责任人可按
 [`data/d0/review`](data/d0/review/README.md)中的流程复制评审模板，填写角色、映射、
