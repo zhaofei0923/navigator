@@ -190,6 +190,45 @@
    评审并更新当前清单。拒绝决定、签署不全、错误人员/日期、额外字段、重复证据、哈希漂移、
    非当前证据清单或已有输出都会失败且不落库。成功后只剩AC-010和最终D0决定待审。
 
+   AC-009新版评审和证据提交到Git后，生成最终收口候选包：
+
+   ```bash
+   uv run navigator-data prepare-d0-final-review \
+     --authorization data/d0/candidates/d0_baseline_publication_authorization.<date>.json \
+     --review data/d0/review/d0_review_packet.<date>.json \
+     --output data/d0/candidates/d0_final_review_bundle.<date>.json
+   ```
+
+   该包只允许AC-010的待批准与缺证据两项自引用门禁存在，要求AC-001至009均已批准、
+   D0四项任务完成，并重新绑定整条Git/工作簿/合同/证据链。它为AC-010验收签署和最终D0
+   决定分配两个独立证据编号，但本身不批准任何事项。生成空白最终确认模板：
+
+   ```bash
+   uv run navigator-data prepare-d0-final-confirmation \
+     --authorization data/d0/candidates/d0_baseline_publication_authorization.<date>.json \
+     --review data/d0/review/d0_review_packet.<date>.json \
+     --bundle data/d0/candidates/d0_final_review_bundle.<date>.json \
+     --review-output data/d0/review/d0_review_packet.<later-date>.json \
+     --output data/d0/review/d0_final_confirmation.template.<later-date>.json
+   ```
+
+   项目批准人必须分别填写AC-010验收签署和最终决定签署，两者均绑定同一精确候选包哈希，
+   但使用独立证据。完成副本放入`data/d0/evidence`；批准时执行：
+
+   ```bash
+   uv run navigator-data apply-d0-final-confirmation \
+     --input data/d0/evidence/<completed-final-confirmation>.json \
+     --authorization data/d0/candidates/d0_baseline_publication_authorization.<date>.json \
+     --review data/d0/review/d0_review_packet.<date>.json \
+     --bundle data/d0/candidates/d0_final_review_bundle.<date>.json \
+     --review-output data/d0/review/d0_review_packet.<later-date>.json \
+     --manifest-output data/d0/evidence/manifest.json
+   ```
+
+   应用器只有在新版评审无错误、全部证据有效且完整D0就绪报告为`ready`、阻断项为0时才
+   提交评审和证据清单；否则回滚新评审。D0通过仍不代表D1—D4完成，也不解除D4之前禁止
+   用户侧开发的门禁。
+
 2. 复制模板，文件名必须明确包含实际评审批次，例如：
 
    ```bash

@@ -107,6 +107,23 @@ uv run navigator-data apply-d0-ac009-confirmation \
   --bundle data/d0/candidates/d0_ac009_review_bundle.<date>.json \
   --review-output data/d0/review/d0_review_packet.<later-date>.json \
   --manifest-output data/d0/evidence/manifest.json
+uv run navigator-data prepare-d0-final-review \
+  --authorization data/d0/candidates/d0_baseline_publication_authorization.<date>.json \
+  --review data/d0/review/d0_review_packet.<date>.json \
+  --output data/d0/candidates/d0_final_review_bundle.<date>.json
+uv run navigator-data prepare-d0-final-confirmation \
+  --authorization data/d0/candidates/d0_baseline_publication_authorization.<date>.json \
+  --review data/d0/review/d0_review_packet.<date>.json \
+  --bundle data/d0/candidates/d0_final_review_bundle.<date>.json \
+  --review-output data/d0/review/d0_review_packet.<later-date>.json \
+  --output data/d0/review/d0_final_confirmation.template.<later-date>.json
+uv run navigator-data apply-d0-final-confirmation \
+  --input data/d0/evidence/<completed-final-confirmation>.json \
+  --authorization data/d0/candidates/d0_baseline_publication_authorization.<date>.json \
+  --review data/d0/review/d0_review_packet.<date>.json \
+  --bundle data/d0/candidates/d0_final_review_bundle.<date>.json \
+  --review-output data/d0/review/d0_review_packet.<later-date>.json \
+  --manifest-output data/d0/evidence/manifest.json
 uv run navigator-data prepare-d1
 uv run navigator-data prepare-d2
 uv run navigator-data prepare-d3
@@ -214,6 +231,13 @@ ISO时间；每个角色使用独立证据编号，因此角色持有人以后�
 `apply-d0-ac009-confirmation`只接受完整的`approved`确认和显式转录授权，先用临时证据清单
 重验正式评审，再原子发布新版评审并替换当前证据清单；拒绝、错误人员、日期不符、额外字段、
 重复证据、哈希或Git漂移均不产生输出。应用成功只批准AC-009，AC-010和最终D0决定继续待审。
+AC-009落库状态提交后，`prepare-d0-final-review`仅允许AC-010自身的“待批准”和“缺证据”
+两项门禁存在，并再次绑定发布授权、最新版评审、权威工作簿、全部合同快照、证据清单和Git。
+最终候选为AC-010验收与D0最终决定分别分配证据编号。`prepare-d0-final-confirmation`要求同一
+具名项目批准人分别保留验收签署和最终决定签署；`apply-d0-final-confirmation`先在临时状态中
+重验完整正式评审，再短暂发布新版评审并用临时证据清单执行完整D0就绪报告。只有报告`ready`
+且阻断项为0才原子更新证据清单，否则删除临时评审并保持原状态。即使D0据此正式通过，D1—D4
+仍须独立完成，用户侧开发仍受D4门禁约束。
 
 正式责任人可按
 [`data/d0/review`](data/d0/review/README.md)中的流程复制评审模板，填写角色、映射、

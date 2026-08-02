@@ -33,9 +33,13 @@ from .d0_baseline_review import (
     write_d0_baseline_review_package,
 )
 from .d0_candidates import candidate_payloads, write_candidates
-from .d0_closure import write_d0_ac009_review_bundle
+from .d0_closure import write_d0_ac009_review_bundle, write_d0_final_review_bundle
 from .d0_confirmation import write_confirmed_packets
 from .d0_contract_resolution import load_and_validate_d0_contract_resolution
+from .d0_final_confirmation import (
+    apply_d0_final_confirmation,
+    write_d0_final_confirmation_template,
+)
 from .d0_review import load_and_validate_review_packet, write_review_template
 from .d1_sources import load_and_validate_d1_admission, write_d1_candidates
 from .d2_collection import load_and_validate_d2_bundle, write_d2_candidates
@@ -281,6 +285,41 @@ def _parser() -> argparse.ArgumentParser:
     d0_ac009_apply.add_argument("--bundle", type=Path, required=True)
     d0_ac009_apply.add_argument("--review-output", type=Path, required=True)
     d0_ac009_apply.add_argument("--manifest-output", type=Path, required=True)
+    d0_final_review = commands.add_parser(
+        "prepare-d0-final-review",
+        help=(
+            "Prepare a Git-bound zero-preclosure-blocker candidate for D0-AC-010 and the "
+            "final D0 decision."
+        ),
+    )
+    d0_final_review.add_argument("--authorization", type=Path, required=True)
+    d0_final_review.add_argument("--review", type=Path, required=True)
+    d0_final_review.add_argument("--output", type=Path, required=True)
+    d0_final_confirmation = commands.add_parser(
+        "prepare-d0-final-confirmation",
+        help=(
+            "Prepare an empty project-approver confirmation template for D0-AC-010 and the "
+            "final D0 decision."
+        ),
+    )
+    d0_final_confirmation.add_argument("--authorization", type=Path, required=True)
+    d0_final_confirmation.add_argument("--review", type=Path, required=True)
+    d0_final_confirmation.add_argument("--bundle", type=Path, required=True)
+    d0_final_confirmation.add_argument("--review-output", type=Path, required=True)
+    d0_final_confirmation.add_argument("--output", type=Path, required=True)
+    d0_final_apply = commands.add_parser(
+        "apply-d0-final-confirmation",
+        help=(
+            "Transcribe an approved D0-AC-010 and final D0 confirmation only when the "
+            "resulting D0 gate has zero blockers."
+        ),
+    )
+    d0_final_apply.add_argument("--input", type=Path, required=True)
+    d0_final_apply.add_argument("--authorization", type=Path, required=True)
+    d0_final_apply.add_argument("--review", type=Path, required=True)
+    d0_final_apply.add_argument("--bundle", type=Path, required=True)
+    d0_final_apply.add_argument("--review-output", type=Path, required=True)
+    d0_final_apply.add_argument("--manifest-output", type=Path, required=True)
     commands.add_parser(
         "prepare-d1",
         help="Generate D1 source-admission, country-coverage, and domain-alternative templates.",
@@ -878,6 +917,82 @@ def main(argv: list[str] | None = None) -> int:
         }
         try:
             applied_outputs = apply_d0_ac009_confirmation(
+                paths,
+                inputs["confirmation"],
+                inputs["authorization"],
+                inputs["review"],
+                inputs["bundle"],
+                inputs["review_output"],
+                inputs["manifest_output"],
+            )
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError) as error:
+            print(str(error), file=sys.stderr)
+            return 1
+        for output in applied_outputs:
+            print(output.relative_to(paths.root).as_posix())
+        return 0
+
+    if args.command == "prepare-d0-final-review":
+        authorization_path = (
+            args.authorization
+            if args.authorization.is_absolute()
+            else paths.root / args.authorization
+        )
+        review_path = args.review if args.review.is_absolute() else paths.root / args.review
+        output_path = args.output if args.output.is_absolute() else paths.root / args.output
+        try:
+            bundle_output = write_d0_final_review_bundle(
+                paths,
+                authorization_path,
+                review_path,
+                output_path,
+            )
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError) as error:
+            print(str(error), file=sys.stderr)
+            return 1
+        print(bundle_output.relative_to(paths.root).as_posix())
+        return 0
+
+    if args.command == "prepare-d0-final-confirmation":
+        inputs = {
+            name: value if value.is_absolute() else paths.root / value
+            for name, value in (
+                ("authorization", args.authorization),
+                ("review", args.review),
+                ("bundle", args.bundle),
+                ("review_output", args.review_output),
+                ("output", args.output),
+            )
+        }
+        try:
+            confirmation_output = write_d0_final_confirmation_template(
+                paths,
+                inputs["authorization"],
+                inputs["review"],
+                inputs["bundle"],
+                inputs["review_output"],
+                inputs["output"],
+            )
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError) as error:
+            print(str(error), file=sys.stderr)
+            return 1
+        print(confirmation_output.relative_to(paths.root).as_posix())
+        return 0
+
+    if args.command == "apply-d0-final-confirmation":
+        inputs = {
+            name: value if value.is_absolute() else paths.root / value
+            for name, value in (
+                ("confirmation", args.input),
+                ("authorization", args.authorization),
+                ("review", args.review),
+                ("bundle", args.bundle),
+                ("review_output", args.review_output),
+                ("manifest_output", args.manifest_output),
+            )
+        }
+        try:
+            applied_outputs = apply_d0_final_confirmation(
                 paths,
                 inputs["confirmation"],
                 inputs["authorization"],
