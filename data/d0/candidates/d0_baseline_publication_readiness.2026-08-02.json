@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "stage": "D0",
+  "assessment_scope": "approved D0 baseline manual-publication handoff",
+  "operation": "validate manual D0 baseline publication readiness",
+  "automated_assessment_only": true,
+  "does_not_publish_baseline": true,
+  "does_not_activate_baseline": true,
+  "does_not_complete_d0": true,
+  "source_workbook": {
+    "path": "doc/doc/新能源企业出海导航仪_D0数据标准冻结执行台账.xlsx",
+    "sha256": "224e9a35bcbb363cf41c007499ba32aa6394cfdbf06331830c02d994e1c7ddff"
+  },
+  "decision_record": {
+    "path": "data/d0/review/d0_baseline_adoption_decision.2026-08-02.json",
+    "sha256": "b3be6e8fcef9cb3a12f0fa8f37602aa68c5789b3bf61106d68567ec195fa8748",
+    "decision": "approved_for_manual_adoption"
+  },
+  "expected_candidate_workbook": {
+    "path": "data/d0/candidates/d0_core_contract_candidate.2026-08-01.xlsx",
+    "sha256": "123394d0ee1744edf86e201bd1c683cafdd222d1ff5c55221eb1f0798e2f0712"
+  },
+  "staged_workbook": {
+    "path": "data/d0/candidates/publication-staging/2026-08-02/新能源企业出海导航仪_D0数据标准冻结执行台账.xlsx",
+    "sha256": "123394d0ee1744edf86e201bd1c683cafdd222d1ff5c55221eb1f0798e2f0712"
+  },
+  "baseline_change_assessment": {
+    "candidate_ready_for_formal_baseline_review": true,
+    "resolution_sha256": "3ddefbdf04ce051c7d22dacc289083e73c241d006e15b9dc9d9a563f3910b69e",
+    "checks": []
+  },
+  "ready_for_manual_baseline_publication": true,
+  "checks": [],
+  "warning": "A passing report is a read-only handoff check. It does not replace or activate the authoritative workbook, approve AC-009/010, complete D0/D4, or authorize user-facing development."
+}

@@ -46,7 +46,19 @@ def _isolated_paths(tmp_path: Path) -> RepositoryPaths:
         Path("data/d0/evidence"),
     ):
         shutil.copytree(source.root / relative, tmp_path / relative)
-    return discover_repository(tmp_path)
+    paths = discover_repository(tmp_path)
+    manifest = _load(paths.evidence_manifest)
+    manifest["evidence"] = [
+        item
+        for item in manifest["evidence"]
+        if not str(item.get("evidence_id") or "").startswith("EVD-D0-BASELINE-ADOPTION-")
+    ]
+    _write(paths.evidence_manifest, manifest)
+    for path in paths.evidence_manifest.parent.glob("*baseline_adoption_confirmation*.json"):
+        path.unlink()
+    for path in paths.d0_review_dir.glob("d0_baseline_adoption_decision.*.json"):
+        path.unlink()
+    return paths
 
 
 def _apply_decision(
@@ -115,6 +127,25 @@ def test_approved_decision_and_exact_staged_workbook_are_ready(tmp_path: Path) -
     assert len(report["baseline_change_assessment"]["resolution_sha256"]) == 64
     assert report["baseline_change_assessment"]["checks"] == []
     assert sha256_file(paths.d0_workbook) == source_hash
+
+
+def test_repository_approved_publication_artifacts_are_current() -> None:
+    paths = discover_repository()
+    decision_path = paths.d0_review_dir / "d0_baseline_adoption_decision.2026-08-02.json"
+    staged_items = list(
+        (paths.d0_candidates_dir / "publication-staging" / "2026-08-02").glob("*.xlsx")
+    )
+    assert len(staged_items) == 1
+    report_path = paths.d0_candidates_dir / "d0_baseline_publication_readiness.2026-08-02.json"
+
+    assert load_and_validate_d0_baseline_decision(paths, decision_path)["decision"] == (
+        "approved_for_manual_adoption"
+    )
+    assert _load(report_path) == assess_d0_baseline_publication(
+        paths,
+        decision_path,
+        staged_items[0],
+    )
 
 
 def test_rejected_decision_is_valid_but_not_publishable(tmp_path: Path) -> None:

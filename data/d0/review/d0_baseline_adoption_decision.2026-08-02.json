@@ -1,0 +1,55 @@
+{
+  "bundle": {
+    "path": "data/d0/candidates/d0_baseline_adoption_review_bundle.2026-08-02.json",
+    "sha256": "b128177436355394b5a271c307f388020904b252c232b64be5fd7cb5e0ec82e2"
+  },
+  "change_summary": {
+    "added_primary_key_fields": 29,
+    "candidate_field_count": 158,
+    "compound_fields_split": 20,
+    "entity_primary_key_decisions": 29,
+    "field_unit_decisions": 92,
+    "generated_atomic_fields": 57
+  },
+  "comments": "同意",
+  "confirmation": {
+    "path": "data/d0/evidence/kevin_baseline_adoption_confirmation_20260802.json",
+    "sha256": "9596ed8643a9500b7a0b8b025ffc3c7f16da87bbdf872174422d9b59c1cdcfaf"
+  },
+  "decision": "approved_for_manual_adoption",
+  "does_not_activate_baseline": true,
+  "does_not_complete_d0": true,
+  "inputs": {
+    "authoritative_workbook": {
+      "path": "doc/doc/新能源企业出海导航仪_D0数据标准冻结执行台账.xlsx",
+      "sha256": "224e9a35bcbb363cf41c007499ba32aa6394cfdbf06331830c02d994e1c7ddff"
+    },
+    "candidate_workbook": {
+      "path": "data/d0/candidates/d0_core_contract_candidate.2026-08-01.xlsx",
+      "sha256": "123394d0ee1744edf86e201bd1c683cafdd222d1ff5c55221eb1f0798e2f0712"
+    },
+    "resolution": {
+      "path": "data/d0/review/core_contract_resolution.2026-08-01.json",
+      "sha256": "bac2d22c2cdc6019ec01e86c223428e0720cdd16b22fe3b1f08a569fe0a440b8"
+    },
+    "review_packet": {
+      "path": "data/d0/review/d0_review_packet.2026-08-02.json",
+      "sha256": "b479361510dc2cc9549dd6deb8798eacc5143275dea4d1e8906f455952618547"
+    }
+  },
+  "manual_baseline_adoption_authorized": true,
+  "next_required_action": "A baseline steward must publish a formally revised authoritative workbook, then regenerate contracts and rerun the complete D0 gate.",
+  "record_type": "baseline_adoption_decision",
+  "reviewer_signature": {
+    "evidence_ids": [
+      "EVD-D0-BASELINE-ADOPTION-001-20260802",
+      "EVD-D0-BASELINE-ADOPTION-002-20260802"
+    ],
+    "person_name": "kevin",
+    "role": "项目批准人",
+    "signed_at": "2026-08-02"
+  },
+  "schema_version": 1,
+  "stage": "D0",
+  "warning": "This signed record does not overwrite or activate the authoritative workbook, approve AC-009/010, complete D0/D4, or authorize user-facing development."
+}

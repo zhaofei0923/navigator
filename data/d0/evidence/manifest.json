@@ -173,6 +173,32 @@
       "status": "已批准",
       "subject_path": "data/d0/candidates/d0_acceptance_review_bundle.2026-08-02.json",
       "subject_sha256": "9ae32733d9ae3c973a63f382952f057b20d8a82a2bccb28d11a13a3be8bd86b7"
+    },
+    {
+      "acceptance_id": "D0-AC-001",
+      "decision": "approved_for_manual_adoption",
+      "evidence_id": "EVD-D0-BASELINE-ADOPTION-001-20260802",
+      "path": "data/d0/evidence/kevin_baseline_adoption_confirmation_20260802.json",
+      "recorded_at": "2026-08-02",
+      "recorded_by": "codex (authorized transcription)",
+      "reviewer": "kevin",
+      "sha256": "9596ed8643a9500b7a0b8b025ffc3c7f16da87bbdf872174422d9b59c1cdcfaf",
+      "status": "已批准",
+      "subject_path": "data/d0/candidates/d0_baseline_adoption_review_bundle.2026-08-02.json",
+      "subject_sha256": "b128177436355394b5a271c307f388020904b252c232b64be5fd7cb5e0ec82e2"
+    },
+    {
+      "acceptance_id": "D0-AC-002",
+      "decision": "approved_for_manual_adoption",
+      "evidence_id": "EVD-D0-BASELINE-ADOPTION-002-20260802",
+      "path": "data/d0/evidence/kevin_baseline_adoption_confirmation_20260802.json",
+      "recorded_at": "2026-08-02",
+      "recorded_by": "codex (authorized transcription)",
+      "reviewer": "kevin",
+      "sha256": "9596ed8643a9500b7a0b8b025ffc3c7f16da87bbdf872174422d9b59c1cdcfaf",
+      "status": "已批准",
+      "subject_path": "data/d0/candidates/d0_baseline_adoption_review_bundle.2026-08-02.json",
+      "subject_sha256": "b128177436355394b5a271c307f388020904b252c232b64be5fd7cb5e0ec82e2"
     }
   ],
   "schema_version": 1,

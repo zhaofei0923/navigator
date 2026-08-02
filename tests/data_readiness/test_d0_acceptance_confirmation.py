@@ -218,7 +218,10 @@ def test_application_writes_valid_review_and_evidence_transaction(
     } == expected_approved
 
     evidence = _load(paths.evidence_manifest)["evidence"]
-    new_entries = [item for item in evidence if str(item["evidence_id"]).endswith("20260802")]
+    expected_evidence_ids = {
+        str(item["evidence_candidate_id"]) for item in _load(bundle_path)["acceptance_items"]
+    }
+    new_entries = [item for item in evidence if str(item["evidence_id"]) in expected_evidence_ids]
     assert len(new_entries) == 7
     assert all(item["subject_sha256"] == confirmation["bundle"]["sha256"] for item in new_entries)
     if rejected_id:

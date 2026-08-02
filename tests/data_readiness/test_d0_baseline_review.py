@@ -80,7 +80,22 @@ def _isolated_paths(tmp_path: Path) -> RepositoryPaths:
         Path("data/d0/evidence"),
     ):
         shutil.copytree(source.root / relative, tmp_path / relative)
-    return discover_repository(tmp_path)
+    paths = discover_repository(tmp_path)
+    manifest = _load(paths.evidence_manifest)
+    manifest["evidence"] = [
+        item
+        for item in manifest["evidence"]
+        if not str(item.get("evidence_id") or "").startswith("EVD-D0-BASELINE-ADOPTION-")
+    ]
+    paths.evidence_manifest.write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    for path in paths.evidence_manifest.parent.glob("*baseline_adoption_confirmation*.json"):
+        path.unlink()
+    for path in paths.d0_review_dir.glob("d0_baseline_adoption_decision.*.json"):
+        path.unlink()
+    return paths
 
 
 def test_current_candidate_is_ready_for_project_baseline_decision() -> None:
