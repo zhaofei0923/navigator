@@ -1,0 +1,717 @@
+{
+  "acceptance_items": [
+    {
+      "acceptance_id": "D0-AC-001",
+      "comments": "同意",
+      "hard_gate": true,
+      "machine_status": "pass",
+      "required_roles": [
+        "数据负责人",
+        "后端/数据架构负责人"
+      ],
+      "review_status": "approved",
+      "reviewer_signatures": [
+        {
+          "evidence_ids": [
+            "EVD-D0-AC-001-REVIEW-20260802"
+          ],
+          "person_name": "kevin",
+          "role": "数据负责人",
+          "signed_at": "2026-08-02"
+        },
+        {
+          "evidence_ids": [
+            "EVD-D0-AC-001-REVIEW-20260802"
+          ],
+          "person_name": "kevin",
+          "role": "后端/数据架构负责人",
+          "signed_at": "2026-08-02"
+        }
+      ],
+      "title": "核心实体有唯一代码、主键和权威关系"
+    },
+    {
+      "acceptance_id": "D0-AC-002",
+      "comments": "同意",
+      "hard_gate": true,
+      "machine_status": "pass",
+      "required_roles": [
+        "数据负责人",
+        "数据质量负责人"
+      ],
+      "review_status": "approved",
+      "reviewer_signatures": [
+        {
+          "evidence_ids": [
+            "EVD-D0-AC-002-REVIEW-20260802"
+          ],
+          "person_name": "kevin",
+          "role": "数据负责人",
+          "signed_at": "2026-08-02"
+        },
+        {
+          "evidence_ids": [
+            "EVD-D0-AC-002-REVIEW-20260802"
+          ],
+          "person_name": "kevin",
+          "role": "数据质量负责人",
+          "signed_at": "2026-08-02"
+        }
+      ],
+      "title": "核心字段有唯一代码、类型、单位、空值和来源规则"
+    },
+    {
+      "acceptance_id": "D0-AC-003",
+      "comments": "同意",
+      "hard_gate": true,
+      "machine_status": "pass",
+      "required_roles": [
+        "数据负责人",
+        "产品负责人"
+      ],
+      "review_status": "approved",
+      "reviewer_signatures": [
+        {
+          "evidence_ids": [
+            "EVD-D0-AC-003-REVIEW-20260802"
+          ],
+          "person_name": "kevin",
+          "role": "数据负责人",
+          "signed_at": "2026-08-02"
+        },
+        {
+          "evidence_ids": [
+            "EVD-D0-AC-003-REVIEW-20260802"
+          ],
+          "person_name": "kevin",
+          "role": "产品负责人",
+          "signed_at": "2026-08-02"
+        }
+      ],
+      "title": "状态枚举中文、代码、互斥关系和迁移规则一致"
+    },
+    {
+      "acceptance_id": "D0-AC-004",
+      "comments": "同意",
+      "hard_gate": true,
+      "machine_status": "candidate_generated",
+      "required_roles": [
+        "产品负责人",
+        "数据负责人",
+        "语言审校负责人"
+      ],
+      "review_status": "approved",
+      "reviewer_signatures": [
+        {
+          "evidence_ids": [
+            "EVD-D0-AC-004-REVIEW-20260802"
+          ],
+          "person_name": "kevin",
+          "role": "产品负责人",
+          "signed_at": "2026-08-02"
+        },
+        {
+          "evidence_ids": [
+            "EVD-D0-AC-004-REVIEW-20260802"
+          ],
+          "person_name": "kevin",
+          "role": "数据负责人",
+          "signed_at": "2026-08-02"
+        },
+        {
+          "evidence_ids": [
+            "EVD-D0-AC-004-REVIEW-20260802"
+          ],
+          "person_name": "kevin",
+          "role": "语言审校负责人",
+          "signed_at": "2026-08-02"
+        }
+      ],
+      "title": "时区、货币、单位、精度和多语言规则已批准"
+    },
+    {
+      "acceptance_id": "D0-AC-005",
+      "comments": "同意",
+      "hard_gate": true,
+      "machine_status": "fail",
+      "required_roles": [
+        "数据质量负责人",
+        "数据工程负责人"
+      ],
+      "review_status": "approved",
+      "reviewer_signatures": [
+        {
+          "evidence_ids": [
+            "EVD-D0-AC-005-REVIEW-20260802"
+          ],
+          "person_name": "kevin",
+          "role": "数据质量负责人",
+          "signed_at": "2026-08-02"
+        },
+        {
+          "evidence_ids": [
+            "EVD-D0-AC-005-REVIEW-20260802"
+          ],
+          "person_name": "kevin",
+          "role": "数据工程负责人",
+          "signed_at": "2026-08-02"
+        }
+      ],
+      "title": "来源、原始资料、字段映射、审核和D4模板试填通过"
+    },
+    {
+      "acceptance_id": "D0-AC-006",
+      "comments": "同意",
+      "hard_gate": true,
+      "machine_status": "incomplete",
+      "required_roles": [
+        "国家研究负责人",
+        "语言审校负责人"
+      ],
+      "review_status": "approved",
+      "reviewer_signatures": [
+        {
+          "evidence_ids": [
+            "EVD-D0-AC-006-REVIEW-20260802"
+          ],
+          "person_name": "kevin",
+          "role": "国家研究负责人",
+          "signed_at": "2026-08-02"
+        },
+        {
+          "evidence_ids": [
+            "EVD-D0-AC-006-REVIEW-20260802"
+          ],
+          "person_name": "kevin",
+          "role": "语言审校负责人",
+          "signed_at": "2026-08-02"
+        }
+      ],
+      "title": "金标准样本与术语表由专业人员复核"
+    },
+    {
+      "acceptance_id": "D0-AC-007",
+      "comments": "Nine roles, alternates, and escalation chain confirmed.",
+      "hard_gate": true,
+      "machine_status": "fail",
+      "required_roles": [
+        "项目批准人"
+      ],
+      "review_status": "approved",
+      "reviewer_signatures": [
+        {
+          "evidence_ids": [
+            "EVD-D0-ROLE-ASSIGNMENTS-20260731"
+          ],
+          "person_name": "kevin",
+          "role": "项目批准人",
+          "signed_at": "2026-07-31"
+        }
+      ],
+      "title": "责任人、替补、升级链和审批权限已签署"
+    },
+    {
+      "acceptance_id": "D0-AC-008",
+      "comments": "同意",
+      "hard_gate": true,
+      "machine_status": "candidate_generated",
+      "required_roles": [
+        "数据负责人",
+        "合规负责人"
+      ],
+      "review_status": "approved",
+      "reviewer_signatures": [
+        {
+          "evidence_ids": [
+            "EVD-D0-AC-008-REVIEW-20260802"
+          ],
+          "person_name": "kevin",
+          "role": "数据负责人",
+          "signed_at": "2026-08-02"
+        },
+        {
+          "evidence_ids": [
+            "EVD-D0-AC-008-REVIEW-20260802"
+          ],
+          "person_name": "kevin",
+          "role": "合规负责人",
+          "signed_at": "2026-08-02"
+        }
+      ],
+      "title": "变更、版本、证据目录和文件命名规则可执行"
+    },
+    {
+      "acceptance_id": "D0-AC-009",
+      "comments": null,
+      "hard_gate": true,
+      "machine_status": "fail",
+      "required_roles": [
+        "数据负责人",
+        "项目批准人"
+      ],
+      "review_status": "pending",
+      "reviewer_signatures": [
+        {
+          "evidence_ids": [],
+          "person_name": null,
+          "role": "数据负责人",
+          "signed_at": null
+        },
+        {
+          "evidence_ids": [],
+          "person_name": null,
+          "role": "项目批准人",
+          "signed_at": null
+        }
+      ],
+      "title": "D0阻塞项为0，遗留问题均有责任人和目标日期"
+    },
+    {
+      "acceptance_id": "D0-AC-010",
+      "comments": null,
+      "hard_gate": true,
+      "machine_status": "blocked",
+      "required_roles": [
+        "项目批准人"
+      ],
+      "review_status": "pending",
+      "reviewer_signatures": [
+        {
+          "evidence_ids": [],
+          "person_name": null,
+          "role": "项目批准人",
+          "signed_at": null
+        }
+      ],
+      "title": "项目批准人签署D0通过结论"
+    }
+  ],
+  "artifact_reviews": [
+    {
+      "artifact_id": "D0-ART-CONVENTIONS",
+      "candidate": "conventions.json",
+      "candidate_sha256": "1cf742b3bdc0b47e1648b9dab84ababf912a601fc3485b6c73af61eb32a5ca32",
+      "comments": "同意",
+      "required_roles": [
+        "产品负责人",
+        "数据负责人",
+        "语言审校负责人"
+      ],
+      "review_status": "approved",
+      "reviewer_signatures": [
+        {
+          "evidence_ids": [
+            "EVD-D0-CONVENTIONS-APPROVAL-20260731"
+          ],
+          "person_name": "kevin",
+          "role": "产品负责人",
+          "signed_at": "2026-07-31"
+        },
+        {
+          "evidence_ids": [
+            "EVD-D0-CONVENTIONS-APPROVAL-20260731"
+          ],
+          "person_name": "kevin",
+          "role": "数据负责人",
+          "signed_at": "2026-07-31"
+        },
+        {
+          "evidence_ids": [
+            "EVD-D0-CONVENTIONS-APPROVAL-20260731"
+          ],
+          "person_name": "kevin",
+          "role": "语言审校负责人",
+          "signed_at": "2026-07-31"
+        }
+      ]
+    },
+    {
+      "artifact_id": "D0-ART-FILE-RULES",
+      "candidate": "file_rules.json",
+      "candidate_sha256": "ec3849833020b0df72624b26ae805cbc62cd06f3923fdd51e8bb6157a5f152f1",
+      "comments": "同意",
+      "required_roles": [
+        "数据负责人",
+        "合规负责人"
+      ],
+      "review_status": "approved",
+      "reviewer_signatures": [
+        {
+          "evidence_ids": [
+            "EVD-D0-FILE-RULES-APPROVAL-20260731"
+          ],
+          "person_name": "kevin",
+          "role": "数据负责人",
+          "signed_at": "2026-07-31"
+        },
+        {
+          "evidence_ids": [
+            "EVD-D0-FILE-RULES-APPROVAL-20260731"
+          ],
+          "person_name": "kevin",
+          "role": "合规负责人",
+          "signed_at": "2026-07-31"
+        }
+      ]
+    },
+    {
+      "artifact_id": "D0-ART-TERMINOLOGY",
+      "candidate": "terminology_review_queue.json",
+      "candidate_sha256": "e8057c35b44bdd3d8c6fdcc0cc844d34e1ba9fceaab8ecd5223742da1a65b3d2",
+      "comments": "同意",
+      "required_roles": [
+        "国家研究负责人",
+        "语言审校负责人"
+      ],
+      "review_status": "approved",
+      "reviewer_signatures": [
+        {
+          "evidence_ids": [
+            "EVD-D0-TERMINOLOGY-APPROVAL-20260731"
+          ],
+          "person_name": "kevin",
+          "role": "国家研究负责人",
+          "signed_at": "2026-07-31"
+        },
+        {
+          "evidence_ids": [
+            "EVD-D0-TERMINOLOGY-APPROVAL-20260731"
+          ],
+          "person_name": "kevin",
+          "role": "语言审校负责人",
+          "signed_at": "2026-07-31"
+        }
+      ]
+    }
+  ],
+  "baseline": {
+    "candidate_hashes": {
+      "acceptance_assessment.json": "dfbe7bdc00187680980a79ef24498d3aa55e2884215aa2a5ac750b6515831285",
+      "conventions.json": "1cf742b3bdc0b47e1648b9dab84ababf912a601fc3485b6c73af61eb32a5ca32",
+      "core_contract_resolution.template.json": "26cfe9dcc17eaa444dc06c7815ae71946d9f5c80bbf901344eefb62c59bf8fa3",
+      "core_entity_evidence.json": "023d2452d97912a37deb81931c11e3fc436b89664ac1f3af291674498099a3ad",
+      "core_field_evidence.json": "152d39d390688ace92bb2430d4f8205e01287db009ac1a2f19c6ff6a01788041",
+      "enum_migration_evidence.json": "1b52b70d442a4ff5c13ed8c4b7294fdd2897cf9527471892ce6300eba6afec71",
+      "file_rules.json": "ec3849833020b0df72624b26ae805cbc62cd06f3923fdd51e8bb6157a5f152f1",
+      "gold_standard_gap_report.json": "157efeb7157d594fb01aa44f1d927545b09ce2c78c7771f0161fb958554bb2c8",
+      "machine_evidence_review_queue.json": "1b439d1df30f21e10ed6921a62dc15fbda9ed1097c4fb9144aadc925142cedc9",
+      "mapping_resolution_proposal.json": "a9ba9fb665b7602da3c95c32a371c05196b3b8b540bf416cbb7faa5661c0f0f4",
+      "template_trial_report.json": "eddfcc94a73df607c16d9c1456b86be7d3f4bec0bbd54228033e21c6af884583",
+      "terminology_review_queue.json": "e8057c35b44bdd3d8c6fdcc0cc844d34e1ba9fceaab8ecd5223742da1a65b3d2"
+    },
+    "sources": {
+      "d0_workbook": {
+        "path": "doc/doc/新能源企业出海导航仪_D0数据标准冻结执行台账.xlsx",
+        "sha256": "123394d0ee1744edf86e201bd1c683cafdd222d1ff5c55221eb1f0798e2f0712"
+      },
+      "technical_workbook": {
+        "path": "doc/doc/新能源企业出海导航仪_V1.0技术附件_BASELINE.xlsx",
+        "sha256": "8b36f7cad337d72713f09c2b36d7eaf6ebe0bc2cd13f2bf0c05c45edbd065fb8"
+      }
+    },
+    "version": "V1.0-BASELINE"
+  },
+  "final_decision": {
+    "approved_at": null,
+    "approved_by": null,
+    "approver_role": "项目批准人",
+    "comments": null,
+    "evidence_ids": [],
+    "status": "pending"
+  },
+  "mapping_decisions": [
+    {
+      "change_request_id": "CR-D0-ISO3-20260731",
+      "confidence": "high",
+      "current_target": "country.iso3",
+      "decided_at": "2026-07-31",
+      "decided_by": "kevin",
+      "decider_role": "数据负责人",
+      "decision": "replace_target",
+      "evidence_ids": [
+        "EVD-D0-MAPPING-DECISIONS-20260731"
+      ],
+      "final_target": "country.iso_code",
+      "mapping_id": "MAP-ISO3",
+      "proposed_action": "replace_target",
+      "proposed_target": "country.iso_code",
+      "rationale": "Replace the obsolete country.iso3 target with the frozen ISO field.",
+      "reason": "DATA-COUNTRY-001已冻结为country.iso_code，正文示例也使用该字段",
+      "review_status": "approved"
+    },
+    {
+      "change_request_id": "CR-D0-COUNTRY-NAME-20260731",
+      "confidence": "not_assessed",
+      "current_target": "country.name_zh",
+      "decided_at": "2026-07-31",
+      "decided_by": "kevin",
+      "decider_role": "数据负责人",
+      "decision": "model_entity",
+      "evidence_ids": [
+        "EVD-D0-MAPPING-DECISIONS-20260731"
+      ],
+      "final_target": "localized_text",
+      "mapping_id": "MAP-COUNTRY-NAME",
+      "proposed_action": "domain_decision",
+      "proposed_target": null,
+      "rationale": "Model localized country names without adding a country.name_zh shortcut.",
+      "reason": "正文采用国家本地化名称实体，冻结字段清单没有country.name_zh",
+      "review_status": "approved"
+    },
+    {
+      "change_request_id": "CR-D0-POLICY-DATE-20260731",
+      "confidence": "not_assessed",
+      "current_target": "policy.published_at",
+      "decided_at": "2026-07-31",
+      "decided_by": "kevin",
+      "decider_role": "数据负责人",
+      "decision": "add_field",
+      "evidence_ids": [
+        "EVD-D0-MAPPING-DECISIONS-20260731"
+      ],
+      "final_target": "policy_version.published_at",
+      "mapping_id": "MAP-POLICY-DATE",
+      "proposed_action": "add_or_model_field",
+      "proposed_target": null,
+      "rationale": "Keep publication date separate from policy effective date.",
+      "reason": "published_at与已冻结effective_date语义不同，禁止直接互换",
+      "review_status": "approved"
+    },
+    {
+      "change_request_id": "CR-D0-PROJECT-CAP-20260731",
+      "confidence": "not_assessed",
+      "current_target": "project.capacity_mw",
+      "decided_at": "2026-07-31",
+      "decided_by": "kevin",
+      "decider_role": "数据负责人",
+      "decision": "add_field",
+      "evidence_ids": [
+        "EVD-D0-MAPPING-DECISIONS-20260731"
+      ],
+      "final_target": "project_version.capacity_value",
+      "mapping_id": "MAP-PROJECT-CAP",
+      "proposed_action": "add_or_model_field",
+      "proposed_target": null,
+      "rationale": "Add the canonical value and retain original value, unit, AC/DC side, and source precision as companion fields.",
+      "reason": "需同时定义原值、原单位、标准值、标准单位和精度",
+      "review_status": "approved"
+    },
+    {
+      "change_request_id": "CR-D0-AMOUNT-20260731",
+      "confidence": "not_assessed",
+      "current_target": "tender.budget_original",
+      "decided_at": "2026-07-31",
+      "decided_by": "kevin",
+      "decider_role": "数据负责人",
+      "decision": "add_field",
+      "evidence_ids": [
+        "EVD-D0-MAPPING-DECISIONS-20260731"
+      ],
+      "final_target": "tender.budget_original_value",
+      "mapping_id": "MAP-AMOUNT",
+      "proposed_action": "add_or_model_field",
+      "proposed_target": null,
+      "rationale": "Add the original budget value and retain currency, range, exchange-rate source, and exchange-rate base date.",
+      "reason": "需同时定义原币、原值、换算值、汇率来源和基准日",
+      "review_status": "approved"
+    },
+    {
+      "change_request_id": "CR-D0-ENTITY-20260731",
+      "confidence": "not_assessed",
+      "current_target": "partner.legal_name",
+      "decided_at": "2026-07-31",
+      "decided_by": "kevin",
+      "decider_role": "数据负责人",
+      "decision": "model_entity",
+      "evidence_ids": [
+        "EVD-D0-MAPPING-DECISIONS-20260731"
+      ],
+      "final_target": "legal_entity_name",
+      "mapping_id": "MAP-ENTITY",
+      "proposed_action": "domain_decision",
+      "proposed_target": null,
+      "rationale": "Model legal names as versioned names attached to the legal entity.",
+      "reason": "需先明确伙伴展示实体与法律主体主数据边界",
+      "review_status": "approved"
+    }
+  ],
+  "raw_sample_reviews": [
+    {
+      "ai_index_allowed": false,
+      "capture_metadata_complete": true,
+      "capture_record": "D0-CAPTURE-IDN-HEESI-2024",
+      "compliance_evidence_ids": [
+        "EVD-D0-SAMPLE-COMPLIANCE-20260801"
+      ],
+      "compliance_reviewed_at": "2026-07-31",
+      "compliance_reviewer": "kevin",
+      "compliance_reviewer_role": "合规负责人",
+      "country": "IDN",
+      "license_decision": "limited",
+      "license_snapshot_id": "LIC-IDN-ESDM-HEESI-2024-20260731",
+      "professional_evidence_ids": [
+        "EVD-D0-SAMPLE-PROFESSIONAL-20260801"
+      ],
+      "professional_review_status": "approved",
+      "professional_reviewed_at": "2026-07-31",
+      "professional_reviewer": "kevin",
+      "professional_reviewer_role": "国家研究负责人",
+      "raw_id": "RAW-EXAMPLE-001",
+      "redistribution_allowed": false,
+      "source_id": "SRC-IDN-ESDM"
+    },
+    {
+      "ai_index_allowed": false,
+      "capture_metadata_complete": true,
+      "capture_record": "D0-CAPTURE-VNM-EVN-2024-2025",
+      "compliance_evidence_ids": [
+        "EVD-D0-SAMPLE-COMPLIANCE-20260801"
+      ],
+      "compliance_reviewed_at": "2026-07-31",
+      "compliance_reviewer": "kevin",
+      "compliance_reviewer_role": "合规负责人",
+      "country": "VNM",
+      "license_decision": "limited",
+      "license_snapshot_id": "LIC-VNM-EVN-ANNUAL-REPORT-2024-2025-20260731",
+      "professional_evidence_ids": [
+        "EVD-D0-SAMPLE-PROFESSIONAL-20260801"
+      ],
+      "professional_review_status": "approved",
+      "professional_reviewed_at": "2026-07-31",
+      "professional_reviewer": "kevin",
+      "professional_reviewer_role": "国家研究负责人",
+      "raw_id": "RAW-EXAMPLE-002",
+      "redistribution_allowed": false,
+      "source_id": "SRC-VNM-EVN"
+    },
+    {
+      "ai_index_allowed": false,
+      "capture_metadata_complete": true,
+      "capture_record": "D0-CAPTURE-SAU-PB-ROUND7-QUALIFIED-DEVELOPERS-2025",
+      "compliance_evidence_ids": [
+        "EVD-D0-SAMPLE-COMPLIANCE-20260801"
+      ],
+      "compliance_reviewed_at": "2026-07-31",
+      "compliance_reviewer": "kevin",
+      "compliance_reviewer_role": "合规负责人",
+      "country": "SAU",
+      "license_decision": "limited",
+      "license_snapshot_id": "LIC-SAU-PB-ROUND7-QUALIFIED-DEVELOPERS-2025-20260731",
+      "professional_evidence_ids": [
+        "EVD-D0-SAMPLE-PROFESSIONAL-20260801"
+      ],
+      "professional_review_status": "approved",
+      "professional_reviewed_at": "2026-07-31",
+      "professional_reviewer": "kevin",
+      "professional_reviewer_role": "国家研究负责人",
+      "raw_id": "RAW-EXAMPLE-003",
+      "redistribution_allowed": false,
+      "source_id": "SRC-SAU-PB"
+    }
+  ],
+  "role_assignments": [
+    {
+      "alternate": "peter",
+      "approval_scope": "批准D0阶段结论、例外和升级事项",
+      "escalation_person": "bob",
+      "raci": "A",
+      "role": "项目批准人",
+      "role_holder": "kevin",
+      "signature_evidence_id": "EVD-D0-ROLE-ASSIGNMENTS-20260731",
+      "signed_at": "2026-07-31",
+      "status": "signed"
+    },
+    {
+      "alternate": "peter",
+      "approval_scope": "批准实体、字段、枚举、单位及映射基线",
+      "escalation_person": "bob",
+      "raci": "A/R（D0）",
+      "role": "数据负责人",
+      "role_holder": "kevin",
+      "signature_evidence_id": "EVD-D0-ROLE-ASSIGNMENTS-20260731",
+      "signed_at": "2026-07-31",
+      "status": "signed"
+    },
+    {
+      "alternate": "peter",
+      "approval_scope": "批准产品口径、多语言展示及业务枚举",
+      "escalation_person": "bob",
+      "raci": "C",
+      "role": "产品负责人",
+      "role_holder": "kevin",
+      "signature_evidence_id": "EVD-D0-ROLE-ASSIGNMENTS-20260731",
+      "signed_at": "2026-07-31",
+      "status": "signed"
+    },
+    {
+      "alternate": "peter",
+      "approval_scope": "批准试填、质量规则、问题关闭和验收证据",
+      "escalation_person": "bob",
+      "raci": "R",
+      "role": "数据质量负责人",
+      "role_holder": "kevin",
+      "signature_evidence_id": "EVD-D0-ROLE-ASSIGNMENTS-20260731",
+      "signed_at": "2026-07-31",
+      "status": "signed"
+    },
+    {
+      "alternate": "peter",
+      "approval_scope": "确认模板、采集和标准化规则可执行",
+      "escalation_person": "bob",
+      "raci": "R",
+      "role": "数据工程负责人",
+      "role_holder": "kevin",
+      "signature_evidence_id": "EVD-D0-ROLE-ASSIGNMENTS-20260731",
+      "signed_at": "2026-07-31",
+      "status": "signed"
+    },
+    {
+      "alternate": "peter",
+      "approval_scope": "复核来源、原件事实和金标准样本",
+      "escalation_person": "bob",
+      "raci": "R",
+      "role": "国家研究负责人",
+      "role_holder": "kevin",
+      "signature_evidence_id": "EVD-D0-ROLE-ASSIGNMENTS-20260731",
+      "signed_at": "2026-07-31",
+      "status": "signed"
+    },
+    {
+      "alternate": "peter",
+      "approval_scope": "复核术语、原文与译文口径",
+      "escalation_person": "bob",
+      "raci": "R/C",
+      "role": "语言审校负责人",
+      "role_holder": "kevin",
+      "signature_evidence_id": "EVD-D0-ROLE-ASSIGNMENTS-20260731",
+      "signed_at": "2026-07-31",
+      "status": "signed"
+    },
+    {
+      "alternate": "peter",
+      "approval_scope": "批准来源许可、再分发和AI使用边界",
+      "escalation_person": "bob",
+      "raci": "C",
+      "role": "合规负责人",
+      "role_holder": "kevin",
+      "signature_evidence_id": "EVD-D0-ROLE-ASSIGNMENTS-20260731",
+      "signed_at": "2026-07-31",
+      "status": "signed"
+    },
+    {
+      "alternate": "peter",
+      "approval_scope": "确认实体关系、字段类型和技术约束可实现",
+      "escalation_person": "bob",
+      "raci": "C",
+      "role": "后端/数据架构负责人",
+      "role_holder": "kevin",
+      "signature_evidence_id": "EVD-D0-ROLE-ASSIGNMENTS-20260731",
+      "signed_at": "2026-07-31",
+      "status": "signed"
+    }
+  ],
+  "schema_version": 3,
+  "stage": "D0",
+  "template_only": false,
+  "warning": "This is a proposed post-adoption migration of existing named D0 decisions. It requires the project approver to review the exact migration bundle hash; AC-009/010 and the final D0 decision remain pending."
+}

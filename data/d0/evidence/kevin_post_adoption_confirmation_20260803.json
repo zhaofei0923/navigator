@@ -1,0 +1,19 @@
+{
+  "authorized_transcription": true,
+  "bundle": {
+    "path": "data/d0/candidates/d0_post_adoption_review_bundle.2026-08-03.json",
+    "sha256": "5324be51513cb109730d2c2f8932db121c7dda6d8b6dfbd14608ce823124b81a"
+  },
+  "comments": "同意",
+  "confirmation_type": "post_adoption_review_migration",
+  "decision": "approved",
+  "expected_reviewer": "kevin",
+  "proposed_review_packet_sha256": "a82bf4a56044850428647fdbaa460999760c5fe11657568b1ab67d7e2b8da91b",
+  "review_output": "data/d0/review/d0_review_packet.2026-08-03.json",
+  "reviewed_at": "2026-08-03",
+  "reviewer": "kevin",
+  "schema_version": 1,
+  "stage": "D0",
+  "template_only": false,
+  "warning": "Complete only after the signed project approver reviews the exact bundle SHA-256. Approval authorizes transcription of only the proposed review packet and does not approve D0-AC-009/010, the final D0 decision, D4, or user-facing development."
+}
