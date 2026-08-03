@@ -163,13 +163,17 @@
 
    为该精确候选包生成空白实名确认模板，并绑定唯一的下一版评审路径：
 
+   正式评审文件支持跨日版本`d0_review_packet.<ISO-date>.json`，也支持同日连续审核的
+   `d0_review_packet.<ISO-date>.02.json`、`.03.json`等顺序版本。同日序号从`02`开始，
+   必须连续递增；生成器按日期和序号选取最新版，拒绝覆盖、倒序、跳号和非规范文件名。
+
    ```bash
    uv run navigator-data prepare-d0-ac009-confirmation \
      --authorization data/d0/candidates/d0_baseline_publication_authorization.<date>.json \
      --review data/d0/review/d0_review_packet.<date>.json \
      --bundle data/d0/candidates/d0_ac009_review_bundle.<date>.json \
-     --review-output data/d0/review/d0_review_packet.<later-date>.json \
-     --output data/d0/review/d0_ac009_confirmation.template.<later-date>.json
+     --review-output data/d0/review/d0_review_packet.<same-or-later-batch>.json \
+     --output data/d0/review/d0_ac009_confirmation.template.<same-or-later-batch>.json
    ```
 
    数据负责人和项目批准人分别审核候选包精确SHA-256；即使由同一人兼任，也要保留两条
@@ -182,7 +186,7 @@
      --authorization data/d0/candidates/d0_baseline_publication_authorization.<date>.json \
      --review data/d0/review/d0_review_packet.<date>.json \
      --bundle data/d0/candidates/d0_ac009_review_bundle.<date>.json \
-     --review-output data/d0/review/d0_review_packet.<later-date>.json \
+     --review-output data/d0/review/d0_review_packet.<same-or-later-batch>.json \
      --manifest-output data/d0/evidence/manifest.json
    ```
 
@@ -208,8 +212,8 @@
      --authorization data/d0/candidates/d0_baseline_publication_authorization.<date>.json \
      --review data/d0/review/d0_review_packet.<date>.json \
      --bundle data/d0/candidates/d0_final_review_bundle.<date>.json \
-     --review-output data/d0/review/d0_review_packet.<later-date>.json \
-     --output data/d0/review/d0_final_confirmation.template.<later-date>.json
+     --review-output data/d0/review/d0_review_packet.<same-or-later-batch>.json \
+     --output data/d0/review/d0_final_confirmation.template.<same-or-later-batch>.json
    ```
 
    项目批准人必须分别填写AC-010验收签署和最终决定签署，两者均绑定同一精确候选包哈希，
@@ -221,7 +225,7 @@
      --authorization data/d0/candidates/d0_baseline_publication_authorization.<date>.json \
      --review data/d0/review/d0_review_packet.<date>.json \
      --bundle data/d0/candidates/d0_final_review_bundle.<date>.json \
-     --review-output data/d0/review/d0_review_packet.<later-date>.json \
+     --review-output data/d0/review/d0_review_packet.<same-or-later-batch>.json \
      --manifest-output data/d0/evidence/manifest.json
    ```
 

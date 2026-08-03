@@ -1,0 +1,43 @@
+{
+  "authorized_transcription": false,
+  "bound_current_head": "c0ddd17bf3ad2176599b7ac0046c6c0d46c2aa63",
+  "bundle": {
+    "path": "data/d0/candidates/d0_ac009_review_bundle.2026-08-03.json",
+    "sha256": "f67a82d001e3ab2fe047cba3ffa03415239ee37fe8e760930cfcdeb85a4add29"
+  },
+  "comments": null,
+  "confirmation_type": "ac009_closure_review",
+  "decision": null,
+  "expected_signatures": [
+    {
+      "person_name": "kevin",
+      "role": "数据负责人"
+    },
+    {
+      "person_name": "kevin",
+      "role": "项目批准人"
+    }
+  ],
+  "review_output": "data/d0/review/d0_review_packet.2026-08-03.02.json",
+  "schema_version": 1,
+  "signatures": [
+    {
+      "person_name": "kevin",
+      "role": "数据负责人",
+      "signed_at": null
+    },
+    {
+      "person_name": "kevin",
+      "role": "项目批准人",
+      "signed_at": null
+    }
+  ],
+  "source_review": {
+    "git_blob": "4c224cfc606466d66f3bc0b0504d5d327fd4e997",
+    "path": "data/d0/review/d0_review_packet.2026-08-03.json",
+    "sha256": "a82bf4a56044850428647fdbaa460999760c5fe11657568b1ab67d7e2b8da91b"
+  },
+  "stage": "D0",
+  "template_only": true,
+  "warning": "Complete only after every named D0-AC-009 role holder reviews the exact bundle SHA-256. Approval authorizes only AC-009 transcription; AC-010, the final D0 decision, D4, and user-facing development remain blocked."
+}

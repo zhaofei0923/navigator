@@ -27,7 +27,7 @@ def test_current_d0_gate_fails_honestly() -> None:
             for blocker in report.blockers
             if blocker.code == "D0_ACCEPTANCE_PENDING"
         )
-    } == {"D0-AC-009", "D0-AC-010"}
+    } == {"D0-AC-010"}
     assert not any(
         any(f"D0-AC-{index:03d}" in blocker.message for index in range(1, 9))
         for blocker in report.blockers

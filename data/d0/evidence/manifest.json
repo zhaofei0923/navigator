@@ -199,6 +199,32 @@
       "status": "已批准",
       "subject_path": "data/d0/candidates/d0_baseline_adoption_review_bundle.2026-08-02.json",
       "subject_sha256": "b128177436355394b5a271c307f388020904b252c232b64be5fd7cb5e0ec82e2"
+    },
+    {
+      "acceptance_id": "D0-AC-009",
+      "evidence_id": "EVD-D0-AC-009-CLOSURE-R01-20260803",
+      "path": "data/d0/evidence/kevin_ac009_confirmation_20260803_02.json",
+      "recorded_at": "2026-08-03",
+      "recorded_by": "codex (authorized transcription)",
+      "reviewer": "kevin",
+      "reviewer_role": "数据负责人",
+      "sha256": "d3893fc71480ac76bafb18267e21eac0f42b96a0960257fe6eae08b786cf370f",
+      "status": "已批准",
+      "subject_path": "data/d0/candidates/d0_ac009_review_bundle.2026-08-03.json",
+      "subject_sha256": "f67a82d001e3ab2fe047cba3ffa03415239ee37fe8e760930cfcdeb85a4add29"
+    },
+    {
+      "acceptance_id": "D0-AC-009",
+      "evidence_id": "EVD-D0-AC-009-CLOSURE-R02-20260803",
+      "path": "data/d0/evidence/kevin_ac009_confirmation_20260803_02.json",
+      "recorded_at": "2026-08-03",
+      "recorded_by": "codex (authorized transcription)",
+      "reviewer": "kevin",
+      "reviewer_role": "项目批准人",
+      "sha256": "d3893fc71480ac76bafb18267e21eac0f42b96a0960257fe6eae08b786cf370f",
+      "status": "已批准",
+      "subject_path": "data/d0/candidates/d0_ac009_review_bundle.2026-08-03.json",
+      "subject_sha256": "f67a82d001e3ab2fe047cba3ffa03415239ee37fe8e760930cfcdeb85a4add29"
     }
   ],
   "schema_version": 1,

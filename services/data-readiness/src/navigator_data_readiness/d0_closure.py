@@ -16,6 +16,7 @@ from .d0_baseline_adoption import (
 from .d0_review import validate_review_packet
 from .paths import RepositoryPaths
 from .readiness import build_readiness_report
+from .review_packets import latest_review_packet
 
 _CARRIED_ACCEPTANCE_IDS = {f"D0-AC-{number:03d}" for number in range(1, 9)}
 _PENDING_ACCEPTANCE_IDS = {"D0-AC-009", "D0-AC-010"}
@@ -120,14 +121,10 @@ def _dated_output(path: Path) -> str:
 
 
 def _latest_review_packet(paths: RepositoryPaths) -> Path:
-    packets = sorted(
-        path
-        for path in paths.d0_review_dir.glob("d0_review_packet.*.json")
-        if path.name != "d0_review_packet.template.json"
-    )
-    if not packets:
+    packet = latest_review_packet(paths.d0_review_dir)
+    if packet is None:
         raise ValueError("A completed D0 review packet is required")
-    return packets[-1]
+    return packet
 
 
 def _indexed_items(

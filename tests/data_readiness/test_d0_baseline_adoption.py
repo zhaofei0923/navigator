@@ -911,6 +911,31 @@ def test_ac009_confirmation_template_binds_roles_hash_and_output(
         )
 
 
+def test_ac009_confirmation_allows_the_next_same_day_review_packet(
+    tmp_path: Path,
+) -> None:
+    paths, approval_commit = _isolated_repository(tmp_path)
+    authorization, review_path, _current_head = _prepare_committed_post_adoption_state(
+        paths,
+        approval_commit,
+    )
+    bundle_path = paths.d0_candidates_dir / "d0_ac009_review_bundle.2026-08-03.json"
+    write_d0_ac009_review_bundle(paths, authorization, review_path, bundle_path)
+    review_output = paths.d0_review_dir / "d0_review_packet.2026-08-03.02.json"
+    template_path = paths.d0_review_dir / "d0_ac009_confirmation.template.2026-08-03.02.json"
+
+    written = write_d0_ac009_confirmation_template(
+        paths,
+        authorization,
+        review_path,
+        bundle_path,
+        review_output,
+        template_path,
+    )
+
+    assert _load(written)["review_output"] == review_output.relative_to(paths.root).as_posix()
+
+
 def test_ac009_confirmation_applies_review_and_evidence_atomically(
     tmp_path: Path,
 ) -> None:
@@ -1228,6 +1253,31 @@ def test_final_review_bundle_rejects_uncommitted_ac009_state(tmp_path: Path) -> 
             review_output,
             _final_bundle_output(paths),
         )
+
+
+def test_final_confirmation_allows_the_next_same_day_review_packet(
+    tmp_path: Path,
+) -> None:
+    paths, approval_commit = _isolated_repository(tmp_path)
+    authorization, review_path, _current_head = _prepare_committed_ac009_state(
+        paths,
+        approval_commit,
+    )
+    bundle_path = paths.d0_candidates_dir / "d0_final_review_bundle.2026-08-05.json"
+    write_d0_final_review_bundle(paths, authorization, review_path, bundle_path)
+    review_output = paths.d0_review_dir / "d0_review_packet.2026-08-05.02.json"
+    template_path = paths.d0_review_dir / "d0_final_confirmation.template.2026-08-05.02.json"
+
+    written = write_d0_final_confirmation_template(
+        paths,
+        authorization,
+        review_path,
+        bundle_path,
+        review_output,
+        template_path,
+    )
+
+    assert _load(written)["review_output"] == review_output.relative_to(paths.root).as_posix()
 
 
 def test_final_confirmation_reaches_zero_blocker_d0_gate(tmp_path: Path) -> None:

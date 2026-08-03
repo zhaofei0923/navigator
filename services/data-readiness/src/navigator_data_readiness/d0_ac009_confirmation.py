@@ -15,6 +15,7 @@ from .baseline import sha256_file
 from .d0_closure import load_and_validate_d0_ac009_review_bundle
 from .d0_review import validate_review_packet
 from .paths import RepositoryPaths
+from .review_packets import validate_new_review_packet_path
 from .validation import validate_evidence
 
 _CONFIRMATION_FIELDS = {
@@ -99,13 +100,12 @@ def _validate_review_output(
     bundle_date: date,
 ) -> tuple[str, date]:
     _require_directory(review_output, paths.d0_review_dir, label="D0 AC-009 review output")
-    output_date = _dated_artifact(review_output, label="D0 AC-009 review output")
-    if review_output.name != f"d0_review_packet.{output_date.isoformat()}.json":
-        raise ValueError("D0 AC-009 review output must be named d0_review_packet.<ISO-date>.json")
-    if output_date < bundle_date:
-        raise ValueError("D0 AC-009 review output cannot predate the reviewed bundle")
-    if review_output.exists():
-        raise FileExistsError(f"Refusing to overwrite {review_output}")
+    output_date = validate_new_review_packet_path(
+        review_output,
+        paths.d0_review_dir,
+        minimum_date=bundle_date,
+        label="D0 AC-009 review output",
+    )
     return _relative_path(paths, review_output, label="D0 AC-009 review output"), output_date
 
 

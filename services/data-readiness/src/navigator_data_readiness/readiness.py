@@ -19,6 +19,7 @@ from .d0_candidates import (
 from .d0_review import validate_review_packet
 from .models import CheckResult, ReadinessReport, StageSummary
 from .paths import RepositoryPaths
+from .review_packets import review_packet_paths
 from .validation import validate_evidence, validate_structure
 
 COMPLETE_TASK_STATES = {"已完成", "完成", "通过", "已通过"}
@@ -96,11 +97,7 @@ def _has_review_error(
 
 def _load_review_progress(paths: RepositoryPaths) -> D0ReviewProgress:
     progress = D0ReviewProgress()
-    packet_paths = sorted(
-        path
-        for path in paths.d0_review_dir.glob("d0_review_packet.*.json")
-        if path.name != "d0_review_packet.template.json"
-    )
+    packet_paths = review_packet_paths(paths.d0_review_dir)
     if not packet_paths:
         return progress
     packet_path = packet_paths[-1]

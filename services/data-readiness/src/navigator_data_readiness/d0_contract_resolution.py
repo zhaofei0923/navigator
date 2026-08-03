@@ -14,6 +14,7 @@ from .d0_candidates import (
 from .d0_review import validate_review_packet
 from .models import CheckResult
 from .paths import RepositoryPaths
+from .review_packets import latest_review_packet
 
 READY_FOR_BASELINE_CHANGE_REVIEW = "ready_for_baseline_change_review"
 PROPOSED = "proposed"
@@ -167,12 +168,7 @@ def _evidence_ids(
 
 
 def _latest_formal_review(paths: RepositoryPaths) -> Path | None:
-    candidates = sorted(
-        path
-        for path in paths.d0_review_dir.glob("d0_review_packet.*.json")
-        if ".template." not in path.name
-    )
-    return candidates[-1] if candidates else None
+    return latest_review_packet(paths.d0_review_dir)
 
 
 def _role_holders(

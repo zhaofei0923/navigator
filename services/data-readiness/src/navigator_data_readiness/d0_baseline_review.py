@@ -14,6 +14,7 @@ from .baseline import sha256_file
 from .d0_baseline_change import assess_d0_baseline_change
 from .d0_review import validate_review_packet
 from .paths import RepositoryPaths
+from .review_packets import latest_review_packet
 from .validation import APPROVED_EVIDENCE_STATES, validate_evidence
 
 _EXPECTED_PENDING_REVIEW_CODES = {
@@ -60,10 +61,10 @@ def _binding(paths: RepositoryPaths, path: Path, *, label: str) -> dict[str, str
 
 
 def _latest_formal_review(paths: RepositoryPaths) -> Path:
-    reviews = sorted(paths.d0_review_dir.glob("d0_review_packet.????-??-??.json"))
-    if not reviews:
+    review = latest_review_packet(paths.d0_review_dir)
+    if review is None:
         raise ValueError("No formal D0 review packet is available")
-    return reviews[-1].resolve()
+    return review.resolve()
 
 
 def _approved_acceptance(review_packet: dict[str, Any]) -> list[dict[str, Any]]:
