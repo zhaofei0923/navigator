@@ -4,7 +4,7 @@
       "acceptance_id": "D0-AC-001",
       "comments": null,
       "hard_gate": true,
-      "machine_status": "fail",
+      "machine_status": "pass",
       "required_roles": [
         "数据负责人",
         "后端/数据架构负责人"
@@ -30,7 +30,7 @@
       "acceptance_id": "D0-AC-002",
       "comments": null,
       "hard_gate": true,
-      "machine_status": "fail",
+      "machine_status": "pass",
       "required_roles": [
         "数据负责人",
         "数据质量负责人"
@@ -337,15 +337,15 @@
   ],
   "baseline": {
     "candidate_hashes": {
-      "acceptance_assessment.json": "14b88413ab73834b70fd02451fcef8a7213d52011251a721f8a83a30383d570b",
+      "acceptance_assessment.json": "dfbe7bdc00187680980a79ef24498d3aa55e2884215aa2a5ac750b6515831285",
       "conventions.json": "1cf742b3bdc0b47e1648b9dab84ababf912a601fc3485b6c73af61eb32a5ca32",
-      "core_contract_resolution.template.json": "7b3f75f7a96da6c252cceaaaada5879c84ba578a4234f9589742a5712012afe1",
-      "core_entity_evidence.json": "9ff89d13dd829d1d7022d777eba2630c9257165a28d386be94054750f6cc162b",
-      "core_field_evidence.json": "77e5b77c6fa5f5e2ae62e4b726b529b87debf91526fff81fcdc618197f5d5d79",
-      "enum_migration_evidence.json": "124bef79891f4d1d18037ae0f4463190a65b4e782f41faa62a346974691fd0d0",
+      "core_contract_resolution.template.json": "26cfe9dcc17eaa444dc06c7815ae71946d9f5c80bbf901344eefb62c59bf8fa3",
+      "core_entity_evidence.json": "023d2452d97912a37deb81931c11e3fc436b89664ac1f3af291674498099a3ad",
+      "core_field_evidence.json": "152d39d390688ace92bb2430d4f8205e01287db009ac1a2f19c6ff6a01788041",
+      "enum_migration_evidence.json": "1b52b70d442a4ff5c13ed8c4b7294fdd2897cf9527471892ce6300eba6afec71",
       "file_rules.json": "ec3849833020b0df72624b26ae805cbc62cd06f3923fdd51e8bb6157a5f152f1",
       "gold_standard_gap_report.json": "157efeb7157d594fb01aa44f1d927545b09ce2c78c7771f0161fb958554bb2c8",
-      "machine_evidence_review_queue.json": "cd7a504d79cef7589ffe97574b0d83d73c86921bec19fc94414a73f55713cfc7",
+      "machine_evidence_review_queue.json": "1b439d1df30f21e10ed6921a62dc15fbda9ed1097c4fb9144aadc925142cedc9",
       "mapping_resolution_proposal.json": "a9ba9fb665b7602da3c95c32a371c05196b3b8b540bf416cbb7faa5661c0f0f4",
       "template_trial_report.json": "eddfcc94a73df607c16d9c1456b86be7d3f4bec0bbd54228033e21c6af884583",
       "terminology_review_queue.json": "e8057c35b44bdd3d8c6fdcc0cc844d34e1ba9fceaab8ecd5223742da1a65b3d2"
@@ -353,7 +353,7 @@
     "sources": {
       "d0_workbook": {
         "path": "doc/doc/新能源企业出海导航仪_D0数据标准冻结执行台账.xlsx",
-        "sha256": "224e9a35bcbb363cf41c007499ba32aa6394cfdbf06331830c02d994e1c7ddff"
+        "sha256": "123394d0ee1744edf86e201bd1c683cafdd222d1ff5c55221eb1f0798e2f0712"
       },
       "technical_workbook": {
         "path": "doc/doc/新能源企业出海导航仪_V1.0技术附件_BASELINE.xlsx",

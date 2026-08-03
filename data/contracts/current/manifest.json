@@ -15,7 +15,7 @@
     "enums": "1071b0cf447a3cf27dbf835102068e602233197e0b9407e741858ad4f9784267",
     "feature_requirements": "52b12b6e3b8c1da2fb288083a4fad51dd83a930a80a41eb4a436110df96e4ec9",
     "field_mapping_template": "1d2f7c983056685e43551fcd8fcb2f787edaaae957b2ed89ef543e614af163ee",
-    "fields": "0b4aafcb87e75bef83dd90dca00bf43c0d28920b945efd10dd4ac17aabb40529",
+    "fields": "cebd405819d944a9313242dbc814d2efc3096d19197bb85185e26400622cd08a",
     "identifier_migrations": "3454c7f51b0bb82a941c1f84876ac44f47706a748cc98d53e4eeba3bd91bf9e2",
     "mvp_acceptance": "832d12d12724a8d2f89d5668b7c36185d1c7eb13a60caaef28f4f6460df1804f",
     "page_routes": "fab64ec1fd5f9f7f4d47e097679d7c33e4fdc8f695e7db23861b77cc33d785de",
@@ -27,7 +27,7 @@
     "source_registry_seed": "4b71615c664cecaff394c90c2a6f03fc9facb1761f39b83949bd238f8ec4c6f4",
     "test_cases": "7a8a43ed64d8abdd42fe837532905c7588f69761ad62bf834c0d55079f010330"
   },
-  "generated_at": "2026-07-31T06:42:09+00:00",
+  "generated_at": "2026-08-03T01:58:46+00:00",
   "record_counts": {
     "api_catalog": 70,
     "collection_batch_template": 6,
@@ -43,7 +43,7 @@
     "enums": 251,
     "feature_requirements": 103,
     "field_mapping_template": 6,
-    "fields": 92,
+    "fields": 158,
     "identifier_migrations": 13,
     "mvp_acceptance": 11,
     "page_routes": 166,
@@ -59,7 +59,7 @@
   "sources": {
     "d0_workbook": {
       "path": "doc/doc/新能源企业出海导航仪_D0数据标准冻结执行台账.xlsx",
-      "sha256": "224e9a35bcbb363cf41c007499ba32aa6394cfdbf06331830c02d994e1c7ddff"
+      "sha256": "123394d0ee1744edf86e201bd1c683cafdd222d1ff5c55221eb1f0798e2f0712"
     },
     "technical_workbook": {
       "path": "doc/doc/新能源企业出海导航仪_V1.0技术附件_BASELINE.xlsx",

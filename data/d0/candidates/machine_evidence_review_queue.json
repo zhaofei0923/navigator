@@ -11,10 +11,10 @@
       "acceptance_id": "D0-AC-001",
       "approval_blocked_when_machine_status_not_pass": true,
       "candidate_path": "data/d0/candidates/core_entity_evidence.json",
-      "candidate_sha256": "5791b648d851e614b4744d57c83b9d9022c44fb791ace34e8b9cf9c57c02fad5",
+      "candidate_sha256": "af3c888f03c1237afd61fa343c6f910e62b56316213080348c36891a81bc3c22",
       "evidence_id": "EVD-D0-AC-001-MACHINE-BASELINE",
       "human_status": "pending",
-      "machine_status": "fail",
+      "machine_status": "pass",
       "manifest_entry_template": {
         "acceptance_id": "D0-AC-001",
         "evidence_id": "EVD-D0-AC-001-MACHINE-BASELINE",
@@ -22,7 +22,7 @@
         "recorded_at": null,
         "recorded_by": "navigator-data prepare-d0",
         "reviewer": null,
-        "sha256": "5791b648d851e614b4744d57c83b9d9022c44fb791ace34e8b9cf9c57c02fad5",
+        "sha256": "af3c888f03c1237afd61fa343c6f910e62b56316213080348c36891a81bc3c22",
         "status": "待复核"
       },
       "required_reviewer_roles": [
@@ -34,10 +34,10 @@
       "acceptance_id": "D0-AC-002",
       "approval_blocked_when_machine_status_not_pass": true,
       "candidate_path": "data/d0/candidates/core_field_evidence.json",
-      "candidate_sha256": "d4a4bcc19c963c2a04abe75c33dd355cd19a33857ce80cad8ae719531e55d640",
+      "candidate_sha256": "1d40376db4fad6f2db1d764070d31502e2572449223e2d6171a42fc7da56be68",
       "evidence_id": "EVD-D0-AC-002-MACHINE-BASELINE",
       "human_status": "pending",
-      "machine_status": "fail",
+      "machine_status": "pass",
       "manifest_entry_template": {
         "acceptance_id": "D0-AC-002",
         "evidence_id": "EVD-D0-AC-002-MACHINE-BASELINE",
@@ -45,7 +45,7 @@
         "recorded_at": null,
         "recorded_by": "navigator-data prepare-d0",
         "reviewer": null,
-        "sha256": "d4a4bcc19c963c2a04abe75c33dd355cd19a33857ce80cad8ae719531e55d640",
+        "sha256": "1d40376db4fad6f2db1d764070d31502e2572449223e2d6171a42fc7da56be68",
         "status": "待复核"
       },
       "required_reviewer_roles": [
@@ -57,7 +57,7 @@
       "acceptance_id": "D0-AC-003",
       "approval_blocked_when_machine_status_not_pass": true,
       "candidate_path": "data/d0/candidates/enum_migration_evidence.json",
-      "candidate_sha256": "2631d3ef2cff7ed5de7952877c07779565608e4de05601d7508ebb0f70472283",
+      "candidate_sha256": "391d2d18cb17adb4a1759d17daa314ed8dfa22faf2c816ab90fabc4a80ff5cc2",
       "evidence_id": "EVD-D0-AC-003-MACHINE-BASELINE",
       "human_status": "pending",
       "machine_status": "pass",
@@ -68,7 +68,7 @@
         "recorded_at": null,
         "recorded_by": "navigator-data prepare-d0",
         "reviewer": null,
-        "sha256": "2631d3ef2cff7ed5de7952877c07779565608e4de05601d7508ebb0f70472283",
+        "sha256": "391d2d18cb17adb4a1759d17daa314ed8dfa22faf2c816ab90fabc4a80ff5cc2",
         "status": "待复核"
       },
       "required_reviewer_roles": [

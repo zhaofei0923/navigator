@@ -18,38 +18,8 @@
     {
       "check_id": "ENTITY-PRIMARY-KEY-COVERAGE",
       "description": "每个关系实体必须在字段合同中显式标记主键",
-      "findings": [
-        "country",
-        "country_metric_value",
-        "enterprise_member",
-        "enterprise_profile_version",
-        "field_provenance",
-        "legal_entity",
-        "metric_definition",
-        "partner",
-        "partner_recommendation",
-        "policy",
-        "policy_version",
-        "project",
-        "project_opportunity_assessment",
-        "project_version",
-        "quality_issue",
-        "raw_record",
-        "region",
-        "report",
-        "retrieval_run",
-        "review_task",
-        "risk",
-        "risk_assessment",
-        "scoring_adjustment",
-        "scoring_model_version",
-        "scoring_result",
-        "scoring_rule",
-        "source_family",
-        "source_snapshot",
-        "tender"
-      ],
-      "status": "fail"
+      "findings": [],
+      "status": "pass"
     },
     {
       "check_id": "ENTITY-RELATION-KEY-PRESENT",
@@ -70,42 +40,7 @@
       "status": "pass"
     }
   ],
-  "findings": [
-    {
-      "check_id": "ENTITY-PRIMARY-KEY-COVERAGE",
-      "findings": [
-        "country",
-        "country_metric_value",
-        "enterprise_member",
-        "enterprise_profile_version",
-        "field_provenance",
-        "legal_entity",
-        "metric_definition",
-        "partner",
-        "partner_recommendation",
-        "policy",
-        "policy_version",
-        "project",
-        "project_opportunity_assessment",
-        "project_version",
-        "quality_issue",
-        "raw_record",
-        "region",
-        "report",
-        "retrieval_run",
-        "review_task",
-        "risk",
-        "risk_assessment",
-        "scoring_adjustment",
-        "scoring_model_version",
-        "scoring_result",
-        "scoring_rule",
-        "source_family",
-        "source_snapshot",
-        "tender"
-      ]
-    }
-  ],
+  "findings": [],
   "human_review_scope": [
     "确认关系表中的实体代码覆盖全部核心实体",
     "确认每个核心实体的主键合同；缺失项必须补充基线或记录正式例外",
@@ -152,15 +87,44 @@
     ],
     "primary_key_entities": [
       "app_user",
+      "country",
+      "country_metric_value",
       "data_record_version",
       "enterprise",
+      "enterprise_member",
+      "enterprise_profile_version",
+      "field_provenance",
+      "legal_entity",
+      "metric_definition",
+      "partner",
+      "partner_recommendation",
+      "policy",
+      "policy_version",
+      "project",
+      "project_opportunity_assessment",
+      "project_version",
+      "quality_issue",
+      "raw_record",
+      "region",
+      "report",
+      "retrieval_run",
+      "review_task",
+      "risk",
+      "risk_assessment",
+      "scoring_adjustment",
+      "scoring_model_version",
+      "scoring_result",
+      "scoring_rule",
       "scoring_run",
-      "source_registry"
+      "source_family",
+      "source_registry",
+      "source_snapshot",
+      "tender"
     ],
-    "primary_key_entity_count": 5,
+    "primary_key_entity_count": 34,
     "relationship_count": 25
   },
-  "machine_status": "fail",
+  "machine_status": "pass",
   "required_reviewer_roles": [
     "数据负责人",
     "后端/数据架构负责人"
@@ -170,7 +134,7 @@
     "baseline_version": "V1.0-BASELINE",
     "d0_workbook": {
       "path": "doc/doc/新能源企业出海导航仪_D0数据标准冻结执行台账.xlsx",
-      "sha256": "224e9a35bcbb363cf41c007499ba32aa6394cfdbf06331830c02d994e1c7ddff"
+      "sha256": "123394d0ee1744edf86e201bd1c683cafdd222d1ff5c55221eb1f0798e2f0712"
     },
     "technical_workbook": {
       "path": "doc/doc/新能源企业出海导航仪_V1.0技术附件_BASELINE.xlsx",

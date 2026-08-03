@@ -1,11 +1,11 @@
 {
   "append_only": true,
   "baseline": {
-    "d3_input_sha256": "639696e80f11639c0fff94e93672a24cd4de887e0e77855f12a4483a62df35af",
+    "d3_input_sha256": "1c17caa5fd17358aeb8339a59e7b576316e942694949b371a2859f13becf6e5b",
     "sources": {
       "d0_workbook": {
         "path": "doc/doc/新能源企业出海导航仪_D0数据标准冻结执行台账.xlsx",
-        "sha256": "224e9a35bcbb363cf41c007499ba32aa6394cfdbf06331830c02d994e1c7ddff"
+        "sha256": "123394d0ee1744edf86e201bd1c683cafdd222d1ff5c55221eb1f0798e2f0712"
       },
       "technical_workbook": {
         "path": "doc/doc/新能源企业出海导航仪_V1.0技术附件_BASELINE.xlsx",

@@ -26,7 +26,7 @@ def test_contract_snapshot_contains_frozen_scope() -> None:
 
     assert len(contracts["countries"]) == 5
     assert len(contracts["entities"]) == 25
-    assert len(contracts["fields"]) == 92
+    assert len(contracts["fields"]) == 158
     assert len(contracts["enums"]) == 251
     assert {record["ISO3"] for record in contracts["countries"]} == {
         "IDN",
@@ -69,7 +69,7 @@ def test_write_snapshot_exports_all_contracts(tmp_path: Path) -> None:
     manifest = json.loads((paths.contracts_dir / "manifest.json").read_text(encoding="utf-8"))
 
     assert len(written) == 26
-    assert manifest["record_counts"]["fields"] == 92
+    assert manifest["record_counts"]["fields"] == 158
     assert manifest["record_counts"]["enums"] == 251
     assert manifest["record_counts"]["feature_requirements"] == 103
     assert manifest["record_counts"]["page_routes"] == 166

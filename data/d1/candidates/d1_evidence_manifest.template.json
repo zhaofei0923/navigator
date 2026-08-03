@@ -242,13 +242,13 @@
     }
   ],
   "baseline": {
-    "matrix_template_sha256": "5bc37e931e3c47480c78a72652929451ac13ec2e71c79206a17a0334ad02277e",
+    "matrix_template_sha256": "ac0aaad6d157a82b9e47fd333cf3912a742e733bbf55ef8eb9523712ecb2b8c2",
     "registry_baseline": {
       "d1_input_sha256": "2241b398b288a751e05e46a1275dad97a532c3cd6bc3f89143fee1ef5f47c970",
       "sources": {
         "d0_workbook": {
           "path": "doc/doc/新能源企业出海导航仪_D0数据标准冻结执行台账.xlsx",
-          "sha256": "224e9a35bcbb363cf41c007499ba32aa6394cfdbf06331830c02d994e1c7ddff"
+          "sha256": "123394d0ee1744edf86e201bd1c683cafdd222d1ff5c55221eb1f0798e2f0712"
         },
         "official_source_research_catalog": {
           "path": "data/d1/research/official_source_candidates.json",
@@ -261,7 +261,7 @@
       },
       "version": "V1.0-BASELINE"
     },
-    "registry_template_sha256": "7064f0bc7a5b524a32687abdde2360e0da175bdaf4d898f8f2a1d11d5a727047",
+    "registry_template_sha256": "5a26523f3f1c815b56bfca5cdf60a233f515706429ba0e1fc66581fa581d3680",
     "research_catalog_evidence": {
       "path": "data/d1/evidence/research_catalog_baseline.json",
       "sha256": "de249e1058b39c6b19d405da949d3c7b66f5a6f984566e9bee2b54f4cd3e56d3"

@@ -41,7 +41,13 @@ from navigator_data_readiness.d0_final_confirmation import (
     write_d0_final_confirmation_template,
 )
 from navigator_data_readiness.d0_review import validate_review_packet
-from navigator_data_readiness.paths import RepositoryPaths, discover_repository
+from navigator_data_readiness.paths import (
+    RepositoryPaths,
+    discover_repository,
+)
+from navigator_data_readiness.paths import (
+    discover_repository as discover_current_repository,
+)
 from navigator_data_readiness.readiness import build_readiness_report
 
 
@@ -282,7 +288,7 @@ def _completed_final_confirmation(template_path: Path) -> dict[str, Any]:
     return confirmation
 
 
-def test_repository_authorization_is_current_and_waiting_for_publication() -> None:
+def test_pre_adoption_snapshot_is_authorized_and_waiting_for_publication() -> None:
     paths = discover_repository()
     authorization = _authorization_output(paths)
 
@@ -299,6 +305,20 @@ def test_repository_authorization_is_current_and_waiting_for_publication() -> No
     }
     assert report["ready_for_post_publication_d0_rebuild"] is False
     assert _codes(report) == {"D0_ADOPTION_NOT_PUBLISHED"}
+
+
+def test_current_repository_contains_the_committed_approved_publication() -> None:
+    paths = discover_current_repository()
+    authorization = _authorization_output(paths)
+
+    report = assess_d0_baseline_adoption(paths, authorization)
+
+    assert report["ready_for_post_publication_d0_rebuild"] is True
+    assert report["checks"] == []
+    assert report["current_head"] != report["authorization"]["approval_commit"]
+    assert report["current_authoritative_workbook"]["sha256"] == (
+        "123394d0ee1744edf86e201bd1c683cafdd222d1ff5c55221eb1f0798e2f0712"
+    )
 
 
 def test_writer_binds_git_objects_and_refuses_overwrite(tmp_path: Path) -> None:
