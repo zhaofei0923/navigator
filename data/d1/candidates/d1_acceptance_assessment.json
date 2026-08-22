@@ -73,7 +73,7 @@
       "status": "fail"
     }
   ],
-  "d0_dependency_ready": false,
+  "d0_dependency_ready": true,
   "overall_status": "not_ready",
   "schema_version": 1,
   "stage": "D1"

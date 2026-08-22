@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "confirmation_type": "project_baseline_change_review",
+  "decision_id": "PBD-ACCEL-DEMO-001",
+  "candidate": {
+    "path": "data/governance/candidates/accelerated_demo_baseline_change.2026-08-22.json",
+    "sha256": "86949a277cd438511b60e88f35ee0740b48f187c55183e0839f6a7307db0f86b"
+  },
+  "bound_current_head": "d936468c33313693c3cc1131a47ac131d7cb270c",
+  "expected_reviewer": {
+    "person_name": "kevin",
+    "role": "项目批准人"
+  },
+  "decision": "approve_accelerated_demo_track",
+  "comments": "同意",
+  "reviewed_at": "2026-08-22",
+  "reviewer_signature": {
+    "person_name": "kevin",
+    "role": "项目批准人",
+    "signed_at": "2026-08-22"
+  },
+  "authorized_transcription": true,
+  "authorized_actions": {
+    "write_decision_record": true,
+    "update_repository_governance": true,
+    "start_bounded_demo_implementation": true
+  },
+  "decision_output": "data/governance/review/accelerated_demo_baseline_decision.2026-08-22.json",
+  "evidence_output": "data/governance/evidence/kevin_accelerated_demo_confirmation_20260822.json",
+  "template_only": false,
+  "warning": "Only the named project approver may approve this exact candidate hash. Approval authorizes only the bounded synthetic-data demo track and does not approve D1-D4, real source use, production deployment, or public release."
+}

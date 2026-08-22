@@ -9,14 +9,22 @@ description = "D0-D4 baseline extraction, validation, and evidence-gate tooling 
 readme = "README.md"
 requires-python = ">=3.13,<3.14"
 dependencies = [
+  "alembic>=1.19,<2",
+  "fastapi>=0.139,<0.140",
   "openpyxl>=3.1.5,<4",
+  "psycopg[binary]>=3.3,<4",
+  "pydantic-settings>=2.12,<3",
+  "sqlalchemy>=2.0.52,<2.1",
+  "uvicorn[standard]>=0.52,<1",
 ]
 
 [project.scripts]
 navigator-data = "navigator_data_readiness.cli:main"
+navigator-demo-seed = "navigator_api.seed:main"
 
 [dependency-groups]
 dev = [
+  "httpx>=0.28,<1",
   "mypy>=1.15,<2",
   "pytest>=8.3,<10",
   "pytest-cov>=6,<8",
@@ -25,15 +33,18 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["services/data-readiness/src/navigator_data_readiness"]
+packages = [
+  "services/data-readiness/src/navigator_data_readiness",
+  "services/api/src/navigator_api",
+]
 
 [tool.pytest.ini_options]
 addopts = "-q --strict-config --strict-markers"
-testpaths = ["tests/data_readiness"]
+testpaths = ["tests/data_readiness", "tests/api"]
 
 [tool.coverage.run]
 branch = true
-source = ["navigator_data_readiness"]
+source = ["navigator_data_readiness", "navigator_api"]
 
 [tool.coverage.report]
 fail_under = 85
@@ -50,5 +61,5 @@ allowed-confusables = ["：", "；", "，"]
 [tool.mypy]
 python_version = "3.13"
 strict = true
-packages = ["navigator_data_readiness"]
-mypy_path = "services/data-readiness/src"
+packages = ["navigator_data_readiness", "navigator_api"]
+mypy_path = "services/data-readiness/src:services/api/src"

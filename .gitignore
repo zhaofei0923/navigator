@@ -17,6 +17,7 @@ node_modules/
 .next/
 dist/
 coverage/
+*.tsbuildinfo
 
 # Local runtime state and generated evidence reports
 .env

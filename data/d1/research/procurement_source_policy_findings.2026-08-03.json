@@ -1,0 +1,113 @@
+{
+  "checked_on": "2026-08-03",
+  "findings": [
+    {
+      "country": "IDN",
+      "entry_observation": "INAPROC/SPSE是由LKPP开发并与平台运营方共同管理的政府电子采购系统，公开帮助中心提供现行条款和隐私政策。",
+      "entry_url": "https://www.inaproc.id/",
+      "open_questions": [
+        "取得平台管理方对非搜索引擎爬虫的书面合作授权后再评估自动化",
+        "区分公开采购公告、交易数据、账户数据和个人数据",
+        "确认公开API或正式数据导出渠道及公平使用频率"
+      ],
+      "policy_observation": "SPSE 5条款明确规定，搜索引擎之外的爬虫只有在与平台管理方达成合作约定并符合公平使用政策时才可使用；因此当前不得自动抓取。",
+      "policy_urls": [
+        "https://bantuan.inaproc.id/hc/id-id/articles/16594955307023-Syarat-dan-Ketentuan-SPSE-Versi-5",
+        "https://bantuan.inaproc.id/hc/id-id/articles/16594939876367-Kebijakan-Privasi-SPSE-Versi-5"
+      ],
+      "provisional_disposition": "blocked_for_automation_pending_platform_agreement",
+      "source_id": "SRC-IDN-INAPROC"
+    },
+    {
+      "country": "VNM",
+      "entry_observation": "越南国家电子采购系统公开提供招标检索入口，同时把注册、登录、电子合同、支付和账户身份验证作为独立交易功能。",
+      "entry_url": "https://muasamcong.mpi.gov.vn/",
+      "open_questions": [
+        "寻找公开查询数据的使用条款、版权和自动访问规则",
+        "确认公开查询是否提供正式API或批量导出",
+        "不得使用或模拟需要注册、身份验证、代理程序或交易权限的功能"
+      ],
+      "policy_observation": "本次确认公开检索与登录交易并存，但未找到允许自动采集、复制或再分发的统一政策；交易区需要账户和更高等级身份验证，必须保持隔离。",
+      "policy_urls": [
+        "https://muasamcong.mpi.gov.vn/"
+      ],
+      "provisional_disposition": "insufficient_for_automation_and_redistribution",
+      "source_id": "SRC-VNM-MUASAMCONG"
+    },
+    {
+      "country": "SAU",
+      "entry_observation": "Etimad公开页面展示活动招标和授标统计；开发者门户另有API服务条款。",
+      "entry_url": "https://portal.etimad.sa/en-us/home/gettenderssection",
+      "open_questions": [
+        "确认公开招标详情和附件是否允许缓存、再分发或仅允许链接",
+        "确认API资格、认证、配额、保密义务和服务协议",
+        "区分公共统计、招标文件、供应商数据和受保护账户信息"
+      ],
+      "policy_observation": "公开页面可浏览统计信息，但API条款强调用户义务、主管机关条件、保密和违规责任；未取得服务许可前不得把公开页面可见性解释为自动化授权。",
+      "policy_urls": [
+        "https://apiportal.etimad.sa/en/terms-and-conditions"
+      ],
+      "provisional_disposition": "insufficient_for_api_or_bulk_collection_requires_service_review",
+      "source_id": "SRC-SAU-ETIMAD"
+    },
+    {
+      "country": "ZAF",
+      "entry_observation": "南非eTenders公开提供各级公共机构招标、授标、取消、关闭状态及采购计划检索。",
+      "entry_url": "https://www.etenders.gov.za/",
+      "open_questions": [
+        "寻找门户级使用条款、开放数据许可、API文档和robots规则",
+        "逐份区分采购公告元数据与机构上传招标附件的版权",
+        "确认批量下载、缓存、展示摘录和再分发的允许范围"
+      ],
+      "policy_observation": "门户声明用于公开访问招标信息，但本次未找到覆盖全部内容的复用许可；搜索结果中的个别招标附件含独立知识产权条款，不能整体推定为开放许可。",
+      "policy_urls": [
+        "https://www.etenders.gov.za/"
+      ],
+      "provisional_disposition": "insufficient_for_bulk_collection_requires_portal_and_document_review",
+      "source_id": "SRC-ZAF-ETENDERS"
+    },
+    {
+      "country": "BRA",
+      "entry_observation": "Compras.gov.br官方页面说明其开放数据门户覆盖SIASG和完整公共采购周期，并提供REST API、CSV和技术文档；本次直接打开数据门户时被重定向到登录页。",
+      "entry_url": "https://www.gov.br/compras/pt-br/",
+      "open_questions": [
+        "确认开放数据页面登录重定向是暂时配置还是访问策略",
+        "复核API文档、配额、稳定性公告和数据集许可",
+        "区分开放采购数据与采用CC BY-ND条款的gov.br网页内容"
+      ],
+      "policy_observation": "官方说明将采购开放数据描述为可自由访问、使用、复用和再分发，并提供正式API；但当前访问重定向和网页内容许可差异仍需在正式准入前解决。",
+      "policy_urls": [
+        "https://www.gov.br/compras/pt-br/cidadao/portal-de-dados-abertos/portal-de-dados-abertos",
+        "https://www.gov.br/compras/pt-br/acesso-a-informacao/manuais/"
+      ],
+      "provisional_disposition": "candidate_for_human_open_data_api_and_access_review",
+      "source_id": "SRC-BRA-COMPRAS"
+    }
+  ],
+  "inputs": {
+    "source_registry": {
+      "path": "data/d1/candidates/source_admission_registry.template.json",
+      "sha256": "ae68cac27269c9d42a24381da43873ae46a5d88271f6f5da5fa82eb27f7a5914"
+    }
+  },
+  "machine_observation_only": true,
+  "method": "official_primary_web_pages_reviewed_without_authentication_registration_or_bulk_collection",
+  "schema_version": 1,
+  "stage": "D1",
+  "status": "requires_named_human_review",
+  "usage_boundaries": {
+    "ai_index": "pending",
+    "cache_original": "pending",
+    "collect_content": "pending",
+    "collect_metadata": "pending",
+    "display_excerpt": "pending",
+    "display_original": "pending",
+    "download": "pending",
+    "export": "pending",
+    "model_training": "pending",
+    "store_structured": "pending",
+    "summarize": "pending",
+    "translate": "pending"
+  },
+  "warning": "本文件仅记录五个国家采购主来源官方页面的机器研究观察，不是法律意见、许可批准、访问批准、用途批准、准入证据或active状态依据。"
+}

@@ -1,0 +1,68 @@
+{
+  "checked_on": "2026-08-03",
+  "findings": [
+    {
+      "country": "IDN",
+      "entry_observation": "OSS RBA 是印尼官方风险分级经营许可平台，公开说明 NIB 是企业开始或经营业务的正式身份，并提供按已知 NIB 查询经营主体的入口。",
+      "entry_url": "https://oss.go.id/",
+      "open_questions": [
+        "确认公共 NIB 查询结果允许保存、核验和产品展示的字段范围",
+        "取得覆盖自动查询、批量主体核验、频率限制和缓存期限的正式条款或书面授权",
+        "严格排除负责人身份、联系方式、股东、管理层、账户、申报和其他个人或受限数据"
+      ],
+      "policy_observation": "官方门户支持经营许可办理和按 NIB 查询，但未找到面向批量主体数据的开放许可或公开 API 条款；注册流程要求接受专门条款与隐私政策，业务主体变更页面还涉及负责人、管理层和股东信息。因此不能把单条公共查询入口解释为允许自动采集或再分发企业数据库。",
+      "policy_urls": [
+        "https://oss.go.id/",
+        "https://oss.go.id/en/privacy-policy",
+        "https://oss.go.id/en/panduan",
+        "https://s3.oss.go.id/oss/cms/v2_ID_Pendaftaran-Hak-Akses-OSS-RBA-0fcca1143e40aa5e4cc189f35f6aeadf.pdf"
+      ],
+      "provisional_disposition": "manual_single_entity_verification_only_pending_formal_bulk_terms_or_api",
+      "source_id": "SRC-IDN-OSS"
+    },
+    {
+      "country": "ZAF",
+      "entry_observation": "CIPC 是南非官方企业与知识产权登记机构；企业查询已迁移到 CIPC 的 BizPortal，查询前必须登录，官方说明此要求用于遵守个人信息保护规则。",
+      "entry_url": "https://www.cipc.co.za/",
+      "open_questions": [
+        "由数据负责人确定所需企业基础字段并申请 CIPC 正式数据摘录或报告服务",
+        "取得覆盖商业产品、客户范围、更新频率、保留、再分发和衍生数据的书面许可",
+        "排除董事身份证件、地址、联系方式、受益所有权和其他 POPIA 保护信息"
+      ],
+      "policy_observation": "CIPC 条款禁止未经书面许可使用技术搜索或获取站点信息，并禁止复制、下载、发布、修改或开发站点内容；商业用途仅限向指定客户提供服务的范围。CIPC 同时公布按记录收费的正式电子数据摘录和报告服务。因此网页自动采集不可用，只有经授权的正式数据服务可作为后续候选。",
+      "policy_urls": [
+        "https://www.cipc.co.za/?page_id=11883",
+        "https://eservices.cipc.co.za/Search.aspx",
+        "https://www.cipc.co.za/"
+      ],
+      "provisional_disposition": "blocked_for_web_collection_candidate_only_via_authorized_paid_data_extract",
+      "source_id": "SRC-ZAF-CIPC"
+    }
+  ],
+  "inputs": {
+    "source_registry": {
+      "path": "data/d1/candidates/source_admission_registry.template.json",
+      "sha256": "ae68cac27269c9d42a24381da43873ae46a5d88271f6f5da5fa82eb27f7a5914"
+    }
+  },
+  "machine_observation_only": true,
+  "method": "official_primary_web_pages_reviewed_without_authentication_registration_or_bulk_collection",
+  "schema_version": 1,
+  "stage": "D1",
+  "status": "requires_named_human_review",
+  "usage_boundaries": {
+    "ai_index": "pending",
+    "cache_original": "pending",
+    "collect_content": "pending",
+    "collect_metadata": "pending",
+    "display_excerpt": "pending",
+    "display_original": "pending",
+    "download": "pending",
+    "export": "pending",
+    "model_training": "pending",
+    "store_structured": "pending",
+    "summarize": "pending",
+    "translate": "pending"
+  },
+  "warning": "本文件仅记录两个尚未覆盖的企业主体主来源官方页面的机器研究观察，不是法律意见、许可批准、访问批准、用途批准、准入证据或 active 状态依据。"
+}

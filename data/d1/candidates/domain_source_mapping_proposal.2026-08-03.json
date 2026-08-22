@@ -1,0 +1,298 @@
+{
+  "assignments": [
+    {
+      "alternative_source_id": "SRC-IDN-BI",
+      "country": "IDN",
+      "domain_id": "DOM-COUNTRY",
+      "primary_source_id": "SRC-IDN-BPS",
+      "rationale": "国家统计机构覆盖人口、宏观和产业；中央银行统计作为宏观金融交叉核验。"
+    },
+    {
+      "alternative_source_id": "SRC-IDN-BPK-REG",
+      "country": "IDN",
+      "domain_id": "DOM-POLICY",
+      "primary_source_id": "SRC-IDN-JDIH-ESDM",
+      "rationale": "能源部法规库优先覆盖行业规则；国家法规库用于效力、修订和上位法交叉核验。"
+    },
+    {
+      "alternative_source_id": "SRC-IDN-PLN-REPORTS",
+      "country": "IDN",
+      "domain_id": "DOM-MARKET",
+      "primary_source_id": "SRC-IDN-ESDM",
+      "rationale": "能源部官方统计覆盖行业总量；PLN经营披露补充电网、售电和运行口径。"
+    },
+    {
+      "alternative_source_id": "SRC-IDN-KEMENLH",
+      "country": "IDN",
+      "domain_id": "DOM-RISK",
+      "primary_source_id": "SRC-IDN-BPK-REG",
+      "rationale": "国家法规库用于识别法律变化；环境主管部门用于环境审批和约束风险。"
+    },
+    {
+      "alternative_source_id": "SRC-IDN-PLN-REPORTS",
+      "country": "IDN",
+      "domain_id": "DOM-PROJECT",
+      "primary_source_id": "SRC-IDN-BKPM-DATA",
+      "rationale": "投资主管部门覆盖投资项目和行业机会；PLN披露补充电力项目和资产计划。"
+    },
+    {
+      "alternative_source_id": "SRC-IDN-PLN",
+      "country": "IDN",
+      "domain_id": "DOM-TENDER",
+      "primary_source_id": "SRC-IDN-INAPROC",
+      "rationale": "国家采购门户覆盖公共采购；PLN采购门户补充电力行业专门招标。"
+    },
+    {
+      "alternative_source_id": "SRC-IDN-IDX",
+      "country": "IDN",
+      "domain_id": "DOM-PARTNER",
+      "primary_source_id": "SRC-IDN-OSS",
+      "rationale": "企业许可门户用于经营主体准入核验；交易所披露用于上市主体身份和经营信息交叉核验。"
+    },
+    {
+      "alternative_source_id": "SRC-IDN-DEN",
+      "country": "IDN",
+      "domain_id": "DOM-RAG",
+      "primary_source_id": "SRC-IDN-JDIH-ESDM",
+      "rationale": "能源法规原文适合作为可定位政策文档；国家能源委员会出版物补充规划和展望。"
+    },
+    {
+      "alternative_source_id": "SRC-VNM-SBV",
+      "country": "VNM",
+      "domain_id": "DOM-COUNTRY",
+      "primary_source_id": "SRC-VNM-NSO",
+      "rationale": "国家统计机构覆盖人口、经济和能源；中央银行补充汇率与宏观金融。"
+    },
+    {
+      "alternative_source_id": "SRC-VNM-MOIT",
+      "country": "VNM",
+      "domain_id": "DOM-POLICY",
+      "primary_source_id": "SRC-VNM-VBPL",
+      "rationale": "国家法律数据库用于效力和修订链；工贸部补充能源行业政策和监管原文。"
+    },
+    {
+      "alternative_source_id": "SRC-VNM-EVN",
+      "country": "VNM",
+      "domain_id": "DOM-MARKET",
+      "primary_source_id": "SRC-VNM-NSO",
+      "rationale": "国家统计机构提供统一统计口径；EVN补充电力运行和行业报告。"
+    },
+    {
+      "alternative_source_id": "SRC-VNM-SBV",
+      "country": "VNM",
+      "domain_id": "DOM-RISK",
+      "primary_source_id": "SRC-VNM-ERAV",
+      "rationale": "电力监管机构覆盖许可、价格和市场规则风险；中央银行补充宏观金融风险。"
+    },
+    {
+      "alternative_source_id": "SRC-VNM-EVN",
+      "country": "VNM",
+      "domain_id": "DOM-PROJECT",
+      "primary_source_id": "SRC-VNM-FIA",
+      "rationale": "外商投资机构覆盖投资项目和环境；EVN补充电力项目和运行披露。"
+    },
+    {
+      "alternative_source_id": "SRC-VNM-EVN",
+      "country": "VNM",
+      "domain_id": "DOM-TENDER",
+      "primary_source_id": "SRC-VNM-MUASAMCONG",
+      "rationale": "国家电子采购系统为公共招标主入口；EVN作为电力行业项目文件补充入口，需复核是否含正式招标。"
+    },
+    {
+      "alternative_source_id": "SRC-VNM-MUASAMCONG",
+      "country": "VNM",
+      "domain_id": "DOM-PARTNER",
+      "primary_source_id": "SRC-VNM-FIA",
+      "rationale": "外商投资机构用于投资主体线索；采购系统可补充供应商和中标主体，主体字段可用性待验证。"
+    },
+    {
+      "alternative_source_id": "SRC-VNM-MOIT",
+      "country": "VNM",
+      "domain_id": "DOM-RAG",
+      "primary_source_id": "SRC-VNM-VBPL",
+      "rationale": "法律数据库提供可定位原文；工贸部提供能源政策、通知和行业解释。"
+    },
+    {
+      "alternative_source_id": "SRC-SAU-SAMA",
+      "country": "SAU",
+      "domain_id": "DOM-COUNTRY",
+      "primary_source_id": "SRC-SAU-GASTAT",
+      "rationale": "国家统计机构覆盖人口、经济和能源；中央银行补充金融与宏观统计。"
+    },
+    {
+      "alternative_source_id": "SRC-SAU-WERA",
+      "country": "SAU",
+      "domain_id": "DOM-POLICY",
+      "primary_source_id": "SRC-SAU-MOE",
+      "rationale": "能源部负责国家能源政策；水电监管机构补充许可、费率和服务规则。"
+    },
+    {
+      "alternative_source_id": "SRC-SAU-WERA",
+      "country": "SAU",
+      "domain_id": "DOM-MARKET",
+      "primary_source_id": "SRC-SAU-GASTAT",
+      "rationale": "国家统计机构提供统一市场统计；监管机构补充电力水务费率和行业运行口径。"
+    },
+    {
+      "alternative_source_id": "SRC-SAU-WERA",
+      "country": "SAU",
+      "domain_id": "DOM-RISK",
+      "primary_source_id": "SRC-SAU-ZATCA",
+      "rationale": "税务海关机构覆盖税费和进口风险；能源监管机构覆盖许可和合规风险。"
+    },
+    {
+      "alternative_source_id": "SRC-SAU-PB",
+      "country": "SAU",
+      "domain_id": "DOM-PROJECT",
+      "primary_source_id": "SRC-SAU-MISA",
+      "rationale": "投资部覆盖投资机会和许可；Principal Buyer补充电力采购项目和授标信息。"
+    },
+    {
+      "alternative_source_id": "SRC-SAU-PB",
+      "country": "SAU",
+      "domain_id": "DOM-TENDER",
+      "primary_source_id": "SRC-SAU-ETIMAD",
+      "rationale": "政府采购平台覆盖公共招标；Principal Buyer补充电力行业专门采购。"
+    },
+    {
+      "alternative_source_id": "SRC-SAU-ETIMAD",
+      "country": "SAU",
+      "domain_id": "DOM-PARTNER",
+      "primary_source_id": "SRC-SAU-MISA",
+      "rationale": "投资部用于投资与企业服务主体线索；采购平台补充供应商和中标主体。"
+    },
+    {
+      "alternative_source_id": "SRC-SAU-WERA",
+      "country": "SAU",
+      "domain_id": "DOM-RAG",
+      "primary_source_id": "SRC-SAU-MOE",
+      "rationale": "能源部政策和规划作为主文档源；监管机构决定、许可和费率文件作为补充。"
+    },
+    {
+      "alternative_source_id": "SRC-ZAF-ESKOM",
+      "country": "ZAF",
+      "domain_id": "DOM-COUNTRY",
+      "primary_source_id": "SRC-ZAF-STATSSA",
+      "rationale": "国家统计机构覆盖人口、经济和电力统计；Eskom补充电力系统运行画像。"
+    },
+    {
+      "alternative_source_id": "SRC-ZAF-NERSA",
+      "country": "ZAF",
+      "domain_id": "DOM-POLICY",
+      "primary_source_id": "SRC-ZAF-DMRE",
+      "rationale": "能源主管部门提供政策规划；能源监管机构补充许可、价格和监管决定。"
+    },
+    {
+      "alternative_source_id": "SRC-ZAF-STATSSA",
+      "country": "ZAF",
+      "domain_id": "DOM-MARKET",
+      "primary_source_id": "SRC-ZAF-ESKOM",
+      "rationale": "Eskom提供电力系统供需和运行数据；国家统计机构提供统一经济统计口径。"
+    },
+    {
+      "alternative_source_id": "SRC-ZAF-DFFE-EGIS",
+      "country": "ZAF",
+      "domain_id": "DOM-RISK",
+      "primary_source_id": "SRC-ZAF-NERSA",
+      "rationale": "能源监管机构覆盖许可、价格和合规风险；环境空间数据补充生态和选址约束。"
+    },
+    {
+      "alternative_source_id": "SRC-ZAF-ESKOM",
+      "country": "ZAF",
+      "domain_id": "DOM-PROJECT",
+      "primary_source_id": "SRC-ZAF-IPP",
+      "rationale": "IPP Office覆盖可再生能源和储能项目；Eskom补充电网侧项目及系统需求。"
+    },
+    {
+      "alternative_source_id": "SRC-ZAF-IPP",
+      "country": "ZAF",
+      "domain_id": "DOM-TENDER",
+      "primary_source_id": "SRC-ZAF-ETENDERS",
+      "rationale": "国家电子招标门户覆盖政府采购；IPP Office补充能源专项采购窗口。"
+    },
+    {
+      "alternative_source_id": "SRC-ZAF-ETENDERS",
+      "country": "ZAF",
+      "domain_id": "DOM-PARTNER",
+      "primary_source_id": "SRC-ZAF-CIPC",
+      "rationale": "企业注册机构用于主体身份核验；招标门户补充供应商和中标主体线索。"
+    },
+    {
+      "alternative_source_id": "SRC-ZAF-NERSA",
+      "country": "ZAF",
+      "domain_id": "DOM-RAG",
+      "primary_source_id": "SRC-ZAF-DMRE",
+      "rationale": "能源主管部门政策规划为主文档；监管机构决定和许可文件作为补充。"
+    },
+    {
+      "alternative_source_id": "SRC-BRA-EPE",
+      "country": "BRA",
+      "domain_id": "DOM-COUNTRY",
+      "primary_source_id": "SRC-BRA-IBGE",
+      "rationale": "国家统计机构覆盖人口、产业和地理；EPE补充能源平衡和规划画像。"
+    },
+    {
+      "alternative_source_id": "SRC-BRA-ANEEL",
+      "country": "BRA",
+      "domain_id": "DOM-POLICY",
+      "primary_source_id": "SRC-BRA-MME",
+      "rationale": "能源部负责政策和公报；电力监管机构补充行业规则、许可和市场监管。"
+    },
+    {
+      "alternative_source_id": "SRC-BRA-ONS",
+      "country": "BRA",
+      "domain_id": "DOM-MARKET",
+      "primary_source_id": "SRC-BRA-CCEE",
+      "rationale": "电力交易机构覆盖市场、发电和消费；系统运营商补充负荷、输电和运行数据。"
+    },
+    {
+      "alternative_source_id": "SRC-BRA-BNDES",
+      "country": "BRA",
+      "domain_id": "DOM-RISK",
+      "primary_source_id": "SRC-BRA-ANEEL",
+      "rationale": "电力监管机构覆盖许可和监管风险；开发银行披露补充融资与项目执行风险线索。"
+    },
+    {
+      "alternative_source_id": "SRC-BRA-EPE",
+      "country": "BRA",
+      "domain_id": "DOM-PROJECT",
+      "primary_source_id": "SRC-BRA-BNDES",
+      "rationale": "开发银行披露融资项目和投资；EPE规划补充能源项目需求与储备。"
+    },
+    {
+      "alternative_source_id": "SRC-BRA-BNDES",
+      "country": "BRA",
+      "domain_id": "DOM-TENDER",
+      "primary_source_id": "SRC-BRA-COMPRAS",
+      "rationale": "联邦采购门户为正式招标主入口；开发银行项目披露仅作融资采购线索补充，需验证招标字段。"
+    },
+    {
+      "alternative_source_id": "SRC-BRA-COMPRAS",
+      "country": "BRA",
+      "domain_id": "DOM-PARTNER",
+      "primary_source_id": "SRC-BRA-IBGE",
+      "rationale": "国家统计机构提供产业和企业分类背景；采购门户补充供应商、中标和合同主体。"
+    },
+    {
+      "alternative_source_id": "SRC-BRA-EPE",
+      "country": "BRA",
+      "domain_id": "DOM-RAG",
+      "primary_source_id": "SRC-BRA-MME",
+      "rationale": "能源部政策和公报作为主文档源；EPE研究、规划和能源平衡文档作为补充。"
+    }
+  ],
+  "bound_current_head": "d936468c33313693c3cc1131a47ac131d7cb270c",
+  "generated_on": "2026-08-03",
+  "inputs": {
+    "source_registry": {
+      "path": "data/d1/candidates/source_admission_registry.template.json",
+      "sha256": "ae68cac27269c9d42a24381da43873ae46a5d88271f6f5da5fa82eb27f7a5914"
+    }
+  },
+  "proposal_only": true,
+  "proposal_type": "domain_source_mapping",
+  "schema_version": 1,
+  "stage": "D1",
+  "status": "requires_source_and_compliance_review",
+  "warning": "本文件仅按冻结候选元数据提出40个国家/数据域映射建议。它不批准来源、不完成许可或访问复核、不提供证据、不将任何来源变为active，也不得直接复制为正式D1矩阵。"
+}

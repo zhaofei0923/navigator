@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "record_type": "approved_demo_scope_clarification",
+  "decision_id": "PBD-ACCEL-DEMO-001",
+  "clarified_at": "2026-08-22",
+  "clarified_by": {
+    "person_name": "kevin",
+    "role": "项目批准人"
+  },
+  "required_outcome": "可以内部展示的具有完整前后端的demo",
+  "implementation_interpretation": {
+    "frontend": "可交互的真实Web前端，不是静态截图或仅视觉原型",
+    "backend": "独立可运行的FastAPI服务，提供实际REST接口、校验、错误处理和健康检查",
+    "persistence": "具有数据库模型、迁移和可重置的synthetic_demo种子数据",
+    "integration": "前端通过HTTP调用后端并覆盖核心国家浏览与比较链路",
+    "operations": "提供内部环境一键启动、自动测试和演示说明"
+  },
+  "unchanged_boundaries": [
+    "不接入未批准真实来源",
+    "不包含真实个人信息或秘密",
+    "不公开发布",
+    "不作为生产或专业结论",
+    "不替代D1-D4正式验收"
+  ]
+}

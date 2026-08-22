@@ -1,0 +1,121 @@
+{
+  "checked_on": "2026-08-03",
+  "findings": [
+    {
+      "country": "IDN",
+      "entry_observation": "BPK Regulations Database 是 BPK JDIH 的官方法规数据库，公开提供国家法律、政府规章、地方规则、效力状态、关联法规及附件下载。",
+      "entry_url": "https://peraturan.bpk.go.id/",
+      "open_questions": [
+        "确认法规原文、BPK 编制摘要、页面元数据和第三方附件各自的权利边界",
+        "确认批量查询、历史版本抓取、频率限制和机器人访问条件",
+        "为每条法规保存现行状态、修订链、官方附件哈希和抓取时间"
+      ],
+      "policy_observation": "数据库明确以向公众便捷、快速、准确传播法规和法律文件为目的，但未找到覆盖整站批量复制、数据库再发布或 AI 索引的统一开放许可。正式接入应先限定为法规定位、状态核验和审慎引用，并对原文、摘要与附件分别复核。",
+      "policy_urls": [
+        "https://peraturan.bpk.go.id/",
+        "https://peraturan.bpk.go.id/Details/38690"
+      ],
+      "provisional_disposition": "candidate_for_legal_locator_and_citation_pending_database_reuse_terms",
+      "source_id": "SRC-IDN-BPK-REG"
+    },
+    {
+      "country": "VNM",
+      "entry_observation": "Electricity Regulatory Authority of Vietnam 官方域名公开电力市场规则、决定、发电企业清单和监管文件附件；本次直接打开主页返回网关错误，但官方文档端点可访问。",
+      "entry_url": "https://www.erav.vn/",
+      "open_questions": [
+        "人工确认当前主页、机构归属、TLS 可用性及备用网址",
+        "寻找网站条款、版权、开放数据、robots 和自动下载规则",
+        "区分法律规范性文件、ERAV 自编报告、市场数据、企业信息和第三方附件"
+      ],
+      "policy_observation": "公开监管文件可作为官方规则与市场主体线索，但本次未找到覆盖自动采集、结构化存储、再分发或 AI 索引的广泛许可；主页可用性异常也使自动化稳定性证据不足。",
+      "policy_urls": [
+        "https://www.erav.vn/",
+        "https://www.erav.vn/doc/quyet-dinh-52-qd-dtdl.pdf",
+        "https://www.erav.vn/doc/vbhn-24-vbhn-bct.pdf"
+      ],
+      "provisional_disposition": "citation_only_candidate_pending_access_stability_and_reuse_terms",
+      "source_id": "SRC-VNM-ERAV"
+    },
+    {
+      "country": "SAU",
+      "entry_observation": "ZATCA 官方门户设有开放数据页面、开放数据政策、数据集入口和开放数据申请服务，并将开放数据定义为可由个人及公共或私营实体访问、使用和共享的公共信息。",
+      "entry_url": "https://zatca.gov.sa/en/e-participation/PublicData/Pages/default.aspx",
+      "open_questions": [
+        "逐项确认目标税务、关税和进出口数据确实列入开放数据集并保存政策版本",
+        "区分开放数据、自由信息申请结果、办税服务、企业申报、个人数据和受保护信息",
+        "确认署名、变更说明、更新频率、下载端点及自动访问限制"
+      ],
+      "policy_observation": "正式开放数据可作为复用候选，但自由信息政策明确排除国家安全、执法调查、商业金融、知识产权、采购公平、个人和其他受保护信息；普通网页或获批申请结果不能自动视为开放数据。",
+      "policy_urls": [
+        "https://zatca.gov.sa/en/e-participation/PublicData/Pages/default.aspx",
+        "https://zatca.gov.sa/en/e-participation/PublicData/Pages/About-Open-Data.aspx",
+        "https://zatca.gov.sa/en/AboutUs/Pages/Freedom-of-Information-Policy.aspx",
+        "https://zatca.gov.sa/en/publicdata/pages/addrequest.aspx"
+      ],
+      "provisional_disposition": "candidate_only_via_formally_listed_open_datasets",
+      "source_id": "SRC-SAU-ZATCA"
+    },
+    {
+      "country": "ZAF",
+      "entry_observation": "NERSA 官方门户公开监管规则、许可与价格相关出版物、战略计划和电力市场监管说明，并声明市场监督部门将发布市场评估和监督报告。",
+      "entry_url": "https://www.nersa.org.za/",
+      "open_questions": [
+        "确认门户级使用条款、出版物许可、附件版权和自动下载限制",
+        "区分公开监管决定、许可名录、市场报告、申报表和受限在线门户内容",
+        "通过 PAIA 或书面许可确认结构化再利用、商业使用和再分发边界"
+      ],
+      "policy_observation": "门户公开内容有公共监管价值，但页脚统一标示 NERSA 版权，本次未找到广泛开放许可。公开可访问不能证明允许批量采集、商业再利用、原文再分发或 AI 索引，当前仅适合作为定位和逐文件审核候选。",
+      "policy_urls": [
+        "https://www.nersa.org.za/news-publications/publications",
+        "https://www.nersa.org.za/electricity/overview",
+        "https://www.nersa.org.za/privacy-policy"
+      ],
+      "provisional_disposition": "candidate_for_locator_and_document_level_review_only",
+      "source_id": "SRC-ZAF-NERSA"
+    },
+    {
+      "country": "BRA",
+      "entry_observation": "ANEEL 设有独立开放数据门户，现行 2025—2027 开放数据计划明确覆盖其负责数据的开放、机器可处理格式和公开目录。",
+      "entry_url": "https://dadosabertos.aneel.gov.br/",
+      "open_questions": [
+        "按目标数据集保存开放许可、数据字典、资源 URL、更新周期和版本哈希",
+        "区分 ANEEL 开放数据门户资源、gov.br 普通网页、监管文件、个人数据和受限系统",
+        "确认来源署名、历史修订、API 频率和数据撤回处理规则"
+      ],
+      "policy_observation": "ANEEL 官方说明将开放数据定义为在开放许可下可自由使用、消费或交叉分析且仅需注明作者或来源的数据，因此正式列入其开放数据门户的数据集可作为结构化接入候选；该结论不能自动扩展到普通网页或未列入开放目录的材料。",
+      "policy_urls": [
+        "https://dadosabertos.aneel.gov.br/",
+        "https://dadosabertos.aneel.gov.br/about",
+        "https://dadosabertos.aneel.gov.br/base/pda/PDA_2022-2024.pdf"
+      ],
+      "provisional_disposition": "candidate_only_via_catalogued_aneel_open_datasets",
+      "source_id": "SRC-BRA-ANEEL"
+    }
+  ],
+  "inputs": {
+    "source_registry": {
+      "path": "data/d1/candidates/source_admission_registry.template.json",
+      "sha256": "ae68cac27269c9d42a24381da43873ae46a5d88271f6f5da5fa82eb27f7a5914"
+    }
+  },
+  "machine_observation_only": true,
+  "method": "official_primary_web_pages_reviewed_without_authentication_registration_or_bulk_collection",
+  "schema_version": 1,
+  "stage": "D1",
+  "status": "requires_named_human_review",
+  "usage_boundaries": {
+    "ai_index": "pending",
+    "cache_original": "pending",
+    "collect_content": "pending",
+    "collect_metadata": "pending",
+    "display_excerpt": "pending",
+    "display_original": "pending",
+    "download": "pending",
+    "export": "pending",
+    "model_training": "pending",
+    "store_structured": "pending",
+    "summarize": "pending",
+    "translate": "pending"
+  },
+  "warning": "本文件仅记录五个国家监管与风险主来源官方页面的机器研究观察，不是法律意见、许可批准、访问批准、用途批准、准入证据或 active 状态依据。"
+}

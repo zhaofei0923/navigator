@@ -1,0 +1,151 @@
+{
+  "checked_on": "2026-08-03",
+  "findings": [
+    {
+      "country": "BRA",
+      "entry_observation": "Empresa de Pesquisa Energética 的开放数据页面公开提供国家能源平衡和输电拍卖数据；相关页面明确站点内容或数据资源使用 Creative Commons Attribution 4.0。",
+      "entry_url": "https://www.epe.gov.br/pt/publicacoes-dados-abertos/dados-abertos/dados-abertos-do-balan%C3%A7o-energ%C3%A9tico-nacional-ben",
+      "open_questions": [
+        "逐个目标数据集确认 CC BY 4.0 标记、来源、版本、更新周期和资源端点",
+        "保存适当署名、许可证链接和任何修改或转换说明",
+        "将开放数据集与普通新闻、报告中的第三方材料和可能受限的项目资料分开"
+      ],
+      "policy_observation": "EPE 官方开放数据页面为数据集级再利用提供了较强候选依据，但正式准入仍需把每个目标资源与 CC BY 4.0、署名和变更记录逐项绑定，不能把该许可扩展到整个网站的所有内容。",
+      "policy_urls": [
+        "https://www.epe.gov.br/pt/publicacoes-dados-abertos/dados-abertos/dados-abertos-do-balan%C3%A7o-energ%C3%A9tico-nacional-ben",
+        "https://www.epe.gov.br/pt/leiloes-de-energia/leiloes-de-transmissao/bases-de-dados"
+      ],
+      "provisional_disposition": "candidate_only_via_dataset_specific_cc_by_4_0_with_attribution",
+      "source_id": "SRC-BRA-EPE"
+    },
+    {
+      "country": "BRA",
+      "entry_observation": "ONS 官方开放数据门户为系统运行数据提供数据集下载；数据集法律声明采用 CC BY，并要求署名和说明修改。",
+      "entry_url": "https://dados.ons.org.br/",
+      "open_questions": [
+        "逐项确认目标运行数据集的许可、资源 URL、时间范围、更新频率和字段口径",
+        "记录署名、许可证链接、修改说明和由 ONS 标示的版本元数据",
+        "排除需要登录的协作环境、代理系统、会员资料和任何非开放门户内容"
+      ],
+      "policy_observation": "ONS 开放数据集可作为正式准入候选，但许可只覆盖开放门户中明确标示的数据集；普通网站和受限系统不能继承该许可。",
+      "policy_urls": [
+        "https://dados.ons.org.br/dataset/ambiente-colaborativo",
+        "https://dados.ons.org.br/"
+      ],
+      "provisional_disposition": "candidate_only_via_ons_open_data_dataset_license",
+      "source_id": "SRC-BRA-ONS"
+    },
+    {
+      "country": "SAU",
+      "entry_observation": "Saudi Central Bank 官方统计入口公开提供可处理格式、数据库和 API 入口；普通网站使用条款同时保留版权并限制个人或商业获益性使用。",
+      "entry_url": "https://www.sama.gov.sa/en-US/Statistics/pages/summary.aspx",
+      "open_questions": [
+        "确认开放数据或 API 的专项条款是否优先于普通网站条款，并保存适用范围证据",
+        "逐个时间序列确认再分发、商业使用、署名、缓存、汇率口径和修订规则",
+        "排除第三方数据、受限统计和任何需要身份认证的内容"
+      ],
+      "policy_observation": "开放数据/API 入口说明技术上可获取，但普通条款与开放数据表述之间仍需要数据集级法律解释；在完成该解释前不能假设可产品化再分发或 AI 索引。",
+      "policy_urls": [
+        "https://www.sama.gov.sa/en-US/Statistics/pages/summary.aspx",
+        "https://sama.gov.sa/en-US/Publications/EconomicReports/Pages/database.aspx",
+        "https://www.sama.gov.sa/en-us/pages/termsofuse.aspx"
+      ],
+      "provisional_disposition": "candidate_pending_open_data_api_and_general_terms_reconciliation",
+      "source_id": "SRC-SAU-SAMA"
+    },
+    {
+      "country": "SAU",
+      "entry_observation": "Saudi Principal Buyer 官方网站公开介绍电力采购、项目和机构信息，并发布隐私声明；未发现覆盖采购公告或项目材料批量再利用的开放数据许可。",
+      "entry_url": "https://pb.com.sa/",
+      "open_questions": [
+        "逐个公告或文件确认版权、下载、署名、摘录和再分发条款",
+        "确认是否存在官方公开采购数据接口、频率限制或书面数据授权渠道",
+        "排除登录门户、投标人资料、项目商业机密、联系人和其他个人数据"
+      ],
+      "policy_observation": "公开页面可用于人工定位和官方引用，但隐私声明不构成内容再利用许可；在取得页面级或文档级授权前不应批量采集、保存原件、再分发或建立 AI 索引。",
+      "policy_urls": [
+        "https://pb.com.sa/",
+        "https://pb.com.sa/privacy-notice/"
+      ],
+      "provisional_disposition": "public_information_locator_only_pending_document_specific_reuse_authority",
+      "source_id": "SRC-SAU-PB"
+    },
+    {
+      "country": "VNM",
+      "entry_observation": "越南工贸部官方门户公开能源政策和监管文件；英文使用条款允许在不修改内容的条件下下载、保存和打印并要求注明来源，而越南文规章同时要求在利用或引用信息时取得书面同意。",
+      "entry_url": "https://moit.gov.vn/en/news/energy",
+      "open_questions": [
+        "由合规审核人确认英文条款与越南文规章发生差异时的优先级及适用范围",
+        "取得批量结构化抽取、商业使用、翻译、摘要、再分发和 AI 索引所需的书面同意",
+        "逐份保留原始越南文文件、发布日期、版本、来源域名和未修改证明"
+      ],
+      "policy_observation": "现有条款最多支持保守的下载、打印和明确来源引用，不能直接推导出批量采集、内容改写、翻译、产品化再利用或 AI 索引权限。",
+      "policy_urls": [
+        "https://moit.gov.vn/en/?page=termsOfUse&site=1002948",
+        "https://moit.gov.vn/quy-che",
+        "https://moit.gov.vn/en/news/energy"
+      ],
+      "provisional_disposition": "citation_and_unchanged_download_candidate_bulk_reuse_requires_written_consent",
+      "source_id": "SRC-VNM-MOIT"
+    },
+    {
+      "country": "VNM",
+      "entry_observation": "State Bank of Vietnam 官方门户公开汇率、金融机构、货币政策和统计信息，但当前未找到覆盖自动采集、结构化再利用或再分发的广泛许可。",
+      "entry_url": "https://www.sbv.gov.vn/",
+      "open_questions": [
+        "定位具体统计和汇率页面并确认官方下载或 API、字段口径、修订和更新时间",
+        "确认版权、署名、商业使用、再分发、缓存、翻译和 AI 索引规则",
+        "排除个人、机构监管报送、受限金融信息和第三方授权数据"
+      ],
+      "policy_observation": "官方发布身份支持人工引用和来源定位，但没有足够证据批准机器人采集、原件缓存、结构化存储、产品展示或再分发。",
+      "policy_urls": [
+        "https://www.sbv.gov.vn/"
+      ],
+      "provisional_disposition": "official_locator_only_pending_specific_statistics_terms_and_machine_access_rules",
+      "source_id": "SRC-VNM-SBV"
+    },
+    {
+      "country": "ZAF",
+      "entry_observation": "DFFE EGIS 官方入口提供可下载的环境地理空间数据，并为图层列出发布日期、元数据和使用条款入口；DFFE 普通网站条款未建立覆盖所有图层的统一开放许可。",
+      "entry_url": "https://www.dffe.gov.za/index.php/egis",
+      "open_questions": [
+        "逐图层保存 Terms of use、许可人、署名、发布日期、版本、空间范围和更新频率",
+        "确认允许的下载、转换、衍生物、商业展示、再分发和 AI 索引用途",
+        "排除环境审批申请、个人资料、受限调查材料和不属于可下载图层的普通网站内容"
+      ],
+      "policy_observation": "免费可下载和公开元数据使 EGIS 成为数据集级准入候选，但正式使用必须以每个图层的条款和许可为准，不能仅依赖门户开放性或普通网站条款。",
+      "policy_urls": [
+        "https://www.dffe.gov.za/index.php/egis",
+        "https://www.dffe.gov.za/terms-use"
+      ],
+      "provisional_disposition": "candidate_pending_layer_specific_terms_license_and_attribution_review",
+      "source_id": "SRC-ZAF-DFFE-EGIS"
+    }
+  ],
+  "inputs": {
+    "source_registry": {
+      "path": "data/d1/candidates/source_admission_registry.template.json",
+      "sha256": "ae68cac27269c9d42a24381da43873ae46a5d88271f6f5da5fa82eb27f7a5914"
+    }
+  },
+  "machine_observation_only": true,
+  "method": "official_primary_web_pages_reviewed_without_authentication_registration_or_bulk_collection",
+  "schema_version": 1,
+  "stage": "D1",
+  "status": "requires_named_human_review",
+  "usage_boundaries": {
+    "ai_index": "pending",
+    "cache_original": "pending",
+    "collect_content": "pending",
+    "collect_metadata": "pending",
+    "display_excerpt": "pending",
+    "display_original": "pending",
+    "download": "pending",
+    "export": "pending",
+    "model_training": "pending",
+    "store_structured": "pending",
+    "summarize": "pending",
+    "translate": "pending"
+  },
+  "warning": "本文件仅记录七个非印尼备选官方来源的机器研究观察，不是法律意见、许可批准、访问批准、用途批准、准入证据或 active 状态依据。"
+}

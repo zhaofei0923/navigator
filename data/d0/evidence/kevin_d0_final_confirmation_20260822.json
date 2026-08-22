@@ -1,0 +1,35 @@
+{
+  "acceptance_signature": {
+    "person_name": "kevin",
+    "role": "项目批准人",
+    "signed_at": "2026-08-22"
+  },
+  "authorized_transcription": true,
+  "bound_current_head": "d936468c33313693c3cc1131a47ac131d7cb270c",
+  "bundle": {
+    "path": "data/d0/candidates/d0_final_review_bundle.2026-08-22.json",
+    "sha256": "e686c111e856de6b3552d2f2df6c4c5f7d9110cf6ac967c0a2430d72567c7b79"
+  },
+  "comments": "同意",
+  "confirmation_type": "final_closure_review",
+  "decision": "approved",
+  "expected_approver": {
+    "person_name": "kevin",
+    "role": "项目批准人"
+  },
+  "final_signature": {
+    "person_name": "kevin",
+    "role": "项目批准人",
+    "signed_at": "2026-08-22"
+  },
+  "review_output": "data/d0/review/d0_review_packet.2026-08-22.json",
+  "schema_version": 1,
+  "source_review": {
+    "git_blob": "2bf3680d2a0ba2e1832cb1d2a4a0e0cb4bd182b0",
+    "path": "data/d0/review/d0_review_packet.2026-08-03.02.json",
+    "sha256": "9074796b40c11ef640358a98eca7710a8a86314451fbc44823e210870d752dbb"
+  },
+  "stage": "D0",
+  "template_only": false,
+  "warning": "Complete only after the named project approver separately reviews the exact bundle SHA-256 for D0-AC-010 and the final D0 decision. Approval may complete D0 but does not complete D1-D4 or authorize user-facing development."
+}

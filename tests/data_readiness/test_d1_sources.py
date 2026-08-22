@@ -198,7 +198,7 @@ def test_d1_templates_expose_frozen_counts_and_country_gaps() -> None:
     assert all(item["active_gap"] == item["target"] for item in gaps.values())
     assert gap["regional_or_global_seed_count"] == 7
     assert assessment["overall_status"] == "not_ready"
-    assert assessment["d0_dependency_ready"] is False
+    assert assessment["d0_dependency_ready"] is True
     threshold_check = next(
         item for item in assessment["checks"] if item["check_id"] == "D1-COUNTRY-THRESHOLDS"
     )
@@ -403,8 +403,8 @@ def test_unfilled_d1_templates_fail_all_hard_categories() -> None:
         "D1_COUNTRY_SOURCE_TARGET_UNMET",
         "D1_MATRIX_SOURCES_INCOMPLETE",
         "D1_MATRIX_APPROVAL_PENDING",
-        "D1_D0_DEPENDENCY_PENDING",
     } <= codes
+    assert "D1_D0_DEPENDENCY_PENDING" not in codes
 
 
 def test_completed_d1_registry_and_matrix_pass_when_d0_is_ready() -> None:
@@ -794,7 +794,8 @@ def test_write_and_load_d1_artifacts(tmp_path: Path) -> None:
 
     assert len(written) == 5
     assert all(path.is_file() for path in written)
-    assert any(item.code == "D1_D0_DEPENDENCY_PENDING" for item in checks)
+    assert all(item.code != "D1_D0_DEPENDENCY_PENDING" for item in checks)
+    assert any(item.code == "D1_REGISTRY_TEMPLATE_UNCOPIED" for item in checks)
 
 
 def test_load_d1_artifacts_handles_missing_invalid_and_non_object_files(tmp_path: Path) -> None:

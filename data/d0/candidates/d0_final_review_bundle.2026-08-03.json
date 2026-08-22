@@ -1,0 +1,406 @@
+{
+  "acceptance_item": {
+    "acceptance_id": "D0-AC-010",
+    "current_review_status": "pending",
+    "hard_gate": true,
+    "required_roles": [
+      "项目批准人"
+    ],
+    "reviewer_signature_template": [
+      {
+        "evidence_ids": [
+          "EVD-D0-AC-010-CLOSURE-ACCEPTANCE-20260803"
+        ],
+        "person_name": "kevin",
+        "role": "项目批准人",
+        "signed_at": null
+      }
+    ],
+    "title": "项目批准人签署D0通过结论"
+  },
+  "automated_assessment_only": true,
+  "bundle_type": "final_closure_review_candidate",
+  "current_head": "d936468c33313693c3cc1131a47ac131d7cb270c",
+  "does_not_approve_acceptance": true,
+  "does_not_approve_final_decision": true,
+  "does_not_authorize_user_facing_development": true,
+  "does_not_complete_d0": true,
+  "does_not_complete_d4": true,
+  "evidence_manifest_templates": [
+    {
+      "acceptance_id": "D0-AC-010",
+      "evidence_id": "EVD-D0-AC-010-CLOSURE-ACCEPTANCE-20260803",
+      "path": null,
+      "recorded_at": null,
+      "recorded_by": "codex (authorized transcription)",
+      "review_purpose": "D0-AC-010 acceptance",
+      "reviewer": "kevin",
+      "reviewer_role": "项目批准人",
+      "sha256": null,
+      "status": "待复核",
+      "subject_path": "data/d0/candidates/d0_final_review_bundle.2026-08-03.json",
+      "subject_sha256": null
+    },
+    {
+      "acceptance_id": "D0-AC-010",
+      "evidence_id": "EVD-D0-AC-010-CLOSURE-FINAL-20260803",
+      "path": null,
+      "recorded_at": null,
+      "recorded_by": "codex (authorized transcription)",
+      "review_purpose": "final D0 decision",
+      "reviewer": "kevin",
+      "reviewer_role": "项目批准人",
+      "sha256": null,
+      "status": "待复核",
+      "subject_path": "data/d0/candidates/d0_final_review_bundle.2026-08-03.json",
+      "subject_sha256": null
+    }
+  ],
+  "final_decision_template": {
+    "approved_at": null,
+    "approved_by": "kevin",
+    "approver_role": "项目批准人",
+    "comments": null,
+    "evidence_ids": [
+      "EVD-D0-AC-010-CLOSURE-FINAL-20260803"
+    ],
+    "status": "approved"
+  },
+  "inputs": {
+    "authoritative_d0_workbook": {
+      "git_blob": "01e7bc88f8a067c016d20b2cb499d56b531a1618",
+      "path": "doc/doc/新能源企业出海导航仪_D0数据标准冻结执行台账.xlsx",
+      "sha256": "123394d0ee1744edf86e201bd1c683cafdd222d1ff5c55221eb1f0798e2f0712"
+    },
+    "authoritative_technical_workbook": {
+      "git_blob": "4c6775d52fe5cd3af8d9de4ed0691eda44ab1b83",
+      "path": "doc/doc/新能源企业出海导航仪_V1.0技术附件_BASELINE.xlsx",
+      "sha256": "8b36f7cad337d72713f09c2b36d7eaf6ebe0bc2cd13f2bf0c05c45edbd065fb8"
+    },
+    "contract_snapshot": {
+      "contracts": [
+        {
+          "contract": "api_catalog",
+          "git_blob": "9f658f3fc8ab55cd13895ee8d2257e29fc66156a",
+          "path": "data/contracts/current/api_catalog.json",
+          "record_count": 70,
+          "sha256": "3b82ed67be90592c659844b779e5e79b367b223435027ab9650564b6d8bc0689"
+        },
+        {
+          "contract": "collection_batch_template",
+          "git_blob": "433b85a9426d6a512fe48ffca27a88a491494bcc",
+          "path": "data/contracts/current/collection_batch_template.json",
+          "record_count": 6,
+          "sha256": "e44f41250715aa2712abc3874a73b1148a5903e7bc7d2ec5caead08db4836c34"
+        },
+        {
+          "contract": "collection_rules",
+          "git_blob": "deb0bf85e5d35b206c0fc393544497d4a82575e1",
+          "path": "data/contracts/current/collection_rules.json",
+          "record_count": 14,
+          "sha256": "87e173681f042346a4a1554471e4f83e64b61d1c26e3a10ba17faec73b11e7ee"
+        },
+        {
+          "contract": "countries",
+          "git_blob": "03ae04aabdf0f3f6c162b3ebba7329d783b8e6e3",
+          "path": "data/contracts/current/countries.json",
+          "record_count": 5,
+          "sha256": "614b9bb2aacd2fe9d7bdf38a0daef8243941504b6d5de664f9408298a8b0fe06"
+        },
+        {
+          "contract": "d0_acceptance",
+          "git_blob": "98bf33376fe53c989f1f0d70b7498faf68fe89e6",
+          "path": "data/contracts/current/d0_acceptance.json",
+          "record_count": 10,
+          "sha256": "014bcaecf09d66c368ad61b03d2550160f339d66d98406e43755af340f6b701f"
+        },
+        {
+          "contract": "d0_d4_roadmap",
+          "git_blob": "ab2a43dd2e4a162dcaa0304878eddea44c93be9a",
+          "path": "data/contracts/current/d0_d4_roadmap.json",
+          "record_count": 19,
+          "sha256": "21efa9348d6967cca13d6a6933ddda136bff6b16226054a852c9a328d1e014f8"
+        },
+        {
+          "contract": "d0_tasks",
+          "git_blob": "126663c5b4d0977c1a539c1dc85ba618f4eb8de0",
+          "path": "data/contracts/current/d0_tasks.json",
+          "record_count": 4,
+          "sha256": "e4d96ebe64406bebe693058b7e08ab153b29d3b4a75c385f19cf2598d64eab73"
+        },
+        {
+          "contract": "data_issue_template",
+          "git_blob": "a60704f676bdd0f7d2e7445a329c6f56bf0db851",
+          "path": "data/contracts/current/data_issue_template.json",
+          "record_count": 8,
+          "sha256": "1645c47d97ed79a29cc4eabd1b7f2a11259ceb0639bde8be824053e0ffb06761"
+        },
+        {
+          "contract": "domain_targets",
+          "git_blob": "bcc91c92701043c4c55351fc84c89d214cb76cc5",
+          "path": "data/contracts/current/domain_targets.json",
+          "record_count": 9,
+          "sha256": "94ef85aa2e14b5dea6faae4788f1d9e6639aa2914329581bedde0f6691aaf7da"
+        },
+        {
+          "contract": "engineering_acceptance_tests",
+          "git_blob": "28a5584bbb983f174d0bb3e0232f046ee382057f",
+          "path": "data/contracts/current/engineering_acceptance_tests.json",
+          "record_count": 17,
+          "sha256": "0912923b080fe280a3d4962452ebfa8a82ab537bdb103bff20b82846bf068a7e"
+        },
+        {
+          "contract": "entities",
+          "git_blob": "03ef4fd0ccd56af493593e1bd06813549fb96784",
+          "path": "data/contracts/current/entities.json",
+          "record_count": 25,
+          "sha256": "13170155f9987c8b381d2d30f4e175d53c614a03be99bd384853d7c37299fde8"
+        },
+        {
+          "contract": "enums",
+          "git_blob": "c9d38d7fda439ffdd6077de8e0b328cb73efe227",
+          "path": "data/contracts/current/enums.json",
+          "record_count": 251,
+          "sha256": "1071b0cf447a3cf27dbf835102068e602233197e0b9407e741858ad4f9784267"
+        },
+        {
+          "contract": "feature_requirements",
+          "git_blob": "51f92f15a69598514bbc8f39e23ce392087f1d1f",
+          "path": "data/contracts/current/feature_requirements.json",
+          "record_count": 103,
+          "sha256": "52b12b6e3b8c1da2fb288083a4fad51dd83a930a80a41eb4a436110df96e4ec9"
+        },
+        {
+          "contract": "field_mapping_template",
+          "git_blob": "4440cfe0d70116dd9d8ec295a7ad3b7fff7cb298",
+          "path": "data/contracts/current/field_mapping_template.json",
+          "record_count": 6,
+          "sha256": "1d2f7c983056685e43551fcd8fcb2f787edaaae957b2ed89ef543e614af163ee"
+        },
+        {
+          "contract": "fields",
+          "git_blob": "0d72c72800c92f8f6c6e5da0ad99655123a36065",
+          "path": "data/contracts/current/fields.json",
+          "record_count": 158,
+          "sha256": "cebd405819d944a9313242dbc814d2efc3096d19197bb85185e26400622cd08a"
+        },
+        {
+          "contract": "identifier_migrations",
+          "git_blob": "741ad3f4e13e33d94a130c60912c86e02891c4bb",
+          "path": "data/contracts/current/identifier_migrations.json",
+          "record_count": 13,
+          "sha256": "3454c7f51b0bb82a941c1f84876ac44f47706a748cc98d53e4eeba3bd91bf9e2"
+        },
+        {
+          "contract": "mvp_acceptance",
+          "git_blob": "cf5675f329e9e17f839afd5c430aed98e0398d50",
+          "path": "data/contracts/current/mvp_acceptance.json",
+          "record_count": 11,
+          "sha256": "832d12d12724a8d2f89d5668b7c36185d1c7eb13a60caaef28f4f6460df1804f"
+        },
+        {
+          "contract": "page_routes",
+          "git_blob": "0156460486ffe8766a768f8ed064d643a24b9ced",
+          "path": "data/contracts/current/page_routes.json",
+          "record_count": 166,
+          "sha256": "fab64ec1fd5f9f7f4d47e097679d7c33e4fdc8f695e7db23861b77cc33d785de"
+        },
+        {
+          "contract": "quality_rules",
+          "git_blob": "19511bd25ac49802bbacf7fdfba96aec2bd613b3",
+          "path": "data/contracts/current/quality_rules.json",
+          "record_count": 16,
+          "sha256": "b192a85840d466d0d33c4c2365f6322398819faf3b481c68f8ad0371bd3f12ae"
+        },
+        {
+          "contract": "raw_asset_template",
+          "git_blob": "4c6f15bc761a77f59c6033a57f7a297dcd9c705c",
+          "path": "data/contracts/current/raw_asset_template.json",
+          "record_count": 3,
+          "sha256": "20a2e76f89d85cf42e5dd0e2fb63025a47ee92bb8ef94029d7444b98919084d0"
+        },
+        {
+          "contract": "responsibilities",
+          "git_blob": "fa89efc9b3edd4a9ad3ae763fde1456a81d1bc45",
+          "path": "data/contracts/current/responsibilities.json",
+          "record_count": 9,
+          "sha256": "2a351de14dcf67e958fab3bf5de8d0c00b52d929d65a965c53a2c93fdf912792"
+        },
+        {
+          "contract": "review_checklist",
+          "git_blob": "c8d630f856c121559de827873c14174f6b7da8ee",
+          "path": "data/contracts/current/review_checklist.json",
+          "record_count": 12,
+          "sha256": "9f76a6b092df42a144a478374429927a7b27047e1e6dae717f8502a95f02882f"
+        },
+        {
+          "contract": "role_permissions",
+          "git_blob": "cd7dc3daf2dc9742b187a17fdfa2cc1ad8cf91a0",
+          "path": "data/contracts/current/role_permissions.json",
+          "record_count": 29,
+          "sha256": "7c71b1bde346078116dea8085d556991dc8744cb8144156ce3154c085771667f"
+        },
+        {
+          "contract": "source_registry_seed",
+          "git_blob": "2db1c253c28f62f4bff3f1befa1e2fabf5ae6f4a",
+          "path": "data/contracts/current/source_registry_seed.json",
+          "record_count": 18,
+          "sha256": "4b71615c664cecaff394c90c2a6f03fc9facb1761f39b83949bd238f8ec4c6f4"
+        },
+        {
+          "contract": "test_cases",
+          "git_blob": "2fee356934e7ac218b760b6f66cc033fb82ead03",
+          "path": "data/contracts/current/test_cases.json",
+          "record_count": 92,
+          "sha256": "7a8a43ed64d8abdd42fe837532905c7588f69761ad62bf834c0d55079f010330"
+        }
+      ],
+      "manifest": {
+        "git_blob": "6764e6bab465fa90672095ebed9243f00ba12190",
+        "path": "data/contracts/current/manifest.json",
+        "sha256": "9e87720dd84c2fdb21fe052accb2112f59b209ac7d434d7a7d263540d15a6c89"
+      }
+    },
+    "evidence_manifest": {
+      "git_blob": "b6b7e78fecc32f1c79cc9c14ceaceeadd5239016",
+      "path": "data/d0/evidence/manifest.json",
+      "sha256": "7ad1f1525a8b815be5dab1411c06925739041395d687a7f06aef842f93062789"
+    },
+    "publication_authorization": {
+      "git_blob": "37259ad31a6e5a4240df72573dfaaca3b7554451",
+      "path": "data/d0/candidates/d0_baseline_publication_authorization.2026-08-03.json",
+      "sha256": "1adee61309df5610da2a735902c74ed257c162ae50f076fb0582270821bb66ba"
+    },
+    "review_packet": {
+      "git_blob": "2bf3680d2a0ba2e1832cb1d2a4a0e0cb4bd182b0",
+      "path": "data/d0/review/d0_review_packet.2026-08-03.02.json",
+      "sha256": "9074796b40c11ef640358a98eca7710a8a86314451fbc44823e210870d752dbb"
+    }
+  },
+  "next_required_action": "The signed project approver must review the exact bundle SHA-256 separately for D0-AC-010 and the final D0 decision.",
+  "publication_replay": {
+    "checks": [],
+    "current_authoritative_workbook": {
+      "git_blob": "01e7bc88f8a067c016d20b2cb499d56b531a1618",
+      "path": "doc/doc/新能源企业出海导航仪_D0数据标准冻结执行台账.xlsx",
+      "sha256": "123394d0ee1744edf86e201bd1c683cafdd222d1ff5c55221eb1f0798e2f0712"
+    },
+    "expected_publication": {
+      "adopted_sha256": "123394d0ee1744edf86e201bd1c683cafdd222d1ff5c55221eb1f0798e2f0712",
+      "path": "doc/doc/新能源企业出海导航仪_D0数据标准冻结执行台账.xlsx",
+      "previous_sha256": "224e9a35bcbb363cf41c007499ba32aa6394cfdbf06331830c02d994e1c7ddff",
+      "required_git_mode": "100644",
+      "requires_descendant_commit": true
+    },
+    "ready_for_post_publication_d0_rebuild": true
+  },
+  "readiness_replay": {
+    "baseline_version": "V1.0-BASELINE",
+    "current_stage": "D0",
+    "excluded_self_gates": [
+      {
+        "code": "D0_ACCEPTANCE_PENDING",
+        "location": "D0验收签署",
+        "message": "D0-AC-010: 项目批准人签署D0通过结论 is pending",
+        "severity": "error"
+      },
+      {
+        "code": "EVIDENCE_ACCEPTANCE_MISSING",
+        "location": "data/d0/evidence/manifest.json",
+        "message": "No evidence is registered for D0-AC-010",
+        "severity": "error"
+      }
+    ],
+    "preclosure_blockers": [],
+    "stage_summaries": [
+      {
+        "completed": 4,
+        "stage": "D0",
+        "status": "已完成",
+        "total": 4
+      },
+      {
+        "completed": 0,
+        "stage": "D1",
+        "status": "未完成",
+        "total": 4
+      },
+      {
+        "completed": 0,
+        "stage": "D2",
+        "status": "未完成",
+        "total": 4
+      },
+      {
+        "completed": 0,
+        "stage": "D3",
+        "status": "未完成",
+        "total": 3
+      },
+      {
+        "completed": 0,
+        "stage": "D4",
+        "status": "未完成",
+        "total": 4
+      }
+    ],
+    "warnings": [
+      {
+        "code": "D0_REVIEW_MULTIPLE_PACKETS",
+        "location": "data/d0/review",
+        "message": "5 review packets exist; using latest d0_review_packet.2026-08-03.02.json",
+        "severity": "warning"
+      },
+      {
+        "code": "D0_REVIEW_PROGRESS_APPLIED",
+        "location": "data/d0/review/d0_review_packet.2026-08-03.02.json",
+        "message": "Applied 9 signed roles, 6 mapping decisions, and 9 acceptance approvals from data/d0/review/d0_review_packet.2026-08-03.02.json",
+        "severity": "info"
+      },
+      {
+        "code": "ROADMAP_ACTIVE_TASKS",
+        "location": "D0-D4任务计划",
+        "message": "1 roadmap task(s) are in progress",
+        "severity": "warning"
+      }
+    ],
+    "workbook_hashes": {
+      "d0_workbook": "123394d0ee1744edf86e201bd1c683cafdd222d1ff5c55221eb1f0798e2f0712",
+      "technical_workbook": "8b36f7cad337d72713f09c2b36d7eaf6ebe0bc2cd13f2bf0c05c45edbd065fb8"
+    }
+  },
+  "ready_for_named_human_review": true,
+  "review_replay": {
+    "carried_acceptance_ids": [
+      "D0-AC-001",
+      "D0-AC-002",
+      "D0-AC-003",
+      "D0-AC-004",
+      "D0-AC-005",
+      "D0-AC-006",
+      "D0-AC-007",
+      "D0-AC-008",
+      "D0-AC-009"
+    ],
+    "remaining_acceptance_ids": [
+      "D0-AC-010"
+    ],
+    "validation_checks": [
+      {
+        "code": "D0_REVIEW_ACCEPTANCE_PENDING",
+        "location": "acceptance_items.D0-AC-010",
+        "message": "D0-AC-010 has not been approved",
+        "severity": "error"
+      },
+      {
+        "code": "D0_REVIEW_FINAL_PENDING",
+        "location": "final_decision",
+        "message": "Project approver has not approved the final D0 decision",
+        "severity": "error"
+      }
+    ]
+  },
+  "schema_version": 1,
+  "stage": "D0",
+  "warning": "This machine-generated candidate excludes only the AC-010 pending and missing evidence self-gates. It is not an approval, does not complete D0 or D4, and does not authorize user-facing development."
+}

@@ -1,0 +1,157 @@
+{
+  "checked_on": "2026-08-03",
+  "findings": [
+    {
+      "country": "IDN",
+      "entry_observation": "Otoritas Jasa Keuangan 官方门户和 e-PPID 公开金融监管统计、目录、报告和下载附件，但站点及出版物普遍声明版权受保护。",
+      "entry_url": "https://www.ojk.go.id/en/kanal/iknb/data-dan-statistik/Default.aspx",
+      "open_questions": [
+        "逐个统计系列和附件确认版权、引用、下载、抽取、再分发、商业使用和修订规则",
+        "确认是否存在适合机器接入的正式数据接口及合理访问频率",
+        "排除监管报送源数据、个人信息、受限金融信息和仅供验证或邮件下载的文件"
+      ],
+      "policy_observation": "OJK 提供公共统计下载和公共信息申请渠道，但未发现覆盖批量自动采集或商业再利用的通用开放许可；部分出版物还明确禁止未经书面许可的复制。",
+      "policy_urls": [
+        "https://ojk.go.id/en/data-dan-statistik/Default.aspx",
+        "https://e-ppid.ojk.go.id/e-ppid/infoperiodic/index",
+        "https://www.ojk.go.id/id/default.aspx?title=ojk"
+      ],
+      "provisional_disposition": "official_statistics_locator_pending_series_and_document_level_reuse_permission",
+      "source_id": "SRC-IDN-OJK"
+    },
+    {
+      "country": "IDN",
+      "entry_observation": "Kementerian Keuangan 的 Portal Data APBN 面向公众展示预算地图、主题数据、时间序列和文档；现行门户入口使用 www.data-apbn.kemenkeu.go.id。",
+      "entry_url": "https://www.data-apbn.kemenkeu.go.id/",
+      "open_questions": [
+        "由数据负责人确认注册表中的 data-apbn 域名是否应规范化为现行 www.data-apbn 入口",
+        "确认门户下载、API、版权、署名、商业使用、再分发、修订和访问频率的正式条款",
+        "区分公开预算汇总与内部财政系统、详细交易、个人或纳税主体数据"
+      ],
+      "policy_observation": "门户明确用于向公众展示 APBN 数据，但当前未找到足以授权批量复制、商业产品化、原件再分发或 AI 索引的明确开放许可证；在补齐条款证据前应限于人工引用和来源定位。",
+      "policy_urls": [
+        "https://www.data-apbn.kemenkeu.go.id/peta-anggaran",
+        "https://www.data-apbn.kemenkeu.go.id/"
+      ],
+      "provisional_disposition": "public_budget_locator_pending_portal_license_api_and_automation_terms",
+      "source_id": "SRC-IDN-KEMENKEU"
+    },
+    {
+      "country": "IDN",
+      "entry_observation": "Direktorat Jenderal Bea dan Cukai 官方站点公开关税、进出口规则、流程和公告，并发布适用于网站的正式使用条款。",
+      "entry_url": "https://www.beacukai.go.id/",
+      "open_questions": [
+        "对目标法规、税则和公告逐份确认法定文本来源、有效日期、版本和附件版权",
+        "商业产品使用前取得 DJBC 管理方许可并确认允许的摘录、结构化存储和再分发范围",
+        "排除 CEISA、用户服务门户、登录模块、企业申报、账户和任何敏感海关数据"
+      ],
+      "policy_observation": "DJBC 条款声明站点整体内容归 DJBC 所有，任何商业使用必须取得网站管理方许可；用户服务系统还存在登录和专用客户端要求。因此当前不批准商业自动采集。",
+      "policy_urls": [
+        "https://www.beacukai.go.id/syarat-dan-ketentuan",
+        "https://www.beacukai.go.id/",
+        "https://customer.beacukai.go.id/index.html?page=requirement"
+      ],
+      "provisional_disposition": "official_rule_locator_commercial_product_use_requires_djbc_permission",
+      "source_id": "SRC-IDN-BEACUKAI"
+    },
+    {
+      "country": "IDN",
+      "entry_observation": "Kementerian Perindustrian 官方网站和 Satu Data Kemenperin 公开产业政策、TKDN 及制造业统计；具体数据集页面可下载，但样本数据集显示未提供许可证。",
+      "entry_url": "https://kemenperin.go.id/",
+      "open_questions": [
+        "逐数据集确认许可、生产单位、原始来源、更新频率、字段定义和下载端点",
+        "对标示 No License Provided 的数据取得书面使用授权后再决定结构化存储或产品展示",
+        "将公开统计与 SIINas、企业申报、认证、知识产权和其他登录系统严格隔离"
+      ],
+      "policy_observation": "Satu Data 门户的开放访问和下载功能不等同于开放许可证；当数据集明确显示 No License Provided 时，不能批准再分发、商业使用或 AI 索引。",
+      "policy_urls": [
+        "https://www.satudata.kemenperin.go.id/id/dataset/groups/jumlah-produk-dalam-negeri-bersertifikat-tkdn",
+        "https://www.satudata.kemenperin.go.id/",
+        "https://kemenperin.go.id/"
+      ],
+      "provisional_disposition": "dataset_locator_only_until_explicit_kemenperin_license_or_written_permission",
+      "source_id": "SRC-IDN-KEMENPERIN"
+    },
+    {
+      "country": "IDN",
+      "entry_observation": "Kementerian Perdagangan 的 Satu Data Perdagangan 为公众开放贸易、价格和宏观数据，无需账户即可访问公共数据，并为部分序列提供下载。",
+      "entry_url": "https://satudata.kemendag.go.id/",
+      "open_questions": [
+        "逐序列确认 Kemendag、BPS、BI 或其他来源的权利主体和再利用许可",
+        "确认下载端点、自动访问、商业使用、再分发、署名、修订和缓存条款",
+        "排除账户区、内部应用、个人数据和 Daftar Informasi yang Dikecualikan 中的受限数据"
+      ],
+      "policy_observation": "FAQ 证明公共数据可开放访问，但没有发现覆盖批量采集和商业再利用的通用开放许可；多个页面的数据来自 BPS 或 BI，因此必须沿原始来源逐项复核许可。",
+      "policy_urls": [
+        "https://satudata.kemendag.go.id/faq",
+        "https://satudata.kemendag.go.id/katalog-data",
+        "https://satudata.kemendag.go.id/data-informasi/perdagangan-luar-negeri/impor-non-migas-komoditi"
+      ],
+      "provisional_disposition": "public_data_locator_pending_series_origin_license_and_machine_access_review",
+      "source_id": "SRC-IDN-KEMENDAG"
+    },
+    {
+      "country": "IDN",
+      "entry_observation": "LKPP 已运行 CKAN Satu Data Pengadaan 门户，公开提供 XLSX、CSV、JSON 下载和 CKAN API；多个目标数据集页面同时显示 No License Provided。",
+      "entry_url": "https://data.lkpp.go.id/",
+      "open_questions": [
+        "逐数据集取得明确许可或 LKPP 书面授权，再确定下载、API、结构化存储和再分发权限",
+        "确认 CKAN API 请求频率、版本、更新计划、署名和撤回处理规则",
+        "排除供应商个人资料、受限 SPSE 数据、登录门户、源代码和仅能通过正式协议开放的数据库"
+      ],
+      "policy_observation": "机器可读下载和 CKAN API 只证明技术可访问，数据集的 No License Provided 状态不足以批准再利用；LKPP 公开信息分类还表明数据库/API 和供应商细节可能受正式协议或隐私限制。",
+      "policy_urls": [
+        "https://data.lkpp.go.id/en/",
+        "https://data.lkpp.go.id/id/dataset/data-layanan-pengadaan-secara-elektronik-lpse",
+        "https://ppid.lkpp.go.id/frontend/web/uploads/regulation/KeputusanPPIDLKPPNomor2Tahun2024.pdf"
+      ],
+      "provisional_disposition": "technical_api_candidate_blocked_for_reuse_until_dataset_license_or_formal_agreement",
+      "source_id": "SRC-IDN-LKPP"
+    },
+    {
+      "country": "IDN",
+      "entry_observation": "Badan Informasi Geospasial 的 Ina-Geoportal、Satu Data Indonesia 和 One Map 门户提供地理空间元数据、服务和部分下载，但数据集许可、访问级别和分发限制不一致。",
+      "entry_url": "https://tanahair.indonesia.go.id/portal-web",
+      "open_questions": [
+        "逐图层保存许可、access_constraints、use_constraints、数据所有者、空间范围、版本和更新频率",
+        "只对明确标为可下载且有适用许可证的图层启用处理，并满足署名、同许可或其他分发条件",
+        "排除 read-only、closed、restricted、No License Provided 及需登录申请或书面许可的图层和服务"
+      ],
+      "policy_observation": "BIG 的标准要求元数据记录法律、访问和安全限制；实际目录既有 ODbL 等明确许可，也有 No License Provided 或其他限制，One Map 还实施按角色划分的开放、只读和关闭访问。因此必须按图层准入。",
+      "policy_urls": [
+        "https://tanahair.indonesia.go.id/portal-web/static/Standar%20Data%20Geospasial%20Handbook.pdf",
+        "https://tanahair.indonesia.go.id/sdi/en/dataset/bahaya-gempa-bumi",
+        "https://tanahair.indonesia.go.id/sdi/dataset/lsd_ar",
+        "https://onemap.big.go.id/home/"
+      ],
+      "provisional_disposition": "candidate_only_for_layer_specific_license_and_access_classification",
+      "source_id": "SRC-IDN-GEOSPATIAL"
+    }
+  ],
+  "inputs": {
+    "source_registry": {
+      "path": "data/d1/candidates/source_admission_registry.template.json",
+      "sha256": "ae68cac27269c9d42a24381da43873ae46a5d88271f6f5da5fa82eb27f7a5914"
+    }
+  },
+  "machine_observation_only": true,
+  "method": "official_primary_web_pages_reviewed_without_authentication_registration_or_bulk_collection",
+  "schema_version": 1,
+  "stage": "D1",
+  "status": "requires_named_human_review",
+  "usage_boundaries": {
+    "ai_index": "pending",
+    "cache_original": "pending",
+    "collect_content": "pending",
+    "collect_metadata": "pending",
+    "display_excerpt": "pending",
+    "display_original": "pending",
+    "download": "pending",
+    "export": "pending",
+    "model_training": "pending",
+    "store_structured": "pending",
+    "summarize": "pending",
+    "translate": "pending"
+  },
+  "warning": "本文件仅记录七个印尼补充官方来源的机器研究观察，不是法律意见、许可批准、访问批准、用途批准、准入证据或 active 状态依据。"
+}

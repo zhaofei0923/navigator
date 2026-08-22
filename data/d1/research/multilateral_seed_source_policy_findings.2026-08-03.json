@@ -1,0 +1,154 @@
+{
+  "checked_on": "2026-08-03",
+  "findings": [
+    {
+      "country": "GLOBAL",
+      "entry_observation": "World Bank Data 和 Data Catalog 提供公开指标、机器可读下载及 API；由 World Bank 自身生产并作为开放数据发布的数据集默认采用 CC BY 4.0，但目录也包含其他许可或受限数据集。",
+      "entry_url": "https://data.worldbank.org/",
+      "open_questions": [
+        "逐个目标数据集保存许可证、数据所有者、更新时间、修订规则、字段定义和 API 端点",
+        "只对明确标为 CC BY 4.0 或其他适用开放许可的数据启用商业再利用和再分发",
+        "保留适当署名、许可证链接、翻译或其他修改说明，并排除第三方受限数据"
+      ],
+      "policy_observation": "World Bank Data Catalog 明确 CC BY 4.0 是 World Bank 自产开放数据集的默认许可，允许复制、修改、分发和商业使用，但并非目录中的全部数据都是开放数据，必须以每个数据集页面的许可为准。",
+      "policy_urls": [
+        "https://datacatalog.worldbank.org/public-licenses",
+        "https://datacatalog.worldbank.org/faq",
+        "https://www.worldbank.org/en/about/legal/permissions"
+      ],
+      "provisional_disposition": "candidate_only_for_dataset_specific_open_license_with_attribution_and_change_notice",
+      "source_id": "SRC-WB-DATA"
+    },
+    {
+      "country": "GLOBAL",
+      "entry_observation": "World Bank Projects & Operations 公开项目、融资、采购线索和项目文件；项目页面中的内容类型、API、数据集和第三方文件可能分别适用不同条款。",
+      "entry_url": "https://projects.worldbank.org/",
+      "open_questions": [
+        "区分项目元数据、Data Catalog 数据集、采购公告、项目文件和借款人或第三方材料",
+        "确认每个机器接口和数据集是否有单独的开放许可，而不是仅依赖 World Bank 一般网站条款",
+        "对非开放项目材料限制为链接和人工引用，除非文档级许可明确允许复制、提取或再分发"
+      ],
+      "policy_observation": "World Bank 一般条款对部分 API 只允许非商业使用，而 Data Catalog 中明确标识的数据集可适用 CC BY 4.0；因此项目来源不能整体视为开放，应按具体数据资产和文件分别准入。",
+      "policy_urls": [
+        "https://projects.worldbank.org/en/projects-operations/projects-home?lang=en",
+        "https://www.worldbank.org/ext/en/legal/terms-conditions",
+        "https://datacatalog.worldbank.org/public-licenses"
+      ],
+      "provisional_disposition": "project_locator_candidate_open_data_use_only_when_asset_specific_license_is_present",
+      "source_id": "SRC-WB-PROJ"
+    },
+    {
+      "country": "GLOBAL",
+      "entry_observation": "IRENA Data 和 IRENASTAT 提供可再生能源装机、发电、成本和其他统计的查询与下载；IRENA 通用条款明确覆盖 IRENASTAT、Data Query 等平台。",
+      "entry_url": "https://www.irena.org/Data",
+      "open_questions": [
+        "逐项确认目标 IRENASTAT 数据是否有优先适用的专项条款、第三方数据来源或出版物级许可",
+        "取得商业产品使用、批量提取、再分发、翻译和 AI 索引所需的 IRENA 书面许可",
+        "保存署名、版本、下载日期、统计口径和不使用 IRENA 标识或暗示认可的控制"
+      ],
+      "policy_observation": "IRENA 通用条款允许在适当署名下为非商业目的访问、复制、分享和下载内容；其他用途需要事先书面许可，出版物和第三方材料还受各自条款约束。因此不能直接用于商业产品化采集。",
+      "policy_urls": [
+        "https://www.irena.org/terms-and-conditions",
+        "https://www.irena.org/Data/Downloads/IRENASTAT"
+      ],
+      "provisional_disposition": "noncommercial_citation_and_download_candidate_commercial_use_requires_written_permission",
+      "source_id": "SRC-IRENA"
+    },
+    {
+      "country": "GLOBAL",
+      "entry_observation": "UN Comtrade Plus 公开全球贸易统计并提供开发者和订阅接口，但使用者无论是否订阅都受专门的 UN Comtrade License Agreement 约束。",
+      "entry_url": "https://comtradeplus.un.org/",
+      "open_questions": [
+        "向 UN Statistics Division 取得自动浏览、批量下载、结构化存储、再分发和商业开发的书面许可",
+        "确认免费与 Premium API 的请求额度、账号、用途、缓存、派生数据和终端用户授权范围",
+        "排除任何超出许可证的第三方内容并保存访问账号和订阅权限的合规证据"
+      ],
+      "policy_observation": "UN Comtrade 许可协议明确禁止未经事先书面许可的复制、自动浏览或下载、再分发、发布和商业开发。免费公开访问和 API 存在本身不构成产品化授权。",
+      "policy_urls": [
+        "https://comtradeplus.un.org/LicenseAgreement",
+        "https://comtradeplus.un.org/",
+        "https://unstats.un.org/unsd/api/"
+      ],
+      "provisional_disposition": "blocked_for_automated_or_product_use_without_prior_written_un_permission",
+      "source_id": "SRC-COMTRADE"
+    },
+    {
+      "country": "REGION-ASIA",
+      "entry_observation": "Asian Development Bank 项目门户公开项目数据、项目文件和采购信息；ADB 使用条款为项目数据设有专项授权，并另行区分出版物、Data Library 和第三方内容。",
+      "entry_url": "https://www.adb.org/projects",
+      "open_questions": [
+        "把项目结构化数据与项目文件、照片、出版物和第三方材料分开记录许可",
+        "为所有共享数据保留 ADB 署名和同等的下游署名要求，并禁止使用标识或暗示认可",
+        "确认 API 技术规范、合理请求频率、IATI 版本和目标项目字段的修订规则"
+      ],
+      "policy_observation": "除非另有标示，ADB 项目数据可免费复制、下载、分发、改编、链接、展示并用于商业或非商业产品，但必须署名并把署名要求传递给下游；第三方内容仍需单独许可。",
+      "policy_urls": [
+        "https://www.adb.org/terms-use",
+        "https://data.adb.org/terms-use-data",
+        "https://www.adb.org/projects"
+      ],
+      "provisional_disposition": "candidate_for_adb_project_data_with_attribution_and_third_party_exclusions",
+      "source_id": "SRC-ADB"
+    },
+    {
+      "country": "REGION-AFRICA",
+      "entry_observation": "African Development Bank 官方采购门户公开政策、项目采购和公告材料；AfDB 一般条款把站点材料定位为信息用途。",
+      "entry_url": "https://www.afdb.org/en/projects-and-operations/procurement",
+      "open_questions": [
+        "逐个采购公告和附件确认 AfDB、借款人或第三方的版权主体及文档级条件",
+        "取得商业汇总、再分发、派生数据库、自动采集或大规模缓存的书面许可",
+        "将项目采购与供应商注册、投标文件、受限门户和个人联系信息严格隔离"
+      ],
+      "policy_observation": "AfDB 条款只鼓励为个人、非商业目的打印、下载或复制；未经 AfDB 明确书面同意不得转售、再分发或为商业目的制作派生作品。因此当前仅可作为人工定位和引用来源。",
+      "policy_urls": [
+        "https://www.afdb.org/en/terms-and-conditions",
+        "https://www.afdb.org/en/projects-and-operations/procurement"
+      ],
+      "provisional_disposition": "personal_noncommercial_locator_commercial_or_redistribution_use_requires_written_consent",
+      "source_id": "SRC-AFDB"
+    },
+    {
+      "country": "GLOBAL",
+      "entry_observation": "United Nations Global Marketplace 汇集联合国采购机会、公告和授标信息，同时提供注册账户和付费 Tender Alert Service。",
+      "entry_url": "https://www.ungm.org/",
+      "open_questions": [
+        "任何产品化使用前取得 UNGM 及相关采购机构对复制、存储、自动访问和再分发的书面许可",
+        "确认公开页面、注册账户和 Tender Alert Service 各自的访问与用途边界",
+        "排除供应商账户、个人数据、付费提醒、受限附件和采购机构保留版权的材料"
+      ],
+      "policy_observation": "UNGM 条款仅允许为个人合法用途下载或打印摘录，禁止商业或公共使用、复制到其他站点、存储到检索系统或以任何形式传播；采购材料还可能归发布机构所有。",
+      "policy_urls": [
+        "https://www.ungm.org/Public/Pages/Terms",
+        "https://help.ungm.org/hc/en-us/sections/360003815559-Using-UNGM"
+      ],
+      "provisional_disposition": "blocked_for_product_collection_storage_or_redistribution_without_written_ungm_and_owner_permission",
+      "source_id": "SRC-UNGM"
+    }
+  ],
+  "inputs": {
+    "source_registry": {
+      "path": "data/d1/candidates/source_admission_registry.template.json",
+      "sha256": "ae68cac27269c9d42a24381da43873ae46a5d88271f6f5da5fa82eb27f7a5914"
+    }
+  },
+  "machine_observation_only": true,
+  "method": "official_primary_web_pages_reviewed_without_authentication_registration_or_bulk_collection",
+  "schema_version": 1,
+  "stage": "D1",
+  "status": "requires_named_human_review",
+  "usage_boundaries": {
+    "ai_index": "pending",
+    "cache_original": "pending",
+    "collect_content": "pending",
+    "collect_metadata": "pending",
+    "display_excerpt": "pending",
+    "display_original": "pending",
+    "download": "pending",
+    "export": "pending",
+    "model_training": "pending",
+    "store_structured": "pending",
+    "summarize": "pending",
+    "translate": "pending"
+  },
+  "warning": "本文件仅记录七个多边机构或区域种子来源的机器研究观察，不是法律意见、许可批准、访问批准、用途批准、准入证据或 active 状态依据。"
+}

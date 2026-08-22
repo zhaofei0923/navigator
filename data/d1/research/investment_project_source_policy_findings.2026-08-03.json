@@ -1,0 +1,112 @@
+{
+  "checked_on": "2026-08-03",
+  "findings": [
+    {
+      "country": "IDN",
+      "entry_observation": "BKPM投资实现入口属于印尼投资主管部门官方网站；本次直接打开返回网关错误，但官方使用条款页面可访问。",
+      "entry_url": "https://www.investindonesia.go.id/id/info/realisasi-investasi",
+      "open_questions": [
+        "寻找可独立复用的正式开放数据目录或取得书面许可",
+        "确认统计附件是否声明不同于网站通用条款的许可",
+        "在入口恢复后复核访问频率、robots和历史版本"
+      ],
+      "policy_observation": "网站通用条款将内容用途限制为个人、非商业使用，并禁止未经书面许可复制、存储、发布、传播、翻译或商业利用，因此不能直接用于结构化采集和产品再分发。",
+      "policy_urls": [
+        "https://www.investindonesia.go.id/id/lainnya/ketentuan",
+        "https://www.investindonesia.go.id/id/lainnya/privasi"
+      ],
+      "provisional_disposition": "blocked_for_product_reuse_pending_open_dataset_or_written_permission",
+      "source_id": "SRC-IDN-BKPM-DATA"
+    },
+    {
+      "country": "VNM",
+      "entry_observation": "越南外国投资局官方入口属于mpi.gov.vn域名，但本次网页工具未能安全打开且未检索到明确使用条款。",
+      "entry_url": "https://fia.mpi.gov.vn/en/",
+      "open_questions": [
+        "人工浏览确认当前入口、机构归属和TLS可用性",
+        "寻找网站条款、版权、开放数据和robots声明",
+        "区分新闻、投资统计、项目线索、附件和第三方来源"
+      ],
+      "policy_observation": "目前只有候选身份和用途元数据，没有足够的官方许可或访问证据支持自动采集、缓存、再分发或AI索引。",
+      "policy_urls": [],
+      "provisional_disposition": "insufficient_for_any_automated_or_redistributed_use",
+      "source_id": "SRC-VNM-FIA"
+    },
+    {
+      "country": "SAU",
+      "entry_observation": "MISA投资统计页面可访问并提供投资公报、PDF和Excel；同一官方门户设有开放数据政策和开放数据目录。",
+      "entry_url": "https://misa.gov.sa/resources/investment-statistics/",
+      "open_questions": [
+        "确认每份投资统计文件是否列入开放数据目录并绑定具体许可",
+        "区分开放数据、普通报告、投资机会和电子服务内容",
+        "保留来源、历史、修改说明并遵守用途限制"
+      ],
+      "policy_observation": "MISA开放数据政策允许免费使用、复用和发布其开放数据，并要求注明来源和遵守沙特国家开放数据许可；不能自动扩展到未列入开放数据目录的普通网页或报告。",
+      "policy_urls": [
+        "https://misa.gov.sa/resources/open-data/",
+        "https://misa.gov.sa/app/uploads/2024/09/Terms-and-Conditions-V6.2-2024.pdf"
+      ],
+      "provisional_disposition": "candidate_for_human_dataset_license_and_access_review",
+      "source_id": "SRC-SAU-MISA"
+    },
+    {
+      "country": "ZAF",
+      "entry_observation": "IPP Office官方门户可访问，提供REIPPPP、储能采购、出版物和项目相关文件入口；页面当前提示只读状态。",
+      "entry_url": "https://www.ipp-projects.co.za/",
+      "open_questions": [
+        "寻找门户级使用条款、版权、隐私和robots声明",
+        "逐份确认采购文件、协议、报告和第三方链接的权利",
+        "确认只读提示是临时状态还是访问策略"
+      ],
+      "policy_observation": "公开提供文件入口不等于允许批量下载、缓存或再分发；本次未找到统一开放许可，所有内容用途仍须按文件类别复核。",
+      "policy_urls": [
+        "https://www.ipp-projects.co.za/"
+      ],
+      "provisional_disposition": "insufficient_for_bulk_collection_requires_document_level_review",
+      "source_id": "SRC-ZAF-IPP"
+    },
+    {
+      "country": "BRA",
+      "entry_observation": "BNDES普通透明度门户可查询主要项目、客户和融资业务；独立开放数据门户提供带许可证的结构化数据和API。",
+      "entry_url": "https://www.bndes.gov.br/wps/portal/site/home/transparencia/consulta-operacoes-bndes",
+      "open_questions": [
+        "为目标项目和融资数据集逐项保存ODbL许可、字段字典和更新元数据",
+        "排除银行保密、个人数据和未进入开放数据门户的客户信息",
+        "确认ODbL署名、数据库共享和衍生数据库义务"
+      ],
+      "policy_observation": "普通BNDES门户标示保留所有权利；开放数据门户中的具体数据集则明确采用Open Data Commons ODbL并提供CSV或API，正式采集应限定到这些许可明确的数据集。",
+      "policy_urls": [
+        "https://dadosabertos.bndes.gov.br/pt_BR/dataset/",
+        "https://dadosabertos.bndes.gov.br/pt_BR/group/licitacoes-e-contratos"
+      ],
+      "provisional_disposition": "candidate_only_via_dataset_specific_odbl_open_data",
+      "source_id": "SRC-BRA-BNDES"
+    }
+  ],
+  "inputs": {
+    "source_registry": {
+      "path": "data/d1/candidates/source_admission_registry.template.json",
+      "sha256": "ae68cac27269c9d42a24381da43873ae46a5d88271f6f5da5fa82eb27f7a5914"
+    }
+  },
+  "machine_observation_only": true,
+  "method": "official_primary_web_pages_reviewed_without_authentication_registration_or_bulk_collection",
+  "schema_version": 1,
+  "stage": "D1",
+  "status": "requires_named_human_review",
+  "usage_boundaries": {
+    "ai_index": "pending",
+    "cache_original": "pending",
+    "collect_content": "pending",
+    "collect_metadata": "pending",
+    "display_excerpt": "pending",
+    "display_original": "pending",
+    "download": "pending",
+    "export": "pending",
+    "model_training": "pending",
+    "store_structured": "pending",
+    "summarize": "pending",
+    "translate": "pending"
+  },
+  "warning": "本文件仅记录五个国家投资和项目主来源官方页面的机器研究观察，不是法律意见、许可批准、访问批准、用途批准、准入证据或active状态依据。"
+}

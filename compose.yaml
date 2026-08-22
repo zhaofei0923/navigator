@@ -1,0 +1,83 @@
+name: navigator-demo
+
+services:
+  db:
+    image: ${NAVIGATOR_POSTGRES_IMAGE:-postgres:18-alpine}
+    environment:
+      POSTGRES_DB: navigator_demo
+      POSTGRES_USER: navigator_demo
+      POSTGRES_PASSWORD: ${NAVIGATOR_DB_PASSWORD:?NAVIGATOR_DB_PASSWORD must be set in .env}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U navigator_demo -d navigator_demo"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    volumes:
+      - navigator_demo_pgdata:/var/lib/postgresql
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      navigator.data-scope: synthetic_demo
+
+  api:
+    build:
+      context: ./services/api
+      args:
+        PYTHON_BASE_IMAGE: ${NAVIGATOR_PYTHON_BASE_IMAGE:-python:3.13-slim}
+        INSTALL_DEPENDENCIES: ${NAVIGATOR_INSTALL_DEPENDENCIES:-1}
+    environment:
+      DATABASE_URL: postgresql+psycopg://navigator_demo:${NAVIGATOR_DB_PASSWORD}@db:5432/navigator_demo
+      DEMO_API_KEY: ${NAVIGATOR_DEMO_ACCESS_KEY:?NAVIGATOR_DEMO_ACCESS_KEY must be set in .env}
+      DEMO_CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+      DEMO_AUTO_CREATE_SCHEMA: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8000:8000"
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      navigator.data-scope: synthetic_demo
+
+  web:
+    build:
+      context: ./apps/web
+      args:
+        NODE_IMAGE: ${NAVIGATOR_NODE_IMAGE:-node:24-alpine}
+    environment:
+      DEMO_API_BASE_URL: http://api:8000
+      DEMO_API_KEY: ${NAVIGATOR_DEMO_ACCESS_KEY:?NAVIGATOR_DEMO_ACCESS_KEY must be set in .env}
+      DEMO_SHARED_PASSPHRASE: ${NAVIGATOR_DEMO_PASSPHRASE:?NAVIGATOR_DEMO_PASSPHRASE must be set in .env}
+      SESSION_SECRET: ${NAVIGATOR_DEMO_SESSION_SECRET:?NAVIGATOR_DEMO_SESSION_SECRET must be set in .env}
+      DEMO_COOKIE_SECURE: "false"
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:3000:3000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      start_period: 20s
+      retries: 12
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      navigator.data-scope: synthetic_demo
+
+volumes:
+  navigator_demo_pgdata:
+    labels:
+      navigator.data-scope: synthetic_demo

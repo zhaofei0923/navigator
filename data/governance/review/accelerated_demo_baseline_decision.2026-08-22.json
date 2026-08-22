@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "record_type": "project_baseline_change_decision",
+  "decision_id": "PBD-ACCEL-DEMO-001",
+  "baseline_version": "V1.0-BASELINE",
+  "status": "approved_and_effective",
+  "decision": "approve_accelerated_demo_track",
+  "approved_at": "2026-08-22",
+  "approved_by": {
+    "person_name": "kevin",
+    "role": "项目批准人"
+  },
+  "candidate": {
+    "path": "data/governance/candidates/accelerated_demo_baseline_change.2026-08-22.json",
+    "sha256": "86949a277cd438511b60e88f35ee0740b48f187c55183e0839f6a7307db0f86b"
+  },
+  "confirmation": {
+    "path": "data/governance/evidence/kevin_accelerated_demo_confirmation_20260822.json",
+    "sha256": "10e1c65bb0e305c184867527f7e8328860adf79389d689c78dee08f4560e8a72"
+  },
+  "bound_current_head_at_review": "d936468c33313693c3cc1131a47ac131d7cb270c",
+  "effective_scope": "候选包所列本地或访问受控私有预览的合成数据demo轨道。",
+  "effective_rule": "D4通过前允许实现内部全栈demo，但真实数据接入、外部来源调用、正式账号权限、公开发布和生产采用仍须走正式D1-D4与P0交付门禁。",
+  "authorized_actions": [
+    "write_decision_record",
+    "update_repository_governance",
+    "start_bounded_demo_implementation"
+  ],
+  "controls_inherited_from_candidate": true,
+  "does_not_complete_d1_d4": true,
+  "does_not_authorize_production": true,
+  "does_not_authorize_public_release": true,
+  "does_not_approve_real_source_usage": true,
+  "comments": "同意"
+}

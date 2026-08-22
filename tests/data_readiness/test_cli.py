@@ -25,17 +25,17 @@ def test_report_command_outputs_json(capsys: CaptureFixture[str]) -> None:
 
     assert exit_code == 0
     captured = capsys.readouterr()
-    assert '"ready": false' in captured.out
+    assert '"ready": true' in captured.out
 
 
-def test_gate_command_blocks_current_d0(capsys: CaptureFixture[str]) -> None:
+def test_gate_command_passes_current_d0(capsys: CaptureFixture[str]) -> None:
     paths = discover_repository()
 
     exit_code = main(["--repo", str(paths.root), "gate", "--stage", "D0"])
 
-    assert exit_code == 2
+    assert exit_code == 0
     captured = capsys.readouterr()
-    assert "门禁结论：未通过" in captured.out
+    assert "门禁结论：通过" in captured.out
 
 
 def test_report_command_writes_file(tmp_path: Path, capsys: CaptureFixture[str]) -> None:

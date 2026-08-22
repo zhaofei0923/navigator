@@ -8,12 +8,21 @@
 
 ## Current phase gate
 
-- The repository is currently in D0 data-standard freeze.
-- Until `uv run navigator-data gate --stage D0` passes and D1-D4 are formally completed,
-  work is limited to data preparation, source onboarding, collection, normalization, quality,
-  evidence, and acceptance tooling.
-- Do not create user-facing V0.1 functionality before the D4 review is signed. A change to this
-  rule requires a formal project-baseline decision, not a code-only workaround.
+- D0 formally passed on 2026-08-22; the formal data track is currently in D1 source admission.
+- Until D1-D4 are formally completed, real-source collection, normalization, publication,
+  AI indexing, production data use, and formal V0.1/P0 release remain limited to the approved
+  data-preparation, evidence, acceptance, and delivery processes below.
+- Project-baseline decision `PBD-ACCEL-DEMO-001`, approved by project approver `kevin` on
+  2026-08-22, authorizes a bounded full-stack internal demo before D4. The demo may include a
+  real web frontend, FastAPI backend, database/migrations, synthetic seed data, integration tests,
+  and an access-controlled private preview.
+- The accelerated demo must use only repository-owned `synthetic_demo` fixtures, display a
+  persistent “演示数据 / 非正式结论” notice, remain isolated from D1-D4 candidates and production
+  credentials, and make no external source, model, or real-user calls. It does not authorize public
+  release, production adoption, real authentication/enterprise permissions, or professional claims.
+- Within that approved demo boundary, routine feature work uses machine quality gates and does not
+  require separate D1-D4 human sign-off. Any real data, external integration, public exposure, or
+  production scope requires a new written project-baseline decision or completion of the formal gate.
 
 ## Engineering
 

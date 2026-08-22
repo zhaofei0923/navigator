@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "candidate_type": "project_baseline_change_candidate",
+  "decision_id": "PBD-ACCEL-DEMO-001",
+  "baseline_version": "V1.0-BASELINE",
+  "status": "pending_named_project_approver_review",
+  "prepared_at": "2026-08-22",
+  "prepared_by": "codex (authorized candidate preparation only)",
+  "bound_current_head": "d936468c33313693c3cc1131a47ac131d7cb270c",
+  "bound_inputs": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "cf9b38a662225ca5c3cf637c886ed4970feefb5a34a991e6e27420ff7be50377"
+    },
+    {
+      "path": "docs/development/P0_IMPLEMENTATION_PLAN.md",
+      "sha256": "a93d6e1cc6ea0b16cdf5da1346bf234dbe7e9b4a7d7cc12f902511ee09fec735"
+    },
+    {
+      "path": "doc/doc/新能源企业出海导航仪_V1.0_Markdown完整开发分册_BASELINE/07-开发实施测试与交付.md",
+      "sha256": "3998f9191b9713a05dcd13fa9b31c33c6d311e5880ed4b24c2ee673eb8a84570"
+    },
+    {
+      "path": "doc/doc/新能源企业出海导航仪_V1.0_Markdown完整开发分册_BASELINE/09-首批数据采集实施方案.md",
+      "sha256": "3340fc92ebdb1f5ea9827d4c00c32d3041dc448e6763b54fcb1c71cae67db504"
+    },
+    {
+      "path": "data/contracts/current/manifest.json",
+      "sha256": "9e87720dd84c2fdb21fe052accb2112f59b209ac7d434d7a7d263540d15a6c89"
+    },
+    {
+      "path": "data/d0/candidates/d0_final_review_bundle.2026-08-22.json",
+      "sha256": "e686c111e856de6b3552d2f2df6c4c5f7d9110cf6ac967c0a2430d72567c7b79"
+    }
+  ],
+  "requested_decision": "approve_accelerated_demo_track",
+  "decision_owner": {
+    "person_name": "kevin",
+    "role": "项目批准人"
+  },
+  "change_summary": "在不改变D0-D4正式数据验收结论的前提下，允许D4之前实现一个与生产隔离的P0演示轨道，并将该轨道的重复人工准入压缩为一次项目批准。",
+  "superseded_rule_for_demo_only": "D4正式评审通过后，方可启动V0.1用户侧产品开发",
+  "replacement_rule": "D4通过前仅允许按本决定边界实现本地或私有预览的合成数据演示；真实数据接入、外部发布和生产采用仍以D4正式通过为前置。",
+  "allowed_demo_scope": {
+    "delivery_mode": [
+      "local_development",
+      "access_controlled_private_preview"
+    ],
+    "features": [
+      "演示首页与导航",
+      "五国合成数据的国家列表和详情",
+      "二至四国合成数据对比",
+      "政策、风险、项目、招标和伙伴的只读演示卡片",
+      "来源与更新时间占位展示",
+      "响应式布局、空态、错态和基础可访问性"
+    ],
+    "data": "仅使用仓库内明确标记为synthetic_demo的合成或脱敏固定数据，不读取D1-D4候选数据，不代表真实专业结论。",
+    "api": "允许使用进程内fixture或mock API；禁止调用未批准的外部来源、生产服务或真实用户系统。",
+    "authentication": "演示轨道不实现真实账号、企业权限、付费、CRM写入或管理员操作。",
+    "ai": "允许固定示例文本展示交互外观；禁止真实RAG、外部模型调用、来源材料索引或专业答案声明。"
+  },
+  "mandatory_controls": [
+    "所有页面持续显示“演示数据 / 非正式结论”标识",
+    "演示数据不得包含个人信息、秘密、受限材料或从未准入来源复制的内容",
+    "不得自动采集、批量下载、再分发或AI索引任何D1 under_review来源",
+    "不得公开部署、邀请外部真实用户或用作生产决策",
+    "演示轨道与正式数据目录、凭据、生产配置和发布流水线隔离",
+    "每次合并至少通过格式、类型、单元测试和关键演示流程冒烟测试",
+    "发现越界数据、外部访问或误导性展示时立即停止演示轨道并登记问题"
+  ],
+  "streamlined_governance": {
+    "human_review": "本决定生效后，范围内演示实现不再逐功能等待D1-D4人工签署；新增范围、真实数据、外部访问或公开部署仍需项目批准人书面变更。",
+    "machine_gates": "保留代码质量、测试、秘密扫描、依赖锁定和构建检查；失败不得以demo名义忽略。",
+    "spec_policy": "完整PRD、全量原型、正式OpenAPI和全量追踪可后补；实现前只要求一页演示范围、固定数据契约、关键交互验收点和风险边界，并在真实P0合并前补齐。",
+    "formal_data_track": "D0-D4继续独立推进；任何阶段状态、证据、许可或正式验收不得由演示结果替代。"
+  },
+  "initial_demo_acceptance": [
+    "本地一条命令启动并提供明确访问地址",
+    "首页、国家列表、国家详情和对比主链路可完成",
+    "五国演示数据均标记synthetic_demo且可一键重置",
+    "无真实外部数据请求、无秘密、无个人信息、无AI索引",
+    "关键流程自动化测试通过并提供截图或录屏证据"
+  ],
+  "effective_condition": "项目批准人审核本候选包精确SHA-256并授权落库，且D0-AC-010最终确认同步完成。",
+  "expiry": "D4正式批准、项目批准人撤销或被新的项目基线决定替代时，以最早发生者为准。",
+  "does_not_complete_d1_d4": true,
+  "does_not_authorize_production": true,
+  "does_not_authorize_public_release": true,
+  "does_not_approve_real_source_usage": true,
+  "template_only": true
+}

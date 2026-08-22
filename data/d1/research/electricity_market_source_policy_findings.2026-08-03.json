@@ -1,0 +1,121 @@
+{
+  "checked_on": "2026-08-03",
+  "findings": [
+    {
+      "country": "IDN",
+      "entry_observation": "Kementerian ESDM 的 HEESI 官方出版页可公开访问，并提供年度能源与经济统计手册下载；当前列表可见 HEESI 2024 及历史版本。",
+      "entry_url": "https://www.esdm.go.id/en/publication/handbook-of-energy-economic-statistics-of-indonesia-heesi",
+      "open_questions": [
+        "逐版确认 HEESI 手册正文、表格和附件的版权或数据许可声明",
+        "区分仅引用统计结论、抽取结构化数值、缓存原文件和再分发原文件的权利边界",
+        "确认下载端点、更新频率、历史版本保留和自动访问限制"
+      ],
+      "policy_observation": "官方页面将 HEESI 定位为面向公众的可靠参考并提供下载，但站点标示版权归 Kementerian ESDM；部分 ESDM 出版物另有禁止未经书面许可复制的声明。公开下载本身不足以证明可进行产品化再分发或 AI 索引，必须按具体手册版本复核。",
+      "policy_urls": [
+        "https://www.esdm.go.id/en/publication/handbook-of-energy-economic-statistics-of-indonesia-heesi",
+        "https://www.esdm.go.id/en/media-center/news-archives/terbitkan-heesi-2024-kementerian-esdm-tegaskan-pentingnya-data-energi-terpadu-",
+        "https://www.esdm.go.id/en"
+      ],
+      "provisional_disposition": "candidate_for_citation_only_pending_document_level_reuse_review",
+      "source_id": "SRC-IDN-ESDM"
+    },
+    {
+      "country": "VNM",
+      "entry_observation": "Vietnam Electricity 的英文官网公开发布电力运行、项目、报告和新闻内容；官方页脚声明网站内容引用时应清楚注明来源 www.evn.com.vn。",
+      "entry_url": "https://en.evn.com.vn/",
+      "open_questions": [
+        "确认公开报告、统计表、新闻和第三方图片各自的复制及再分发许可",
+        "确认是否存在面向公开运行数据的正式 API、下载许可和频率规则",
+        "排除客户服务应用、合同、用电记录和其他个人数据或受限账户内容"
+      ],
+      "policy_observation": "官方来源标注要求支持审慎引用公开网页信息，但未找到覆盖批量采集、结构化存储、商业再利用或原件再分发的广泛开放许可。EVN 客户服务应用另涉及身份、合同、用电和支付等个人数据，不能纳入公开来源采集范围。",
+      "policy_urls": [
+        "https://en.evn.com.vn/en-US/news-l/Contact-Us-60-181",
+        "https://www.evn.com.vn/vi-vn/app-cskh-chinh-sach-bao-ve-du-lieu-ca-nhan-kh"
+      ],
+      "provisional_disposition": "citation_only_candidate_pending_broad_reuse_and_automation_terms",
+      "source_id": "SRC-VNM-EVN"
+    },
+    {
+      "country": "SAU",
+      "entry_observation": "原 WERA 候选入口已演变为 Saudi Electricity Regulatory Authority（SERA）门户；现行官方门户公开数据管理办公室、开放数据政策和数据申请入口。",
+      "entry_url": "https://www.sera.gov.sa/en/knowledge-center/data-management-office",
+      "open_questions": [
+        "由数据负责人确认 SRC-SAU-WERA 是否应正式迁移名称、域名和入口到 SERA",
+        "确认目标电力监管数据集确实位于开放数据平台并逐项保存许可、版本和更新元数据",
+        "复核开放数据政策中的用途限制、署名要求、责任限制和自动访问规则"
+      ],
+      "policy_observation": "SERA 官方开放数据政策允许门户访问者和受益人利用其开放数据并强调透明度，但该政策只覆盖被正式发布为开放数据的对象，不能自动扩展到普通监管网页、附件、许可材料、投诉资料或受限数据申请结果。",
+      "policy_urls": [
+        "https://www.sera.gov.sa/en/knowledge-center/data-management-office/data-management-office-categories/office-policies/office-policies-categories/open-data-policy",
+        "https://www.sera.gov.sa/en/knowledge-center/data-management-office/data-management-office-categories/data-sharing/data-sharing-categories/data-request",
+        "https://www.sera.gov.sa/en/abouttheorganization/anoverviewoftheorganization"
+      ],
+      "provisional_disposition": "candidate_for_registry_migration_and_dataset_scoped_open_data_review",
+      "source_id": "SRC-SAU-WERA"
+    },
+    {
+      "country": "ZAF",
+      "entry_observation": "Eskom Data Portal 公开展示需求、供给、可再生能源、停机和排放数据，并提供最多五年范围的数据申请下载表单。",
+      "entry_url": "https://www.eskom.co.za/dataportal/",
+      "open_questions": [
+        "确认是否存在可覆盖商业分析产品的独立书面许可或授权",
+        "核对数据申请表中的身份信息、用途声明、保留期限和下载频率限制",
+        "区分可引用的分析结论与禁止再利用、再发布或商业开发的原始数据"
+      ],
+      "policy_observation": "Data Portal 免责声明声明数据仅供信息用途、仍为 Eskom 单独所有，且不得被用户用于包括商业用途在内的任何开发利用；任何复制或使用还受主站条款约束。因此当前不能用于产品化采集、存储、再分发或 AI 索引。",
+      "policy_urls": [
+        "https://www.eskom.co.za/dataportal/disclaimer/",
+        "https://www.eskom.co.za/dataportal/data-request-form/",
+        "https://www.eskom.co.za/wp-content/uploads/2021/10/WEBSITE-TERMS-AND-CONDITIONS_Sep2021.pdf"
+      ],
+      "provisional_disposition": "blocked_for_product_use_without_separate_written_authorization",
+      "source_id": "SRC-ZAF-ESKOM"
+    },
+    {
+      "country": "BRA",
+      "entry_observation": "CCEE 普通门户公开电力市场分析，并另设 Dados Abertos CCEE 数据门户；具体开放数据集页面同时提供下载资源、更新频率和法律条款。",
+      "entry_url": "https://dadosabertos.ccee.org.br/",
+      "open_questions": [
+        "按目标数据集逐项确认 CC BY 4.0 标记、来源、修改说明、更新频率和资源端点",
+        "将公开 CKAN 数据与需要登录的 CCEE 系统、会员数据、个人数据和机密信息严格隔离",
+        "确认自动下载仅使用开放数据门户允许的资源或 API，不使用被条款禁止的机器人复制方式访问普通平台"
+      ],
+      "policy_observation": "CCEE 的具体开放数据集标示 Creative Commons Attribution 4.0，允许分发、修改和开发利用，但必须适当署名并说明变更；普通站点条款仅允许非营利复制公开内容，而受限系统条款还禁止机器人监控或复制平台内容。因此正式接入应限于逐项确认许可的开放数据集。",
+      "policy_urls": [
+        "https://dadosabertos.ccee.org.br/",
+        "https://dadosabertos.ccee.org.br/dataset/lista_perfil",
+        "https://www.ccee.org.br/termos-de-uso",
+        "https://www.ccee.org.br/-/termo-de-acesso-e-uso"
+      ],
+      "provisional_disposition": "candidate_only_via_dataset_specific_cc_by_4_0_open_data",
+      "source_id": "SRC-BRA-CCEE"
+    }
+  ],
+  "inputs": {
+    "source_registry": {
+      "path": "data/d1/candidates/source_admission_registry.template.json",
+      "sha256": "ae68cac27269c9d42a24381da43873ae46a5d88271f6f5da5fa82eb27f7a5914"
+    }
+  },
+  "machine_observation_only": true,
+  "method": "official_primary_web_pages_reviewed_without_authentication_registration_or_bulk_collection",
+  "schema_version": 1,
+  "stage": "D1",
+  "status": "requires_named_human_review",
+  "usage_boundaries": {
+    "ai_index": "pending",
+    "cache_original": "pending",
+    "collect_content": "pending",
+    "collect_metadata": "pending",
+    "display_excerpt": "pending",
+    "display_original": "pending",
+    "download": "pending",
+    "export": "pending",
+    "model_training": "pending",
+    "store_structured": "pending",
+    "summarize": "pending",
+    "translate": "pending"
+  },
+  "warning": "本文件仅记录五个国家电力市场主来源官方页面的机器研究观察，不是法律意见、许可批准、访问批准、用途批准、准入证据或 active 状态依据。"
+}

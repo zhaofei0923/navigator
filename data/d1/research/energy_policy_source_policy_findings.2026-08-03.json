@@ -1,0 +1,112 @@
+{
+  "checked_on": "2026-08-03",
+  "findings": [
+    {
+      "country": "IDN",
+      "entry_observation": "JDIH ESDM官方入口可访问，展示能源矿产法规、部长决定、法律依据和原文下载。",
+      "entry_url": "https://jdih.esdm.go.id/",
+      "open_questions": [
+        "寻找网站通用使用条款和robots声明",
+        "区分法规原文、非官方翻译、专著、文章、视频和第三方材料的权利",
+        "确认批量下载、更新频率和撤回文件处理规则"
+      ],
+      "policy_observation": "JDIH法律依据说明其职责包括保存、管理、传播和提供法律信息，但本次未发现足以批准批量复制、再分发或AI索引的统一网站许可。",
+      "policy_urls": [
+        "https://jdih.esdm.go.id/site/dasar-hukum"
+      ],
+      "provisional_disposition": "insufficient_for_admission_requires_document_class_review",
+      "source_id": "SRC-IDN-JDIH-ESDM"
+    },
+    {
+      "country": "VNM",
+      "entry_observation": "越南国家法律文件数据库可检索法律、法令、通告、效力状态和官方文本。",
+      "entry_url": "https://vbpl.vn/Pages/portal.aspx",
+      "open_questions": [
+        "确认数据库网站本身的使用政策和自动访问规则",
+        "区分越南文正式文本、官方翻译与非官方译文",
+        "保存每份文件的效力状态、修订链和公布机关证据"
+      ],
+      "policy_observation": "数据库公布的知识产权法文本将法律、行政、司法文件及其官方翻译列为不受版权保护的对象；该规则不能自动扩展至网站界面、元数据、非官方翻译或第三方附件。",
+      "policy_urls": [
+        "https://vbpl.vn/TW/pages/vbpqen-toanvan.aspx?ItemID=5978"
+      ],
+      "provisional_disposition": "candidate_for_human_document_class_and_access_review",
+      "source_id": "SRC-VNM-VBPL"
+    },
+    {
+      "country": "SAU",
+      "entry_observation": "沙特能源部官方开放数据使用政策页面可访问。",
+      "entry_url": "https://www.moenergy.gov.sa/en",
+      "open_questions": [
+        "取得并保存政策引用的完整Open Data License版本",
+        "确认每个数据集是否属于开放数据门户并保留许可提示",
+        "确认API、下载频率、个人数据和第三方材料边界"
+      ],
+      "policy_observation": "开放数据政策允许访问者在遵守开放数据许可的条件下使用和复用门户数据；公开传播时要求附带许可并保留版权和数据集权利提示，同时规定用途限制。",
+      "policy_urls": [
+        "https://www.moenergy.gov.sa/en/digital-documents/open-data/usage-policy"
+      ],
+      "provisional_disposition": "candidate_for_human_license_and_dataset_review",
+      "source_id": "SRC-SAU-MOE"
+    },
+    {
+      "country": "ZAF",
+      "entry_observation": "南非矿产资源与能源部门户及能源行业报告可由官方域名访问。",
+      "entry_url": "https://www.dmre.gov.za/",
+      "open_questions": [
+        "寻找部门级网站使用条款、开放数据政策和robots声明",
+        "逐份确认报告、法规、统计附件和第三方材料的版权",
+        "确认只引用链接、保存原件、展示摘录和结构化提取的不同边界"
+      ],
+      "policy_observation": "本次找到的官方能源行业报告标示版权保留，未发现覆盖门户全部内容的开放复用许可，因此不得推定允许复制、再分发或AI索引。",
+      "policy_urls": [
+        "https://www.dmre.gov.za/Portals/0/Energy%20Resources/Energy%20Sector%20Reports/2024-South-African-Energy-Sector-Report.pdf"
+      ],
+      "provisional_disposition": "insufficient_for_admission_requires_explicit_permission_review",
+      "source_id": "SRC-ZAF-DMRE"
+    },
+    {
+      "country": "BRA",
+      "entry_observation": "巴西矿业和能源部官方开放数据页面及当前开放数据计划入口可访问。",
+      "entry_url": "https://www.gov.br/mme/",
+      "open_questions": [
+        "逐项确认数据集是否列入当前开放数据计划和目录",
+        "区分开放数据集许可与gov.br网页内容的CC BY-ND条款",
+        "排除个人数据、保密信息、第三方材料及特定系统附加条款"
+      ],
+      "policy_observation": "MME开放数据页面说明开放数据以开放许可发布，可自由使用、消费或交叉分析，通常只要求注明作者或来源；gov.br网页内容另标CC BY-ND 3.0，必须按对象类别分别处理。",
+      "policy_urls": [
+        "https://www.gov.br/mme/pt-br/acesso-a-informacao/dados-abertos",
+        "https://www.gov.br/mme/pt-br/acesso-a-informacao/dados-abertos/planos-de-dados-abertos"
+      ],
+      "provisional_disposition": "candidate_for_human_dataset_license_and_content_class_review",
+      "source_id": "SRC-BRA-MME"
+    }
+  ],
+  "inputs": {
+    "source_registry": {
+      "path": "data/d1/candidates/source_admission_registry.template.json",
+      "sha256": "ae68cac27269c9d42a24381da43873ae46a5d88271f6f5da5fa82eb27f7a5914"
+    }
+  },
+  "machine_observation_only": true,
+  "method": "official_primary_web_pages_reviewed_without_authentication_or_bulk_collection",
+  "schema_version": 1,
+  "stage": "D1",
+  "status": "requires_named_human_review",
+  "usage_boundaries": {
+    "ai_index": "pending",
+    "cache_original": "pending",
+    "collect_content": "pending",
+    "collect_metadata": "pending",
+    "display_excerpt": "pending",
+    "display_original": "pending",
+    "download": "pending",
+    "export": "pending",
+    "model_training": "pending",
+    "store_structured": "pending",
+    "summarize": "pending",
+    "translate": "pending"
+  },
+  "warning": "本文件仅记录五个国家能源政策主来源官方页面的机器研究观察，不是法律意见、许可批准、访问批准、用途批准、准入证据或active状态依据。"
+}

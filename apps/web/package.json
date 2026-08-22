@@ -1,0 +1,39 @@
+{
+  "name": "navigator-internal-demo-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --hostname 0.0.0.0",
+    "build": "next build --webpack",
+    "start": "next start --hostname 0.0.0.0",
+    "lint": "eslint . --max-warnings=0",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --coverage"
+  },
+  "dependencies": {
+    "lucide-react": "1.33.0",
+    "next": "16.3.2",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "recharts": "3.10.1"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "3.3.5",
+    "@testing-library/jest-dom": "6.9.1",
+    "@testing-library/react": "16.3.2",
+    "@testing-library/user-event": "14.6.1",
+    "@types/node": "24.12.0",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@vitest/coverage-v8": "4.1.0",
+    "eslint": "9.39.4",
+    "eslint-config-next": "16.3.2",
+    "jsdom": "29.0.1",
+    "typescript": "5.9.3",
+    "vitest": "4.1.0"
+  },
+  "engines": {
+    "node": ">=20.9.0"
+  }
+}

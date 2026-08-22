@@ -1,0 +1,137 @@
+{
+  "checked_on": "2026-08-03",
+  "findings": [
+    {
+      "country": "IDN",
+      "entry_observation": "Bank Indonesia 官方统计入口公开提供经济金融统计、SDDS 元数据和下载页面；公开统计以汇总数据为主，官方元数据同时明确个体或源数据具有保密边界。",
+      "entry_url": "https://www.bi.go.id/en/statistik/default.aspx",
+      "open_questions": [
+        "按目标时间序列确认下载格式、版本、修订规则、署名要求和自动访问频率",
+        "确认公开汇总统计的再分发、结构化存储、翻译和 AI 索引是否需要单独书面许可",
+        "排除个体数据、报送机构源数据以及 BI 仅获第三方许可后再发布的数据"
+      ],
+      "policy_observation": "BI 的数据治理规则允许其发布数据并为使用者、媒介和发布时间设置要求；官方元数据支持公开使用汇总统计，但没有发现覆盖批量自动采集和产品化再分发的广泛开放许可。",
+      "policy_urls": [
+        "https://www.bi.go.id/en/statistik/ekonomi-keuangan/sski/Default.aspx",
+        "https://www.bi.go.id/en/statistik/sdds/Default.aspx",
+        "https://www.bi.go.id/id/publikasi/peraturan/Pages/PBI_122024.aspx",
+        "https://www.bi.go.id/en/statistik/Metadata/SEKI/Documents/International-Economic-Indicators.pdf"
+      ],
+      "provisional_disposition": "candidate_for_aggregate_public_statistics_pending_series_level_license_and_automation_review",
+      "source_id": "SRC-IDN-BI"
+    },
+    {
+      "country": "IDN",
+      "entry_observation": "Indonesia Stock Exchange 的现行官方网站已使用 idx.id 域名；公开统计和上市公司披露可浏览，但交易、指数、参考和发布数据同时被列为正式许可产品。",
+      "entry_url": "https://www.idx.id/id/produk/layanan-data-bei/",
+      "open_questions": [
+        "由数据负责人确认 SRC-IDN-IDX 是否应从 idx.co.id 正式迁移到 idx.id，并更新规范域名和入口",
+        "逐项区分免费公开披露、统计报告与受 IDX Data、Index、Reference 或 Publication License 约束的数据",
+        "在取得适用许可前禁止实时、延迟、日终或历史市场数据的批量采集、再分发和产品展示"
+      ],
+      "policy_observation": "IDX 使用条款把网站信息定位为信息传播；市场数据服务页和许可通用条款则明确市场数据、指数和发布数据存在订阅及许可安排，并列出再分发者。因此公开可见不等于可复制或再分发，任何市场数据接入都必须先完成产品和许可分类。",
+      "policy_urls": [
+        "https://www.idx.id/id/syarat-penggunaan",
+        "https://www.idx.id/id/produk/layanan-data-bei/",
+        "https://www.idx.id/media/vaupc3md/20240215_final-general-term-of-use-version-0-3-2024-efektif-1-january-2024-2.pdf"
+      ],
+      "provisional_disposition": "public_disclosure_locator_only_market_data_blocked_until_applicable_idx_license",
+      "source_id": "SRC-IDN-IDX"
+    },
+    {
+      "country": "IDN",
+      "entry_observation": "PT PLN 官方投资者和利益相关方页面公开提供年度报告、可持续发展报告、统计报告及其他披露文件下载；网站页脚标示 PT PLN 版权所有并保留全部权利。",
+      "entry_url": "https://web.pln.co.id/stakeholder/laporan-tahunan",
+      "open_questions": [
+        "逐份核对目标年度报告 PDF 内的版权、免责声明、第三方图片和数据来源说明",
+        "确认是否允许保存原 PDF、抽取结构化数值、展示摘要和在商业产品内再分发",
+        "建立文件版本、发布日期、原始 URL、内容哈希和表格口径的长期追踪规则"
+      ],
+      "policy_observation": "公开下载支持把报告作为官方证据和人工引用来源，但网站的保留全部权利声明不足以授权批量复制、原件再分发或 AI 索引。不同报告或投资者材料还可能含有更严格的文档级免责声明，必须逐份复核。",
+      "policy_urls": [
+        "https://web.pln.co.id/stakeholder/laporan-tahunan",
+        "https://web.pln.co.id/en/stakeholders/investor-home/1000"
+      ],
+      "provisional_disposition": "document_locator_and_citation_candidate_pending_report_level_reuse_review",
+      "source_id": "SRC-IDN-PLN-REPORTS"
+    },
+    {
+      "country": "IDN",
+      "entry_observation": "Dewan Energi Nasional 官方门户公开提供能源政策、法规、Indonesia Energy Outlook、能源平衡和其他出版物，且当前站点仍在持续更新。",
+      "entry_url": "https://www.den.go.id/",
+      "open_questions": [
+        "逐份确认能源展望、能源平衡和政策文件的版权、引用、翻译、摘录及再分发边界",
+        "确认下载链接的稳定性、历史版本保留、更新频率和是否存在正式机器接口",
+        "识别出版物中来自其他机关或第三方的临时数据并保留原始来源与修订状态"
+      ],
+      "policy_observation": "DEN 将这些文件作为公共信息发布，但页面仅显示版权归 DEN，未发现覆盖批量自动采集、商业再利用或原件再分发的广泛开放许可；出版物还明确部分数据可能来自持续修订的来源。",
+      "policy_urls": [
+        "https://www.den.go.id/",
+        "https://www.den.go.id/publikasi/Outlook-Energi-Indonesia"
+      ],
+      "provisional_disposition": "official_policy_and_publication_locator_pending_document_level_license_review",
+      "source_id": "SRC-IDN-DEN"
+    },
+    {
+      "country": "IDN",
+      "entry_observation": "现行 Kementerian Lingkungan Hidup/BPLH 官网、JDIH 和 SATUDATA 门户已投入使用；SATUDATA 标示数据开放、可访问并提供导出功能，但具体数据集许可和下载条款仍需逐项确认。",
+      "entry_url": "https://kemenlh.go.id/",
+      "open_questions": [
+        "由数据负责人确认旧 MENLHK 来源向现行 KemenLH/BPLH 域名和职责范围的正式迁移关系",
+        "按数据集或图层保存许可、来源机构、发布时间、版本、更新频率、署名和导出规则",
+        "将公开数据门户与需要登录的环境申报、企业合规、个人资料和受限审批系统严格隔离"
+      ],
+      "policy_observation": "官方门户证明环境数据和法律文件存在公共访问入口，但开放访问和导出按钮本身不构成通用开放许可；自动采集、结构化存储、再分发和 AI 索引仍需数据集级政策或书面授权。",
+      "policy_urls": [
+        "https://satudata.kemenlh.go.id/",
+        "https://kemenlh.go.id/",
+        "https://jdih.kemenlh.go.id/home"
+      ],
+      "provisional_disposition": "candidate_only_for_dataset_scoped_review_on_current_kemenlh_portals",
+      "source_id": "SRC-IDN-KEMENLH"
+    },
+    {
+      "country": "IDN",
+      "entry_observation": "PLN e-Procurement 官方门户公开展示采购公告、DPT 公告和部分采购结果，同时明确注册、投标、供应商管理和进一步功能需要账户登录。",
+      "entry_url": "https://eproc.pln.co.id/",
+      "open_questions": [
+        "由合规审核人复核正式 Terms and Conditions PDF 对公开公告、登录区、账户和下载的具体限制",
+        "确认公开公告是否允许自动采集、缓存、摘录、结构化存储和商业产品展示",
+        "任何登录、验证码、会话、供应商资格文件或账户资料均不得绕过访问控制或纳入公共来源采集"
+      ],
+      "policy_observation": "门户将公开采购信息与注册、登录和供应商操作区分开，并将使用正式应用的规则放在 Terms and Conditions 中；没有发现授权机器人批量复制或再分发的开放许可。自动接入在取得书面许可和频率规则前应保持关闭。",
+      "policy_urls": [
+        "https://eproc.pln.co.id/",
+        "https://eproc.pln.co.id/assets/portal/doc/Term%20of%20Conditions.pdf"
+      ],
+      "provisional_disposition": "public_announcement_locator_only_automation_and_reuse_blocked_pending_written_review",
+      "source_id": "SRC-IDN-PLN"
+    }
+  ],
+  "inputs": {
+    "source_registry": {
+      "path": "data/d1/candidates/source_admission_registry.template.json",
+      "sha256": "ae68cac27269c9d42a24381da43873ae46a5d88271f6f5da5fa82eb27f7a5914"
+    }
+  },
+  "machine_observation_only": true,
+  "method": "official_primary_web_pages_reviewed_without_authentication_registration_or_bulk_collection",
+  "schema_version": 1,
+  "stage": "D1",
+  "status": "requires_named_human_review",
+  "usage_boundaries": {
+    "ai_index": "pending",
+    "cache_original": "pending",
+    "collect_content": "pending",
+    "collect_metadata": "pending",
+    "display_excerpt": "pending",
+    "display_original": "pending",
+    "download": "pending",
+    "export": "pending",
+    "model_training": "pending",
+    "store_structured": "pending",
+    "summarize": "pending",
+    "translate": "pending"
+  },
+  "warning": "本文件仅记录六个印尼备选官方来源的机器研究观察，不是法律意见、许可批准、访问批准、用途批准、准入证据或 active 状态依据。"
+}

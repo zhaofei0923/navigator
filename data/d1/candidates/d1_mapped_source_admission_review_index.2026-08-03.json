@@ -1,0 +1,157 @@
+{
+  "automated_index_only": true,
+  "bound_current_head": "d936468c33313693c3cc1131a47ac131d7cb270c",
+  "coverage": {
+    "alternative_assignment_coverage": {
+      "covered": 40,
+      "total": 40
+    },
+    "all_registry_sources_with_research": 59,
+    "mapped_unique_sources_with_research": 45,
+    "primary_assignment_coverage": {
+      "covered": 40,
+      "total": 40
+    },
+    "research_findings": 59,
+    "research_files": 11,
+    "source_registry_candidates": 59,
+    "unmapped_but_researched_candidates": [
+      "SRC-ADB",
+      "SRC-AFDB",
+      "SRC-COMTRADE",
+      "SRC-IDN-BEACUKAI",
+      "SRC-IDN-GEOSPATIAL",
+      "SRC-IDN-KEMENDAG",
+      "SRC-IDN-KEMENKEU",
+      "SRC-IDN-KEMENPERIN",
+      "SRC-IDN-LKPP",
+      "SRC-IDN-OJK",
+      "SRC-IRENA",
+      "SRC-UNGM",
+      "SRC-WB-DATA",
+      "SRC-WB-PROJ"
+    ]
+  },
+  "d0_dependency": {
+    "candidate_path": "data/d0/candidates/d0_final_review_bundle.2026-08-03.json",
+    "candidate_sha256": "14482e5945bbc5ad267ca383c8efa059aa5edf0df95c89db836f4fee042518bb",
+    "required_before_formal_d1_review": true,
+    "status": "pending_named_D0_AC_010_and_final_approval"
+  },
+  "generated_on": "2026-08-03",
+  "inputs": {
+    "mapping_proposal": {
+      "assignment_count": 40,
+      "path": "data/d1/candidates/domain_source_mapping_proposal.2026-08-03.json",
+      "sha256": "5b4b979e0c027ec4f89c3ab65357f71a0692c57520cd140334b7e884316ec0f3"
+    },
+    "research_files": [
+      {
+        "finding_count": 5,
+        "path": "data/d1/research/electricity_market_source_policy_findings.2026-08-03.json",
+        "sha256": "45ea87cadc23c8670f9e62d5da354d7244b5b71b556fdd8498e25621202ae560"
+      },
+      {
+        "finding_count": 5,
+        "path": "data/d1/research/energy_policy_source_policy_findings.2026-08-03.json",
+        "sha256": "c43edb001091f1a3ed163865183008303483d492086a0f469711ce932ecf8c74"
+      },
+      {
+        "finding_count": 7,
+        "path": "data/d1/research/indonesia_additional_source_policy_findings.2026-08-03.json",
+        "sha256": "beadc12f35930f8a3d050157f22e6d2cc7cb232c60208fbac8503264c0e833d5"
+      },
+      {
+        "finding_count": 6,
+        "path": "data/d1/research/indonesia_alternative_source_policy_findings.2026-08-03.json",
+        "sha256": "eceb6f32efc3c97b8cbb9189a7488bcdb00d283520d44136a43e132da434b1f9"
+      },
+      {
+        "finding_count": 5,
+        "path": "data/d1/research/investment_project_source_policy_findings.2026-08-03.json",
+        "sha256": "4def5279e4efbd3d5af74f09a855f80a7cc19a02df89a4638f57ca922ee61c52"
+      },
+      {
+        "finding_count": 7,
+        "path": "data/d1/research/multilateral_seed_source_policy_findings.2026-08-03.json",
+        "sha256": "be42448a48501a070ae1617ad977db517c1e9141d75d8d6dca5082b58f9babf5"
+      },
+      {
+        "finding_count": 5,
+        "path": "data/d1/research/national_statistics_source_policy_findings.2026-08-03.json",
+        "sha256": "2951dcecf433ad6ec38531f9c3cc6fe20e867e27fcf4f585e5250f80cddd0225"
+      },
+      {
+        "finding_count": 7,
+        "path": "data/d1/research/non_indonesia_alternative_source_policy_findings.2026-08-03.json",
+        "sha256": "fdb07a56fc2f19219eadc3a8b6aa09e376f3cf5eb5b1ea911f59395f7a91d548"
+      },
+      {
+        "finding_count": 2,
+        "path": "data/d1/research/partner_entity_source_policy_findings.2026-08-03.json",
+        "sha256": "e9f2a6b75f87d1561536c6462f271c3d2cfc13a7115fb64883568504ec93c5d8"
+      },
+      {
+        "finding_count": 5,
+        "path": "data/d1/research/procurement_source_policy_findings.2026-08-03.json",
+        "sha256": "50fa9fc70a661aac3b2f42dc8e2570ca31df58b8484ba963bd6182d519132b78"
+      },
+      {
+        "finding_count": 5,
+        "path": "data/d1/research/regulatory_risk_source_policy_findings.2026-08-03.json",
+        "sha256": "f55f5083130caa4d7c6d3b5e6eecfb967cfa82180e5d0d1562a5fca0bc5a9aa5"
+      }
+    ],
+    "source_registry": {
+      "path": "data/d1/candidates/source_admission_registry.template.json",
+      "sha256": "ae68cac27269c9d42a24381da43873ae46a5d88271f6f5da5fa82eb27f7a5914",
+      "source_count": 59
+    }
+  },
+  "post_d0_review_sequence": [
+    {
+      "action": "在新的已提交 Git HEAD 上重新生成并哈希绑定本索引、映射建议和全部研究文件",
+      "sequence": 1
+    },
+    {
+      "action": "逐来源保存 terms、license、robots、访问规则和来源身份快照到 data/d1/evidence，并登记相对路径与 SHA-256",
+      "sequence": 2
+    },
+    {
+      "action": "由数据负责人和合规负责人分别审核来源身份、许可、访问方式、12 类用途边界、保留规则和署名要求",
+      "sequence": 3
+    },
+    {
+      "action": "在不绕过登录、验证码、付费、地区、robots 或频率限制的前提下执行小样本验证，并保存可复核证据",
+      "sequence": 4
+    },
+    {
+      "action": "仅将证据齐全且具名批准的来源设为 active；被拒绝或证据不足的来源保持 blocked、retired 或 under_review",
+      "sequence": 5
+    },
+    {
+      "action": "为 40 个国家和数据域组合绑定不同的 active 主来源与备选来源，再执行 validate-d1 和 D1 阶段门禁",
+      "sequence": 6
+    }
+  ],
+  "required_per_source_review_fields": [
+    "technical_owner",
+    "data_owner_reviewer",
+    "compliance_reviewer",
+    "reviewed_at",
+    "next_review_at",
+    "terms_snapshot_id",
+    "license_snapshot_id",
+    "robots_snapshot_id",
+    "access_policy",
+    "usage_boundaries",
+    "boundary_conditions",
+    "attribution_requirement",
+    "retention_rule",
+    "approval_evidence_ids"
+  ],
+  "schema_version": 1,
+  "stage": "D1",
+  "status": "research_index_complete_59_of_59_formal_review_blocked_by_D0_and_missing_evidence",
+  "warning": "本索引不是准入包、批准记录或 active 状态依据。59 个候选来源的网页研究不能代替条款、许可、robots、访问、试采和具名批准证据；其中 14 个候选已研究但未进入当前 40 项主备来源映射。D0 正式关闭后必须在新的 Git HEAD 上重新生成正式 D1 审核包。"
+}

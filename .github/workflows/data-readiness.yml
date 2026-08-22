@@ -79,3 +79,30 @@ jobs:
 
       - name: Run test suite with coverage gate
         run: uv run pytest --cov --cov-report=term-missing
+
+  web-demo:
+    name: Internal demo web QA
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7.0.1
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install locked frontend dependencies
+        working-directory: apps/web
+        run: npm ci
+
+      - name: Run frontend quality checks
+        working-directory: apps/web
+        run: |
+          npm run lint
+          npm run typecheck
+          npm run test
+          npm run build

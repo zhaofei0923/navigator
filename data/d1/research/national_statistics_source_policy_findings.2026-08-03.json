@@ -1,0 +1,113 @@
+{
+  "checked_on": "2026-08-03",
+  "findings": [
+    {
+      "country": "IDN",
+      "entry_observation": "BPS官方能源统计主题入口可访问，并在页脚直接链接中央站点使用条款。",
+      "entry_url": "https://www.bps.go.id/en/statistics-table?subject=558",
+      "open_questions": [
+        "逐个数据集确认是否存在覆盖通用条款的专门限制",
+        "确认允许的自动化频率并保存robots快照",
+        "确认撤回内容的删除传播和索引清除机制"
+      ],
+      "policy_observation": "中央使用条款允许商业和非商业使用、复制、传播及再加工，但要求合法使用、完整署名和直达链接；内容撤回时还要求删除，并保留异常流量限制权。",
+      "policy_urls": [
+        "https://www.bps.go.id/en/term-of-use"
+      ],
+      "provisional_disposition": "candidate_for_human_license_and_access_review",
+      "source_id": "SRC-IDN-BPS"
+    },
+    {
+      "country": "VNM",
+      "entry_observation": "NSO官方主页可由搜索索引确认，但本次直接打开出现超时，不能据此证明稳定自动访问。",
+      "entry_url": "https://www.nso.gov.vn/en/homepage/",
+      "open_questions": [
+        "寻找并保存完整网站使用条款或数据许可文件",
+        "区分网页统计表、下载文件和第三方联合出版物的版权",
+        "确认PX-Web接口、频率和robots边界"
+      ],
+      "policy_observation": "官方页面声明NSO持有网站版权，并要求引用时明确注明NSO网站来源；未发现足以支持批量复制、再分发或AI索引的统一许可。",
+      "policy_urls": [
+        "https://www.nso.gov.vn/en/homepage/"
+      ],
+      "provisional_disposition": "insufficient_for_admission_requires_human_license_review",
+      "source_id": "SRC-VNM-NSO"
+    },
+    {
+      "country": "SAU",
+      "entry_observation": "GASTAT使用政策页面可访问，并确认stats.gov.sa为官方政府网站。",
+      "entry_url": "https://www.stats.gov.sa/",
+      "open_questions": [
+        "逐项检查指标页面是否声明替代通用条款的专门政策",
+        "排除商标、标识和明确标注的第三方材料",
+        "确认API或批量下载的速率与访问限制"
+      ],
+      "policy_observation": "通用政策允许在注明GASTAT来源并标明修改的条件下复制、发布、传播、改编、翻译和商业复用；商标、第三方材料及指标专门政策除外。",
+      "policy_urls": [
+        "https://www.stats.gov.sa/en/use-policy"
+      ],
+      "provisional_disposition": "candidate_for_human_license_and_access_review",
+      "source_id": "SRC-SAU-GASTAT"
+    },
+    {
+      "country": "ZAF",
+      "entry_observation": "Stats SA版权与免责声明页面及数据访问政策入口可访问。",
+      "entry_url": "https://www.statssa.gov.za/",
+      "open_questions": [
+        "下载并复核正式Publications and Data Access Policy文件",
+        "区分公开统计产品、付费产品、微数据和第三方内容",
+        "确认批量获取、缓存和AI索引是否另受限制"
+      ],
+      "policy_observation": "官方版权页面允许用户处理、使用、发布或分发信息，但要求注明Stats SA为基础数据来源，并说明后续应用或分析由用户自行处理。",
+      "policy_urls": [
+        "https://www.statssa.gov.za/?page_id=425",
+        "https://www.statssa.gov.za/?page_id=18324"
+      ],
+      "provisional_disposition": "candidate_for_human_license_and_access_review",
+      "source_id": "SRC-ZAF-STATSSA"
+    },
+    {
+      "country": "BRA",
+      "entry_observation": "IBGE官方开放数据基础设施页面可访问，并列出开放数据计划和元数据目录。",
+      "entry_url": "https://www.ibge.gov.br/",
+      "open_questions": [
+        "确认当前2024-2025开放数据计划及后续版本的有效状态",
+        "为具体数据集确认许可、第三方权利和引用规则",
+        "区分聚合公开数据、受限微数据和保密调查信息"
+      ],
+      "policy_observation": "IBGE说明其开放数据工作受巴西联邦开放数据政策约束，同时明确部分微数据可能因保密要求而去标识或限制访问；尚不能推导所有数据集具有统一复用许可。",
+      "policy_urls": [
+        "https://www.ibge.gov.br/acesso-informacao/acoes-e-programas/infraestrutura-nacional-de-dados-abertos-inda.html?lang=pt-BR",
+        "https://anda.ibge.gov.br/acesso-informacao/dados-abertos.html"
+      ],
+      "provisional_disposition": "insufficient_for_admission_requires_dataset_level_review",
+      "source_id": "SRC-BRA-IBGE"
+    }
+  ],
+  "inputs": {
+    "source_registry": {
+      "path": "data/d1/candidates/source_admission_registry.template.json",
+      "sha256": "ae68cac27269c9d42a24381da43873ae46a5d88271f6f5da5fa82eb27f7a5914"
+    }
+  },
+  "machine_observation_only": true,
+  "method": "official_primary_web_pages_reviewed_without_authentication_or_bulk_collection",
+  "schema_version": 1,
+  "stage": "D1",
+  "status": "requires_named_human_review",
+  "usage_boundaries": {
+    "ai_index": "pending",
+    "cache_original": "pending",
+    "collect_content": "pending",
+    "collect_metadata": "pending",
+    "display_excerpt": "pending",
+    "display_original": "pending",
+    "download": "pending",
+    "export": "pending",
+    "model_training": "pending",
+    "store_structured": "pending",
+    "summarize": "pending",
+    "translate": "pending"
+  },
+  "warning": "本文件仅记录五个国家统计主来源官方页面的机器研究观察，不是法律意见、许可批准、访问批准、用途批准、准入证据或active状态依据。"
+}
