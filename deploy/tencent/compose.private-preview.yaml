@@ -1,0 +1,136 @@
+name: navigator-private-preview
+
+services:
+  db:
+    image: ${NAVIGATOR_POSTGRES_IMAGE:-postgres:18-alpine}
+    pull_policy: never
+    environment:
+      POSTGRES_DB: navigator_demo
+      POSTGRES_USER: navigator_demo
+      POSTGRES_PASSWORD: ${NAVIGATOR_DB_PASSWORD:?NAVIGATOR_DB_PASSWORD must be set}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U navigator_demo -d navigator_demo"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+    volumes:
+      - navigator_private_preview_pgdata:/var/lib/postgresql
+    networks:
+      - preview_internal
+    restart: unless-stopped
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 320m
+    cpus: 0.50
+    pids_limit: 160
+    logging:
+      driver: local
+      options:
+        max-size: 10m
+        max-file: "3"
+    labels:
+      navigator.data-scope: synthetic_demo
+      navigator.delivery-mode: access_controlled_private_preview
+
+  api:
+    image: ${NAVIGATOR_API_IMAGE:?NAVIGATOR_API_IMAGE must be set}
+    pull_policy: never
+    environment:
+      DATABASE_URL: postgresql+psycopg://navigator_demo:${NAVIGATOR_DB_PASSWORD}@db:5432/navigator_demo
+      DEMO_API_KEY: ${NAVIGATOR_DEMO_ACCESS_KEY:?NAVIGATOR_DEMO_ACCESS_KEY must be set}
+      DEMO_CORS_ORIGINS: https://${NAVIGATOR_HOSTNAME:-navigator.easudata.com}
+      DEMO_AUTO_CREATE_SCHEMA: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - preview_internal
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    restart: unless-stopped
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: 256m
+    cpus: 0.50
+    pids_limit: 128
+    logging:
+      driver: local
+      options:
+        max-size: 10m
+        max-file: "3"
+    labels:
+      navigator.data-scope: synthetic_demo
+      navigator.delivery-mode: access_controlled_private_preview
+      navigator.source-snapshot-sha256: ${NAVIGATOR_SOURCE_SNAPSHOT_SHA256:?NAVIGATOR_SOURCE_SNAPSHOT_SHA256 must be set}
+
+  web:
+    image: ${NAVIGATOR_WEB_IMAGE:?NAVIGATOR_WEB_IMAGE must be set}
+    pull_policy: never
+    environment:
+      DEMO_API_BASE_URL: http://api:8000
+      DEMO_API_KEY: ${NAVIGATOR_DEMO_ACCESS_KEY:?NAVIGATOR_DEMO_ACCESS_KEY must be set}
+      DEMO_SHARED_PASSPHRASE: ${NAVIGATOR_DEMO_PASSPHRASE:?NAVIGATOR_DEMO_PASSPHRASE must be set}
+      SESSION_SECRET: ${NAVIGATOR_DEMO_SESSION_SECRET:?NAVIGATOR_DEMO_SESSION_SECRET must be set}
+      DEMO_COOKIE_SECURE: "true"
+      NODE_OPTIONS: --max-old-space-size=256
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${NAVIGATOR_WEB_PORT:-3100}:3000"
+    networks:
+      - preview_edge
+      - preview_internal
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      start_period: 20s
+      retries: 12
+    restart: unless-stopped
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: 384m
+    cpus: 0.75
+    pids_limit: 160
+    logging:
+      driver: local
+      options:
+        max-size: 10m
+        max-file: "3"
+    labels:
+      navigator.data-scope: synthetic_demo
+      navigator.delivery-mode: access_controlled_private_preview
+      navigator.source-snapshot-sha256: ${NAVIGATOR_SOURCE_SNAPSHOT_SHA256:?NAVIGATOR_SOURCE_SNAPSHOT_SHA256 must be set}
+
+networks:
+  preview_edge:
+    labels:
+      navigator.data-scope: synthetic_demo
+  preview_internal:
+    internal: true
+    labels:
+      navigator.data-scope: synthetic_demo
+
+volumes:
+  navigator_private_preview_pgdata:
+    external: true
+    name: navigator-private-preview_navigator_private_preview_pgdata
