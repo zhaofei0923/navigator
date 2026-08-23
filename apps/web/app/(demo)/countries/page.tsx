@@ -1,93 +1,130 @@
 "use client";
 
-import { ArrowRight, Search } from "lucide-react";
+import { ArrowRight, Bot, GitCompareArrows, SunMedium } from "lucide-react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { EmptyState, ErrorState, LoadingState } from "@/components/page-state";
+import { ErrorState, LoadingState } from "@/components/page-state";
 import { useDemoQuery } from "@/hooks/use-demo-query";
-import type { CountrySummary } from "@/lib/types";
+import { useLocale } from "@/lib/i18n";
+import type { GlobeMarker } from "@/lib/types";
+
+const CountryGlobe = dynamic(() => import("@/components/country-globe"), {
+  ssr: false,
+  loading: () => <div className="markets-globe-loading" aria-hidden="true" />,
+});
+
+const COPY = {
+  "zh-CN": {
+    title: "全球市场",
+    description: "浏览合成国家画像，了解市场、政策、项目、伙伴与风险。",
+    globeKicker: "全球市场导航",
+    globeTitle: "从地球视图选择目标市场",
+    globeHelp: "拖动、缩放或悬停国家；选择高亮市场后可进入完整国家画像。",
+    readiness: "进入准备度",
+    openCountry: "进入国家详情",
+    compare: "对比两个国家",
+    currentMarket: "当前演示市场",
+    currentMarketHelp: "以下任务将自动沿用该市场，进入工具后仍可调整。",
+    nextActions: "从当前市场继续",
+    assistant: "AI 市场判断",
+    solarStorage: "光储方案",
+    compareCurrent: "加入双国对比",
+  },
+  en: {
+    title: "Global Markets",
+    description: "Explore synthetic market profiles across policy, projects, partners, and risk.",
+    globeKicker: "GLOBAL MARKET NAVIGATOR",
+    globeTitle: "Choose a target market from the globe",
+    globeHelp: "Drag, zoom or hover over countries, then select a highlighted market to open its profile.",
+    readiness: "Readiness",
+    openCountry: "Open market profile",
+    compare: "Compare two markets",
+    currentMarket: "Current demo market",
+    currentMarketHelp: "The next tasks will carry this market forward and can still be changed in each tool.",
+    nextActions: "Continue from this market",
+    assistant: "AI market assessment",
+    solarStorage: "Solar + storage concept",
+    compareCurrent: "Add to comparison",
+  },
+} as const;
 
 export default function CountriesPage() {
-  const query = useDemoQuery<CountrySummary[]>("countries");
-  const [search, setSearch] = useState("");
-  const [region, setRegion] = useState("all");
-  const regions = useMemo(
-    () => Array.from(new Set(query.data?.map((item) => item.region) || [])),
-    [query.data],
-  );
-  const filtered = useMemo(() => {
-    const keyword = search.trim().toLocaleLowerCase("zh-CN");
-    return (query.data || []).filter(
-      (country) =>
-        (region === "all" || country.region === region) &&
-        (!keyword ||
-          country.name_zh.toLocaleLowerCase("zh-CN").includes(keyword) ||
-          country.name_en.toLocaleLowerCase("en").includes(keyword) ||
-          country.code.toLowerCase().includes(keyword)),
-    );
-  }, [query.data, region, search]);
+  const { locale } = useLocale();
+  const copy = COPY[locale];
+  const router = useRouter();
+  const markersQuery = useDemoQuery<GlobeMarker[]>("demo/globe-markers");
+  const [selectedCode, setSelectedCode] = useState("");
 
+  const selectedMarker = useMemo(
+    () => markersQuery.data?.find((item) => item.code === selectedCode) ?? markersQuery.data?.[0],
+    [markersQuery.data, selectedCode],
+  );
+  const compareHref = selectedMarker ? `/compare?countries=${selectedMarker.code}` : "/compare";
   return (
-    <section>
+    <section className="markets-page">
       <div className="page-heading">
         <div>
-          <h1>国家</h1>
-          <p>浏览合成国家画像，并进入市场、政策、项目、伙伴与风险全景。</p>
+          <h1>{copy.title}</h1>
+          <p>{copy.description}</p>
         </div>
-        <Link className="button button-primary" href="/compare">开始国家对比 <ArrowRight size={17} /></Link>
+        <Link className="button button-primary" href={compareHref}>{copy.compare} <ArrowRight size={17} /></Link>
       </div>
-      <div className="filter-bar" role="search">
-        <label className="filter-search">
-          <Search size={17} aria-hidden="true" />
-          <span className="sr-only">搜索国家</span>
-          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索国家或代码" />
-        </label>
-        <label>
-          <span className="sr-only">筛选区域</span>
-          <select value={region} onChange={(event) => setRegion(event.target.value)}>
-            <option value="all">区域：全部</option>
-            {regions.map((item) => <option key={item} value={item}>{item}</option>)}
-          </select>
-        </label>
-        <span className="result-count">{filtered.length} 个演示国家</span>
-      </div>
-      {query.loading ? <LoadingState /> : null}
-      {query.error ? <ErrorState message={query.error} retry={query.reload} /> : null}
-      {!query.loading && !query.error && filtered.length === 0 ? <EmptyState /> : null}
-      {filtered.length ? (
-        <div className="country-list panel">
-          <div className="country-list-head" aria-hidden="true">
-            <span>国家</span><span>五维概览</span><span>进入准备度</span><span>操作</span>
-          </div>
-          {filtered.map((country) => (
-            <article className="country-row" key={country.code}>
-              <div className="country-row-name">
-                <span className="country-code">{country.code}</span>
-                <div><h2>{country.name_zh}</h2><p>{country.name_en} · {country.region}</p></div>
-              </div>
-              <div className="mini-score-set" aria-label={`${country.name_zh} 五维评分`}>
-                <MiniScore label="市场" value={country.scores.market_attractiveness} />
-                <MiniScore label="政策" value={country.scores.policy_certainty} />
-                <MiniScore label="项目" value={country.scores.project_activity} />
-                <MiniScore label="伙伴" value={country.scores.partner_maturity} />
-                <MiniScore label="风险" value={country.scores.risk_controllability} />
-              </div>
-              <div className="readiness-score"><strong>{country.scores.readiness ?? "—"}</strong><span>/100</span></div>
-              <Link className="button button-secondary" href={`/countries/${country.code}`}>查看详情 <ArrowRight size={16} /></Link>
-            </article>
-          ))}
+      <div className="markets-explorer">
+        <div className="markets-explorer-heading">
+          <span className="section-kicker">{copy.globeKicker}</span>
+          <h2>{copy.globeTitle}</h2>
+          <p>{copy.globeHelp}</p>
         </div>
-      ) : null}
+        {markersQuery.loading ? <LoadingState /> : null}
+        {markersQuery.error ? <ErrorState message={markersQuery.error} retry={markersQuery.reload} /> : null}
+        {markersQuery.data?.length ? (
+          <CountryGlobe
+            markers={markersQuery.data}
+            selectedCode={selectedMarker?.code ?? markersQuery.data[0].code}
+            locale={locale}
+            onSelect={setSelectedCode}
+            onOpenCountry={(code) => router.push(`/countries/${code}`)}
+            height={520}
+          />
+        ) : null}
+        {selectedMarker ? (
+          <article className="markets-explorer-summary" aria-live="polite">
+            <div>
+              <span className="markets-context-label">{copy.currentMarket}</span>
+              <span>{selectedMarker.code}</span>
+              <strong>{selectedMarker.name}</strong>
+              <p>{selectedMarker.summary}</p>
+              <small>{copy.currentMarketHelp}</small>
+            </div>
+            <div>
+              <small>{copy.readiness}</small>
+              <b>{selectedMarker.readiness}<em>/100</em></b>
+              <Link href={`/countries/${selectedMarker.code}`}>
+                {copy.openCountry} <ArrowRight size={15} aria-hidden="true" />
+              </Link>
+            </div>
+            <nav className="markets-context-actions" aria-label={copy.nextActions}>
+              <Link href={`/tools/assistant?country=${selectedMarker.code}`}>
+                <Bot size={17} aria-hidden="true" />
+                <span>{copy.assistant}</span>
+                <ArrowRight size={15} aria-hidden="true" />
+              </Link>
+              <Link href={`/tools/solar-storage?country=${selectedMarker.code}`}>
+                <SunMedium size={17} aria-hidden="true" />
+                <span>{copy.solarStorage}</span>
+                <ArrowRight size={15} aria-hidden="true" />
+              </Link>
+              <Link href={`/compare?countries=${selectedMarker.code}`}>
+                <GitCompareArrows size={17} aria-hidden="true" />
+                <span>{copy.compareCurrent}</span>
+                <ArrowRight size={15} aria-hidden="true" />
+              </Link>
+            </nav>
+          </article>
+        ) : null}
+      </div>
     </section>
-  );
-}
-
-function MiniScore({ label, value }: { label: string; value: number }) {
-  return (
-    <span className="mini-score">
-      <small>{label}</small>
-      <span className="progress-track" aria-hidden="true"><i style={{ width: `${value}%` }} /></span>
-      <b>{value}</b>
-    </span>
   );
 }

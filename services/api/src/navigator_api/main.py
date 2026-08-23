@@ -18,6 +18,7 @@ from navigator_api.config import Settings
 from navigator_api.constants import DATA_ORIGIN
 from navigator_api.database import build_engine, build_session_factory
 from navigator_api.errors import DemoAPIError, error_payload
+from navigator_api.localization import locale_from_value
 from navigator_api.models import Base, Country
 from navigator_api.routers import api_router
 from navigator_api.schemas import HealthResponse
@@ -76,39 +77,49 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.exception_handler(DemoAPIError)
     async def demo_api_error_handler(_request: Request, exc: DemoAPIError) -> JSONResponse:
+        locale = locale_from_value(_request.query_params.get("locale"))
         return JSONResponse(
             status_code=exc.status_code,
-            content=error_payload(code=exc.code, message=exc.message, details=exc.details),
+            content=error_payload(
+                code=exc.code, message=exc.message, details=exc.details, locale=locale
+            ),
         )
 
     @app.exception_handler(RequestValidationError)
     async def validation_error_handler(
         _request: Request, exc: RequestValidationError
     ) -> JSONResponse:
+        locale = locale_from_value(_request.query_params.get("locale"))
         return JSONResponse(
             status_code=422,
             content=error_payload(
                 code="VALIDATION_ERROR",
                 message="请求参数未通过校验。",
                 details=_validation_details(exc),
+                locale=locale,
             ),
         )
 
     @app.exception_handler(HTTPException)
     async def http_error_handler(_request: Request, exc: HTTPException) -> JSONResponse:
+        locale = locale_from_value(_request.query_params.get("locale"))
         return JSONResponse(
             status_code=exc.status_code,
-            content=error_payload(code=f"HTTP_{exc.status_code}", message=str(exc.detail)),
+            content=error_payload(
+                code=f"HTTP_{exc.status_code}", message=str(exc.detail), locale=locale
+            ),
         )
 
     @app.exception_handler(SQLAlchemyError)
     async def database_error_handler(_request: Request, exc: SQLAlchemyError) -> JSONResponse:
         LOGGER.exception("Synthetic demo database request failed", exc_info=exc)
+        locale = locale_from_value(_request.query_params.get("locale"))
         return JSONResponse(
             status_code=503,
             content=error_payload(
                 code="DEMO_DATABASE_UNAVAILABLE",
                 message="内部演示数据库暂不可用。",
+                locale=locale,
             ),
         )
 

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { hasValidDemoSession } from "@/lib/demo-session";
+import { normalizeLocale, type SupportedLocale } from "@/lib/i18n/config";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,15 @@ const COLLECTIONS = new Set([
   "tenders",
   "partners",
 ]);
-const POST_ENDPOINTS = new Set(["country-comparisons", "demo/reset"]);
+const POST_ENDPOINTS = new Set([
+  "country-comparisons",
+  "demo/reset",
+  "demo/country-comparisons",
+  "demo/tools/assistant/preview",
+  "demo/tools/solar-storage/preview",
+  "demo/tools/feasibility-report/preview",
+]);
+const DEMO_GET_ENDPOINTS = new Set(["demo/globe-markers", "demo/tools/tenders"]);
 const SAFE_SEGMENT = /^[A-Za-z0-9_-]+$/;
 
 function resolveApiPath(path: string[], method: string): string | null {
@@ -30,6 +39,19 @@ function resolveApiPath(path: string[], method: string): string | null {
     return `/api/v1/countries/${path[1]}`;
   }
   const joined = path.join("/");
+  if (method === "GET" && DEMO_GET_ENDPOINTS.has(joined)) {
+    return `/api/v1/${joined}`;
+  }
+  if (
+    method === "GET" &&
+    path.length === 4 &&
+    path[0] === "demo" &&
+    path[1] === "tools" &&
+    path[2] === "tenders" &&
+    SAFE_SEGMENT.test(path[3])
+  ) {
+    return `/api/v1/${joined}`;
+  }
   if (method === "POST" && POST_ENDPOINTS.has(joined)) {
     return `/api/v1/${joined}`;
   }
@@ -45,10 +67,57 @@ function apiBaseUrl(): URL {
 }
 
 function copyAllowedQuery(source: URL, target: URL) {
-  for (const key of ["country_code", "limit"]) {
+  for (const key of ["country_code", "limit", "locale", "sector", "stage", "keyword"]) {
     const value = source.searchParams.get(key);
-    if (value) target.searchParams.set(key, value);
+    if (value && value.length <= 120) target.searchParams.set(key, value);
   }
+}
+
+function proxyCopy(locale: SupportedLocale) {
+  return locale === "en"
+    ? {
+        session: "The demo session has expired. Please sign in again.",
+        unavailable: "This demo endpoint is unavailable.",
+        configuration: "The synthetic-data service is not configured.",
+        tooLarge: "The request is too large.",
+        rejected: "The upstream response is not approved synthetic demo data and was blocked.",
+        invalid: "The synthetic demo response is invalid.",
+        connection: "The synthetic-data service is temporarily unavailable. Please try again.",
+      }
+    : {
+        session: "演示会话已失效，请重新进入。",
+        unavailable: "此演示接口不可用。",
+        configuration: "演示数据服务尚未配置。",
+        tooLarge: "请求内容过大。",
+        rejected: "上游响应不是获准的合成演示数据，已拒绝显示。",
+        invalid: "演示数据响应格式无效。",
+        connection: "暂时无法连接演示数据服务，请稍后重试。",
+      };
+}
+
+function proxyError(
+  locale: SupportedLocale,
+  status: number,
+  code: string,
+  message: string,
+) {
+  return NextResponse.json(
+    {
+      meta: {
+        data_origin: "synthetic_demo",
+        disclaimer:
+          locale === "en"
+            ? "Demo Data / Non-official Conclusions"
+            : "演示数据 / 非正式结论",
+        locale,
+      },
+      error: { code, message },
+    },
+    {
+      status,
+      headers: { "Cache-Control": "no-store, private" },
+    },
+  );
 }
 
 async function readLimitedBody(request: Request, maxBytes: number): Promise<string | null> {
@@ -74,23 +143,31 @@ async function readLimitedBody(request: Request, maxBytes: number): Promise<stri
 }
 
 async function proxyRequest(request: Request, context: RouteContext) {
+  const sourceUrl = new URL(request.url);
+  const locale = normalizeLocale(sourceUrl.searchParams.get("locale"));
+  const copy = proxyCopy(locale);
   if (!(await hasValidDemoSession())) {
-    return NextResponse.json({ error: "演示会话已失效，请重新进入。" }, { status: 401 });
+    return proxyError(locale, 401, "DEMO_SESSION_EXPIRED", copy.session);
   }
 
   const { path } = await context.params;
   const apiPath = resolveApiPath(path, request.method);
   if (!apiPath) {
-    return NextResponse.json({ error: "此演示接口不可用。" }, { status: 404 });
+    return proxyError(locale, 404, "DEMO_ENDPOINT_NOT_ALLOWED", copy.unavailable);
   }
 
   const apiKey = process.env.DEMO_API_KEY?.trim();
   if (!apiKey) {
-    return NextResponse.json({ error: "演示数据服务尚未配置。" }, { status: 503 });
+    return proxyError(locale, 503, "DEMO_API_NOT_CONFIGURED", copy.configuration);
   }
 
-  const target = new URL(apiPath, apiBaseUrl());
-  copyAllowedQuery(new URL(request.url), target);
+  let target: URL;
+  try {
+    target = new URL(apiPath, apiBaseUrl());
+  } catch {
+    return proxyError(locale, 503, "DEMO_API_NOT_CONFIGURED", copy.configuration);
+  }
+  copyAllowedQuery(sourceUrl, target);
   const headers = new Headers({
     Accept: "application/json",
     "X-Demo-Key": apiKey,
@@ -100,11 +177,11 @@ async function proxyRequest(request: Request, context: RouteContext) {
   if (request.method === "POST") {
     const contentLength = Number(request.headers.get("content-length") || "0");
     if (contentLength > 16_384) {
-      return NextResponse.json({ error: "请求内容过大。" }, { status: 413 });
+      return proxyError(locale, 413, "DEMO_REQUEST_TOO_LARGE", copy.tooLarge);
     }
     const limitedBody = await readLimitedBody(request, 16_384);
     if (limitedBody === null) {
-      return NextResponse.json({ error: "请求内容过大。" }, { status: 413 });
+      return proxyError(locale, 413, "DEMO_REQUEST_TOO_LARGE", copy.tooLarge);
     }
     body = limitedBody;
     headers.set("Content-Type", "application/json");
@@ -119,33 +196,39 @@ async function proxyRequest(request: Request, context: RouteContext) {
       signal: AbortSignal.timeout(10_000),
     });
     const payload = await upstream.text();
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(payload);
+    } catch {
+      return proxyError(locale, 502, "DEMO_UPSTREAM_INVALID", copy.invalid);
+    }
 
     if (upstream.ok) {
-      try {
-        const parsed = JSON.parse(payload) as { meta?: { data_origin?: unknown } };
-        if (parsed.meta?.data_origin !== "synthetic_demo") {
-          return NextResponse.json(
-            { error: "上游响应不是获准的合成演示数据，已拒绝显示。" },
-            { status: 502 },
-          );
-        }
-      } catch {
-        return NextResponse.json({ error: "演示数据响应格式无效。" }, { status: 502 });
+      const candidate = parsed as { meta?: { data_origin?: unknown } };
+      if (candidate.meta?.data_origin !== "synthetic_demo") {
+        return proxyError(locale, 502, "DEMO_UPSTREAM_NOT_SYNTHETIC", copy.rejected);
+      }
+    } else {
+      const candidate = parsed as {
+        meta?: { data_origin?: unknown };
+        error?: { code?: unknown };
+      };
+      if (
+        candidate.meta?.data_origin !== "synthetic_demo" ||
+        typeof candidate.error?.code !== "string"
+      ) {
+        return proxyError(locale, 502, "DEMO_UPSTREAM_INVALID", copy.invalid);
       }
     }
 
-    return new NextResponse(payload, {
+    return NextResponse.json(parsed, {
       status: upstream.status,
       headers: {
-        "Content-Type": upstream.headers.get("content-type") || "application/json",
         "Cache-Control": "no-store, private",
       },
     });
   } catch {
-    return NextResponse.json(
-      { error: "暂时无法连接演示数据服务，请稍后重试。" },
-      { status: 502 },
-    );
+    return proxyError(locale, 502, "DEMO_UPSTREAM_UNAVAILABLE", copy.connection);
   }
 }
 

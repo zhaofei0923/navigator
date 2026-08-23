@@ -1,6 +1,7 @@
 export type DemoMeta = {
   data_origin: "synthetic_demo";
-  disclaimer: "演示数据 / 非正式结论";
+  disclaimer: "演示数据 / 非正式结论" | "Demo Data / Non-official Conclusions";
+  locale: "zh-CN" | "en";
   result_count?: number | null;
 };
 
@@ -147,6 +148,7 @@ export type ComparisonCountry = {
   rank: number;
   country_code: string;
   name_zh: string;
+  name_en: string;
   scores: CountryScores;
   dimension_deltas: Partial<Record<ScoreDimensionKey, number>>;
   trend: string;
@@ -170,6 +172,71 @@ export type DemoInfo = {
   country_codes: string[];
   external_calls_enabled: false;
   real_data_enabled: false;
+};
+
+export type GlobeMarker = {
+  data_origin: "synthetic_demo";
+  code: string;
+  name: string;
+  lat: number;
+  lng: number;
+  summary: string;
+  readiness: number;
+};
+
+export type AssistantQuestionType =
+  | "market_entry"
+  | "policy_risk"
+  | "partner_strategy"
+  | "tender_readiness";
+
+export type AssistantPreview = {
+  data_origin: "synthetic_demo";
+  country_code: string;
+  question_type: AssistantQuestionType;
+  summary: string;
+  actions: string[];
+  related_items: string[];
+  limitations: string[];
+};
+
+export type SolarStorageScenario =
+  | "utility_scale"
+  | "commercial_industrial"
+  | "island_microgrid";
+
+export type SolarStoragePreview = {
+  data_origin: "synthetic_demo";
+  country_code: string;
+  scenario: SolarStorageScenario;
+  configuration: string[];
+  assumptions: string[];
+  risks: string[];
+  next_steps: string[];
+};
+
+export type FeasibilityProjectType = "solar_storage" | "microgrid" | "battery_storage";
+
+export type FeasibilitySectionKey =
+  | "market_context"
+  | "technical_concept"
+  | "delivery_plan"
+  | "risk_review";
+
+export type FeasibilitySection = {
+  key: FeasibilitySectionKey;
+  title: string;
+  content: string;
+};
+
+export type FeasibilityPreview = {
+  data_origin: "synthetic_demo";
+  country_code: string;
+  project_type: FeasibilityProjectType;
+  title: string;
+  sections: FeasibilitySection[];
+  open_questions: string[];
+  limitations: string[];
 };
 
 export type IntelligenceItem = PolicyItem | RiskItem | OpportunityItem | TenderItem | PartnerItem;

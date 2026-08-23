@@ -2,7 +2,10 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { CountryRail } from "@/components/country-rail";
+import { LocaleProvider } from "@/lib/i18n";
 import type { CountrySummary } from "@/lib/types";
+
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
 const scores = {
   market_attractiveness: 70,
@@ -46,5 +49,17 @@ describe("CountryRail", () => {
     expect(screen.getByRole("button", { name: "甲国" })).toHaveAttribute("aria-pressed", "true");
     await user.click(screen.getByRole("button", { name: "乙国" }));
     expect(onSelect).toHaveBeenCalledWith("BBB");
+  });
+
+  it("renders only the English market names in English", () => {
+    render(
+      <LocaleProvider initialLocale="en">
+        <CountryRail countries={countries} selectedCode="AAA" onSelect={vi.fn()} />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByRole("group", { name: "Select a market" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Alpha" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByText("甲国")).not.toBeInTheDocument();
   });
 });

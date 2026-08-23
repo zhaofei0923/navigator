@@ -9,10 +9,22 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from navigator_api.constants import DATA_ORIGIN, DISCLAIMER
 
+type Locale = Literal["zh-CN", "en"]
+type Disclaimer = Literal["演示数据 / 非正式结论", "Demo Data / Non-official Conclusions"]
+type QuestionType = Literal["market_entry", "policy_risk", "partner_strategy", "tender_readiness"]
+type SolarScenario = Literal["utility_scale", "commercial_industrial", "island_microgrid"]
+type ProjectType = Literal["solar_storage", "microgrid", "battery_storage"]
+type SectionKey = Literal["market_context", "technical_concept", "delivery_plan", "risk_review"]
+
+
+def default_section_keys() -> list[SectionKey]:
+    return ["market_context", "technical_concept", "delivery_plan", "risk_review"]
+
 
 class DemoMeta(BaseModel):
     data_origin: Literal["synthetic_demo"] = DATA_ORIGIN
-    disclaimer: Literal["演示数据 / 非正式结论"] = DISCLAIMER
+    disclaimer: Disclaimer = DISCLAIMER
+    locale: Locale = "zh-CN"
     result_count: int | None = Field(default=None, ge=0)
 
 
@@ -159,6 +171,7 @@ class ComparisonCountry(SyntheticItem):
     rank: int = Field(ge=1)
     country_code: str
     name_zh: str
+    name_en: str
     scores: CountryScores
     dimension_deltas: dict[str, float]
     trend: str
@@ -171,6 +184,123 @@ class ComparisonResult(SyntheticItem):
     countries: list[ComparisonCountry]
     recommendation: str
     methodology: str
+
+
+class DemoComparisonRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    country_codes: list[str] = Field(min_length=2, max_length=2)
+
+    @field_validator("country_codes")
+    @classmethod
+    def normalize_and_validate_codes(cls, value: list[str]) -> list[str]:
+        normalized = [code.strip().upper() for code in value]
+        if any(len(code) != 3 or not code.isalpha() for code in normalized):
+            raise ValueError("country_codes must contain three-letter country codes")
+        if len(set(normalized)) != 2:
+            raise ValueError("country_codes must contain exactly two different countries")
+        return normalized
+
+
+class GlobeMarker(SyntheticItem):
+    code: str
+    name: str
+    lat: float = Field(ge=-90, le=90)
+    lng: float = Field(ge=-180, le=180)
+    summary: str
+    readiness: int = Field(ge=0, le=100)
+
+
+class AssistantPreviewRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    country_code: str
+    question_type: QuestionType
+
+    @field_validator("country_code")
+    @classmethod
+    def normalize_country_code(cls, value: str) -> str:
+        normalized = value.strip().upper()
+        if len(normalized) != 3 or not normalized.isalpha():
+            raise ValueError("country_code must be a three-letter country code")
+        return normalized
+
+
+class AssistantPreview(SyntheticItem):
+    country_code: str
+    question_type: QuestionType
+    summary: str
+    actions: list[str]
+    related_items: list[str]
+    limitations: list[str]
+
+
+class SolarStoragePreviewRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    country_code: str
+    scenario: SolarScenario
+    solar_capacity_mw: float = Field(gt=0, le=1000)
+    storage_duration_hours: int = Field(ge=1, le=12)
+
+    @field_validator("country_code")
+    @classmethod
+    def normalize_country_code(cls, value: str) -> str:
+        normalized = value.strip().upper()
+        if len(normalized) != 3 or not normalized.isalpha():
+            raise ValueError("country_code must be a three-letter country code")
+        return normalized
+
+
+class SolarStoragePreview(SyntheticItem):
+    country_code: str
+    scenario: SolarScenario
+    configuration: list[str]
+    assumptions: list[str]
+    risks: list[str]
+    next_steps: list[str]
+
+
+class FeasibilityReportPreviewRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    country_code: str
+    project_type: ProjectType
+    section_keys: list[SectionKey] = Field(
+        default_factory=default_section_keys,
+        min_length=1,
+        max_length=4,
+    )
+
+    @field_validator("country_code")
+    @classmethod
+    def normalize_country_code(cls, value: str) -> str:
+        normalized = value.strip().upper()
+        if len(normalized) != 3 or not normalized.isalpha():
+            raise ValueError("country_code must be a three-letter country code")
+        return normalized
+
+    @field_validator("section_keys")
+    @classmethod
+    def validate_unique_sections(cls, value: list[SectionKey]) -> list[SectionKey]:
+        if len(set(value)) != len(value):
+            raise ValueError("section_keys cannot contain duplicates")
+        return value
+
+
+class FeasibilitySection(BaseModel):
+    key: SectionKey
+    title: str
+    content: str
+
+
+class FeasibilityReportPreview(SyntheticItem):
+    country_code: str
+    project_type: ProjectType
+    title: str
+    sections: list[FeasibilitySection]
+    open_questions: list[str]
+    limitations: list[str]
 
 
 class DemoInfo(SyntheticItem):

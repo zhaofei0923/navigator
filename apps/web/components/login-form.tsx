@@ -3,37 +3,62 @@
 import { FormEvent, useState } from "react";
 import { ArrowRight, LockKeyhole } from "lucide-react";
 import { useSearchParams } from "next/navigation";
+import { useTranslations } from "@/lib/i18n/client";
+import type { TranslationKey } from "@/lib/i18n/dictionary";
+
+type LoginErrorKey = Extract<TranslationKey, `login.error.${string}`>;
+
+function errorKeyForStatus(status: number): LoginErrorKey {
+  if (status === 400) return "login.error.invalidRequest";
+  if (status === 401) return "login.error.invalidPassphrase";
+  if (status === 503) return "login.error.notConfigured";
+  return "login.error.default";
+}
 
 export function LoginForm() {
   const searchParams = useSearchParams();
+  const t = useTranslations();
   const [passphrase, setPassphrase] = useState("");
-  const [error, setError] = useState<string | null>(
-    searchParams.get("expired") ? "演示会话已结束，请重新输入口令。" : null,
+  const [errorKey, setErrorKey] = useState<LoginErrorKey | null>(
+    searchParams.get("expired") ? "login.error.expired" : null,
   );
   const [submitting, setSubmitting] = useState(false);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitting(true);
-    setError(null);
+    setErrorKey(null);
     try {
       const response = await fetch("/api/session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ passphrase }),
       });
-      const payload = (await response.json()) as { error?: string };
-      if (!response.ok) throw new Error(payload.error || "无法进入演示环境。");
+      if (!response.ok) {
+        setErrorKey(errorKeyForStatus(response.status));
+        setSubmitting(false);
+        return;
+      }
       window.location.replace("/");
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "无法进入演示环境。");
+    } catch {
+      setErrorKey("login.error.default");
       setSubmitting(false);
     }
   }
 
   return (
     <form className="login-form" onSubmit={submit}>
-      <label htmlFor="passphrase">共享演示口令</label>
+      <input
+        className="sr-only"
+        name="username"
+        type="text"
+        autoComplete="username"
+        value="navigator-demo"
+        readOnly
+        tabIndex={-1}
+        aria-hidden="true"
+      />
+      <label htmlFor="passphrase">{t("login.passphrase")}</label>
       <div className="input-with-icon">
         <LockKeyhole size={18} aria-hidden="true" />
         <input
@@ -48,13 +73,13 @@ export function LoginForm() {
           autoFocus
         />
       </div>
-      {error ? (
+      {errorKey ? (
         <p className="form-error" role="alert">
-          {error}
+          {t(errorKey)}
         </p>
       ) : null}
       <button className="button button-primary button-wide" type="submit" disabled={submitting}>
-        {submitting ? "正在验证…" : "进入内部 demo"}
+        {submitting ? t("login.submitting") : t("login.submit")}
         <ArrowRight size={18} aria-hidden="true" />
       </button>
     </form>

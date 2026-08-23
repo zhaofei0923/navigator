@@ -18,6 +18,8 @@ node_modules/
 dist/
 coverage/
 *.tsbuildinfo
+.superdesign/tmp/
+output/playwright/
 
 # Local runtime state and generated evidence reports
 .env

@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, Plus } from "lucide-react";
+import { useLocale } from "@/lib/i18n";
 import type { CountrySummary } from "@/lib/types";
 
 export function CountryRail({
@@ -12,8 +13,9 @@ export function CountryRail({
   selectedCode: string;
   onSelect: (code: string) => void;
 }) {
+  const { locale } = useLocale();
   return (
-    <div className="country-rail" role="group" aria-label="选择国家">
+    <div className="country-rail" role="group" aria-label={locale === "en" ? "Select a market" : "选择国家"}>
       {countries.map((country) => {
         const selected = country.code === selectedCode;
         return (
@@ -24,7 +26,7 @@ export function CountryRail({
             aria-pressed={selected}
             onClick={() => onSelect(country.code)}
           >
-            <span>{country.name_zh}</span>
+            <span>{locale === "en" ? country.name_en : country.name_zh}</span>
             <span className="country-rail-action" aria-hidden="true">
               {selected ? <Check size={16} /> : <Plus size={16} />}
             </span>

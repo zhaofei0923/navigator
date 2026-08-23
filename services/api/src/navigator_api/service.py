@@ -9,9 +9,15 @@ from sqlalchemy.orm import InstrumentedAttribute, Session, selectinload
 
 from navigator_api.constants import DATA_ORIGIN
 from navigator_api.errors import DemoAPIError
+from navigator_api.localization import localized_list, localized_text
 from navigator_api.models import (
     Base,
     Country,
+    Opportunity,
+    Partner,
+    Policy,
+    RiskRecord,
+    Tender,
 )
 from navigator_api.schemas import (
     ActionItem,
@@ -20,9 +26,14 @@ from navigator_api.schemas import (
     CountryDetail,
     CountryScores,
     CountrySummary,
+    Locale,
+    OpportunityItem,
+    PartnerItem,
+    PolicyItem,
     ReasonItem,
     RiskItem,
     SignalItem,
+    TenderItem,
 )
 
 DIMENSION_FIELDS = (
@@ -47,38 +58,70 @@ def country_scores(country: Country) -> CountryScores:
     )
 
 
-def country_summary(country: Country) -> CountrySummary:
+def country_summary(country: Country, locale: Locale = "zh-CN") -> CountrySummary:
     return CountrySummary(
         code=country.code,
         name_zh=country.name_zh,
         name_en=country.name_en,
-        region=country.region,
+        region=localized_text(locale, f"country:{country.code}", "region", country.region),
         currency=country.currency,
-        summary=country.summary,
+        summary=localized_text(locale, f"country:{country.code}", "summary", country.summary),
         scores=country_scores(country),
         dimension_deltas=country.dimension_deltas,
         data_origin=DATA_ORIGIN,
     )
 
 
-def country_detail(country: Country) -> CountryDetail:
-    summary = country_summary(country)
+def country_detail(country: Country, locale: Locale = "zh-CN") -> CountryDetail:
+    summary = country_summary(country, locale)
     return CountryDetail(
         **summary.model_dump(),
         signals=[
-            SignalItem.model_validate(signal)
+            SignalItem.model_validate(signal).model_copy(
+                update={
+                    "title": localized_text(
+                        locale, f"signal:{signal.signal_id}", "title", signal.title
+                    ),
+                    "summary": localized_text(
+                        locale, f"signal:{signal.signal_id}", "summary", signal.summary
+                    ),
+                }
+            )
             for signal in sorted(country.signals, key=lambda item: item.signal_id)
         ],
         reasons=[
-            ReasonItem.model_validate(reason)
+            ReasonItem.model_validate(reason).model_copy(
+                update={
+                    "title": localized_text(
+                        locale, f"reason:{reason.reason_id}", "title", reason.title
+                    ),
+                    "detail": localized_text(
+                        locale, f"reason:{reason.reason_id}", "detail", reason.detail
+                    ),
+                }
+            )
             for reason in sorted(country.reasons, key=lambda item: (item.rank, item.reason_id))
         ],
         risks=[
-            RiskItem.model_validate(risk)
-            for risk in sorted(country.risks, key=lambda item: item.risk_id)
+            risk_item(risk, locale) for risk in sorted(country.risks, key=lambda item: item.risk_id)
         ],
         actions=[
-            ActionItem.model_validate(action)
+            ActionItem.model_validate(action).model_copy(
+                update={
+                    "title": localized_text(
+                        locale, f"action:{action.action_id}", "title", action.title
+                    ),
+                    "detail": localized_text(
+                        locale, f"action:{action.action_id}", "detail", action.detail
+                    ),
+                    "owner_hint": localized_text(
+                        locale,
+                        f"action:{action.action_id}",
+                        "owner_hint",
+                        action.owner_hint,
+                    ),
+                }
+            )
             for action in sorted(country.actions, key=lambda item: (item.priority, item.action_id))
         ],
     )
@@ -121,7 +164,9 @@ def _overall_score(country: Country) -> float:
     )
 
 
-def compare_countries(session: Session, country_codes: Sequence[str]) -> ComparisonResult:
+def compare_countries(
+    session: Session, country_codes: Sequence[str], locale: Locale = "zh-CN"
+) -> ComparisonResult:
     statement = select(Country).where(Country.code.in_(country_codes))
     country_by_code = {country.code: country for country in session.scalars(statement).all()}
     missing = [code for code in country_codes if code not in country_by_code]
@@ -149,6 +194,7 @@ def compare_countries(session: Session, country_codes: Sequence[str]) -> Compari
                 rank=rank,
                 country_code=country.code,
                 name_zh=country.name_zh,
+                name_en=country.name_en,
                 scores=country_scores(country),
                 dimension_deltas={
                     field: round(float(getattr(country, field)) - averages[field], 1)
@@ -157,7 +203,11 @@ def compare_countries(session: Session, country_codes: Sequence[str]) -> Compari
                 trend=trend,
                 overall_score=overall,
                 reason=(
-                    "五维合成评分在本次选择中最高。"
+                    "The synthetic five-dimension score ranks highest in this selection."
+                    if locale == "en" and rank == 1
+                    else "The synthetic five-dimension score demonstrates relative ranking."
+                    if locale == "en"
+                    else "五维合成评分在本次选择中最高。"
                     if rank == 1
                     else "五维合成评分用于展示相对排序。"
                 ),
@@ -169,12 +219,72 @@ def compare_countries(session: Session, country_codes: Sequence[str]) -> Compari
     return ComparisonResult(
         comparison_id="CMP-" + "-".join(sorted(country_codes)),
         countries=comparison_rows,
-        recommendation=f"内部演示排序首位为 {winner.name_zh}；不得作为专业或投资结论。",
+        recommendation=(
+            f"{winner.name_en} ranks first in this internal demo; this is not a professional "
+            "or investment conclusion."
+            if locale == "en"
+            else f"内部演示排序首位为 {winner.name_zh}；不得作为专业或投资结论。"
+        ),
         methodology=(
-            "合成五维加权：市场吸引力25%、政策确定性20%、项目活跃度20%、"
+            "Synthetic five-dimension weighting: market attractiveness 25%, policy certainty "
+            "20%, project activity 20%, partner maturity 15%, and risk controllability 20%."
+            if locale == "en"
+            else "合成五维加权：市场吸引力25%、政策确定性20%、项目活跃度20%、"
             "合作伙伴成熟度15%、风险可控性20%。"
         ),
         data_origin=DATA_ORIGIN,
+    )
+
+
+def policy_item(row: Policy, locale: Locale) -> PolicyItem:
+    key = f"policy:{row.policy_id}"
+    return PolicyItem.model_validate(row).model_copy(
+        update={
+            "title": localized_text(locale, key, "title", row.title),
+            "summary": localized_text(locale, key, "summary", row.summary),
+        }
+    )
+
+
+def risk_item(row: RiskRecord, locale: Locale) -> RiskItem:
+    key = f"risk:{row.risk_id}"
+    return RiskItem.model_validate(row).model_copy(
+        update={
+            "title": localized_text(locale, key, "title", row.title),
+            "detail": localized_text(locale, key, "detail", row.detail),
+            "mitigation": localized_text(locale, key, "mitigation", row.mitigation),
+        }
+    )
+
+
+def opportunity_item(row: Opportunity, locale: Locale) -> OpportunityItem:
+    key = f"opportunity:{row.opportunity_id}"
+    return OpportunityItem.model_validate(row).model_copy(
+        update={
+            "title": localized_text(locale, key, "title", row.title),
+            "detail": localized_text(locale, key, "detail", row.detail),
+            "next_step": localized_text(locale, key, "next_step", row.next_step),
+        }
+    )
+
+
+def tender_item(row: Tender, locale: Locale) -> TenderItem:
+    key = f"tender:{row.tender_id}"
+    return TenderItem.model_validate(row).model_copy(
+        update={
+            "title": localized_text(locale, key, "title", row.title),
+            "summary": localized_text(locale, key, "summary", row.summary),
+        }
+    )
+
+
+def partner_item(row: Partner, locale: Locale) -> PartnerItem:
+    key = f"partner:{row.partner_id}"
+    return PartnerItem.model_validate(row).model_copy(
+        update={
+            "capabilities": localized_list(locale, key, "capabilities", list(row.capabilities)),
+            "summary": localized_text(locale, key, "summary", row.summary),
+        }
     )
 
 

@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "targets": {
+    "/": {
+      "targetKind": "existing-ui",
+      "projectId": "a94f43c4-a1b3-492b-99c7-838ba218ed53",
+      "baselineDraftId": "a51cdac5-0a83-423c-8428-dfe869139e1f",
+      "activeDraftId": "a51cdac5-0a83-423c-8428-dfe869139e1f",
+      "designSystemPath": ".superdesign/design-system.md",
+      "referenceIds": [
+        "3bc7097a-b163-46d4-afd3-5f9bdaba83aa"
+      ],
+      "contextFiles": [
+        ".superdesign/design-system.md",
+        "apps/web/app/(demo)/page.tsx",
+        "apps/web/components/app-shell.tsx",
+        "apps/web/components/language-switcher.tsx",
+        "apps/web/components/country-globe.tsx",
+        "apps/web/components/page-state.tsx",
+        "apps/web/app/globals.css:1:220",
+        "apps/web/app/globals.css:1558:2221",
+        "apps/web/app/globals.css:3702:4064"
+      ],
+      "fingerprints": {
+        ".superdesign/design-system.md": "852b5d3fb1b81aefc833423c1e673f0d1ab8e3de3511a3572725e7501cebbdec",
+        "apps/web/app/(demo)/page.tsx": "a52d5a6923c16b7cbaa55c2f2a9c93fcc2b7a38ef8656923a9e29d8c1b2fcf3d",
+        "apps/web/components/app-shell.tsx": "18d98749a994551e90d7f2045c3bc4b354775eb1c3b4d75f6efdf841946fc82a",
+        "apps/web/components/language-switcher.tsx": "e3e93df87b8a6e24a1c5101209db62a96f7783636cb22338d0e0d41a341ddf18",
+        "apps/web/components/country-globe.tsx": "8ab7ac891fc28886b01f4056ab89641cdfc26391d08c0c1deb83bc1b22edd10f",
+        "apps/web/components/page-state.tsx": "710c980ee6b7814023e100449f34612e013a1fa119bf0c4b39089981b026e432",
+        "apps/web/app/globals.css": "ac0d4e264d7f94fd21843952fd6630414a3a758cb8658ffbc6219ee16c7aa2a2"
+      },
+      "components": [
+        {
+          "name": "AppShell",
+          "id": "ed1c15c3-9b37-4a38-aece-e0004806fb06",
+          "sourcePath": "apps/web/components/app-shell.tsx"
+        },
+        {
+          "name": "ToolPageShell",
+          "id": "e1014cb8-40bd-4977-a0ee-4224a6829789",
+          "sourcePath": "apps/web/components/tool-page-shell.tsx"
+        }
+      ],
+      "drafts": {
+        "a51cdac5-0a83-423c-8428-dfe869139e1f": {
+          "title": "Navigator Compact Task-Guided Home",
+          "visualDirection": "compact task-guided workbench with selected-market context and four linked tool steps",
+          "currentVersion": 2
+        }
+      },
+      "updatedAt": "2026-08-23T11:11:24.2079038+08:00"
+    }
+  }
+}
