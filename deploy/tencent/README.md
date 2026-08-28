@@ -1,5 +1,11 @@
 # Tencent Cloud access-controlled private preview
 
+Current approved site: the Zambia increment now serves 60 overseas countries
+through the existing anonymous entry. Use the
+[2026-08-28 release record and current operations](ZAMBIA_RELEASE_20260828.md).
+The synthetic-preview instructions below are retained for the separate historical
+profile; they are not the current site's startup or access policy.
+
 This deployment profile is limited to the `PBD-ACCEL-DEMO-001` synthetic-data
 private-preview scope. It is not a production or public-release profile.
 
@@ -169,3 +175,43 @@ not run `down -v`, `--volumes` or a Docker prune. Stop only the explicitly selec
 project when necessary. Content rollback uses previously published, non-revoked
 overview versions; the initial 59-country publication has no earlier published
 overview, and old sample manuscripts/retired reports are not rollback targets.
+
+### Confirmed Zambia update on the existing site
+
+The 2026-08-28 user confirmation covers the added Zambia basic data, source
+collection and bilingual overview in one Excel. It expands the existing 59
+overseas markets to 60; China remains excluded. The new seed has release ID
+`BASIC61-PRIVATE-R1` and schema `basic61.seed.v1`, under the unchanged
+`basic60_private` profile. The old `BASIC60-PRIVATE-R1` seed and its fixed-count
+contract remain intact and usable for rollback. See
+[the confirmed extension bindings](../basic60/README.md#confirmed-zambia-extension-2026-08-28)
+and [the versioned preparation commands](../../services/data-readiness/COUNTRY_EXTENSIONS.md).
+
+The current site's anonymous entry was separately and explicitly approved by
+the user (“允许不登录可访问”). Preserve that authorization and the existing
+anonymous Web entry and Nginx routing; do not recreate a shared passphrase or an
+additional login. This update does not advance formal D1-D4/P0
+or claim a new production approval.
+
+For this increment, reuse the existing Basic60 Compose project, database,
+loopback port 3101 and protected credentials. Build compatible Web/API images
+from an exact source snapshot, stage the new immutable ready artifacts and
+the complete 60-country content store in a new release directory, and verify
+their hashes before changing the running services. Do not copy raw-source
+downloads, unpublished drafts or secrets into image/build archives. The private
+content-volume backup retains its required historical review/confirmation files.
+
+Take a PostgreSQL dump before the controlled Web/API replacement. Do not launch
+an alternate API against this database while the old one is serving: both would
+share the one active-release pointer. Keep the previous environment, images and
+content directory so restarting the old version can reactivate its authorized
+seed without deleting the new or old database records. No Nginx route change,
+database migration, volume replacement or Docker prune is required.
+
+The added-version checks must confirm 61 archived country rows, 305 macro annual
+rows, 61 energy rows, 2317 available observations and 62 explicit pending values;
+the read-only API returns 60 overseas countries. Verify Zambia's selection,
+detail charts and both overview languages, all 59 previous overview versions,
+China/invalid-code rejection, key protection, and read-only API-only data mounts.
+The old staged-release 59-country count above describes the original release,
+not this increment's acceptance count.

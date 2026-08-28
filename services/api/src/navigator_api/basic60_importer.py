@@ -42,6 +42,11 @@ from navigator_api.basic60_seed_contract import (
     MetricValueArtifact,
     ProvenancedArtifact,
 )
+from navigator_api.basic61_governance import Basic61ReleaseAuthorization
+from navigator_api.basic61_seed_contract import (
+    EXPECTED_COUNTS as EXPECTED_BASIC61_COUNTS,
+)
+from navigator_api.basic61_seed_contract import Basic61SeedArtifact
 from navigator_api.database import build_engine, build_session_factory
 
 MAX_SEED_BYTES = 128 * 1024 * 1024
@@ -69,7 +74,7 @@ def _canonical_sha256(value: Any) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
-def load_seed_artifact(path: Path) -> tuple[Basic60SeedArtifact, str]:
+def load_seed_artifact(path: Path) -> tuple[Basic60SeedArtifact | Basic61SeedArtifact, str]:
     try:
         size = path.stat().st_size
         if size > MAX_SEED_BYTES:
@@ -79,34 +84,53 @@ def load_seed_artifact(path: Path) -> tuple[Basic60SeedArtifact, str]:
         raise Basic60ImportError(f"Cannot read BASIC60 seed artifact: {path}") from exc
     digest = hashlib.sha256(payload).hexdigest()
     try:
-        artifact = Basic60SeedArtifact.model_validate_json(payload)
+        header = json.loads(payload)
+        artifact: Basic60SeedArtifact | Basic61SeedArtifact
+        if isinstance(header, dict) and header.get("schema_version") == "basic61.seed.v1":
+            artifact = Basic61SeedArtifact.model_validate(header)
+        else:
+            artifact = Basic60SeedArtifact.model_validate_json(payload)
     except ValueError as exc:
         raise Basic60ImportError(f"BASIC60 seed artifact is invalid: {exc}") from exc
     return artifact, digest
 
 
 def _validate_activation(
-    artifact: Basic60SeedArtifact,
+    artifact: Basic60SeedArtifact | Basic61SeedArtifact,
     artifact_sha256: str,
     settings: Basic60Settings,
 ) -> None:
     if artifact.release.status != "private_trial_ready":
         raise Basic60ImportError("Only a private_trial_ready artifact can be activated")
-    if settings.enforce_baseline_counts:
+    if settings.enforce_baseline_counts or isinstance(artifact, Basic61SeedArtifact):
         declared = artifact.release.counts.model_dump()
-        if declared != EXPECTED_PRIVATE_TRIAL_COUNTS:
+        expected = (
+            EXPECTED_BASIC61_COUNTS
+            if isinstance(artifact, Basic61SeedArtifact)
+            else EXPECTED_PRIVATE_TRIAL_COUNTS
+        )
+        if declared != expected:
             raise Basic60ImportError(
                 "BASIC60 activation counts do not match the approved V1 baseline: "
-                f"expected={EXPECTED_PRIVATE_TRIAL_COUNTS}, actual={declared}"
+                f"expected={expected}, actual={declared}"
             )
     try:
-        validate_basic60_activation(
+        _, authorization, _ = validate_basic60_activation(
             settings,
             release_id=artifact.release.release_id,
             release_bundle_sha256=artifact.release.release_bundle_sha256,
             validation_report_sha256=artifact.release.validation_report_sha256,
             seed_artifact_sha256=artifact_sha256,
         )
+        if isinstance(artifact, Basic61SeedArtifact):
+            if not isinstance(authorization, Basic61ReleaseAuthorization):
+                raise Basic60ImportError("BASIC61 requires its dedicated extension authorization")
+            bound_extension = authorization.extension.model_dump()
+            if any(
+                getattr(artifact.extension, name) != value
+                for name, value in bound_extension.items()
+            ):
+                raise Basic60ImportError("BASIC61 seed and reviewed extension bindings differ")
     except Basic60GovernanceError as exc:
         raise Basic60ImportError(str(exc)) from exc
 
@@ -168,7 +192,9 @@ def _provenance(
         entity_key=country_code,
         field_path=field_path,
         source_field=field_path,
-        transform_ref="basic60.seed.v1",
+        transform_ref="basic61.seed.v1"
+        if release_id == "BASIC61-PRIVATE-R1"
+        else "basic60.seed.v1",
         source_ref=item.source_ref,
         quality_status=quality_status,
     )
@@ -402,15 +428,20 @@ def database_counts(session: Session, release_id: str) -> dict[str, int]:
 def validate_basic60_release_counts(
     session: Session, release: Basic60Release, settings: Basic60Settings
 ) -> None:
-    if not settings.enforce_baseline_counts:
+    if not settings.enforce_baseline_counts and release.release_id != "BASIC61-PRIVATE-R1":
         return
-    if release.declared_counts != EXPECTED_PRIVATE_TRIAL_COUNTS:
+    expected = (
+        EXPECTED_BASIC61_COUNTS
+        if release.release_id == "BASIC61-PRIVATE-R1"
+        else EXPECTED_PRIVATE_TRIAL_COUNTS
+    )
+    if release.declared_counts != expected:
         raise Basic60ImportError("Stored BASIC60 release counts do not match the V1 baseline")
     actual = database_counts(session, release.release_id)
     expected_actual = {
-        "countries": EXPECTED_PRIVATE_TRIAL_COUNTS["countries"],
-        "available_metric_values": EXPECTED_PRIVATE_TRIAL_COUNTS["available_metric_values"],
-        "pending_metric_values": EXPECTED_PRIVATE_TRIAL_COUNTS["pending_metric_values"],
+        "countries": expected["countries"],
+        "available_metric_values": expected["available_metric_values"],
+        "pending_metric_values": expected["pending_metric_values"],
         "unavailable_metric_values": 0,
     }
     if actual != expected_actual:

@@ -199,6 +199,44 @@ describe("Navigator product home", () => {
     expect(router.push).toHaveBeenCalledExactlyOnceWith("/basic60/countries/BRA");
   });
 
+  it.each([
+    { locale: "zh-CN", basePath: "" },
+    { locale: "en", basePath: "/basic60" },
+  ] as const)("selects the added Zambia market and retains its navigation context in $locale", async ({ locale, basePath }) => {
+    const user = userEvent.setup();
+    const english = locale === "en";
+    const name = english ? "Zambia" : "赞比亚";
+    const { container } = show({
+      locale,
+      basePath,
+      markets: [...countries, market("ZMB", name, "Southern Africa")],
+    });
+    const regionSelect = screen.getByRole("combobox", { name: english ? "Continent / major region" : "洲 / 主要区域" });
+    const countrySelect = screen.getByRole("combobox", { name: english ? "Country" : "国家" });
+    await user.selectOptions(regionSelect, "Africa");
+    expect(within(countrySelect).getByRole("option", { name })).toHaveValue("ZMB");
+    expect(within(countrySelect).queryByRole("option", { name: "中国" })).not.toBeInTheDocument();
+    await user.selectOptions(countrySelect, "ZMB");
+    expect(screen.getByTestId("globe")).toHaveAttribute("data-selected", "ZMB");
+    expect(screen.getByTestId("globe")).toHaveAttribute("data-focus", "ZMB");
+    expect(window.location.search).toBe("?country=ZMB");
+    const flow = within(container.querySelector(".home-service-flow") as HTMLElement);
+    expect(flow.getByRole("link", { name: english ? "View country data" : "查看国家数据" })).toHaveAttribute("href", `${basePath}/countries/ZMB`);
+    expect(flow.getByRole("link", { name: english ? "Explore expansion tools" : "进入出海工具" })).toHaveAttribute("href", `${basePath}/tools?country=ZMB`);
+    expect(flow.getByRole("link", { name: english ? "Explore partners" : "进入合作伙伴" })).toHaveAttribute("href", `${basePath}/partners?country=ZMB`);
+    await user.dblClick(screen.getByRole("button", { name }));
+    expect(router.push).toHaveBeenCalledExactlyOnceWith(`${basePath}/countries/ZMB`);
+    act(() => {
+      window.history.replaceState(null, "", `${basePath || "/"}?country=ZMB#markets`);
+      fireEvent.popState(window);
+    });
+    expect(countrySelect).toHaveValue("ZMB");
+    expect(regionSelect).toHaveValue("Africa");
+    expect(screen.getByTestId("globe")).toHaveAttribute("data-focus", "ZMB");
+    expect(container.textContent).not.toMatch(/BASIC61|Basic|已审核|source_ref|市场比较|Market comparison/);
+    expect(screen.getAllByRole("link").some((link) => /compare|policies|risks/.test(link.getAttribute("href") ?? ""))).toBe(false);
+  });
+
   it("clears a country independently while retaining the chosen region", async () => {
     const user = userEvent.setup();
     show({ initialCountryCode: "IDN" });

@@ -32,9 +32,13 @@ tmp/
 # Local real-source intake and Basic60 runtime volumes
 /raw material/
 /runtime/basic60/
+/runtime/basic61/
 /runtime/market-research/
 /runtime/market-content/
 /runtime/market-overview/
+/runtime/country-expansion/
+/runtime/country-extensions/
+/outputs/zmb-20260828-r1/
 /outputs/market-59-20260827/
 /outputs/market-overview-samples-20260827/
 /outputs/market-overview-59-20260827/

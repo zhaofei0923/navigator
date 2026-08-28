@@ -27,6 +27,16 @@ from .basic60_private import (
     write_basic60_release_authorization,
     write_basic60_runtime_attestation,
 )
+from .country_extension import (
+    COUNTRY_EXTENSION_COMMANDS,
+    add_country_extension_commands,
+    run_country_extension_command,
+)
+from .country_extension_release import (
+    COUNTRY_EXTENSION_RELEASE_COMMANDS,
+    add_country_extension_release_commands,
+    run_country_extension_release_command,
+)
 from .d0_ac009_confirmation import (
     apply_d0_ac009_confirmation,
     write_d0_ac009_confirmation_template,
@@ -619,6 +629,8 @@ def _parser() -> argparse.ArgumentParser:
     gate.add_argument("--stage", choices=("D0",), required=True)
     gate.add_argument("--format", choices=("markdown", "json"), default="markdown")
     add_market_content_commands(commands)
+    add_country_extension_commands(commands)
+    add_country_extension_release_commands(commands)
     return parser
 
 
@@ -647,6 +659,12 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command in MARKET_COMMANDS:
         return run_market_content_command(args, paths.root)
+
+    if args.command in COUNTRY_EXTENSION_COMMANDS:
+        return run_country_extension_command(args, paths.root)
+
+    if args.command in COUNTRY_EXTENSION_RELEASE_COMMANDS:
+        return run_country_extension_release_command(args, paths.root)
 
     if args.command == "validate":
         checks = validate_structure(paths)

@@ -226,28 +226,44 @@ Embedding、Reranker或本地/云端模型服务；上述运行组件统一留�
 - Basic60 API、数据库、密钥和数据卷仍与合成Demo隔离；
 - 原合成Demo数据库卷只下线保留，不导入真实数据，也不删除。
 
-无应用口令只适用于当前回环地址的内部展示。若后续发布到非本机地址，必须先增加VPN、
-IP白名单或企业身份认证，不得直接暴露本配置。
+历史默认约束曾将无应用口令限定为本机回环地址展示，非本机访问要求另行批准访问边界。
+2026-08-28的独立决定`PBD-NAVIGATOR-ANONYMOUS-ACCESS-20260828-001`已批准现有腾讯云
+站点无需登录即可访问；该站点按这份匿名访问批准运行，本次不新增VPN、IP白名单或登录门禁。
+匿名批准仅开放既有Demo的Web入口，API和数据库仍保持内部访问，密钥只保留在服务端；
+不改写原有历史PBD，也不将该批准自动扩展到其他站点或系统。
 
-切换时先用原`compose.yaml`执行不带删卷参数的`down`，再同时加载`.env`、受保护的
-Basic60环境文件、`compose.private-trial.yaml`和`compose.approved-demo.yaml`执行
-`up --build -d`。严禁使用`down -v`、`--volumes`或`docker volume prune`。
-
-已在批准Demo运行时，日常UI/API更新不需要先关闭整个项目。复用原环境文件与Compose项目：
+当前本机已接入赞比亚扩展`BASIC61-PRIVATE-R1`，原始档案61国（含保留但不对客开放的中国），
+对客提供60个海外国家；原59国的基础数据和概述历史保留。日常启动／重启使用
+`runtime/basic61/deployment-20260828-r1`中的持久配置，不再使用旧版两文件Compose命令：
 
 ```bash
-docker compose --project-name navigator-basic60-private \
-  --env-file .env --env-file .env.basic60-private.local \
-  -f deploy/basic60/compose.private-trial.yaml \
-  -f deploy/basic60/compose.approved-demo.yaml build web api
-docker compose --project-name navigator-basic60-private \
-  --env-file .env --env-file .env.basic60-private.local \
-  -f deploy/basic60/compose.private-trial.yaml \
-  -f deploy/basic60/compose.approved-demo.yaml up -d --no-deps web api
+sh runtime/basic61/deployment-20260828-r1/restart.sh --execute
 ```
 
-API启动仍会执行原有迁移与幂等种子核验；本轮不生成新种子，不替换批准文件，不删除数据库卷。
-需要保留口令访问的`/basic60`兼容运行模式复用同一套页面内容，但不改变其独立访问边界。
+以上在WSL仓库根目录运行；不加`--execute`时仅核验、不修改容器。目录权限为`0700`、文件为
+`0600`，位于已被Git忽略的`runtime/basic61`下。配置保存原环境副本、新版本增量环境、已验证
+Compose和镜像引用、回退配置及切换前数据库备份；不得打印其中的环境或resolved配置。
+目录缺失时应恢复已验证的持久包，不得回落执行旧59国启动命令。
+
+脚本固定原`navigator-basic60-private`项目，依次重建API、Web，使用`--no-build --pull never`，
+保留数据库容器ID、数据卷、账号与密钥。数据库若已停止，只启动同一个现有容器，不重建。
+新ready包和完整60国概述卷保持只读；地址仍为`http://127.0.0.1:3000`，无需共享口令。
+API启动继续执行迁移、幂等种子核验和机器签名校验，不新增人工审核步骤。
+
+如需明确回退原59国版本，运行：
+
+```bash
+sh runtime/basic61/deployment-20260828-r1/rollback.sh --execute
+```
+
+回退仅切换旧API/Web镜像、环境与内容挂载，不执行`pg_restore`、不删除卷，也不删除新版本历史。
+未来更新镜像、凭据或内容根目录时应生成新的部署包，不能直接修改这份冻结包。
+
+历史说明：原`.env`＋`.env.basic60-private.local`及两个旧Compose文件仍保留，旧
+`up --build -d`／`build web api`命令只用于旧59国环境或明确的历史恢复，不适用于当前日常启动。
+重启现有容器不会自行回到旧版，但按旧配置重新`up`会激活旧59国种子；只修改runtime目录还会
+遗漏新版本的seed和attestation文件名。`scripts/demo-up.ps1`属于另一个合成Demo，不是当前入口。
+严禁使用`down -v`、`--volumes`或`docker volume prune`；不应为日常更新先关闭整个项目。
 
 ## 11. 首页与导航回归检查
 

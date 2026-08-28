@@ -14,7 +14,7 @@ import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
 
-const [inputArg, outputArg, qaArg] = process.argv.slice(2);
+const [inputArg, outputArg, qaArg, extensionArg] = process.argv.slice(2);
 if (!inputArg || !outputArg || !qaArg) {
   throw new Error("Usage: build_review_workbook.mjs review-data.json output.xlsx qa-directory");
 }
@@ -33,6 +33,7 @@ if (!dependencyRoot || !path.isAbsolute(dependencyRoot)) {
 }
 const inputBytes = await fs.readFile(inputPath);
 const source = JSON.parse(inputBytes.toString("utf8"));
+const extension = extensionArg ? JSON.parse(await fs.readFile(path.resolve(extensionArg), "utf8")) : null;
 const headers = ["country_code", "content_version", "locale", "json_pointer", "original_value", "edited_value"];
 if (JSON.stringify(source.content_headers) !== JSON.stringify(headers)) {
   throw new Error("The six import-contract headers must remain unchanged");
@@ -133,6 +134,7 @@ const wb = Workbook.create();
 const guide = wb.worksheets.add("审核导览");
 const overview = wb.worksheets.add("国别总览");
 const reading = wb.worksheets.add("中文阅读");
+const basicReading = extension ? wb.worksheets.add("基础数据阅读") : null;
 const edits = wb.worksheets.add("内容编辑");
 const evidence = wb.worksheets.add("来源依据");
 const gaps = wb.worksheets.add("待确认事项");
@@ -170,6 +172,7 @@ function table(sheet, labels, values, widths, name, { rowHeights = true } = {}) 
   const last = values.length + 1;
   const lastCol = column(labels.length - 1);
   const range = sheet.getRange(`A1:${lastCol}${last}`);
+  range.setNumberFormat("@");
   // Artifact input follows Excel's formula/quote conventions. Explicitly escape
   // leading formula or quote characters while preserving the exact stored text.
   range.values = [labels, ...values].map((row) => row.map((value) => (
@@ -336,6 +339,108 @@ const metadataValues = Object.entries(workbookMetadata).map(([key, value]) => [k
 table(metadata, ["key", "value"], metadataValues, [28, 102], "MarketPackageMetadata");
 metadata.getRange(`B2:B${metadataValues.length + 1}`).setNumberFormat("@");
 
+// A new country's facts and overview are reviewed in this same physical file.
+// Keep the established overview contract separate from the extension contract;
+// there is only one editable copy of each bilingual overview paragraph.
+const extensionPreviews = [];
+if (extension) {
+  const extensionHeaders = ["country_code", "section", "locale", "json_pointer", "original_value", "edited_value", "source_ids"];
+  if (JSON.stringify(extension.headers) !== JSON.stringify(extensionHeaders) ||
+      !extension.metadata || !Array.isArray(extension.rows) || !extension.rows.length ||
+      extension.rows.some((row) => row.length !== 7 || row[0] !== "ZMB" || row[1] === "overview" || row[4] !== row[5])) {
+    throw new Error("A validated single-country extension review contract is required");
+  }
+  const factSheet = wb.worksheets.add("新增国内容");
+  const metaSheet = wb.worksheets.add("新增国包信息");
+  const sourceSheet = wb.worksheets.add("基础数据依据");
+  const factLast = table(factSheet, extensionHeaders, extension.rows,
+    [12, 18, 12, 66, 64, 64, 64], "AddedCountryFacts");
+  factSheet.getRange(`A2:G${factLast}`).setNumberFormat("@");
+  factSheet.getRange(`E2:E${factLast}`).format.fill = palette.gray;
+  factSheet.getRange(`F2:F${factLast}`).format.fill = palette.input;
+  const factMetadata = Object.entries(extension.metadata).map(([key, value]) => [key, safeText(value)]);
+  const extensionMetaLast = table(metaSheet, ["key", "value"], factMetadata, [34, 112], "AddedCountryPackage");
+  metaSheet.getRange(`B2:B${extensionMetaLast}`).setNumberFormat("@");
+  const sourceRows = (extension.source_rows ?? []).map((item) => (
+    Array.isArray(item) ? item : [item.id, item.title, item.url, item.captured_at, item.local_path, item.sha256]
+  )).map((row) => row.map((value, index) => index === 3 ? JSON.stringify(safeText(value)) : safeText(value)));
+  // This column has an explicit canonical JSON-string encoding in the review
+  // contract. ISO datetime values otherwise become Excel dates and lose their
+  // timezone/microsecond precision, even when the cell format is text.
+  table(sourceSheet, ["id", "title", "url", "captured_at", "local_path", "sha256"],
+    sourceRows, [30, 52, 88, 30, 78, 68], "AddedCountrySources");
+  sourceSheet.getRange(`D2:D${sourceRows.length + 1}`).setNumberFormat("@");
+  // A concise, Chinese reading view links to the only editable fact cells.
+  // It is not a second data input, and no rounded values are copied into it.
+  const identityNames = {
+    iso2: "国家代码 ISO2", admin_level_1_count: "一级行政区数量", admin_level_1_type: "一级行政区类型",
+    capital: "首都", collected_at: "资料采集日期", country_name_en: "英文名称", country_name_zh: "中文名称",
+    currency_code: "货币代码", currency_name: "货币名称", local_names: "本地名称",
+    official_languages: "官方语言", official_name_en: "英文正式名称", region_code: "主要区域", time_zones: "时区",
+  };
+  const metricNames = {
+    population_total: "人口", land_area_sq_km: "陆地面积", gdp_current_usd: "国内生产总值（现价）",
+    gdp_growth_pct: "GDP实际增长率", gdp_per_capita_current_usd: "人均GDP（现价）",
+    inflation_cpi_pct: "CPI通胀率", official_exchange_rate_lcu_per_usd: "官方汇率（本币/美元）",
+    fdi_net_inflows_usd: "外商直接投资净流入", electricity_installed_capacity_mw: "电力总装机",
+    electricity_generation_gwh: "总发电量", renewable_capacity_mw: "可再生能源装机",
+    renewable_generation_gwh: "可再生能源发电量", renewable_share_capacity_pct: "可再生能源装机占比",
+    renewable_share_generation_pct: "可再生能源发电占比", electricity_demand_gwh: "用电需求（本期不展示）",
+  };
+  const units = { COUNT: "人", PERSON: "人", PERSONS: "人", KM2: "平方公里", SQ_KM: "平方公里", USD: "美元", USD_PER_PERSON: "美元/人", PERCENT: "%", LCU_PER_USD: "克瓦查/美元", MW: "MW", GWH: "GWh" };
+  const readingRows = [], readingFormulas = [];
+  const metricFields = new Map();
+  for (const [index, row] of extension.rows.entries()) {
+    const excelRow = index + 2;
+    if (row[1] === "identity") {
+      const key = row[3].split("/").at(-1);
+      if (!identityNames[key]) throw new Error(`Missing Chinese identity label: ${key}`);
+      const ref = `'新增国内容'!F${excelRow}`;
+      const array = ["local_names", "official_languages", "time_zones"].includes(key);
+      readingRows.push(["国家档案", identityNames[key], "—", "", "", "", excelRow]);
+      readingFormulas.push({
+        value: array ? `=SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(${ref},"[",""),"]",""),CHAR(34),""),",","；")` : `=${ref}`,
+        source: `=IF('新增国内容'!G${excelRow}="","",'新增国内容'!G${excelRow})`,
+      });
+    } else {
+      const match = /^\/new_country\/metrics\/(\d+)\/(\w+)$/.exec(row[3]);
+      if (!match) throw new Error(`Unknown metric pointer: ${row[3]}`);
+      const index = Number(match[1]);
+      if (!metricFields.has(index)) metricFields.set(index, new Map());
+      metricFields.get(index).set(match[2], { row, excelRow });
+    }
+  }
+  for (const [, fields] of [...metricFields.entries()].sort((a, b) => a[0] - b[0])) {
+    const code = fields.get("metric_code").row[5];
+    if (!metricNames[code]) throw new Error(`Missing Chinese metric label: ${code}`);
+    const value = fields.get("normalized_value"), period = fields.get("period");
+    const unit = fields.get("unit").row[5];
+    const group = ["population_total", "land_area_sq_km"].includes(code) ? "档案指标"
+      : /electricity_|renewable_/.test(code) ? "能源指标" : "宏观指标";
+    const ref = `'新增国内容'!F${value.excelRow}`, yearRef = `'新增国内容'!F${period.excelRow}`;
+    readingRows.push([group, metricNames[code], "", "", units[unit] ?? unit, "", value.excelRow]);
+    readingFormulas.push({ value: `=IF(${ref}="null","暂不展示",VALUE(${ref}))`,
+      period: `=IF(${yearRef}="null","—",${yearRef})`, source: `=IF('新增国内容'!G${value.excelRow}="","",'新增国内容'!G${value.excelRow})` });
+  }
+  const basicLast = table(basicReading, ["类别", "指标", "统计期", "数值", "单位", "内部来源ID", "编辑页行号"],
+    readingRows, [16, 34, 18, 38, 18, 66, 14], "AddedCountryReading");
+  readingFormulas.forEach((formulas, index) => {
+    const row = index + 2;
+    basicReading.getRange(`D${row}`).formulas = [[formulas.value]];
+    basicReading.getRange(`F${row}`).formulas = [[formulas.source]];
+    if (formulas.period) {
+      basicReading.getRange(`C${row}`).formulas = [[formulas.period]];
+      basicReading.getRange(`D${row}`).setNumberFormat("#,##0.#############");
+    }
+  });
+  basicReading.getRange(`D2:D${basicLast}`).format.font.color = "#177E86";
+  extensionPreviews.push(["新增国内容", "C1:G8", "11-added-facts"],
+    ["新增国包信息", `A1:B${extensionMetaLast}`, "12-extension-package"],
+    ["基础数据依据", "A1:D5", "13-basic-evidence"],
+    ["基础数据阅读", "A1:G7", "14-basic-reading"],
+    ["基础数据阅读", `A${basicLast - 7}:G${basicLast}`, "15-energy-reading"]);
+}
+
 guide.showGridLines = false;
 guide.getRange("A1:H35").format = { font: { size: 11, color: palette.text }, wrapText: true, verticalAlignment: "top" };
 guide.getRange("A1:H35").format.columnWidth = 18;
@@ -345,6 +450,10 @@ guide.getRange("A1").values = [["Navigator · 新能源市场概述集中审核"
 guide.getRange("A1:H2").format = { fill: palette.navy, font: { bold: true, color: palette.white, size: 22 }, wrapText: true };
 guide.getRange("A3:H3").merge();
 guide.getRange("A3").values = [["中文主稿 / 双语同版 / 一份文件确认 · 仅为本批研究初稿，尚未发布"]];
+if (extension) {
+  guide.getRange("A1").values = [["Navigator · 赞比亚新增国家集中审核"]];
+  guide.getRange("A3").values = [["基础数据 + 中英文市场概述 + 内部来源依据 / 一份文件，一次确认 / 尚未发布"]];
+}
 guide.getRange("A3:H3").format = { fill: palette.tealLight, font: { color: palette.teal, bold: true } };
 const kpis = [["A5:B5", "A6:B7", "国家", `=COUNTA('国别总览'!A2:A${overviewLast})`],
   ["C5:D5", "C6:D7", "双语内容行", `=COUNTA('内容编辑'!A2:A${editLast})`],
@@ -371,6 +480,15 @@ for (const [row, heading, description] of instructions) {
   guide.getRange(`A${row + 1}:H${row + 2}`).merge(); guide.getRange(`A${row + 1}`).values = [[description]];
   guide.getRange(`A${row + 1}:H${row + 2}`).format = { wrapText: true, font: { color: palette.text } };
 }
+if (extension) {
+  guide.getRange("A9").values = [["01  本次只审核新增赞比亚"]];
+  guide.getRange("A10").values = [["原有59个海外国家不重新审核。先看「中文阅读」和「基础数据阅读」；「来源依据」「基础数据依据」保留核查路径。「新增国内容」为唯一基础数据编辑页，阅读页公式关联原值。原60国材料和线上版本不变。"]];
+  guide.getRange("A14").values = [["概述在「内容编辑」F列修改。基础数据如需修订，在「新增国内容」F列提出修正；实质变化须同步原始记录并重新生成最终候选后确认。其余标识、指针、原值和元信息不改，不新增或删除段落行。"]];
+  guide.getRange("A25").values = [["05  同一份文件确认基础数据与概述"]];
+  guide.getRange("A22").values = [["「来源依据」和「基础数据依据」保留官方链接、原文位置及哈希。基础来源的captured_at列用双引号包裹的JSON文本完整保留时区和微秒，防止Excel自动转日期；无需手改。资料缺口单独保留，不进入对客正文。"]];
+  guide.getRange("A26").values = [["你确认这份Excel最终实际内容后，再生成新基础数据发布版本并接入原站。机器检查不签署、不发布；只有本次赞比亚新增内容需要确认，既有59国不重审。修改后需先校验并绑定最终文件，不能复用旧确认。"]];
+  guide.getRange("A30").values = [["新增ZMB后原始档案共61国（保留中国历史档案），海外范围60国（不含中国）。本表不自动改变线上数据或导航；未取得依据的值保留缺失，不用零或推算结果替代。"]];
+}
 guide.getRange("A33:H35").merge();
 guide.getRange("A33").values = [["篇幅说明：每篇中文正文1500–2000字、6–8个自然段，不含标题和适用说明。表内字符公式使用Excel LEN并去除空白，含标点及英文/数字；后端导入按Unicode字符复核。篇幅不是研究深度分数，未知税率和项目条件不得用无依据结论补足。"]];
 guide.getRange("A33:H35").format = { fill: palette.input, font: { color: palette.amber }, wrapText: true };
@@ -383,14 +501,18 @@ for (const [name, range] of [["审核导览", "A5:H7"], ["国别总览", "A1:J4"
   inspections.push(await wb.inspect({ kind: "table", range: `'${name}'!${range}`, include: "values,formulas", tableMaxRows: 10, tableMaxCols: 14 }));
   console.log(JSON.stringify({ stage: "inspection_ready", sheet: name }));
 }
-const errors = await wb.inspect({ kind: "match", searchTerm: "#REF!|#DIV/0!|#VALUE!|#NAME\\?|#NUM!", options: { useRegex: true, maxResults: 100 } });
-await fs.writeFile(path.join(qaPath, "workbook-inspection.json"), JSON.stringify({ inspections, errors }, null, 2), "utf8");
+const errors = await wb.inspect({ kind: "match", searchTerm: "#REF!|#DIV/0!|#VALUE!|#NAME\\?|#NUM!|#N/A", options: { useRegex: true, maxResults: 100 } });
+await fs.writeFile(path.join(qaPath, "workbook-inspection.json"), JSON.stringify({ inspections, errors: errors.ndjson }, null, 2), "utf8");
+if (errors.truncated || typeof errors.ndjson !== "string" || !errors.ndjson.includes("Cell search matched 0 entries.")) {
+  throw new Error("Formula-error inspection did not confirm a clean workbook; review the QA report");
+}
 const previews = [
   ["审核导览", "A1:H35", "01-guide"], ["国别总览", "A1:H5", "02-overview"],
   ["中文阅读", "A1:F8", "03-chinese-reading"], ["内容编辑", "E1:J7", "04-editing"],
   ["来源依据", "A1:H4", "05-evidence"], ["待确认事项", "A1:D5", "06-gaps"],
   ["包信息", `A1:B${metadataValues.length + 1}`, "07-package"],
 ];
+previews.push(...extensionPreviews);
 // Sample the body of a full batch as well as the first rows. This catches late
 // country clipping and the longest English paragraph without changing content.
 const middleReadingRow = Math.floor(readable.length / 2) + 2;

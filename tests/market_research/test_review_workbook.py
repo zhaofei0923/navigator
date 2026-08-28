@@ -383,3 +383,319 @@ def write_synthetic_inputs(root: Path) -> None:
         (target / "review-data.json").write_text(
             json.dumps(review, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
         )
+
+
+class _Cell:
+    def __init__(self, value: object) -> None:
+        self.value = value
+        self.data_type = "f" if isinstance(value, str) and value.startswith("=") else "s"
+
+
+class _Sheet:
+    def __init__(self, rows: list[list[Any]]) -> None:
+        self.rows = rows
+
+    def iter_rows(self, *, max_col: int) -> list[tuple[_Cell, ...]]:
+        return [
+            tuple(_Cell(value) for value in (row + [None] * max_col)[:max_col]) for row in self.rows
+        ]
+
+
+class _Workbook:
+    def __init__(self, sheets: dict[str, list[list[Any]]]) -> None:
+        self.sheets = sheets
+        self.sheetnames = list(sheets)
+
+    def __getitem__(self, name: str) -> _Sheet:
+        return _Sheet(self.sheets[name])
+
+
+def synthetic_extension_review() -> tuple[dict[str, Any], dict[str, Any], _Workbook]:
+    """Literal-only parser stubs, never actual workbook authoring or approval."""
+    _, review = synthetic_overview_review()
+    review["countries"] = review["countries"][:1]
+    review["content_rows"] = [row for row in review["content_rows"] if row[0] == "AAA"]
+    extension = {
+        "metadata": {
+            "schema_version": "navigator.country-extension-review.v1",
+            "extension_id": "COUNTRY-EXT-AAA-20260827-R1",
+            "candidate_sha256": "b" * 64,
+            "parent_seed_sha256": "c" * 64,
+            "target_release_id": "BASIC61-PRIVATE-R1",
+            "review_scope_country": "AAA",
+            "as_of": "2026-08-27",
+        },
+        "headers": list(verify.EXTENSION_HEADERS),
+        "rows": [["AAA", "identity", "", "/new_country/iso2", "AA", "AA", "SYNTHETIC"]],
+        "source_rows": [
+            {
+                "id": "SYNTHETIC",
+                "title": "Synthetic only",
+                "url": "https://example.invalid/test-only",
+                "captured_at": "2026-08-27T12:00:00.123456+08:00",
+                "local_path": "raw material/synthetic.json",
+                "sha256": "d" * 64,
+            }
+        ],
+    }
+    sheets = {name: [] for name in verify.SHEETS}
+    sheets.update(
+        {
+            "新增国内容": [list(verify.EXTENSION_HEADERS), *deepcopy(extension["rows"])],
+            "新增国包信息": [
+                ["key", "value"],
+                *[list(item) for item in extension["metadata"].items()],
+            ],
+            "基础数据依据": [
+                list(verify.EXTENSION_SOURCE_HEADERS),
+                *[
+                    [
+                        json.dumps(source[key], ensure_ascii=False, separators=(",", ":"))
+                        if key == "captured_at"
+                        else source[key]
+                        for key in verify.EXTENSION_SOURCE_HEADERS
+                    ]
+                    for source in extension["source_rows"]
+                ],
+            ],
+        }
+    )
+    return review, extension, _Workbook(sheets)
+
+
+@pytest.mark.parametrize("reading_sheet", [False, True])
+def test_known_extension_sheets_require_matching_frozen_metadata(reading_sheet: bool) -> None:
+    review, extension, workbook = synthetic_extension_review()
+    if reading_sheet:
+        workbook.sheetnames.append(verify.EXTENSION_READING_SHEET)
+    failures: list[str] = []
+    verify.verify_sheet_inventory(review, workbook, extension, failures)
+    assert failures == []
+    verify.verify_sheet_inventory(review, workbook, None, failures)
+    assert failures == ["extension worksheets require a frozen overview extension review"]
+
+
+@pytest.mark.parametrize(
+    "fault",
+    [
+        "unknown_sheet",
+        "extra_sheet_with_reading",
+        "missing_sheet",
+        "base_order",
+        "missing_extension_tables",
+        "schema",
+        "hash",
+        "country",
+        "date",
+        "target_release",
+        "extension_id",
+        "metadata_original",
+        "metadata_duplicate",
+        "identity_changed",
+        "identity_formula",
+        "source_timestamp_quoted",
+        "source_timestamp_raw",
+        "source_timestamp_serial",
+        "source_timestamp_truncated",
+        "source_timestamp_timezone",
+        "source_hash_changed",
+        "legacy",
+    ],
+)
+def test_unbound_extension_tables_values_and_unknown_sheets_fail_closed(fault: str) -> None:
+    review, extension, workbook = synthetic_extension_review()
+    if fault == "unknown_sheet":
+        workbook.sheetnames.append("unreviewed")
+    elif fault == "extra_sheet_with_reading":
+        workbook.sheetnames.extend([verify.EXTENSION_READING_SHEET, "unreviewed"])
+    elif fault == "missing_sheet":
+        workbook.sheetnames.remove("基础数据依据")
+    elif fault == "base_order":
+        workbook.sheetnames[:2] = reversed(workbook.sheetnames[:2])
+    elif fault == "missing_extension_tables":
+        workbook.sheetnames = list(verify.SHEETS)
+    elif fault == "schema":
+        extension["metadata"]["schema_version"] = "approved"
+    elif fault == "hash":
+        extension["metadata"]["candidate_sha256"] = "not-a-hash"
+    elif fault == "country":
+        extension["metadata"]["review_scope_country"] = "BBB"
+    elif fault == "date":
+        extension["metadata"]["as_of"] = "2026-08-28"
+    elif fault == "target_release":
+        extension["metadata"]["target_release_id"] = "BASIC60-PRIVATE-R1"
+    elif fault == "extension_id":
+        extension["metadata"]["extension_id"] = "COUNTRY-EXT-AAA-20260827-R0"
+    elif fault == "metadata_original":
+        workbook.sheets["新增国包信息"][1][1] = "changed"
+    elif fault == "metadata_duplicate":
+        workbook.sheets["新增国包信息"].append(workbook.sheets["新增国包信息"][1])
+    elif fault == "identity_changed":
+        workbook.sheets["新增国内容"][1][5] = "BB"
+    elif fault == "identity_formula":
+        workbook.sheets["新增国内容"][1][5] = '=TEXT("AA","@")'
+    elif fault == "source_timestamp_quoted":
+        workbook.sheets["基础数据依据"][1][3] = "'" + workbook.sheets["基础数据依据"][1][3]
+    elif fault == "source_timestamp_raw":
+        workbook.sheets["基础数据依据"][1][3] = extension["source_rows"][0]["captured_at"]
+    elif fault == "source_timestamp_serial":
+        workbook.sheets["基础数据依据"][1][3] = 46262.1270396412
+    elif fault == "source_timestamp_truncated":
+        workbook.sheets["基础数据依据"][1][3] = json.dumps("2026-08-27T12:00:00+08:00")
+    elif fault == "source_timestamp_timezone":
+        workbook.sheets["基础数据依据"][1][3] = json.dumps("2026-08-27T12:00:00.123456")
+    elif fault == "source_hash_changed":
+        workbook.sheets["基础数据依据"][1][5] = "a" * 64
+    elif fault == "legacy":
+        for row in review["content_rows"]:
+            row[3] = "/locales/zh-CN/report/title"
+    failures: list[str] = []
+    verify.verify_sheet_inventory(review, workbook, extension, failures)
+    assert failures
+
+
+def test_original_seven_sheet_inventory_remains_supported() -> None:
+    _, review = synthetic_overview_review()
+    workbook = _Workbook({name: [] for name in verify.SHEETS})
+    failures: list[str] = []
+    verify.verify_sheet_inventory(review, workbook, None, failures)
+    assert failures == []
+
+
+def synthetic_basic_reading() -> tuple[dict[str, Any], _Workbook, _Workbook]:
+    _review, extension, _workbook = synthetic_extension_review()
+    extension["rows"].append(
+        [
+            "AAA",
+            "identity",
+            "",
+            "/new_country/identity/local_names",
+            '["Alpha","Beta"]',
+            '["Alpha","Beta"]',
+            "SYNTHETIC",
+        ]
+    )
+    for index, (code, value, unit) in enumerate(
+        (
+            ("population_total", "100", "COUNT"),
+            ("fdi_net_inflows_usd", "-15", "USD"),
+            ("gdp_growth_pct", "0", "PERCENT"),
+            ("inflation_cpi_pct", "125", "PERCENT"),
+            ("electricity_demand_gwh", "null", "GWH"),
+        )
+    ):
+        fields = {
+            "metric_code": code,
+            "normalized_value": value,
+            "period": "null" if value == "null" else "2024",
+            "unit": unit,
+        }
+        for field, text in fields.items():
+            extension["rows"].append(
+                [
+                    "AAA",
+                    "metric",
+                    "",
+                    f"/new_country/metrics/{index}/{field}",
+                    text,
+                    text,
+                    "" if value == "null" else "SYNTHETIC",
+                ]
+            )
+    inventory = verify.extension_reading_inventory(extension)
+    formula_rows = [list(verify.EXTENSION_READING_HEADERS)]
+    value_rows = [list(verify.EXTENSION_READING_HEADERS)]
+    for item in inventory:
+        row = item["values"].copy()
+        for column, formula in item["formulas"].items():
+            row[ord(column) - ord("A")] = formula
+        reference = f"'新增国内容'!G{row[6]}"
+        row[5] = f'=IF({reference}="","",{reference})'
+        formula_rows.append(row)
+        value_rows.append(item["values"].copy())
+    return (
+        extension,
+        _Workbook({verify.EXTENSION_READING_SHEET: formula_rows}),
+        _Workbook({verify.EXTENSION_READING_SHEET: value_rows}),
+    )
+
+
+def test_basic_reading_derives_numbers_arrays_sources_and_empty_values_from_editable_cells() -> (
+    None
+):
+    extension, formulas, values = synthetic_basic_reading()
+    failures: list[str] = []
+    verify.verify_extension_reading(extension, formulas, values, failures)
+    assert failures == []
+    rows = values.sheets[verify.EXTENSION_READING_SHEET]
+    assert rows[2][3] == "Alpha；Beta"
+    assert rows[3][3:5] == [100, "人"]
+    assert rows[4][3] == -15
+    assert rows[5][3] == 0
+    assert rows[6][3] == 125
+    assert rows[7][2:6] == ["—", "暂不展示", "GWh", ""]
+    assert len({row[6] for row in rows[1:]}) == 7
+    assert formulas.sheets[verify.EXTENSION_READING_SHEET][1][3] == "='新增国内容'!F2"
+
+
+@pytest.mark.parametrize(
+    "fault",
+    [
+        "cached_value",
+        "static_duplicate",
+        "wrong_fact_reference",
+        "wrong_period_reference",
+        "source_reference",
+        "missing_source_to_zero",
+        "array_not_formatted",
+        "row_mapping",
+        "unit",
+        "missing_row",
+        "duplicate_row",
+        "header",
+    ],
+)
+def test_basic_reading_rejects_unbound_values_or_changes_to_immutable_reading_map(
+    fault: str,
+) -> None:
+    extension, formulas, values = synthetic_basic_reading()
+    formula_rows = formulas.sheets[verify.EXTENSION_READING_SHEET]
+    value_rows = values.sheets[verify.EXTENSION_READING_SHEET]
+    if fault == "cached_value":
+        value_rows[4][3] = 15
+    elif fault == "static_duplicate":
+        formula_rows[4][3] = value_rows[4][3]
+    elif fault == "wrong_fact_reference":
+        formula_rows[4][3] = "='新增国内容'!F2"
+    elif fault == "wrong_period_reference":
+        formula_rows[4][2] = "='新增国内容'!F2"
+    elif fault == "source_reference":
+        formula_rows[4][5] = "='新增国内容'!G2"
+    elif fault == "missing_source_to_zero":
+        formula_rows[-1][5] = f"='新增国内容'!G{formula_rows[-1][6]}"
+        value_rows[-1][5] = 0
+    elif fault == "array_not_formatted":
+        formula_rows[2][3] = "='新增国内容'!F3"
+    elif fault == "row_mapping":
+        formula_rows[4][6] = value_rows[4][6] = 2
+    elif fault == "unit":
+        formula_rows[4][4] = value_rows[4][4] = "MW"
+    elif fault == "missing_row":
+        formula_rows.pop()
+        value_rows.pop()
+    elif fault == "duplicate_row":
+        formula_rows.append(formula_rows[-1])
+        value_rows.append(value_rows[-1])
+    elif fault == "header":
+        formula_rows[0][0] = "editable input"
+    failures: list[str] = []
+    verify.verify_extension_reading(extension, formulas, values, failures)
+    assert failures
+
+
+def test_reading_tab_may_follow_the_chinese_overview_without_reordering_existing_tabs() -> None:
+    review, extension, workbook = synthetic_extension_review()
+    workbook.sheetnames.insert(3, verify.EXTENSION_READING_SHEET)
+    failures: list[str] = []
+    verify.verify_sheet_inventory(review, workbook, extension, failures)
+    assert failures == []

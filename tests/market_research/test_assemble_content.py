@@ -159,6 +159,72 @@ def test_numeric_transcription_counts_whitespace_dates_signs_and_ranges() -> Non
     assert overview_character_count("中 文\t标点，12\n") == 7
 
 
+def test_explicit_extended_scope_preserves_the_frozen_profile_file(tmp_path: Path) -> None:
+    root, authored = fixture_repo(tmp_path)
+    original = root / "raw material/global_sources/60_country_profiles.csv"
+    before = original.read_bytes()
+    extended = original.with_name("61_country_profiles.csv")
+    extended.write_bytes(before + b"ZMB,Synthetic Zambia,Zambia\r\n")
+    write_json(authored / "countries/ZMB.json", manuscript("ZMB"))
+    write_json(authored / "research/ZMB.json", research("ZMB"))
+    result = assembly.assemble(
+        root,
+        authored,
+        root / "runtime/market-overview/zmb-extension",
+        package_id="OVERVIEW-SYNTHETIC-ZMB-R1",
+        countries=("ZMB",),
+        expected_scope_count=3,
+        profiles_path=extended,
+    )
+    assert result["country_count"] == 1
+    assert result["published"] is False
+    assert original.read_bytes() == before
+    with pytest.raises(ValueError, match="unsupported targets"):
+        assembly.assemble(
+            root,
+            authored,
+            root / "runtime/market-overview/zmb-old-scope",
+            package_id="OVERVIEW-SYNTHETIC-ZMB-R1",
+            countries=("ZMB",),
+            expected_scope_count=2,
+        )
+
+
+def test_extended_scope_still_excludes_china_and_checks_declared_count(tmp_path: Path) -> None:
+    root, authored = fixture_repo(tmp_path)
+    profile = root / "raw material/global_sources/60_country_profiles.csv"
+    for countries, count, message in [
+        (("CHN",), 2, "unsupported targets"),
+        (("IDN",), 3, "scope count"),
+    ]:
+        with pytest.raises(ValueError, match=message):
+            assembly.assemble(
+                root,
+                authored,
+                root / "runtime/market-overview/rejected",
+                package_id="OVERVIEW-SYNTHETIC-R1",
+                countries=countries,
+                expected_scope_count=count,
+                profiles_path=profile,
+            )
+
+
+def test_scope_profiles_cannot_escape_the_raw_collection(tmp_path: Path) -> None:
+    root, authored = fixture_repo(tmp_path)
+    outside = root / "untrusted.csv"
+    outside.write_text("iso3\nZMB\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="within raw material"):
+        assembly.assemble(
+            root,
+            authored,
+            root / "runtime/market-overview/rejected",
+            package_id="OVERVIEW-SYNTHETIC-R1",
+            countries=("ZMB",),
+            expected_scope_count=1,
+            profiles_path=outside,
+        )
+
+
 def test_complete_scope_is_a_review_bundle_not_a_publication(tmp_path: Path) -> None:
     root, authored = fixture_repo(tmp_path)
     second = manuscript("VNM")

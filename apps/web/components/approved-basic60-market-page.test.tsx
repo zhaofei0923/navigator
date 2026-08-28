@@ -56,6 +56,26 @@ describe("approved home server boundary", () => {
     expect(mocks.props.mock.calls[0][0].initialCountryCode).toBe("");
   });
 
+  it.each(["zh-CN", "en"] as const)("passes Zambia from the expanded API list with its localized display name in %s", async (locale) => {
+    const zambia: Basic60CountrySummary = {
+      ...country("IDN"), code: "ZMB", iso2: "ZM", name_zh: "赞比亚", name_en: "Zambia", region_code: "Southern Africa",
+    };
+    const response = { data: [country("CHN"), country("IDN"), zambia], meta: { release_id: "BASIC61-PRIVATE-R1", as_of: "2026-08-28" } };
+    const original = structuredClone(response);
+    mocks.locale.mockResolvedValue(locale);
+    mocks.list.mockResolvedValue(response);
+    render(await resolveHome({ searchParams: Promise.resolve({ country: "zmb" }) }));
+    const props = mocks.props.mock.calls[0][0];
+    expect(props).toMatchObject({ locale, initialCountryCode: "ZMB", dataStatus: "ready" });
+    expect(props.countries).toHaveLength(2);
+    expect(props.countries[1]).toEqual({
+      code: "ZMB", name: locale === "en" ? "Zambia" : "赞比亚", alternateName: locale === "en" ? "赞比亚" : "Zambia", region: "Southern Africa", featuredMetrics: [],
+    });
+    expect(JSON.stringify(props)).not.toMatch(/BASIC61|source_ref|review_status|coverageLevel/);
+    expect(response).toEqual(original);
+    expect(mocks.list).toHaveBeenCalledExactlyOnceWith({ coverage_level: "Basic", limit: 100 }, locale);
+  });
+
   it.each([{ data: [] }, { data: [country("CHN")] }])("keeps an empty home instead of replacing the page with an error", async ({ data }) => {
     mocks.list.mockResolvedValue({ data });
     render(await resolveHome());

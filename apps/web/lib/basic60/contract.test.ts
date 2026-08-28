@@ -19,10 +19,21 @@ describe("isBasic60Envelope", () => {
     expect(isBasic60Envelope(valid)).toBe(true);
   });
 
+  it("accepts the Zambia extension without changing the private profile or formal status", () => {
+    expect(isBasic60Envelope({
+      ...valid,
+      meta: { ...valid.meta, release_id: "BASIC61-PRIVATE-R1", as_of: "2026-08-28" },
+    })).toBe(true);
+  });
+
   it.each([
     ["a demo envelope", { ...valid, meta: { ...valid.meta, release_profile: "synthetic_demo" } }],
     ["a formal completion claim", { ...valid, meta: { ...valid.meta, formal_gate_status: "passed" } }],
     ["another release", { ...valid, meta: { ...valid.meta, release_id: "BASIC60-PROD-R1" } }],
+    ["an unapproved extension", { ...valid, meta: { ...valid.meta, release_id: "BASIC62-PRIVATE-R1" } }],
+    ["an unapproved revision", { ...valid, meta: { ...valid.meta, release_id: "BASIC61-PRIVATE-R2" } }],
+    ["an extension with a formal completion claim", { ...valid, meta: { ...valid.meta, release_id: "BASIC61-PRIVATE-R1", formal_gate_status: "passed" } }],
+    ["an extension with another profile", { ...valid, meta: { ...valid.meta, release_id: "BASIC61-PRIVATE-R1", release_profile: "synthetic_demo" } }],
     ["another coverage level", { ...valid, meta: { ...valid.meta, coverage_level: "Standard" } }],
     ["an invalid as-of date", { ...valid, meta: { ...valid.meta, as_of: "today" } }],
   ])("rejects %s", (_label, envelope) => {

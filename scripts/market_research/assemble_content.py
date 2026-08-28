@@ -245,12 +245,21 @@ def assemble(
     package_id: str,
     countries: tuple[str, ...],
     expected_scope_count: int = 59,
+    profiles_path: Path | None = None,
 ) -> dict[str, Any]:
     for path in (repo, authored_dir, output):
         ensure_no_symlinks(path)
     repo, authored_dir, output = repo.resolve(), authored_dir.resolve(), output.resolve()
     _check_directories(repo, authored_dir, output)
-    profiles_path = repo / "raw material/global_sources/60_country_profiles.csv"
+    # Scope extensions are explicit inputs. Never mutate or silently replace the
+    # frozen 60-country collection used by earlier approved overview batches.
+    profiles_path = profiles_path or repo / "raw material/global_sources/60_country_profiles.csv"
+    if not profiles_path.is_absolute():
+        profiles_path = repo / profiles_path
+    ensure_no_symlinks(profiles_path)
+    profiles_path = profiles_path.resolve()
+    if not profiles_path.is_relative_to(repo / "raw material") or profiles_path.suffix != ".csv":
+        raise ValueError("country scope must be a CSV within raw material")
     fingerprints: dict[str, str] = {}
     profiles_bytes = _read_input(profiles_path, repo, fingerprints)
     profile_rows = list(csv.DictReader(io.StringIO(profiles_bytes.decode("utf-8-sig"))))
@@ -478,6 +487,7 @@ def main() -> int:
     parser.add_argument("--package-id", required=True)
     parser.add_argument("--countries", nargs="+", required=True)
     parser.add_argument("--expected-scope-count", type=int, default=59)
+    parser.add_argument("--profiles", type=Path, default=None)
     args = parser.parse_args()
     result = assemble(
         args.repo,
@@ -486,6 +496,7 @@ def main() -> int:
         package_id=args.package_id,
         countries=tuple(args.countries),
         expected_scope_count=args.expected_scope_count,
+        profiles_path=args.profiles,
     )
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0

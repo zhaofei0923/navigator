@@ -40,7 +40,7 @@ packages = [
 
 [tool.pytest.ini_options]
 addopts = "-q --strict-config --strict-markers"
-testpaths = ["tests/data_readiness", "tests/api"]
+testpaths = ["tests/data_readiness", "tests/api", "tests/market_research"]
 
 [tool.coverage.run]
 branch = true

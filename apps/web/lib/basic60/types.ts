@@ -1,7 +1,7 @@
 export type Basic60Locale = "zh-CN" | "en";
 
 export type Basic60Meta = {
-  release_id: "BASIC60-PRIVATE-R1";
+  release_id: "BASIC60-PRIVATE-R1" | "BASIC61-PRIVATE-R1";
   release_profile: "basic60_private";
   formal_gate_status: "pending";
   coverage_level: "Basic";

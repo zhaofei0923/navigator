@@ -1,6 +1,8 @@
 import { act, createEvent, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { readFileSync } from "node:fs";
+import { URL as NodeURL } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import CountryGlobe, { type CountryGlobeMarker } from "@/components/country-globe";
 import type { GlobeMarker } from "@/lib/types";
@@ -381,6 +383,53 @@ describe("CountryGlobe", () => {
     expect(globeMock.pointOfView).not.toHaveBeenCalled();
     expect(globe).toHaveAttribute("data-latitude", "-2");
     expect(globe).toHaveAttribute("data-longitude", "118");
+  });
+
+  it.each(["zh-CN", "en"] as const)("locates and opens Zambia using the existing local polygon in %s", async (locale) => {
+    enableWebGL();
+    const collection = JSON.parse(readFileSync(new NodeURL("../public/data/world-countries-110m.geojson", import.meta.url), "utf8")) as { features: WorldCountryFeature[] };
+    const zambia = collection.features.find((feature) => feature.properties.code === "ZMB");
+    expect(zambia).toBeDefined();
+    expect(zambia?.geometry.type).toBe("Polygon");
+    const coordinates = zambia!.geometry.coordinates.flat();
+    expect(coordinates.length).toBeGreaterThan(3);
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({ type: "FeatureCollection", features: [...countries, zambia] }),
+    } as Response);
+    const onSelect = vi.fn();
+    const onOpenCountry = vi.fn();
+    const user = userEvent.setup();
+    const name = locale === "en" ? "Zambia" : "赞比亚";
+    render(<CountryGlobe
+      markers={[{ code: "ZMB", name }]}
+      selectedCode="ZMB"
+      focusCode="ZMB"
+      dataProfile="approved_basic60"
+      locale={locale}
+      showLocator={false}
+      onSelect={onSelect}
+      onOpenCountry={onOpenCountry}
+    />);
+    const globe = await screen.findByTestId("mock-world-globe");
+    await waitFor(() => {
+      const latitude = Number(globe.dataset.latitude);
+      const longitude = Number(globe.dataset.longitude);
+      expect(latitude).toBeGreaterThan(Math.min(...coordinates.map((point) => point[1])));
+      expect(latitude).toBeLessThan(Math.max(...coordinates.map((point) => point[1])));
+      expect(longitude).toBeGreaterThan(Math.min(...coordinates.map((point) => point[0])));
+      expect(longitude).toBeLessThan(Math.max(...coordinates.map((point) => point[0])));
+    });
+    const polygon = screen.getByTestId("polygon-ZMB");
+    expect(polygon).toHaveAttribute("data-pointer", "true");
+    expect(polygon).toHaveTextContent(name);
+    expect(polygon).not.toHaveTextContent(/Basic|BASIC61|source_ref|已审核/);
+    expect(screen.getByTestId("polygon-CHN")).toHaveAttribute("data-pointer", "false");
+    await user.click(polygon);
+    expect(onSelect).toHaveBeenCalledExactlyOnceWith("ZMB");
+    expect(onOpenCountry).not.toHaveBeenCalled();
+    await user.click(polygon);
+    expect(onOpenCountry).toHaveBeenCalledExactlyOnceWith("ZMB");
   });
 
   it.each([

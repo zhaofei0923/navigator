@@ -1,6 +1,7 @@
 import type { Basic60Envelope, Basic60Meta } from "@/lib/basic60/types";
 
 export const BASIC60_RELEASE_ID = "BASIC60-PRIVATE-R1" as const;
+export const BASIC61_RELEASE_ID = "BASIC61-PRIVATE-R1" as const;
 export const BASIC60_RELEASE_PROFILE = "basic60_private" as const;
 export const BASIC60_FORMAL_GATE_STATUS = "pending" as const;
 
@@ -11,7 +12,7 @@ function isObject(value: unknown): value is Record<string, unknown> {
 export function isBasic60Meta(value: unknown): value is Basic60Meta {
   if (!isObject(value)) return false;
   return (
-    value.release_id === BASIC60_RELEASE_ID &&
+    (value.release_id === BASIC60_RELEASE_ID || value.release_id === BASIC61_RELEASE_ID) &&
     value.release_profile === BASIC60_RELEASE_PROFILE &&
     value.formal_gate_status === BASIC60_FORMAL_GATE_STATUS &&
     value.coverage_level === "Basic" &&

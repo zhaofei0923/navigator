@@ -26,4 +26,16 @@ describe("product navigation context", () => {
     expect(navigationCountryCode("/countries/CHN", "BRA")).toBeNull();
     expect(navigationCountryCode("/countries/CHN/market-report", "BRA")).toBeNull();
   });
+
+  it.each(["/countries/ZMB", "/basic60/countries/zmb", "/approved-basic60/countries/ZMB", "/countries/ZMB/market-report", "/basic60/countries/zmb/market-report", "/approved-basic60/countries/ZMB/market-report"])(
+    "preserves Zambia on the detail and legacy return path %s",
+    (pathname) => {
+      const code = navigationCountryCode(pathname, "IDN");
+      expect(code).toBe("ZMB");
+      expect(homeMarketHref(code)).toBe("/?country=ZMB#markets");
+      expect(homeMarketHref(code, "/basic60")).toBe("/basic60?country=ZMB#markets");
+      expect(navigationCountryCode("/tools", code)).toBe("ZMB");
+      expect(navigationCountryCode("/partners", code)).toBe("ZMB");
+    },
+  );
 });

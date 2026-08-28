@@ -45,12 +45,23 @@ Basic60 API and PostgreSQL services remain on their isolated network and volumes
 the synthetic Demo database is not imported or modified.
 
 Navigator is an overseas-market guide for Chinese new energy enterprises. China (`CHN` /
-`CN`) is not an application target market: the reviewed source package retains
-all 60 country records, while the current application scope contains 59 overseas
-target markets. The original workbook, source records, and technical
-`BASIC60-PRIVATE-R1` release identity are preserved. User-facing copy describes
-overseas target markets instead of claiming a fixed 60-country application;
-country-list counts come from the returned `result_count` metadata.
+`CN`) is not an application target market. The frozen `BASIC60-PRIVATE-R1`
+baseline retains its 60 source records and 59 overseas target markets. The
+approved Zambia extension, `BASIC61-PRIVATE-R1`, contains 61 source countries
+and 60 overseas targets without changing the original workbook or records.
+Both exact release IDs are accepted under `release_profile=basic60_private`,
+with `formal_gate_status=pending`; the original ID remains valid for rollback.
+Other release IDs fail closed. User-facing copy does not state a fixed country
+count; country-list counts come from the returned `result_count` metadata.
+
+Zambia (`ZMB` / `ZM`) is supplied by the existing country-list and detail GET
+APIs, with `name_zh=赞比亚`, `name_en=Zambia`, and `region_code=Southern Africa`.
+It therefore appears under Africa using the same filters, context links and
+return-to-map behavior as other countries. Globe positioning uses the existing
+local GeoJSON polygon; there is no additional coordinate whitelist, static
+business dataset, or synthetic fallback. Its overview uses the unchanged
+same-country/same-locale content endpoint and an independent
+`OVERVIEW-ZMB-{YYYYMMDD}-R{n}` content version.
 
 Selected country context is carried in the `country` query parameter between the
 homepage, tools, and partners. Without a valid selection there is no implicit

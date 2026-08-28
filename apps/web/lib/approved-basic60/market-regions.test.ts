@@ -86,6 +86,25 @@ describe("marketRegionFor", () => {
     ]);
     expect(sourceCountries).toHaveLength(60);
   });
+
+  it("adds Zambia to Africa for 60 overseas markets without changing the frozen 60-country membership", () => {
+    const original = REVIEWED_COUNTRY_REGIONS.flatMap(({ source, codes }) =>
+      codes.split(" ").map((code) => ({ code, region: source })),
+    );
+    const expanded = [...original, { code: "ZMB", region: "Southern Africa" }];
+    const targets = expanded.filter(isOutboundTargetCountry);
+    expect(expanded).toHaveLength(61);
+    expect(expanded.slice(0, original.length)).toEqual(original);
+    expect(targets).toHaveLength(60);
+    expect(new Set(targets.map((country) => country.code)).size).toBe(60);
+    expect(targets.some((country) => country.code === "CHN")).toBe(false);
+    expect(targets.filter((country) => country.code === "ZMB")).toEqual([
+      { code: "ZMB", region: "Southern Africa" },
+    ]);
+    expect(targets.filter((country) => marketRegionFor(country.region) === "Africa")).toHaveLength(11);
+    expect(original).toHaveLength(60);
+    expect(original.some((country) => country.code === "ZMB")).toBe(false);
+  });
 });
 
 describe("MARKET_REGIONS", () => {

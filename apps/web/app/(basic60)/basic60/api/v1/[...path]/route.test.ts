@@ -44,6 +44,27 @@ describe("BASIC60 private API proxy", () => {
     expect(new Headers(init.headers).get("X-Private-Trial-Key")).toBe("basic60-unit-test-key");
   });
 
+  it.each(["BASIC60-PRIVATE-R1", "BASIC61-PRIVATE-R1"])("accepts the country response from %s without changing the private proxy boundary", async (releaseId) => {
+    const code = releaseId === "BASIC61-PRIVATE-R1" ? "ZMB" : "IDN";
+    const payload = { ...validEnvelope, meta: { ...validEnvelope.meta, release_id: releaseId, result_count: 1 }, data: { code } };
+    const fetchMock = vi.fn().mockResolvedValue(Response.json(payload));
+    vi.stubGlobal("fetch", fetchMock);
+    const response = await GET(
+      new Request(`http://localhost/basic60/api/v1/countries/${code.toLowerCase()}?expand=identity,macro,energy&locale=zh-CN`),
+      { params: Promise.resolve({ path: ["countries", code.toLowerCase()] }) },
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(payload);
+    expect(response.headers.get("Cache-Control")).toBe("no-store, private");
+    expect(fetchMock).toHaveBeenCalledOnce();
+    const [target, init] = fetchMock.mock.calls[0] as [URL, RequestInit];
+    expect(target.pathname).toBe(`/api/v1/countries/${code}`);
+    expect(target.searchParams.get("locale")).toBe("zh-CN");
+    expect(target.searchParams.get("expand")).toBe("identity,macro,energy");
+    expect(new Headers(init.headers).get("X-Private-Trial-Key")).toBe("basic60-unit-test-key");
+    expect(init.cache).toBe("no-store");
+  });
+
   it.each([
     ["GET", ["policies"]],
     ["GET", ["search"]],
@@ -63,6 +84,17 @@ describe("BASIC60 private API proxy", () => {
 
   it("rejects an upstream demo envelope", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ meta: { data_origin: "synthetic_demo" }, data: [] }), { status: 200 })));
+    const response = await GET(
+      new Request("http://localhost/basic60/api/v1/countries"),
+      { params: Promise.resolve({ path: ["countries"] }) },
+    );
+    expect(response.status).toBe(502);
+    expect((await response.json()).error.code).toBe("BASIC60_RELEASE_REJECTED");
+  });
+
+  it("does not allow an arbitrary release ID through the proxy", async () => {
+    const payload = { ...validEnvelope, meta: { ...validEnvelope.meta, release_id: "BASIC62-PRIVATE-R1" } };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json(payload)));
     const response = await GET(
       new Request("http://localhost/basic60/api/v1/countries"),
       { params: Promise.resolve({ path: ["countries"] }) },

@@ -7,11 +7,17 @@ import hmac
 import json
 from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from navigator_api.basic60_config import Basic60Settings, validate_runtime_attestation_key
+
+if TYPE_CHECKING:
+    from navigator_api.basic61_governance import (
+        Basic61ReleaseAuthorization,
+        Basic61ValidationReport,
+    )
 
 DECISION_ID = "PBD-BASIC60-PRIVATE-001"
 
@@ -351,8 +357,23 @@ def validate_basic60_activation(
     release_bundle_sha256: str,
     validation_report_sha256: str,
     seed_artifact_sha256: str,
-) -> tuple[Basic60Decision, Basic60ReleaseAuthorization, Basic60ValidationReport]:
+) -> tuple[
+    Basic60Decision,
+    Basic60ReleaseAuthorization | Basic61ReleaseAuthorization,
+    Basic60ValidationReport | Basic61ValidationReport,
+]:
     """Bind PBD, strict output, authorization, seed, HMAC proof, and active release."""
+
+    if release_id == "BASIC61-PRIVATE-R1":
+        from navigator_api.basic61_governance import validate_basic61_activation
+
+        return validate_basic61_activation(
+            settings,
+            release_id=release_id,
+            release_bundle_sha256=release_bundle_sha256,
+            validation_report_sha256=validation_report_sha256,
+            seed_artifact_sha256=seed_artifact_sha256,
+        )
 
     decision = validate_basic60_decision(settings)
     if decision is None:

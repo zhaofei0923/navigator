@@ -23,6 +23,18 @@ describe("server-only single market-overview client", () => {
     expect(options.signal).toBeInstanceOf(AbortSignal);
   });
 
+  it.each(["zh-CN", "en"] as const)("reads Zambia's independently versioned overview without probing another country in %s", async (locale) => {
+    const expected = overviewFixture(locale, "ZMB");
+    expected.meta.content_version = "OVERVIEW-ZMB-20260828-R1";
+    expected.meta.as_of = "2026-08-28";
+    fetchMock.mockResolvedValue(Response.json(expected));
+    await expect(loadCountryMarketOverview("zmb", locale)).resolves.toEqual({ status: "ready", envelope: expected });
+    expect(fetchMock).toHaveBeenCalledOnce();
+    const [url, options] = fetchMock.mock.calls[0];
+    expect(String(url)).toBe(`http://market-api.test:8000/api/v1/countries/ZMB/market-overview?locale=${locale}`);
+    expect(options).toMatchObject({ method: "GET", cache: "no-store", redirect: "error", headers: { "X-Private-Trial-Key": "test-only-not-a-real-key" } });
+  });
+
   it.each(["CHN", "chn", "CN", "IDN/market-overview", "../IDN"])("rejects invalid or excluded country %s before requesting data", async (code) => {
     await expect(getCountryMarketOverview(code, "zh-CN")).rejects.toMatchObject({ status: 404, code: "COUNTRY_NOT_FOUND" });
     expect(fetchMock).not.toHaveBeenCalled();

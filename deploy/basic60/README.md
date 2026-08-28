@@ -1,9 +1,10 @@
 # BASIC60 access-controlled private trial
 
 This deployment is isolated from `navigator-demo` and
-`navigator-private-preview`. It serves only `BASIC60-PRIVATE-R1`, keeps formal
-D1-D4/P0 status pending, and contains no policy, search, vector, RAG, or model
-service.
+`navigator-private-preview`. It accepts the frozen `BASIC60-PRIVATE-R1` and
+the separately confirmed Zambia extension `BASIC61-PRIVATE-R1`, keeps formal
+D1-D4/P0 status pending, and contains no policy search, vector, RAG, or model
+service. The original fixed-count contract is not relaxed to accept extensions.
 
 ## Fail-closed prerequisites
 
@@ -71,7 +72,54 @@ enable search, model execution, or legacy `/api/demo/*` routes. Only the Web
 edge network is non-internal so the loopback-published page is reachable; API
 and PostgreSQL remain on the internal network with no host ports.
 
-## Start
+## Current local startup: 60 overseas countries
+
+The confirmed local deployment now uses `BASIC61-PRIVATE-R1`: 61 archived
+country records including China, with **60 overseas countries** available in the
+approved Demo. Use the persistent deployment bundle at
+`runtime/basic61/deployment-20260828-r1`, not the historical commands below:
+
+```bash
+sh runtime/basic61/deployment-20260828-r1/restart.sh --execute
+```
+
+Run this from the repository root in WSL. Without `--execute`, the script only
+checks the selected deployment. The bundle preserves the verified environment
+snapshots, Compose files, fixed image references and pre-switch database backup;
+its directory is `0700` and its files are `0600`, outside Git. Do not print its
+environment or resolved Compose files. If the bundle is absent, recover the
+verified bundle rather than falling back to the old startup command.
+
+The entry fixes the existing `navigator-basic60-private` project, database
+container and volume. It replaces API and Web sequentially using `--no-build
+--pull never`; an already stopped database is started by its existing container
+ID, never recreated. It keeps the new ready package and full 60-country overview
+store read-only, the loopback address `http://127.0.0.1:3000`, and anonymous entry.
+The original `.env` and `.env.basic60-private.local` are not rewritten.
+
+Restarting the already-created containers preserves the new release, but
+running the old two-Compose `up` command reactivates the old 59-country release.
+The new package also needs its own seed and attestation filenames; changing only
+`NAVIGATOR_BASIC60_RUNTIME_DIR` is not sufficient. Do not use `scripts/demo-up.ps1`
+for this deployment: it starts the separate synthetic Demo.
+
+For an explicit rollback to the preserved 59-country release:
+
+```bash
+sh runtime/basic61/deployment-20260828-r1/rollback.sh --execute
+```
+
+Rollback restores the old API/Web images, environment and overview mount in the
+same project. It does not run `pg_restore`, delete a volume, or remove the newer
+database history. The protected database backup is retained for separate,
+explicit disaster recovery. Future image, credential or content-root changes
+require an updated deployment bundle, not edits to this frozen bundle.
+
+## Historical initial BASIC60 startup (59 overseas countries)
+
+The commands in this section document the original deployment. They are not the
+current local restart/update entry and must not be used to restart the confirmed
+Zambia extension.
 
 Create the dedicated volume once:
 
@@ -115,7 +163,10 @@ not use the Demo passphrase or session cookie; `/login` redirects to `/` and
 `--volumes`, or run `docker volume prune` during this switch. The synthetic
 Demo volume stays offline and recoverable.
 
-## Stop and rollback
+## Historical initial stop command
+
+This is the original initial-deployment stop command, not the current release
+rollback entry. Use the protected `rollback.sh` above for a version rollback.
 
 ```bash
 docker compose \
@@ -129,6 +180,55 @@ rollback imports and activates the previously authorized immutable seed; it
 does not overwrite or delete release history.
 
 ## Single country market overview
+
+### Confirmed Zambia extension (2026-08-28)
+
+The user confirmed `outputs/zmb-20260828-r1/赞比亚新增国家集中审核_20260828.xlsx`
+with “审核通过” on 2026-08-28. Its SHA-256 is
+`4f6e221bf536588d5c4552f642a47951b19d741b8a14e1cea73d00302eeab6c9`.
+That one decision covers the added country's basic data, source material and
+bilingual overview; it is not a re-review of the existing 59 overseas countries.
+
+Use the separate confirmed-extension commands documented in
+[COUNTRY_EXTENSIONS.md](../../services/data-readiness/COUNTRY_EXTENSIONS.md)
+to build and replay `runtime/basic61/zmb-20260828-r1`. This `basic61.seed.v1`
+version preserves every parent country object, source and metric definition,
+then adds Zambia. The archived seed contains 61 countries including China;
+the existing China exclusion makes 60 overseas countries publicly selectable.
+Never relabel the old seed or change its frozen 60/300/60/2279/61 counts.
+
+The same Excel is imported for overview package `OVERVIEW-ZMB-20260828-R1`,
+with `--profiles "raw material/global_sources/61_country_profiles.csv"`.
+Its candidate SHA-256 is
+`6a7ae095c920857f714355ce67ad7590864dbec5f4e850acabe56bfe064346ae`.
+The actual confirmation is recorded under
+`runtime/country-extensions/confirmations/COUNTRY-EXT-ZMB-20260828-R1.20260828.json`;
+the existing overview publisher consumes the same decision via
+`runtime/market-overview/confirmations/OVERVIEW-ZMB-20260828-R1.20260828.json`.
+Both bind the identical Excel and retain date-only approval precision.
+
+The complete new content store is
+`runtime/market-overview/zmb-published-20260828-r1`, copied from the previous
+store before appending Zambia. Its current manifest is
+`0b0b3d6bc46a18d35aeb188028c6d57210818edfdcac3810c4cb8130092f0819`;
+the previous 59 active content versions remain unchanged. Old source files,
+workbooks, original ready package and content store are preserved.
+
+Deploy the compatible Web and API together, using the new ready seed,
+validation, authorization and machine-attestation hashes and the complete
+60-country overview store. Reuse the protected machine key, database, API key,
+session settings and the existing anonymous-entry authorization. These are
+runtime artifact changes, not new user accounts or another approval workflow.
+Both exact release IDs remain supported so rollback can reactivate the old
+authorized seed without deleting database history.
+
+Do not run old and new API instances against the same active-release database
+as a parallel preview: activating one version changes the shared active pointer.
+Take a database backup, validate the new files before switching, and replace the
+existing Web/API services together. Restore the previous environment, image
+references and content mount for rollback. Do not delete or recreate volumes.
+The Tencent deployment keeps the same domain and loopback Web port; there is no
+new site, new navigation or fixed country-count marketing copy.
 
 The approved Demo reads only
 `GET /api/v1/countries/{code}/market-overview?locale=zh-CN|en` for new authored

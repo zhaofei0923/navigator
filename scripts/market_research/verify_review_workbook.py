@@ -35,6 +35,65 @@ SHEETS = (
     "待确认事项",
     "包信息",
 )
+EXTENSION_SHEETS = ("新增国内容", "新增国包信息", "基础数据依据")
+EXTENSION_READING_SHEET = "基础数据阅读"
+EXTENSION_HEADERS = (
+    "country_code",
+    "section",
+    "locale",
+    "json_pointer",
+    "original_value",
+    "edited_value",
+    "source_ids",
+)
+EXTENSION_SOURCE_HEADERS = ("id", "title", "url", "captured_at", "local_path", "sha256")
+EXTENSION_READING_HEADERS = ("类别", "指标", "统计期", "数值", "单位", "内部来源ID", "编辑页行号")
+IDENTITY_NAMES = {
+    "iso2": "国家代码 ISO2",
+    "admin_level_1_count": "一级行政区数量",
+    "admin_level_1_type": "一级行政区类型",
+    "capital": "首都",
+    "collected_at": "资料采集日期",
+    "country_name_en": "英文名称",
+    "country_name_zh": "中文名称",
+    "currency_code": "货币代码",
+    "currency_name": "货币名称",
+    "local_names": "本地名称",
+    "official_languages": "官方语言",
+    "official_name_en": "英文正式名称",
+    "region_code": "主要区域",
+    "time_zones": "时区",
+}
+METRIC_NAMES = {
+    "population_total": "人口",
+    "land_area_sq_km": "陆地面积",
+    "gdp_current_usd": "国内生产总值（现价）",  # noqa: RUF001 - exact Chinese workbook label
+    "gdp_growth_pct": "GDP实际增长率",
+    "gdp_per_capita_current_usd": "人均GDP（现价）",  # noqa: RUF001
+    "inflation_cpi_pct": "CPI通胀率",
+    "official_exchange_rate_lcu_per_usd": "官方汇率（本币/美元）",  # noqa: RUF001
+    "fdi_net_inflows_usd": "外商直接投资净流入",
+    "electricity_installed_capacity_mw": "电力总装机",
+    "electricity_generation_gwh": "总发电量",
+    "renewable_capacity_mw": "可再生能源装机",
+    "renewable_generation_gwh": "可再生能源发电量",
+    "renewable_share_capacity_pct": "可再生能源装机占比",
+    "renewable_share_generation_pct": "可再生能源发电占比",
+    "electricity_demand_gwh": "用电需求（本期不展示）",  # noqa: RUF001
+}
+METRIC_UNITS = {
+    "COUNT": "人",
+    "PERSON": "人",
+    "PERSONS": "人",
+    "KM2": "平方公里",
+    "SQ_KM": "平方公里",
+    "USD": "美元",
+    "USD_PER_PERSON": "美元/人",
+    "PERCENT": "%",
+    "LCU_PER_USD": "克瓦查/美元",
+    "MW": "MW",
+    "GWH": "GWh",
+}
 LEVEL_LABELS = {"insufficient": "信息不足", "low": "低", "medium": "中", "high": "高"}
 OVERVIEW_POINTER = re.compile(r"^/locales/(zh-CN|en)/(title|paragraphs/(?:0|[1-9]\d*)|disclaimer)$")
 LEGACY_POINTER = re.compile(r"^/locales/(?:zh-CN|en)/(?:analysis|report)/.+$")
@@ -211,19 +270,154 @@ def reading_row(row: list[str]) -> bool:
     )
 
 
-def verify(review_path: Path, workbook_path: Path) -> dict[str, Any]:
+def verify_sheet_inventory(
+    review: dict[str, Any],
+    workbook: Any,
+    extension: dict[str, Any] | None,
+    failures: list[str],
+) -> None:
+    """Accept only a separately frozen extension; never ignore arbitrary extra sheets."""
+    names = tuple(workbook.sheetnames)
+    if names == SHEETS:
+        if extension is not None:
+            failures.append("extension review requires its three contract worksheets")
+        return
+    core = tuple(name for name in names if name != EXTENSION_READING_SHEET)
+    extras = core[len(SHEETS) :]
+    if (
+        core[: len(SHEETS)] != SHEETS
+        or len(extras) != 3
+        or set(extras) != set(EXTENSION_SHEETS)
+        or names.count(EXTENSION_READING_SHEET) > 1
+    ):
+        failures.append("sheet inventory/order differs")
+        return
+    if not isinstance(extension, dict) or review_profile(review) != "overview":
+        failures.append("extension worksheets require a frozen overview extension review")
+        return
+    metadata = extension.get("metadata")
+    metadata_keys = {
+        "schema_version",
+        "extension_id",
+        "candidate_sha256",
+        "parent_seed_sha256",
+        "target_release_id",
+        "review_scope_country",
+        "as_of",
+    }
+    countries = review.get("countries", [])
+    if not isinstance(metadata, dict) or set(metadata) != metadata_keys or len(countries) != 1:
+        failures.append("extension metadata must bind a single added country")
+        return
+    code = countries[0].get("code", countries[0].get("country_code"))
+    if (
+        metadata["schema_version"] != "navigator.country-extension-review.v1"
+        or metadata["review_scope_country"] != code
+        or metadata["as_of"] != countries[0].get("as_of")
+        or metadata["target_release_id"] != "BASIC61-PRIVATE-R1"
+        or not isinstance(code, str)
+        or not re.fullmatch(r"[A-Z]{3}", code)
+        or code == "CHN"
+        or not re.fullmatch(
+            rf"COUNTRY-EXT-{code}-{str(metadata['as_of']).replace('-', '')}-R[1-9]\d*",
+            str(metadata["extension_id"]),
+        )
+        or any(
+            not re.fullmatch(r"[a-f0-9]{64}", str(metadata[key]))
+            for key in ("candidate_sha256", "parent_seed_sha256")
+        )
+    ):
+        failures.append("extension metadata country, date, version or hash differs")
+        return
+    rows = extension.get("rows")
+    sources = extension.get("source_rows")
+    if (
+        extension.get("headers") != list(EXTENSION_HEADERS)
+        or not isinstance(rows, list)
+        or not rows
+        or any(
+            not isinstance(row, list)
+            or len(row) != 7
+            or any(not isinstance(value, str) for value in row)
+            or row[0] != code
+            or row[1] not in {"identity", "metric"}
+            or row[4] != row[5]
+            for row in rows
+        )
+        or len({row[3] for row in rows}) != len(rows)
+        or not isinstance(sources, list)
+        or not sources
+        or any(
+            not isinstance(source, dict)
+            or set(source) != set(EXTENSION_SOURCE_HEADERS)
+            or any(not isinstance(value, str) or not value for value in source.values())
+            for source in sources
+        )
+    ):
+        failures.append("extension review data has invalid literal row contracts")
+        return
+    meta_cells = list(workbook["新增国包信息"].iter_rows(max_col=2))
+    meta_rows = [tuple(cell.value for cell in row) for row in meta_cells]
+    if (
+        not meta_rows
+        or meta_rows[0] != ("key", "value")
+        or len(meta_rows) != len(metadata) + 1
+        or any(not isinstance(key, str) for key, _value in meta_rows[1:])
+        or dict(meta_rows[1:]) != metadata
+        or any(cell.data_type in {"f", "e"} for row in meta_cells for cell in row)
+    ):
+        failures.append("extension worksheet metadata differs from the frozen review")
+    inventories = (
+        ("新增国内容", [list(EXTENSION_HEADERS), *rows], 7),
+        (
+            "基础数据依据",
+            [
+                list(EXTENSION_SOURCE_HEADERS),
+                *[
+                    [
+                        json.dumps(source[key], ensure_ascii=False, separators=(",", ":"))
+                        if key == "captured_at"
+                        else source[key]
+                        for key in EXTENSION_SOURCE_HEADERS
+                    ]
+                    for source in sources
+                ],
+            ],
+            6,
+        ),
+    )
+    for name, expected, width in inventories:
+        cells = list(workbook[name].iter_rows(max_col=width))
+        actual = [[cell.value if cell.value is not None else "" for cell in row] for row in cells]
+        if actual != expected or any(cell.data_type in {"f", "e"} for row in cells for cell in row):
+            failures.append(f"extension literal inventory differs in {name}")
+
+
+def verify(
+    review_path: Path, workbook_path: Path, extension_review_path: Path | None = None
+) -> dict[str, Any]:
     review = json.loads(review_path.read_text(encoding="utf-8"))
     profile = review_profile(review)
     statistics = overview_statistics(review) if profile == "overview" else {}
     expected = review["content_rows"]
+    extension = (
+        json.loads(extension_review_path.read_text(encoding="utf-8"))
+        if extension_review_path is not None
+        else None
+    )
     initial_hash = hashlib.sha256(workbook_path.read_bytes()).hexdigest()
     formulas = openpyxl.load_workbook(workbook_path, read_only=False, data_only=False)
     values = openpyxl.load_workbook(workbook_path, read_only=True, data_only=True)
     failures = []
     warnings = []
     try:
-        if tuple(formulas.sheetnames) != SHEETS:
-            failures.append("sheet inventory/order differs")
+        verify_sheet_inventory(review, formulas, extension, failures)
+        if (
+            not failures
+            and extension is not None
+            and EXTENSION_READING_SHEET in formulas.sheetnames
+        ):
+            verify_extension_reading(extension, formulas, values, failures)
         edit = formulas["内容编辑"]
         actual_rows = list(edit.iter_rows(min_row=2, max_col=6, values_only=True))
         if tuple(cell.value for cell in edit[1][:6]) != HEADERS:
@@ -297,6 +491,12 @@ def verify(review_path: Path, workbook_path: Path) -> dict[str, Any]:
             "evidence_rows": len(review["evidence_rows"]),
             "gap_rows": len(review["gap_rows"]),
             "sheet_count": len(formulas.sheetnames),
+            "extension_included": extension is not None,
+            "extension_reading_rows": (
+                len(list(values[EXTENSION_READING_SHEET].iter_rows(min_row=2, max_col=7)))
+                if EXTENSION_READING_SHEET in values.sheetnames
+                else 0
+            ),
             "formula_error_count": len(error_cells),
             "overview_zh_chars": {
                 code: item["overview_zh_chars"] for code, item in statistics.items()
@@ -312,6 +512,127 @@ def verify(review_path: Path, workbook_path: Path) -> dict[str, Any]:
     if hashlib.sha256(workbook_path.read_bytes()).hexdigest() != initial_hash:
         raise RuntimeError("read-only workbook verification changed the file")
     return report
+
+
+def extension_reading_inventory(extension: dict[str, Any]) -> list[dict[str, Any]]:
+    """Derive the single read-only view from the same immutable editable leaf inventory."""
+    result: list[dict[str, Any]] = []
+    metrics: dict[int, dict[str, tuple[int, list[str]]]] = {}
+    for excel_row, row in enumerate(extension["rows"], 2):
+        key = row[3].rsplit("/", 1)[-1]
+        if row[1] == "identity":
+            reference = f"'新增国内容'!F{excel_row}"
+            array = key in {"local_names", "official_languages", "time_zones"}
+            display = row[5]
+            if array:
+                display = (
+                    display.replace("[", "").replace("]", "").replace('"', "").replace(",", "；")
+                )
+            formula = (
+                f'=SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE({reference},"[",""),'
+                '"]",""),CHAR(34),""),",","；")'
+                if array
+                else f"={reference}"
+            )
+            result.append(
+                {
+                    "values": [
+                        "国家档案",
+                        IDENTITY_NAMES[key],
+                        "—",
+                        display,
+                        "",
+                        row[6],
+                        excel_row,
+                    ],
+                    "formulas": {"D": formula},
+                }
+            )
+        else:
+            match = re.fullmatch(r"/new_country/metrics/(\d+)/(\w+)", row[3])
+            if match is None:
+                raise ValueError("unknown metric pointer in extension reading")
+            fields = metrics.setdefault(int(match[1]), {})
+            if key in fields:
+                raise ValueError("duplicate metric pointer in extension reading")
+            fields[key] = (excel_row, row)
+    for _index, fields in sorted(metrics.items()):
+        excel_row, value = fields["normalized_value"]
+        period_row, period = fields["period"]
+        code, unit = fields["metric_code"][1][5], fields["unit"][1][5]
+        if code in {"population_total", "land_area_sq_km"}:
+            group = "档案指标"
+        elif code.startswith(("electricity_", "renewable_")):
+            group = "能源指标"
+        else:
+            group = "宏观指标"
+        reference, year_reference = f"'新增国内容'!F{excel_row}", f"'新增国内容'!F{period_row}"
+        result.append(
+            {
+                "values": [
+                    group,
+                    METRIC_NAMES[code],
+                    "—" if period[5] == "null" else period[5],
+                    "暂不展示" if value[5] == "null" else float(value[5]),
+                    METRIC_UNITS.get(unit, unit),
+                    value[6],
+                    excel_row,
+                ],
+                "formulas": {
+                    "C": f'=IF({year_reference}="null","—",{year_reference})',
+                    "D": f'=IF({reference}="null","暂不展示",VALUE({reference}))',
+                },
+            }
+        )
+    return result
+
+
+def verify_extension_reading(
+    extension: dict[str, Any], formulas: Any, values: Any, failures: list[str]
+) -> None:
+    """No static duplicate values: every displayed fact must retain its exact source formula."""
+    try:
+        expected = extension_reading_inventory(extension)
+    except (KeyError, TypeError, ValueError) as exc:
+        failures.append(f"invalid extension reading inventory: {exc}")
+        return
+    sheet = formulas[EXTENSION_READING_SHEET]
+    cached = values[EXTENSION_READING_SHEET]
+    formula_rows = list(sheet.iter_rows(max_col=7))
+    value_rows = list(cached.iter_rows(max_col=7))
+    if (
+        len(formula_rows) != len(expected) + 1
+        or len(value_rows) != len(expected) + 1
+        or tuple(cell.value for cell in formula_rows[0]) != EXTENSION_READING_HEADERS
+    ):
+        failures.append("extension reading headers or row inventory differs")
+        return
+    for index, (item, cells, cached_cells) in enumerate(
+        zip(expected, formula_rows[1:], value_rows[1:], strict=True), 2
+    ):
+        actual = [cell.value if cell.value is not None else "" for cell in cached_cells]
+        if actual != item["values"]:
+            failures.append(
+                f"extension reading cached values or row mapping differs at row {index}"
+            )
+        for column_index, column in enumerate("ABCDEFG"):
+            cell = cells[column_index]
+            formula = item["formulas"].get(column)
+            if column == "F":
+                reference = f"'新增国内容'!G{item['values'][6]}"
+                allowed = {f'=IF({reference}="","",{reference})'}
+                if item["values"][5]:
+                    allowed.add(f"={reference}")
+                if cell.data_type != "f" or cell.value not in allowed:
+                    failures.append(f"extension reading source reference differs at row {index}")
+            elif formula is not None:
+                if cell.data_type != "f" or cell.value != formula:
+                    failures.append(f"extension reading {column} formula differs at row {index}")
+            elif (
+                cell.data_type in {"f", "e"}
+                or (cell.value if cell.value is not None else "") != item["values"][column_index]
+            ):
+                failures.append(f"extension reading label or pointer differs at row {index}")
 
 
 def _verify_overview(
@@ -459,8 +780,13 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("review_data", type=Path)
     parser.add_argument("workbook", type=Path)
+    parser.add_argument(
+        "--extension-review",
+        type=Path,
+        help="Frozen country-extension review-data.json required for extra extension worksheets.",
+    )
     args = parser.parse_args()
-    report = verify(args.review_data, args.workbook)
+    report = verify(args.review_data, args.workbook, args.extension_review)
     print(json.dumps(report, ensure_ascii=False, indent=2))
     return 0 if report["status"] == "passed" else 1
 
