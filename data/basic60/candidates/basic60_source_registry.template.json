@@ -1,0 +1,118 @@
+{
+  "country_source_uri_manifest": {
+    "path": "data/basic60/candidates/basic60_country_source_uri_manifest.json",
+    "sha256": "d5eb14418d2d3eb9badb6c40628a7576cb2046f79bca6399a431ca24a1012f6f"
+  },
+  "profile_id": "basic60_private",
+  "release_id": "BASIC60-PRIVATE-R1",
+  "schema_version": 1,
+  "source_declaration": "official_public_data",
+  "sources": [
+    {
+      "access_method": null,
+      "admission_fingerprint": {
+        "dataset_path": "global_sources/60_country_profiles.csv",
+        "record_selector": null,
+        "schema_field_count": 21,
+        "schema_fingerprint_sha256": "badb56cdcd7b6ca984cb003227d8116f24814758264a19b898ef77ba41608c25",
+        "source_uri_entry_count": 361,
+        "source_uri_field": "sources[].url",
+        "source_uri_fingerprint_sha256": "f89091e7ec9c73f0b93f34e2794201fc16473465b998a287eb71d1c53cc5b221",
+        "source_uri_mode": "country_source_manifest",
+        "source_uri_row_key_fields": [
+          "iso3",
+          "provider",
+          "fields"
+        ],
+        "terms_fingerprint_sha256": null
+      },
+      "data_domain": "country_identity",
+      "dataset": null,
+      "evidence": null,
+      "evidence_sha256": null,
+      "provider": null,
+      "rate_limit": null,
+      "snapshots": [],
+      "source_ref": null,
+      "source_role": "primary",
+      "status": "under_review",
+      "terms_uri": null
+    },
+    {
+      "access_method": null,
+      "admission_fingerprint": {
+        "dataset_path": "global_sources/60_country_macro_energy.csv",
+        "record_selector": {
+          "field": "record_type",
+          "value": "macro_annual"
+        },
+        "schema_field_count": 29,
+        "schema_fingerprint_sha256": "4bf926a9615e826fe449e1ce244b88c2f6ca418782114e6b1115a704f4fe9aca",
+        "source_uri_entry_count": 300,
+        "source_uri_field": "macro_source_url",
+        "source_uri_fingerprint_sha256": "4af22c4cdee839ce7f509fabd4a117ba76a8f300d60e8547fa42469c089e2957",
+        "source_uri_mode": "csv_column",
+        "source_uri_row_key_fields": [
+          "iso3",
+          "record_type",
+          "year"
+        ],
+        "terms_fingerprint_sha256": null
+      },
+      "data_domain": "macro",
+      "dataset": null,
+      "evidence": null,
+      "evidence_sha256": null,
+      "provider": null,
+      "rate_limit": null,
+      "snapshots": [],
+      "source_ref": null,
+      "source_role": "primary",
+      "status": "under_review",
+      "terms_uri": null
+    },
+    {
+      "access_method": null,
+      "admission_fingerprint": {
+        "dataset_path": "global_sources/60_country_macro_energy.csv",
+        "record_selector": {
+          "field": "record_type",
+          "value": "energy_latest"
+        },
+        "schema_field_count": 29,
+        "schema_fingerprint_sha256": "4bf926a9615e826fe449e1ce244b88c2f6ca418782114e6b1115a704f4fe9aca",
+        "source_uri_entry_count": 60,
+        "source_uri_field": "energy_source_url",
+        "source_uri_fingerprint_sha256": "0fe4dc16c15fffea7bf4a0f088d586c6d7d2fe432e0450729fb6ae3aef208190",
+        "source_uri_mode": "csv_column",
+        "source_uri_row_key_fields": [
+          "iso3",
+          "record_type"
+        ],
+        "terms_fingerprint_sha256": null
+      },
+      "data_domain": "energy",
+      "dataset": null,
+      "evidence": null,
+      "evidence_sha256": null,
+      "provider": null,
+      "rate_limit": null,
+      "snapshots": [],
+      "source_ref": null,
+      "source_role": "primary",
+      "status": "under_review",
+      "terms_uri": null
+    }
+  ],
+  "template_only": true,
+  "update_policy": {
+    "mode": "manual_incremental",
+    "reapproval_triggers": [
+      "provider_changed",
+      "source_url_changed",
+      "terms_or_license_changed",
+      "dataset_structure_changed",
+      "usage_boundary_changed"
+    ]
+  }
+}

@@ -29,6 +29,17 @@ artifacts/
 data/d0/evidence/files/
 tmp/
 
+# Local real-source intake and Basic60 runtime volumes
+/raw material/
+/runtime/basic60/
+/runtime/market-research/
+/runtime/market-content/
+/runtime/market-overview/
+/outputs/market-59-20260827/
+/outputs/market-overview-samples-20260827/
+/outputs/market-overview-59-20260827/
+/outputs/basic60/
+
 # OS and editor files
 .DS_Store
 Thumbs.db

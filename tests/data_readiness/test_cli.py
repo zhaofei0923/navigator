@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import secrets
 from pathlib import Path
 
 from navigator_data_readiness.cli import main
@@ -527,6 +528,211 @@ def test_prepare_d4_command_lists_candidates(
     assert exit_code == 0
     captured = capsys.readouterr()
     assert "data/d4/candidates/candidate.json" in captured.out
+
+
+def test_prepare_basic60_private_command_lists_isolated_outputs(
+    monkeypatch: MonkeyPatch,
+    capsys: CaptureFixture[str],
+) -> None:
+    paths = discover_repository()
+    seed = paths.root / "runtime/basic60/basic60_seed.json"
+    template = paths.root / "data/basic60/candidates/basic60_private_acceptance.template.json"
+    monkeypatch.setattr(
+        "navigator_data_readiness.cli.prepare_basic60_private",
+        lambda *_args: (
+            [seed, template],
+            {"status": "not_ready", "checks": [{"code": "B60_HUMAN_APPROVALS_PENDING"}]},
+        ),
+    )
+
+    exit_code = main(["prepare-basic60-private"])
+
+    assert exit_code == 0
+    captured = capsys.readouterr()
+    assert "runtime/basic60/basic60_seed.json" in captured.out
+    assert "data/basic60/candidates/basic60_private_acceptance.template.json" in captured.out
+
+
+def test_materialize_basic60_l0_command_lists_three_unsigned_batch_manifests(
+    monkeypatch: MonkeyPatch,
+    capsys: CaptureFixture[str],
+) -> None:
+    paths = discover_repository()
+    manifests = [
+        paths.root / "data/basic60/evidence/l0-run" / name
+        for name in (
+            "basic60-batch-profile.l0-manifest.json",
+            "basic60-batch-macro.l0-manifest.json",
+            "basic60-batch-energy.l0-manifest.json",
+        )
+    ]
+    monkeypatch.setattr(
+        "navigator_data_readiness.cli.materialize_basic60_l0",
+        lambda *_args: manifests,
+    )
+
+    exit_code = main(
+        [
+            "materialize-basic60-l0",
+            "--bundle",
+            "data/basic60/review/d1-approved.json",
+            "--l0-dir",
+            "/tmp/navigator-basic60-l0",
+            "--evidence-dir",
+            "data/basic60/evidence/l0-run",
+            "--volume-id",
+            "basic60-volume-01",
+        ]
+    )
+
+    assert exit_code == 0
+    captured = capsys.readouterr()
+    assert all(path.relative_to(paths.root).as_posix() in captured.out for path in manifests)
+
+
+def test_collect_basic60_machine_evidence_command_lists_single_report(
+    monkeypatch: MonkeyPatch,
+    capsys: CaptureFixture[str],
+) -> None:
+    paths = discover_repository()
+    report = paths.root / "runtime/basic60/machine/basic60_machine_evidence.json"
+    monkeypatch.setattr(
+        "navigator_data_readiness.cli.collect_basic60_machine_evidence",
+        lambda *_args: report,
+    )
+
+    exit_code = main(
+        [
+            "collect-basic60-machine-evidence",
+            "--bundle",
+            "data/basic60/review/d1-d3-frozen.json",
+            "--operation-logs",
+            "runtime/basic60/machine-input/operations.json",
+            "--api-observations",
+            "runtime/basic60/machine-input/api.json",
+            "--route-probes",
+            "runtime/basic60/machine-input/routes.json",
+        ]
+    )
+
+    assert exit_code == 0
+    assert report.relative_to(paths.root).as_posix() in capsys.readouterr().out
+
+
+def test_validate_basic60_private_command_uses_only_private_terminal_statuses(
+    monkeypatch: MonkeyPatch,
+    capsys: CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr(
+        "navigator_data_readiness.cli.load_and_assess_basic60_private",
+        lambda *_args: {
+            "status": "revoked",
+            "formal_gate_status": "pending",
+            "checks": [],
+        },
+    )
+
+    exit_code = main(["validate-basic60-private"])
+
+    assert exit_code == 2
+    captured = capsys.readouterr()
+    assert '"status": "revoked"' in captured.out
+    assert '"formal_gate_status": "pending"' in captured.out
+
+
+def test_validate_basic60_ready_requires_runtime_attestation_key(
+    monkeypatch: MonkeyPatch,
+    capsys: CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr(
+        "navigator_data_readiness.cli.load_and_assess_basic60_private",
+        lambda *_args: {
+            "status": "private_trial_ready",
+            "formal_gate_status": "pending",
+            "checks": [],
+        },
+    )
+    monkeypatch.delenv("BASIC60_RUNTIME_ATTESTATION_KEY", raising=False)
+
+    exit_code = main(["validate-basic60-private"])
+
+    assert exit_code == 1
+    assert "BASIC60_RUNTIME_ATTESTATION_KEY must contain at least 32" in capsys.readouterr().err
+
+
+def test_validate_basic60_ready_rejects_known_attestation_key_examples(
+    monkeypatch: MonkeyPatch,
+    capsys: CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr(
+        "navigator_data_readiness.cli.load_and_assess_basic60_private",
+        lambda *_args: {
+            "status": "private_trial_ready",
+            "formal_gate_status": "pending",
+            "checks": [],
+        },
+    )
+    for trust_key in (
+        "replace-me",
+        "replace-with-at-least-32-random-bytes",
+        "test-runtime-attestation-key-with-32-bytes",
+        "basic60-test-runtime-attestation-key-32-bytes",
+        "example-value-runtime-attestation-key-32-bytes",
+    ):
+        monkeypatch.setenv("BASIC60_RUNTIME_ATTESTATION_KEY", trust_key)
+
+        assert main(["validate-basic60-private"]) == 1
+        assert "known placeholder or example value" in capsys.readouterr().err
+
+
+def test_validate_basic60_ready_emits_runtime_machine_attestation(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: CaptureFixture[str],
+) -> None:
+    ready_seed = tmp_path / "ready-seed.json"
+    authorization = tmp_path / "authorization.json"
+    attestation = tmp_path / "attestation.json"
+    called: dict[str, str] = {}
+    monkeypatch.setattr(
+        "navigator_data_readiness.cli.load_and_assess_basic60_private",
+        lambda *_args: {
+            "status": "private_trial_ready",
+            "formal_gate_status": "pending",
+            "checks": [],
+        },
+    )
+    monkeypatch.setattr(
+        "navigator_data_readiness.cli.write_basic60_ready_seed",
+        lambda *_args, **_kwargs: ready_seed,
+    )
+    monkeypatch.setattr(
+        "navigator_data_readiness.cli.write_basic60_release_authorization",
+        lambda *_args, **_kwargs: authorization,
+    )
+
+    def fake_attestation(*_args: object, **kwargs: object) -> Path:
+        called["trust_key"] = str(kwargs["trust_key"])
+        return attestation
+
+    monkeypatch.setattr(
+        "navigator_data_readiness.cli.write_basic60_runtime_attestation",
+        fake_attestation,
+    )
+    trust_key = secrets.token_hex(32)
+    monkeypatch.setenv("BASIC60_RUNTIME_ATTESTATION_KEY", trust_key)
+
+    exit_code = main(
+        [
+            "validate-basic60-private",
+            "--output",
+            str(tmp_path / "validation.json"),
+        ]
+    )
+
+    assert exit_code == 0
+    assert called["trust_key"] == trust_key
+    assert f"Runtime machine attestation: {attestation}" in capsys.readouterr().err
 
 
 def test_prepare_p0_traceability_command_lists_candidates(

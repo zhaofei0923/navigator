@@ -18,6 +18,7 @@ dependencies = [
 
 [project.scripts]
 navigator-api-seed = "navigator_api.seed:main"
+navigator-api-basic60-seed = "navigator_api.basic60_importer:main"
 
 [dependency-groups]
 dev = [

@@ -1,12 +1,32 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import os
 import sys
 from collections.abc import Sequence
 from pathlib import Path
 
 from .baseline import write_snapshot
+from .basic60_private import (
+    ACCEPTANCE_TEMPLATE_NAME,
+    RAW_MANIFEST_NAME,
+    READY_SEED_NAME,
+    RELEASE_AUTHORIZATION_NAME,
+    RUNTIME_ATTESTATION_KEY_ENV,
+    RUNTIME_ATTESTATION_NAME,
+    SEED_NAME,
+    collect_basic60_machine_evidence,
+    load_and_assess_basic60_private,
+    materialize_basic60_l0,
+    prepare_basic60_excel_review_bundle,
+    prepare_basic60_private,
+    validate_runtime_attestation_key,
+    write_basic60_ready_seed,
+    write_basic60_release_authorization,
+    write_basic60_runtime_attestation,
+)
 from .d0_ac009_confirmation import (
     apply_d0_ac009_confirmation,
     write_d0_ac009_confirmation_template,
@@ -45,6 +65,11 @@ from .d1_sources import load_and_validate_d1_admission, write_d1_candidates
 from .d2_collection import load_and_validate_d2_bundle, write_d2_candidates
 from .d3_processing import load_and_validate_d3_bundle, write_d3_candidates
 from .d4_acceptance import load_and_validate_d4_bundle, write_d4_candidates
+from .market_content import (
+    MARKET_COMMANDS,
+    add_market_content_commands,
+    run_market_content_command,
+)
 from .models import CheckResult
 from .p0_baseline_change import (
     load_and_assess_p0_baseline_change,
@@ -370,6 +395,166 @@ def _parser() -> argparse.ArgumentParser:
     d4_validation.add_argument("--d1-registry", type=Path, required=True)
     d4_validation.add_argument("--d1-matrix", type=Path, required=True)
     d4_validation.add_argument("--d1-evidence", type=Path, required=True)
+    basic60_prepare = commands.add_parser(
+        "prepare-basic60-private",
+        help=(
+            "Prepare the isolated Basic60 private-trial runtime seed, deterministic raw "
+            "manifest/sample, source matrix, replay evidence, and unfilled human-review "
+            "templates without changing formal D1-D4."
+        ),
+    )
+    basic60_prepare.add_argument("--raw-dir", type=Path, default=Path("raw material"))
+    basic60_prepare.add_argument("--runtime-dir", type=Path, default=Path("runtime/basic60"))
+    basic60_prepare.add_argument(
+        "--candidate-dir", type=Path, default=Path("data/basic60/candidates")
+    )
+    basic60_review = commands.add_parser(
+        "prepare-basic60-review",
+        help=(
+            "Bind one frozen Basic60 data/source Excel workbook into a simplified private-"
+            "review packet without changing formal D1-D4."
+        ),
+    )
+    basic60_review.add_argument("--raw-dir", type=Path, default=Path("raw material"))
+    basic60_review.add_argument("--seed", type=Path, default=Path("runtime/basic60") / SEED_NAME)
+    basic60_review.add_argument(
+        "--source-uri-manifest",
+        type=Path,
+        default=Path("data/basic60/candidates/basic60_country_source_uri_manifest.json"),
+    )
+    basic60_review.add_argument(
+        "--input-bundle",
+        type=Path,
+        required=True,
+        help="Existing PBD/A1 packet whose machine provenance is retained.",
+    )
+    basic60_review.add_argument(
+        "--workbook",
+        type=Path,
+        default=Path("outputs/basic60/BASIC60-PRIVATE-R1_60国基础数据集中审核.xlsx"),
+    )
+    basic60_review.add_argument(
+        "--output",
+        type=Path,
+        default=Path("data/basic60/review/basic60_private_excel_review.pending.json"),
+        help="New non-overwriting review packet; approval remains pending.",
+    )
+    basic60_l0 = commands.add_parser(
+        "materialize-basic60-l0",
+        help=(
+            "After PBD and D1 approvals, copy only approved Basic60 CSV inputs into an "
+            "external read-only content-addressed L0 and emit unsigned batch evidence."
+        ),
+    )
+    basic60_l0.add_argument("--raw-dir", type=Path, default=Path("raw material"))
+    basic60_l0.add_argument(
+        "--manifest",
+        type=Path,
+        default=Path("data/basic60/candidates") / RAW_MANIFEST_NAME,
+    )
+    basic60_l0.add_argument(
+        "--bundle",
+        type=Path,
+        required=True,
+        help="D1-approved review copy under data/basic60/review.",
+    )
+    basic60_l0.add_argument(
+        "--l0-dir",
+        type=Path,
+        required=True,
+        help="Absolute external directory outside the repository and raw input.",
+    )
+    basic60_l0.add_argument(
+        "--evidence-dir",
+        type=Path,
+        required=True,
+        help=(
+            "New output directory under data/basic60/evidence; existing manifests are not replaced."
+        ),
+    )
+    basic60_l0.add_argument(
+        "--volume-id",
+        required=True,
+        help="Stable non-secret identifier for the external L0 volume.",
+    )
+    basic60_machine = commands.add_parser(
+        "collect-basic60-machine-evidence",
+        help=(
+            "Aggregate strict D3, live operation, HTTP latency, and isolation observations "
+            "into one replayable machine report; missing live evidence fails closed."
+        ),
+    )
+    basic60_machine.add_argument("--seed", type=Path, default=Path("runtime/basic60") / SEED_NAME)
+    basic60_machine.add_argument(
+        "--manifest",
+        type=Path,
+        default=Path("data/basic60/candidates") / RAW_MANIFEST_NAME,
+    )
+    basic60_machine.add_argument(
+        "--bundle",
+        type=Path,
+        required=True,
+        help="Frozen D1-D3 review copy used by the live machine run.",
+    )
+    basic60_machine.add_argument("--operation-logs", type=Path, required=True)
+    basic60_machine.add_argument("--api-observations", type=Path, required=True)
+    basic60_machine.add_argument("--route-probes", type=Path, required=True)
+    basic60_machine.add_argument(
+        "--output",
+        type=Path,
+        default=Path("runtime/basic60/machine/basic60_machine_evidence.json"),
+    )
+    basic60_validation = commands.add_parser(
+        "validate-basic60-private",
+        help=(
+            "Validate the hash-bound Basic60 private-trial packet; this can only return "
+            "private_trial_ready, not_ready, or revoked and never completes formal D1-D4."
+        ),
+    )
+    basic60_validation.add_argument("--raw-dir", type=Path, default=Path("raw material"))
+    basic60_validation.add_argument(
+        "--manifest",
+        type=Path,
+        default=Path("data/basic60/candidates") / RAW_MANIFEST_NAME,
+    )
+    basic60_validation.add_argument(
+        "--seed", type=Path, default=Path("runtime/basic60") / SEED_NAME
+    )
+    basic60_validation.add_argument(
+        "--bundle",
+        type=Path,
+        default=Path("data/basic60/candidates") / ACCEPTANCE_TEMPLATE_NAME,
+    )
+    basic60_validation.add_argument(
+        "--l0-dir",
+        type=Path,
+        help=(
+            "External content-addressed L0 root. Required whenever the packet claims "
+            "completed D2 batches; pending templates may omit it."
+        ),
+    )
+    basic60_validation.add_argument("--output", type=Path)
+    basic60_validation.add_argument(
+        "--ready-seed-output",
+        type=Path,
+        default=Path("runtime/basic60") / READY_SEED_NAME,
+        help="Written only after all machine and hash-bound human gates pass.",
+    )
+    basic60_validation.add_argument(
+        "--release-authorization-output",
+        type=Path,
+        default=Path("runtime/basic60") / RELEASE_AUTHORIZATION_NAME,
+        help="Hash-bound API authorization transcribed only after a ready validation.",
+    )
+    basic60_validation.add_argument(
+        "--runtime-attestation-output",
+        type=Path,
+        default=Path("runtime/basic60") / RUNTIME_ATTESTATION_NAME,
+        help=(
+            "HMAC machine-validation attestation written only after ready finalization; "
+            f"the key is read only from {RUNTIME_ATTESTATION_KEY_ENV}."
+        ),
+    )
     commands.add_parser(
         "prepare-p0-traceability",
         help="Generate the P0 requirement-to-route/API/permission/test preflight artifacts.",
@@ -433,6 +618,7 @@ def _parser() -> argparse.ArgumentParser:
     gate = commands.add_parser("gate", help="Enforce a formal stage gate.")
     gate.add_argument("--stage", choices=("D0",), required=True)
     gate.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    add_market_content_commands(commands)
     return parser
 
 
@@ -445,9 +631,22 @@ def _print_checks(checks: Sequence[CheckResult]) -> None:
         print(f"{check.code}: {check.message}{suffix}", file=sys.stderr)
 
 
+def _resolve_cli_path(root: Path, value: Path) -> Path:
+    return value.resolve() if value.is_absolute() else (root / value).resolve()
+
+
+def _absolute_cli_path(root: Path, value: Path) -> Path:
+    """Build an absolute lexical path without hiding symbolic-link components."""
+
+    return value if value.is_absolute() else root / value
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     paths = discover_repository(args.repo)
+
+    if args.command in MARKET_COMMANDS:
+        return run_market_content_command(args, paths.root)
 
     if args.command == "validate":
         checks = validate_structure(paths)
@@ -1119,6 +1318,161 @@ def main(argv: list[str] | None = None) -> int:
         )
         _print_checks(checks)
         return 1 if checks else 0
+
+    if args.command == "prepare-basic60-private":
+        raw_dir = _resolve_cli_path(paths.root, args.raw_dir)
+        runtime_dir = _resolve_cli_path(paths.root, args.runtime_dir)
+        candidate_dir = _resolve_cli_path(paths.root, args.candidate_dir)
+        try:
+            written, assessment = prepare_basic60_private(
+                paths,
+                raw_dir,
+                runtime_dir,
+                candidate_dir,
+            )
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError) as error:
+            print(str(error), file=sys.stderr)
+            return 1
+        for path in written:
+            try:
+                print(path.relative_to(paths.root).as_posix())
+            except ValueError:
+                print(path)
+        return 0 if assessment.get("status") == "not_ready" and len(written) > 1 else 1
+
+    if args.command == "prepare-basic60-review":
+        try:
+            output, _bundle = prepare_basic60_excel_review_bundle(
+                paths,
+                _absolute_cli_path(paths.root, args.raw_dir),
+                _absolute_cli_path(paths.root, args.seed),
+                _absolute_cli_path(paths.root, args.source_uri_manifest),
+                _absolute_cli_path(paths.root, args.input_bundle),
+                _absolute_cli_path(paths.root, args.workbook),
+                _absolute_cli_path(paths.root, args.output),
+            )
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError) as error:
+            print(str(error), file=sys.stderr)
+            return 1
+        try:
+            print(output.relative_to(paths.root).as_posix())
+        except ValueError:
+            print(output)
+        return 0
+
+    if args.command == "materialize-basic60-l0":
+        try:
+            written = materialize_basic60_l0(
+                paths,
+                _absolute_cli_path(paths.root, args.raw_dir),
+                _absolute_cli_path(paths.root, args.manifest),
+                _absolute_cli_path(paths.root, args.bundle),
+                _absolute_cli_path(paths.root, args.l0_dir),
+                _absolute_cli_path(paths.root, args.evidence_dir),
+                args.volume_id,
+            )
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError) as error:
+            print(str(error), file=sys.stderr)
+            return 1
+        for path in written:
+            try:
+                print(path.relative_to(paths.root).as_posix())
+            except ValueError:
+                print(path)
+        return 0
+
+    if args.command == "collect-basic60-machine-evidence":
+        try:
+            output = collect_basic60_machine_evidence(
+                paths,
+                _absolute_cli_path(paths.root, args.seed),
+                _absolute_cli_path(paths.root, args.manifest),
+                _absolute_cli_path(paths.root, args.bundle),
+                _absolute_cli_path(paths.root, args.operation_logs),
+                _absolute_cli_path(paths.root, args.api_observations),
+                _absolute_cli_path(paths.root, args.route_probes),
+                _absolute_cli_path(paths.root, args.output),
+            )
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError) as error:
+            print(str(error), file=sys.stderr)
+            return 1
+        try:
+            print(output.relative_to(paths.root).as_posix())
+        except ValueError:
+            print(output)
+        return 0
+
+    if args.command == "validate-basic60-private":
+        raw_dir = _resolve_cli_path(paths.root, args.raw_dir)
+        manifest_path = _resolve_cli_path(paths.root, args.manifest)
+        seed_path = _resolve_cli_path(paths.root, args.seed)
+        bundle_path = _resolve_cli_path(paths.root, args.bundle)
+        l0_dir = _absolute_cli_path(paths.root, args.l0_dir) if args.l0_dir is not None else None
+        assessment = load_and_assess_basic60_private(
+            paths,
+            raw_dir,
+            manifest_path,
+            seed_path,
+            bundle_path,
+            l0_dir,
+        )
+        serialized = json.dumps(assessment, ensure_ascii=False, indent=2) + "\n"
+        ready_seed_output: Path | None = None
+        release_authorization_output: Path | None = None
+        runtime_attestation_output: Path | None = None
+        if assessment.get("status") == "private_trial_ready":
+            try:
+                trust_key = validate_runtime_attestation_key(os.getenv(RUNTIME_ATTESTATION_KEY_ENV))
+                validation_hash = hashlib.sha256(serialized.encode()).hexdigest()
+                ready_seed_output = write_basic60_ready_seed(
+                    paths,
+                    manifest_path,
+                    seed_path,
+                    bundle_path,
+                    _resolve_cli_path(paths.root, args.ready_seed_output),
+                    validation_report_sha256=validation_hash,
+                )
+                release_authorization_output = write_basic60_release_authorization(
+                    paths,
+                    bundle_path,
+                    ready_seed_output,
+                    _resolve_cli_path(paths.root, args.release_authorization_output),
+                    validation_report_sha256=validation_hash,
+                )
+                runtime_attestation_output = write_basic60_runtime_attestation(
+                    paths,
+                    bundle_path,
+                    ready_seed_output,
+                    release_authorization_output,
+                    _resolve_cli_path(paths.root, args.runtime_attestation_output),
+                    validation_report_sha256=validation_hash,
+                    trust_key=trust_key,
+                )
+            except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError) as error:
+                print(f"Ready artifact finalization failed: {error}", file=sys.stderr)
+                return 1
+        if args.output:
+            destination = _resolve_cli_path(paths.root, args.output)
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_text(serialized, encoding="utf-8")
+            try:
+                print(destination.relative_to(paths.root).as_posix())
+            except ValueError:
+                print(destination)
+        else:
+            print(serialized, end="")
+        if ready_seed_output is not None:
+            print(f"Ready seed: {ready_seed_output}", file=sys.stderr)
+        if release_authorization_output is not None:
+            print(f"Release authorization: {release_authorization_output}", file=sys.stderr)
+        if runtime_attestation_output is not None:
+            print(f"Runtime machine attestation: {runtime_attestation_output}", file=sys.stderr)
+        status = assessment.get("status")
+        if status == "private_trial_ready":
+            return 0
+        if status == "revoked":
+            return 2
+        return 1
 
     if args.command == "prepare-p0-traceability":
         written = write_p0_traceability_candidates(paths)

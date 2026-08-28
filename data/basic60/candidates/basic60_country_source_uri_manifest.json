@@ -1,0 +1,3501 @@
+{
+  "country_file_count": 60,
+  "entries": [
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "ARE",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "ARE",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:AE"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "ARE",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "ARE",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/ARE?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "ARE",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/ARE/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "ARE",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/ARE/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "ARG",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "ARG",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:AR"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "ARG",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "ARG",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/ARG?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "ARG",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/ARG/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "ARG",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/ARG/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "AUS",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "AUS",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:AU"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "AUS",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "AUS",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/AUS?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "AUS",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/AUS/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "AUS",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/AUS/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "BEL",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "BEL",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:BE"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "BEL",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "BEL",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/BEL?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "BEL",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/BEL/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "BEL",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/BEL/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "BGD",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "BGD",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:BD"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "BGD",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "BGD",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/BGD?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "BGD",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/BGD/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "BGD",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/BGD/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "BRA",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "BRA",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:BR"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "BRA",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "BRA",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/BRA?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "BRA",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/BRA/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "BRA",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/BRA/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "CAN",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "CAN",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:CA"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "CAN",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "CAN",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/CAN?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "CAN",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/CAN/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "CAN",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/CAN/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "CHL",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "CHL",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:CL"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "CHL",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "CHL",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/CHL?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "CHL",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/CHL/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "CHL",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/CHL/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "CHN",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "CHN",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:CN"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "CHN",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "CHN",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/CHN?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "CHN",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/CHN/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "CHN",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/CHN/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "COL",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "COL",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:CO"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "COL",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "COL",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/COL?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "COL",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/COL/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "COL",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/COL/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "DEU",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "DEU",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:DE"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "DEU",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "DEU",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/DEU?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "DEU",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/DEU/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "DEU",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/DEU/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "DNK",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "DNK",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:DK"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "DNK",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "DNK",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/DNK?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "DNK",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/DNK/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "DNK",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/DNK/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "DOM",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "DOM",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:DO"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "DOM",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "DOM",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/DOM?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "DOM",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/DOM/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "DOM",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/DOM/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "EGY",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "EGY",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:EG"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "EGY",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "EGY",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/EGY?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "EGY",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/EGY/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "EGY",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/EGY/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "ESP",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "ESP",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:ES"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "ESP",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "ESP",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/ESP?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "ESP",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/ESP/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "ESP",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/ESP/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "FIN",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "FIN",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:FI"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "FIN",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "FIN",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/FIN?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "FIN",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/FIN/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "FIN",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/FIN/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "FRA",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "FRA",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:FR"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "FRA",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "FRA",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/FRA?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "FRA",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/FRA/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "FRA",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/FRA/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "GBR",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "GBR",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:GB"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "GBR",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "GBR",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/GBR?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "GBR",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/GBR/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "GBR",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/GBR/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "GHA",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "GHA",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:GH"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "GHA",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "GHA",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/GHA?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "GHA",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/GHA/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "GHA",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/GHA/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "GRC",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "GRC",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:GR"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "GRC",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "GRC",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/GRC?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "GRC",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/GRC/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "GRC",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/GRC/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "IDN",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "IDN",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:ID"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "IDN",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "IDN",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/IDN?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "IDN",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/IDN/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "IDN",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/IDN/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "IND",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "IND",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:IN"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "IND",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "IND",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/IND?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "IND",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/IND/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "IND",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/IND/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "IRL",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "IRL",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:IE"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "IRL",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "IRL",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/IRL?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "IRL",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/IRL/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "IRL",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/IRL/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "ITA",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "ITA",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:IT"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "ITA",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "ITA",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/ITA?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "ITA",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/ITA/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "ITA",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/ITA/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "JOR",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "JOR",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:JO"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "JOR",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "JOR",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/JOR?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "JOR",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/JOR/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "JOR",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/JOR/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "JPN",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "JPN",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:JP"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "JPN",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "JPN",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/JPN?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "JPN",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/JPN/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "JPN",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/JPN/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "KAZ",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "KAZ",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:KZ"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "KAZ",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "KAZ",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/KAZ?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "KAZ",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/KAZ/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "KAZ",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/KAZ/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "KEN",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "KEN",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:KE"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "KEN",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "KEN",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/KEN?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "KEN",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/KEN/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "KEN",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/KEN/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "KOR",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "KOR",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:KR"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "KOR",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "KOR",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/KOR?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "KOR",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/KOR/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "KOR",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/KOR/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "LKA",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "LKA",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:LK"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "LKA",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "LKA",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/LKA?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "LKA",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/LKA/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "LKA",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/LKA/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "MAR",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "MAR",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:MA"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "MAR",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "MAR",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/MAR?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "MAR",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/MAR/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "MAR",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/MAR/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "MEX",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "MEX",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:MX"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "MEX",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "MEX",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/MEX?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "MEX",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/MEX/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "MEX",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/MEX/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "MYS",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "MYS",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:MY"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "MYS",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "MYS",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/MYS?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "MYS",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/MYS/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "MYS",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/MYS/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "NAM",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "NAM",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:NA"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "NAM",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "NAM",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/NAM?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "NAM",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/NAM/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "NAM",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/NAM/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "NGA",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "NGA",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:NG"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "NGA",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "NGA",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/NGA?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "NGA",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/NGA/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "NGA",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/NGA/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "NLD",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "NLD",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:NL"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "NLD",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "NLD",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/NLD?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "NLD",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/NLD/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "NLD",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/NLD/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "NOR",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "NOR",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:NO"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "NOR",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "NOR",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/NOR?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "NOR",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/NOR/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "NOR",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/NOR/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "NPL",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "NPL",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:NP"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "NPL",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "NPL",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/NPL?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "NPL",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/NPL/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "NPL",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/NPL/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "NZL",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "NZL",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:NZ"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "NZL",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "NZL",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/NZL?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "NZL",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/NZL/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "NZL",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/NZL/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "OMN",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "OMN",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:OM"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "OMN",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "OMN",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/OMN?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "OMN",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/OMN/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "OMN",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/OMN/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "PAK",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "PAK",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:PK"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "PAK",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "PAK",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/PAK?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "PAK",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/PAK/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "PAK",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/PAK/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "PAN",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "PAN",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:PA"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "PAN",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "PAN",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/PAN?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "PAN",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/PAN/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "PAN",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/PAN/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "PER",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "PER",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:PE"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "PER",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "PER",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/PER?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "PER",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/PER/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "PER",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/PER/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "PHL",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "PHL",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:PH"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "PHL",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "PHL",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/PHL?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "PHL",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/PHL/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "PHL",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/PHL/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "POL",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "POL",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:PL"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "POL",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "POL",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/POL?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "POL",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/POL/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "POL",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/POL/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "PRT",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "PRT",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:PT"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "PRT",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "PRT",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/PRT?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "PRT",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/PRT/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "PRT",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/PRT/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "ROU",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "ROU",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:RO"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "ROU",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "ROU",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/ROU?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "ROU",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/ROU/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "ROU",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/ROU/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "RWA",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "RWA",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:RW"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "RWA",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "RWA",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/RWA?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "RWA",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/RWA/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "RWA",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/RWA/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "SAU",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "SAU",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:SA"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "SAU",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "SAU",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/SAU?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "SAU",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/SAU/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "SAU",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/SAU/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "SGP",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "SGP",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:SG"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "SGP",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "SGP",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/SGP?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "SGP",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/SGP/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "SGP",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/SGP/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "SWE",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "SWE",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:SE"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "SWE",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "SWE",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/SWE?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "SWE",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/SWE/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "SWE",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/SWE/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "THA",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "THA",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:TH"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "THA",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "THA",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/THA?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "THA",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/THA/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "THA",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/THA/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "TUR",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "TUR",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:TR"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "TUR",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "TUR",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/TUR?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "TUR",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/TUR/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "TUR",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/TUR/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "TZA",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "TZA",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:TZ"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "TZA",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "TZA",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/TZA?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "TZA",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/TZA/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "TZA",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/TZA/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "UGA",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "UGA",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:UG"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "UGA",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "UGA",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/UGA?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "UGA",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/UGA/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "UGA",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/UGA/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "URY",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "URY",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:UY"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "URY",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "URY",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/URY?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "URY",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/URY/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "URY",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/URY/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "USA",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "USA",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:US"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "USA",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "USA",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/USA?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "USA",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/USA/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "USA",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/USA/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "UZB",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "UZB",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:UZ"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "UZB",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "UZB",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/UZB?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "UZB",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/UZB/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "UZB",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/UZB/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "VNM",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "VNM",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:VN"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "VNM",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "VNM",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/VNM?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "VNM",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/VNM/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "VNM",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/VNM/indicator/SP.POP.TOTL?format=json"
+    },
+    {
+      "fields": [
+        "time_zones"
+      ],
+      "iso3": "ZAF",
+      "provider": "IANA Time Zone Database zone.tab",
+      "url": "https://data.iana.org/time-zones/tzdb/zone.tab"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "admin_level_1_type"
+      ],
+      "iso3": "ZAF",
+      "provider": "ISO Online Browsing Platform - ISO 3166-2",
+      "url": "https://www.iso.org/obp/ui/#iso:code:3166:ZA"
+    },
+    {
+      "fields": [
+        "currency_code",
+        "currency_name",
+        "local_names",
+        "official_languages",
+        "official_name_en"
+      ],
+      "iso3": "ZAF",
+      "provider": "REST Countries repository pinned structured snapshot (auxiliary; human review required)",
+      "url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/src/main/resources/countriesV3.1.json"
+    },
+    {
+      "fields": [
+        "admin_level_1_count",
+        "capital",
+        "official_languages"
+      ],
+      "iso3": "ZAF",
+      "provider": "South African Government - South Africa at a glance",
+      "url": "https://www.gov.za/about-sa/south-africa-glance"
+    },
+    {
+      "fields": [
+        "capital",
+        "country_name_en",
+        "iso2",
+        "iso3"
+      ],
+      "iso3": "ZAF",
+      "provider": "World Bank Country API",
+      "url": "https://api.worldbank.org/v2/country/ZAF?format=json"
+    },
+    {
+      "fields": [
+        "area_sq_km",
+        "area_year"
+      ],
+      "iso3": "ZAF",
+      "provider": "World Bank World Development Indicators - Land area",
+      "url": "https://api.worldbank.org/v2/country/ZAF/indicator/AG.LND.TOTL.K2?format=json"
+    },
+    {
+      "fields": [
+        "population",
+        "population_year"
+      ],
+      "iso3": "ZAF",
+      "provider": "World Bank World Development Indicators - Population, total",
+      "url": "https://api.worldbank.org/v2/country/ZAF/indicator/SP.POP.TOTL?format=json"
+    }
+  ],
+  "entries_sha256": "f89091e7ec9c73f0b93f34e2794201fc16473465b998a287eb71d1c53cc5b221",
+  "entry_count": 361,
+  "profile_id": "basic60_private",
+  "release_id": "BASIC60-PRIVATE-R1",
+  "schema_version": "basic60.country-source-uri-manifest.v1",
+  "source_pattern": "countries/*/00_country_profile/country_profile.json"
+}

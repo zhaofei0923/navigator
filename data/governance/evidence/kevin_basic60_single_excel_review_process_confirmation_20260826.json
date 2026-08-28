@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "record_type": "project_approver_instruction_evidence",
+  "evidence_id": "EV-B60-SINGLE-EXCEL-PROCESS-20260826",
+  "captured_at": "2026-08-26T08:00:48+08:00",
+  "actor": {
+    "person_name": "kevin",
+    "role": "项目批准人"
+  },
+  "instruction_summary": "将Basic60私有试用的数据完成流程收敛为一个集中Excel审核文件；项目批准人审核其中全部基础数据与来源并明确批准后，即可用于私有发布和已批准用途。",
+  "authorized_process": {
+    "review_artifact_count": 1,
+    "review_artifact_type": "xlsx",
+    "review_scope": "all_basic60_data_and_sources",
+    "required_human_approver_count": 1,
+    "required_approver": "kevin",
+    "approval_binding": [
+      "workbook_sha256",
+      "canonical_payload_sha256"
+    ],
+    "authorized_outcome_after_approval": "private_trial_ready"
+  },
+  "removed_private_trial_requirements": [
+    "separate_d2_batch_signoff",
+    "separate_d3_human_signoff_when_no_exception",
+    "fixed_180_observation_sample",
+    "two_independent_reviewers",
+    "five_role_sequential_signoff"
+  ],
+  "retained_machine_controls": [
+    "frozen_counts_and_hashes",
+    "canonical_data_and_source_payload",
+    "raw_root_integrity",
+    "d3_replayability",
+    "environment_isolation",
+    "source_revocation",
+    "v1_ai_runtime_disabled"
+  ],
+  "boundary": {
+    "this_evidence_approves_the_review_process_only": true,
+    "this_evidence_does_not_approve_the_generated_workbook": true,
+    "formal_d1_d4_status": "pending",
+    "p0_status": "pending",
+    "production_release_authorized": false
+  },
+  "template_only": false
+}

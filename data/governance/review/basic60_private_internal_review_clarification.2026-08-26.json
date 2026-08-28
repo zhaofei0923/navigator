@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "record_type": "basic60_private_internal_review_clarification",
+  "decision_id": "PBD-BASIC60-PRIVATE-001",
+  "status": "approved_and_effective",
+  "effective_from": "2026-08-26T00:21:49+08:00",
+  "basis": {
+    "candidate": {
+      "path": "data/governance/candidates/basic60_private_baseline_change.2026-08-25.json",
+      "sha256": "8f73c0341ec9a3b9cffcd271f10557b2462f2b19f1ff25d3887f80422d3d5f53"
+    },
+    "confirmation": {
+      "path": "data/governance/evidence/kevin_basic60_private_confirmation_20260825.json",
+      "sha256": "595ec2158025ef5c8ae472c6d796aead6048c8a53523c4e3a9b5d64bb876c5d2"
+    },
+    "decision": {
+      "path": "data/governance/review/basic60_private_baseline_decision.2026-08-25.json",
+      "sha256": "fdfc437aceb63c51c1e9c982d1f692b75685bc9dfdc97024c5d5d93a6b200def"
+    }
+  },
+  "owner_confirmations": {
+    "external_information_accuracy_confirmed": true,
+    "collected_data_origin": "official_public_sources",
+    "manual_data_updates_allowed": true,
+    "simplified_internal_review_authorized": true
+  },
+  "d1_internal_review": {
+    "review_unit": "provider_dataset",
+    "required_primary_source_count": 3,
+    "alternative_sources_required": false,
+    "per_country_manual_review_required": false,
+    "approval_mode": "single_consolidated_project_approver",
+    "required_approver": {
+      "person_name": "kevin",
+      "role": "项目批准人"
+    },
+    "machine_checks_retained": [
+      "official_source_reference",
+      "terms_and_license_evidence",
+      "snapshot_hash",
+      "attribution",
+      "usage_boundary"
+    ]
+  },
+  "manual_update_policy": {
+    "mode": "manual_incremental",
+    "routine_value_updates_reuse_d1_admission": true,
+    "required_each_update": [
+      "new_snapshot_hash",
+      "difference_report",
+      "source_reference",
+      "operator_record"
+    ],
+    "d1_reapproval_triggers": [
+      "source_url_changed",
+      "terms_or_license_changed",
+      "dataset_structure_changed"
+    ]
+  },
+  "v1_usage_boundaries": {
+    "private_structured_storage": "allowed",
+    "private_display": "allowed",
+    "public_release": "prohibited",
+    "private_export": "prohibited",
+    "ai_indexing": "prohibited",
+    "model_training": "prohibited",
+    "cloud_model_processing": "prohibited"
+  },
+  "does_not_complete": [
+    "D2-P",
+    "D3-P",
+    "D4-P",
+    "formal_D1_D4",
+    "P0",
+    "private_trial_ready",
+    "production_release"
+  ],
+  "approval": {
+    "person_name": "kevin",
+    "role": "项目批准人",
+    "approved_at": "2026-08-26T00:21:49+08:00",
+    "authorization_basis": "explicit_user_confirmation_in_project_task"
+  }
+}

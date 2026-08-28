@@ -1,0 +1,191 @@
+{
+  "schema_version": 1,
+  "profile_id": "basic60_private",
+  "release_id": "BASIC60-PRIVATE-R1",
+  "template_only": false,
+  "source_declaration": "official_public_data",
+  "update_policy": {
+    "mode": "manual_incremental",
+    "reapproval_triggers": [
+      "source_url",
+      "terms",
+      "structure"
+    ]
+  },
+  "country_source_uri_manifest": {
+    "path": "data/basic60/candidates/basic60_country_source_uri_manifest.json",
+    "sha256": "d5eb14418d2d3eb9badb6c40628a7576cb2046f79bca6399a431ca24a1012f6f"
+  },
+  "sources": [
+    {
+      "source_ref": "B60-SRC-COUNTRY-PRIMARY",
+      "provider": "World Bank, IANA, ISO and pinned REST Countries repository snapshot",
+      "dataset": "BASIC60 country identity composite",
+      "data_domain": "country_identity",
+      "source_role": "primary",
+      "status": "active",
+      "terms_uri": "https://data.worldbank.org/summary-terms-of-use",
+      "evidence_sha256": "a693717a176a57b6861df8f44086f94354df0dfb069ea2233aea707dc1b0ab0a",
+      "license_basis_sha256s": [
+        "cc693cfa097025b8bce5c179100480678d0849b3bbf49708bff740e1d9439951",
+        "0613408568889f5739e5ae252b722a2659c02002839ad970a63dc5e9174b27cf",
+        "ec7bc11ca454454dd2d3d349fafef9fad06b5647f746ae8a68976892d10e0f1d",
+        "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5"
+      ],
+      "evidence": {
+        "path": "data/basic60/evidence/country_identity_source_evidence.2026-08-26.json",
+        "sha256": "a693717a176a57b6861df8f44086f94354df0dfb069ea2233aea707dc1b0ab0a"
+      },
+      "license_scope": {
+        "store": true,
+        "display": true,
+        "export": false,
+        "translate": false,
+        "ai_processing": false,
+        "cloud_processing": false
+      },
+      "access_method": "existing frozen snapshot; future refresh by manual operator only",
+      "rate_limit": "no automated V1 refresh",
+      "ai_processing": "prohibited_for_v1",
+      "cloud_processing": "prohibited_for_v1",
+      "snapshots": [
+        {
+          "snapshot_ref": "raw-material/global_sources/60_country_profiles.csv@2026-08-22",
+          "captured_at": "2026-08-22T00:00:00+08:00",
+          "content_sha256": "d2f574bbb07d7edf4689e9b90b7e4250b534f49d95ebb61d989779ce26236361",
+          "retrieval_uri": "urn:navigator:raw-material:global_sources:60_country_profiles.csv",
+          "media_type": "text/csv"
+        }
+      ],
+      "admission_fingerprint": {
+        "dataset_path": "global_sources/60_country_profiles.csv",
+        "record_selector": null,
+        "schema_field_count": 21,
+        "schema_fingerprint_sha256": "badb56cdcd7b6ca984cb003227d8116f24814758264a19b898ef77ba41608c25",
+        "source_uri_mode": "country_source_manifest",
+        "source_uri_field": "sources[].url",
+        "source_uri_row_key_fields": [
+          "iso3",
+          "provider",
+          "fields"
+        ],
+        "source_uri_entry_count": 361,
+        "source_uri_fingerprint_sha256": "f89091e7ec9c73f0b93f34e2794201fc16473465b998a287eb71d1c53cc5b221",
+        "terms_fingerprint_sha256": "e2a664fe980db154e7ca4b2deef170f1e5dacd8bdf519601bc05399ffbd99312"
+      }
+    },
+    {
+      "source_ref": "B60-SRC-WDI-PRIMARY",
+      "provider": "World Bank",
+      "dataset": "World Development Indicators 2020-2024 BASIC60 observations",
+      "data_domain": "macro",
+      "source_role": "primary",
+      "status": "active",
+      "terms_uri": "https://data.worldbank.org/summary-terms-of-use",
+      "evidence_sha256": "24992663e94ad4f5a5a0851da22403815fd06b6d58ca08bf68da2a4018b69cb7",
+      "license_basis_sha256s": [
+        "cc693cfa097025b8bce5c179100480678d0849b3bbf49708bff740e1d9439951"
+      ],
+      "evidence": {
+        "path": "data/basic60/evidence/world_bank_wdi_source_evidence.2026-08-26.json",
+        "sha256": "24992663e94ad4f5a5a0851da22403815fd06b6d58ca08bf68da2a4018b69cb7"
+      },
+      "license_scope": {
+        "store": true,
+        "display": true,
+        "export": false,
+        "translate": false,
+        "ai_processing": false,
+        "cloud_processing": false
+      },
+      "access_method": "existing frozen snapshot; future refresh by manual operator only",
+      "rate_limit": "no automated V1 refresh",
+      "ai_processing": "prohibited_for_v1",
+      "cloud_processing": "prohibited_for_v1",
+      "snapshots": [
+        {
+          "snapshot_ref": "raw-material/global_sources/60_country_macro_energy.csv#macro@2026-08-22",
+          "captured_at": "2026-08-22T00:00:00+08:00",
+          "content_sha256": "1cd4c43f5898fdb1b9b096d491f0e01b8bdf2ce015f0d99fdb5dade4969ff1e4",
+          "retrieval_uri": "urn:navigator:raw-material:global_sources:60_country_macro_energy.csv#macro",
+          "media_type": "text/csv"
+        }
+      ],
+      "admission_fingerprint": {
+        "dataset_path": "global_sources/60_country_macro_energy.csv",
+        "record_selector": {
+          "field": "record_type",
+          "value": "macro_annual"
+        },
+        "schema_field_count": 29,
+        "schema_fingerprint_sha256": "4bf926a9615e826fe449e1ce244b88c2f6ca418782114e6b1115a704f4fe9aca",
+        "source_uri_mode": "csv_column",
+        "source_uri_field": "macro_source_url",
+        "source_uri_row_key_fields": [
+          "iso3",
+          "record_type",
+          "year"
+        ],
+        "source_uri_entry_count": 300,
+        "source_uri_fingerprint_sha256": "4af22c4cdee839ce7f509fabd4a117ba76a8f300d60e8547fa42469c089e2957",
+        "terms_fingerprint_sha256": "c035d386e880e682d96e04face2543689a7ff7bf1e86fb5f0d8f058d8abb8e8a"
+      }
+    },
+    {
+      "source_ref": "B60-SRC-IRENA-PRIMARY",
+      "provider": "International Renewable Energy Agency (IRENA)",
+      "dataset": "IRENASTAT Power Capacity and Generation 2026 H1 BASIC60 snapshot",
+      "data_domain": "energy",
+      "source_role": "primary",
+      "status": "active",
+      "terms_uri": "https://www.irena.org/terms-and-conditions",
+      "evidence_sha256": "0608824364f70d68748c64d6026807a8a6e5465580e7ad2da4bded85907769b5",
+      "license_basis_sha256s": [
+        "d2bda2b5357516b5faf507ed8f901f78c409099887e16ab556fff663abc51b9a"
+      ],
+      "evidence": {
+        "path": "data/basic60/evidence/irena_source_evidence.2026-08-26.json",
+        "sha256": "0608824364f70d68748c64d6026807a8a6e5465580e7ad2da4bded85907769b5"
+      },
+      "license_scope": {
+        "store": true,
+        "display": true,
+        "export": false,
+        "translate": false,
+        "ai_processing": false,
+        "cloud_processing": false
+      },
+      "access_method": "existing frozen snapshot; future refresh by manual operator export only",
+      "rate_limit": "no robot or automated V1 refresh",
+      "ai_processing": "prohibited_for_v1",
+      "cloud_processing": "prohibited_for_v1",
+      "snapshots": [
+        {
+          "snapshot_ref": "raw-material/global_sources/60_country_macro_energy.csv#energy@2026-08-22",
+          "captured_at": "2026-08-22T00:00:00+08:00",
+          "content_sha256": "1cd4c43f5898fdb1b9b096d491f0e01b8bdf2ce015f0d99fdb5dade4969ff1e4",
+          "retrieval_uri": "https://pxweb.irena.org/api/v1/en/IRENASTAT/Power%20Capacity%20and%20Generation/Country_ELECCAP_2026_H1_v-PX%201.px",
+          "media_type": "text/csv"
+        }
+      ],
+      "admission_fingerprint": {
+        "dataset_path": "global_sources/60_country_macro_energy.csv",
+        "record_selector": {
+          "field": "record_type",
+          "value": "energy_latest"
+        },
+        "schema_field_count": 29,
+        "schema_fingerprint_sha256": "4bf926a9615e826fe449e1ce244b88c2f6ca418782114e6b1115a704f4fe9aca",
+        "source_uri_mode": "csv_column",
+        "source_uri_field": "energy_source_url",
+        "source_uri_row_key_fields": [
+          "iso3",
+          "record_type"
+        ],
+        "source_uri_entry_count": 60,
+        "source_uri_fingerprint_sha256": "0fe4dc16c15fffea7bf4a0f088d586c6d7d2fe432e0450729fb6ae3aef208190",
+        "terms_fingerprint_sha256": "7aa67ed2e83e65c03cded64347df7c15927e4e18633e0d9bdff5de42ff292682"
+      }
+    }
+  ]
+}

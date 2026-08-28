@@ -9,7 +9,6 @@ import { demoApi } from "@/lib/api-client";
 import { formatNumber } from "@/lib/format";
 import { useLocale, type SupportedLocale } from "@/lib/i18n";
 import {
-  comparisonHref,
   resolveToolCountry,
   TOOL_PATHS,
   toolHref,
@@ -43,7 +42,6 @@ const COPY = {
     next: "建议下一步",
     empty: "设置受控容量和场景参数后，合成概念方案将在这里显示。",
     nextFeasibility: "继续形成可研草案",
-    compare: "加入双国对比",
     hours: (value: number) => `${formatNumber(value, 0, "zh-CN")} 小时`,
     scenarios: {
       utility_scale: "大型地面电站",
@@ -67,7 +65,6 @@ const COPY = {
     next: "Recommended next steps",
     empty: "Set controlled capacity and scenario parameters and the synthetic concept will appear here.",
     nextFeasibility: "Continue to feasibility draft",
-    compare: "Add to two-market comparison",
     hours: (value: number) => `${formatNumber(value, 0, "en")} ${value === 1 ? "hour" : "hours"}`,
     scenarios: {
       utility_scale: "Utility-scale plant",
@@ -175,7 +172,6 @@ export default function SolarStorageToolPage() {
           label: copy.nextFeasibility,
           primary: true,
         },
-        { href: comparisonHref(effectiveCountryCode), label: copy.compare },
       ]}
     >
       <div className="tool-workspace">

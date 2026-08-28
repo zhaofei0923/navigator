@@ -1,0 +1,66 @@
+{
+  "schema_version": "basic60.single-excel-review-amendment.v1",
+  "record_type": "basic60_private_process_amendment",
+  "amendment_id": "PBD-BASIC60-PRIVATE-001-A2",
+  "amends_decision_id": "PBD-BASIC60-PRIVATE-001",
+  "status": "approved_and_effective",
+  "effective_from": "2026-08-26T08:00:48+08:00",
+  "approval": {
+    "person_name": "kevin",
+    "role": "项目批准人",
+    "decision": "approved",
+    "authorization_basis": "explicit_user_confirmation_in_project_task",
+    "evidence": {
+      "path": "data/governance/evidence/kevin_basic60_single_excel_review_process_confirmation_20260826.json",
+      "sha256": "b32cc375842deb563c19426c27a0bd1f4c02e460561ecf29cd563a9c5bd40d5d"
+    }
+  },
+  "single_review_process": {
+    "review_mode": "single_workbook_single_project_approver",
+    "review_scope": "all_basic60_data_and_sources",
+    "workbook_path": "outputs/basic60/BASIC60-PRIVATE-R1_60国基础数据集中审核.xlsx",
+    "required_approver": {
+      "person_name": "kevin",
+      "role": "项目批准人"
+    },
+    "approval_must_bind": [
+      "workbook_sha256",
+      "canonical_payload_sha256"
+    ],
+    "authorized_outcome_after_exact_approval": "private_trial_ready",
+    "approval_before_review_is_prohibited": true
+  },
+  "private_trial_human_gate_reduction": {
+    "separate_d1_d2_d3_d4_meetings_required": false,
+    "separate_d2_batch_signoff_required": false,
+    "separate_d3_signoff_when_no_exception": false,
+    "fixed_180_observation_sample_required": false,
+    "two_independent_reviewers_required": false,
+    "five_role_sequential_signoff_required": false,
+    "only_human_release_gate": "exact_workbook_approval_by_project_approver"
+  },
+  "machine_controls_retained": [
+    "frozen_workbook_sha256",
+    "canonical_payload_sha256",
+    "country_macro_energy_and_observation_counts",
+    "raw_root_sha256",
+    "source_binding_completeness",
+    "d3_replayability",
+    "private_environment_isolation",
+    "source_revocation",
+    "v1_ai_runtime_disabled"
+  ],
+  "current_data_approval": {
+    "status": "pending_user_review",
+    "approval_evidence": null
+  },
+  "boundaries": {
+    "formal_d1_d4_status": "pending",
+    "p0_status": "pending",
+    "production_release_authorized": false,
+    "public_release_authorized": false,
+    "does_not_complete_formal_d1_d4": true,
+    "does_not_authorize_p0_or_production": true
+  },
+  "template_only": false
+}

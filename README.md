@@ -28,6 +28,45 @@ D1—D4完成，不允许真实来源接入、公开发布或生产采用。
 
 详细范围与排障见[`docs/development/DEMO_RUNBOOK.md`](docs/development/DEMO_RUNBOOK.md)。
 
+## BASIC60真实数据私有试用候选
+
+`BASIC60-PRIVATE-R1`新增了与合成Demo完全隔离的60国Basic数据候选链、只读API、
+私有试用界面和Compose拓扑。它只覆盖国家档案、2020—2024宏观指标和已收集能源指标；
+政策、搜索、RAG、向量数据库和模型服务均未实现。私有试用的D1—D4审核已经收敛为
+一份包含全部基础数据及来源的集中Excel，以及项目批准人`kevin`对该文件的一次批准。
+批准必须同时绑定Excel文件SHA-256和规范数据/来源载荷SHA-256；批准前唯一人工阻断项为
+`B60_EXCEL_REVIEW_APPROVAL_PENDING`，批准后机器状态只能进入`private_trial_ready`。
+这不会完成正式D1—D4、P0或生产发布，以上状态继续保持`pending`。
+
+```bash
+uv run navigator-data prepare-basic60-private
+uv run navigator-data prepare-basic60-review \
+  --input-bundle data/basic60/review/basic60_private_acceptance.json \
+  --workbook outputs/basic60/BASIC60-PRIVATE-R1_60国基础数据集中审核.xlsx
+uv run navigator-data validate-basic60-private \
+  --bundle data/basic60/review/basic60_private_excel_review.approved.2026-08-26.json
+```
+
+当前集中Excel已由项目批准人`kevin`审核通过：工作簿SHA-256为
+`163a48df8772f5d8a5fc2638240d9f117fec5d0fbb439246319b4fd881e44dd8`，规范数据/来源载荷
+SHA-256为`087f355987d160f828aa70f92eda82b26b2b68bb4f9a673761c18b85ca18b657`。
+批准后验证已返回`private_trial_ready`且`checks=[]`。60项用电需求本版暂不要求补齐，继续
+保持`pending`且不转为零；冻结的61项`pending`总数不变。正式D1—D4、P0和生产仍为
+`pending`。
+
+普通国家列表、详情和比较页面/API不显示来源；来源仅保留在集中审核Excel和后台审计材料中。
+Excel批准覆盖全部规范化字段的私有展示、内部AI、本地模型和受控外部模型处理，但V1不部署
+AI、RAG、向量、全文检索或模型运行组件。完整的审核、撤销和隔离部署步骤见
+[`docs/development/BASIC60_PRIVATE_RUNBOOK.md`](docs/development/BASIC60_PRIVATE_RUNBOOK.md)。
+
+已审核数据通过`deploy/basic60/compose.approved-demo.yaml`接入原Demo单一入口：继续使用
+`http://127.0.0.1:3000`和原页面外壳，访问根地址直接进入，不再要求共享口令；`/login`
+重定向至根地址，`/api/session`关闭。`/countries`、国家详情及`/compare`读取隔离的Basic60
+API/数据库。原五国合成数据库卷下线保留，真实数据不会写入
+其中。该运行模式保留优化版落地页、交互地球、完整一级导航和政策/风险、机会、伙伴、
+四步工具等模块架构；V1尚未开发或没有已审核业务数据的模块显示“待开发”，不生成结果、
+不读取合成数据。搜索、模型执行和旧`/api/demo/*`路由仍保持关闭。
+
 ## 当前可运行能力
 
 - 运行Next.js内部演示前端、FastAPI REST后端、PostgreSQL迁移和可重置合成种子数据；

@@ -1,0 +1,82 @@
+{
+  "schema_version": "basic60.source-evidence.v3",
+  "source_ref": "B60-SRC-COUNTRY-PRIMARY",
+  "terms_snapshots": [
+    {
+      "storage_mode": "external_l0",
+      "sha256": "cc693cfa097025b8bce5c179100480678d0849b3bbf49708bff740e1d9439951",
+      "byte_size": 207426,
+      "captured_at": "2026-08-26T01:23:04+08:00",
+      "retrieval_uri": "https://data.worldbank.org/summary-terms-of-use",
+      "media_type": "text/html",
+      "canonical_url": "https://data.worldbank.org/summary-terms-of-use",
+      "capture_method": "official_https_download",
+      "volume_id": "basic60-private-l0-20260826",
+      "object_key": "sha256/cc693cfa097025b8bce5c179100480678d0849b3bbf49708bff740e1d9439951"
+    },
+    {
+      "storage_mode": "external_l0",
+      "sha256": "0613408568889f5739e5ae252b722a2659c02002839ad970a63dc5e9174b27cf",
+      "byte_size": 252,
+      "captured_at": "2026-08-26T01:23:04+08:00",
+      "retrieval_uri": "https://data.iana.org/time-zones/tzdb/LICENSE",
+      "media_type": "text/plain",
+      "canonical_url": "https://data.iana.org/time-zones/tzdb/LICENSE",
+      "capture_method": "official_https_download",
+      "volume_id": "basic60-private-l0-20260826",
+      "object_key": "sha256/0613408568889f5739e5ae252b722a2659c02002839ad970a63dc5e9174b27cf"
+    },
+    {
+      "storage_mode": "external_l0",
+      "sha256": "ec7bc11ca454454dd2d3d349fafef9fad06b5647f746ae8a68976892d10e0f1d",
+      "byte_size": 50885,
+      "captured_at": "2026-08-26T01:22:16+08:00",
+      "retrieval_uri": "https://www.iso.org/fr/footer-links/obp-tems-of-use.html",
+      "media_type": "text/html",
+      "canonical_url": "https://www.iso.org/fr/footer-links/obp-tems-of-use.html",
+      "capture_method": "official_page_rendered_dom_browser_capture",
+      "volume_id": "basic60-private-l0-20260826",
+      "object_key": "sha256/ec7bc11ca454454dd2d3d349fafef9fad06b5647f746ae8a68976892d10e0f1d"
+    },
+    {
+      "storage_mode": "external_l0",
+      "sha256": "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5",
+      "byte_size": 16725,
+      "captured_at": "2026-08-26T01:23:04+08:00",
+      "retrieval_uri": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/LICENSE",
+      "media_type": "text/plain",
+      "canonical_url": "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/LICENSE",
+      "capture_method": "official_https_download",
+      "volume_id": "basic60-private-l0-20260826",
+      "object_key": "sha256/1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5"
+    }
+  ],
+  "license_conclusion": {
+    "terms_snapshot_sha256s": [
+      "cc693cfa097025b8bce5c179100480678d0849b3bbf49708bff740e1d9439951",
+      "0613408568889f5739e5ae252b722a2659c02002839ad970a63dc5e9174b27cf",
+      "ec7bc11ca454454dd2d3d349fafef9fad06b5647f746ae8a68976892d10e0f1d",
+      "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5"
+    ],
+    "terms_uris": [
+      "https://data.worldbank.org/summary-terms-of-use",
+      "https://data.iana.org/time-zones/tzdb/LICENSE",
+      "https://www.iso.org/fr/footer-links/obp-tems-of-use.html",
+      "https://raw.githubusercontent.com/restcountries/restcountries/ff97f12bb61f8cbc389228d53445f64102cc305f/LICENSE"
+    ],
+    "terms_uri": "https://data.worldbank.org/summary-terms-of-use",
+    "license_scope": {
+      "store": true,
+      "display": true,
+      "export": false,
+      "translate": false,
+      "ai_processing": false,
+      "cloud_processing": false
+    },
+    "access_method": "existing frozen snapshot; future refresh by manual operator only",
+    "rate_limit": "no automated V1 refresh",
+    "ai_processing": "prohibited_for_v1",
+    "cloud_processing": "prohibited_for_v1"
+  },
+  "captured_at": "2026-08-22T00:00:00+08:00"
+}

@@ -42,7 +42,7 @@ describe("CountriesPage market context", () => {
     });
   });
 
-  it("carries the selected globe market into detail, tools, and comparison links", () => {
+  it("carries the selected globe market into detail and tools without comparison actions", () => {
     render(
       <LocaleProvider initialLocale="zh-CN">
         <CountriesPage />
@@ -53,7 +53,8 @@ describe("CountriesPage market context", () => {
     expect(screen.getByRole("link", { name: /进入国家详情/ })).toHaveAttribute("href", "/countries/ZAF");
     expect(screen.getByRole("link", { name: /AI 市场判断/ })).toHaveAttribute("href", "/tools/assistant?country=ZAF");
     expect(screen.getByRole("link", { name: /光储方案/ })).toHaveAttribute("href", "/tools/solar-storage?country=ZAF");
-    expect(screen.getAllByRole("link", { name: /对比|双国对比/ }).every((link) => link.getAttribute("href") === "/compare?countries=ZAF")).toBe(true);
+    expect(screen.queryByRole("link", { name: /对比|比较/ })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("link").some((link) => link.getAttribute("href")?.startsWith("/compare"))).toBe(false);
   });
 
   it("renders the market context and task labels in English", () => {
@@ -66,5 +67,6 @@ describe("CountriesPage market context", () => {
     expect(screen.getByText("Current demo market")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /AI market assessment/ })).toHaveAttribute("href", "/tools/assistant?country=ZAF");
     expect(screen.queryByText("当前演示市场")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /compar/i })).not.toBeInTheDocument();
   });
 });

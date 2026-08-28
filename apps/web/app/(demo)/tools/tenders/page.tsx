@@ -5,9 +5,10 @@ import { useSearchParams } from "next/navigation";
 import { type FormEvent, useMemo, useState } from "react";
 import { ToolPageShell, ToolResultState } from "@/components/tool-page-shell";
 import { useDemoQuery } from "@/hooks/use-demo-query";
+import { homeMarketHref } from "@/lib/approved-basic60/navigation";
 import { formatDate, formatNumber } from "@/lib/format";
 import { useLocale } from "@/lib/i18n";
-import { comparisonHref, resolveToolCountry, toolMarket } from "@/lib/tool-journey";
+import { resolveToolCountry, toolMarket } from "@/lib/tool-journey";
 import type { CountrySummary, TenderItem } from "@/lib/types";
 
 const COPY = {
@@ -34,7 +35,7 @@ const COPY = {
     action: "建议动作",
     loading: "正在筛选合成招标…",
     empty: "当前筛选条件下没有合成招标，可调整筛选后重试。",
-    compare: "进入双国对比",
+    backToMap: "返回首页地图",
     countryProfile: "返回国家详情",
     million: "百万",
     openDetailsAria: (title: string) => `查看${title}详情`,
@@ -62,7 +63,7 @@ const COPY = {
     action: "Recommended action",
     loading: "Filtering synthetic tenders…",
     empty: "No synthetic tenders match these filters. Adjust the filters and try again.",
-    compare: "Open two-market comparison",
+    backToMap: "Back to homepage map",
     countryProfile: "Return to country profile",
     million: "million",
     openDetailsAria: (title: string) => `View details for ${title}`,
@@ -138,7 +139,7 @@ export default function TenderToolPage() {
       currentStep="tenders"
       market={market}
       relatedActions={[
-        { href: comparisonHref(contextCountryCode), label: copy.compare, primary: true },
+        { href: homeMarketHref(contextCountryCode), label: copy.backToMap, primary: true },
         {
           href: contextCountryCode ? `/countries/${contextCountryCode}` : "/countries",
           label: copy.countryProfile,

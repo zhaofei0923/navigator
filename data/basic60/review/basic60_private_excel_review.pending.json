@@ -1,0 +1,158 @@
+{
+  "ai_usage_policy": {
+    "path": "data/basic60/candidates/basic60_ai_usage_policy.json",
+    "sha256": "454adff8ad1fea6ec19160fd07af5a3092ea1ee8cf4b2d2afe410ea2d141e7c4"
+  },
+  "baseline_candidate": {
+    "path": "data/governance/candidates/basic60_private_baseline_change.2026-08-25.json",
+    "sha256": "8f73c0341ec9a3b9cffcd271f10557b2462f2b19f1ff25d3887f80422d3d5f53"
+  },
+  "baseline_clarification": {
+    "path": "data/governance/review/basic60_private_internal_review_clarification.2026-08-26.json",
+    "sha256": "d8184d7ae79ee92600462753de6018a48d4190a36cf465660d294a285400505b"
+  },
+  "baseline_confirmation": {
+    "path": "data/governance/evidence/kevin_basic60_private_confirmation_20260825.json",
+    "sha256": "595ec2158025ef5c8ae472c6d796aead6048c8a53523c4e3a9b5d64bb876c5d2"
+  },
+  "baseline_confirmation_template": {
+    "path": "data/governance/review/basic60_private_baseline_confirmation.template.2026-08-25.json",
+    "sha256": "020e982e621ed9427b46289da032179fe2d58cde284e9bdd0f637fd5dbb63936"
+  },
+  "baseline_decision": {
+    "path": "data/governance/review/basic60_private_baseline_decision.2026-08-25.json",
+    "sha256": "fdfc437aceb63c51c1e9c982d1f692b75685bc9dfdc97024c5d5d93a6b200def"
+  },
+  "formal_gate_status": "pending",
+  "processing": {
+    "open_anomaly_count": 0,
+    "open_high_risk_anomaly_count": 0,
+    "original_values_preserved": true,
+    "pipelines": [
+      {
+        "pipeline_id": "D3-PARSE",
+        "replay_manifest": {
+          "path": "data/basic60/candidates/basic60-d3-parse.replay-manifest.json",
+          "sha256": "41943be4aa21e415cf4ea1e00f338434ca2034bbeabd29b40b3175112e7a2dd0"
+        },
+        "status": "succeeded"
+      },
+      {
+        "pipeline_id": "D3-STANDARDIZE",
+        "replay_manifest": {
+          "path": "data/basic60/candidates/basic60-d3-standardize.replay-manifest.json",
+          "sha256": "e51c246c6e2153c1dd9a8e29f15f4a165716f62fb94584a2140563e63ba8cbd1"
+        },
+        "status": "succeeded"
+      },
+      {
+        "pipeline_id": "D3-ENTITY",
+        "replay_manifest": {
+          "path": "data/basic60/candidates/basic60-d3-entity.replay-manifest.json",
+          "sha256": "010f292cdab86f3425590b469166a7c579a21afcd2e2556d137afbc7907a6621"
+        },
+        "status": "succeeded"
+      }
+    ],
+    "source_text_preserved": true
+  },
+  "profile": {
+    "path": "data/basic60/candidates/basic60_private_profile.json",
+    "sha256": "060b1b0bb30a0ead80588a7fa01ac677612f15759d7a8e933587acc0499a2fb5"
+  },
+  "profile_id": "basic60_private",
+  "raw_manifest": {
+    "path": "data/basic60/candidates/basic60_raw_manifest.json",
+    "sha256": "dae161e8e21cc0bb011120f4a3664017534808fc1c8e893ca63c8f888d78854b"
+  },
+  "raw_root_sha256": "b4380273f12b5f04cda57c94a4df972768064714cea43eba5d7a345c3198b688",
+  "release_id": "BASIC60-PRIVATE-R1",
+  "revocation": null,
+  "runtime_seed": {
+    "path": "runtime/basic60/basic60_seed.json",
+    "sha256": "4e40dc48d5c315a83d21df33d7a88b3185d70d64d6e224c115afbbfdfa7a6531"
+  },
+  "schema_version": 1,
+  "single_excel_review": {
+    "approval": null,
+    "canonical_payload_sha256": "087f355987d160f828aa70f92eda82b26b2b68bb4f9a673761c18b85ca18b657",
+    "does_not_authorize_p0_or_production": true,
+    "does_not_complete_formal_d1_d4": true,
+    "formal_gate_status": "pending",
+    "machine_counts": {
+      "available_observation_count": 2279,
+      "country_count": 60,
+      "energy_latest_record_count": 60,
+      "macro_annual_record_count": 300,
+      "pending_observation_count": 61,
+      "source_binding_count": 422
+    },
+    "raw_root_sha256": "b4380273f12b5f04cda57c94a4df972768064714cea43eba5d7a345c3198b688",
+    "review_mode": "single_workbook_single_project_approver",
+    "review_scope": "all_basic60_data_and_sources",
+    "runtime_seed": {
+      "path": "runtime/basic60/basic60_seed.json",
+      "sha256": "4e40dc48d5c315a83d21df33d7a88b3185d70d64d6e224c115afbbfdfa7a6531"
+    },
+    "schema_version": "basic60.excel-review-gate.v1",
+    "source_uri_manifest": {
+      "path": "data/basic60/candidates/basic60_country_source_uri_manifest.json",
+      "sha256": "d5eb14418d2d3eb9badb6c40628a7576cb2046f79bca6399a431ca24a1012f6f"
+    },
+    "workbook": {
+      "path": "outputs/basic60/BASIC60-PRIVATE-R1_60国基础数据集中审核.xlsx",
+      "sha256": "9410fdc8de0cbfb2499327179ee3c84d36c7142ae1b4a8ba2382929973d9dacd"
+    }
+  },
+  "source_admission": {
+    "ai_usage_policy": {
+      "path": "data/basic60/candidates/basic60_ai_usage_policy.json",
+      "sha256": "454adff8ad1fea6ec19160fd07af5a3092ea1ee8cf4b2d2afe410ea2d141e7c4"
+    },
+    "country_domain_matrix": {
+      "path": "data/basic60/candidates/basic60_country_domain_matrix.json",
+      "sha256": "cad4a96e664fb839300c96c4572bcf0fe802c824768d381758707b4d5249ecf4"
+    },
+    "derived_matrix_sha256": "b55987df2d393ffc84da5dce2224b81090674feadded4f17946e69219ba87280",
+    "domains": [
+      {
+        "alternative_source_id": null,
+        "domain_id": "country_profile",
+        "primary_source_id": "B60-SRC-COUNTRY-PRIMARY",
+        "status": "active"
+      },
+      {
+        "alternative_source_id": null,
+        "domain_id": "macroeconomic",
+        "primary_source_id": "B60-SRC-WDI-PRIMARY",
+        "status": "active"
+      },
+      {
+        "alternative_source_id": null,
+        "domain_id": "energy",
+        "primary_source_id": "B60-SRC-IRENA-PRIMARY",
+        "status": "active"
+      }
+    ],
+    "source_registry": {
+      "path": "data/basic60/evidence/basic60_source_registry.r2.2026-08-26.json",
+      "sha256": "2c461c7c718bfc6f1125dada031af4e4bb278ec18085665763dfaa95d053776c"
+    },
+    "usage_boundaries": {
+      "ai_index": "deferred_to_v2",
+      "controlled_external_model_processing": "allowed_by_manual_decision",
+      "internal_ai_processing": "allowed_by_manual_decision",
+      "local_model_processing": "allowed_by_manual_decision",
+      "model_training": "prohibited",
+      "private_display": "allowed_without_source_labels_by_manual_decision",
+      "private_export": "prohibited_except_controlled_model_payload",
+      "store_structured": "allowed",
+      "v1_ai_runtime": "disabled"
+    }
+  },
+  "template_only": false,
+  "usage_amendment": {
+    "path": "data/governance/review/basic60_private_usage_amendment.2026-08-26.json",
+    "sha256": "dfa34b4ab13a77aeb37776e6e629f60d491dc40a030adcb238a2a4131b12b49f"
+  }
+}

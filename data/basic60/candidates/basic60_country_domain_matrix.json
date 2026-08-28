@@ -1,0 +1,732 @@
+{
+  "country_count": 60,
+  "coverage_level": "Basic",
+  "domain_count": 3,
+  "profile_id": "basic60_private",
+  "release_id": "BASIC60-PRIVATE-R1",
+  "row_count": 180,
+  "rows": [
+    {
+      "domain_id": "country_profile",
+      "iso3": "ARE"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "ARE"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "ARE"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "ARG"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "ARG"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "ARG"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "AUS"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "AUS"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "AUS"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "BEL"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "BEL"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "BEL"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "BGD"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "BGD"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "BGD"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "BRA"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "BRA"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "BRA"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "CAN"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "CAN"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "CAN"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "CHL"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "CHL"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "CHL"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "CHN"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "CHN"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "CHN"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "COL"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "COL"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "COL"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "DEU"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "DEU"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "DEU"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "DNK"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "DNK"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "DNK"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "DOM"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "DOM"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "DOM"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "EGY"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "EGY"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "EGY"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "ESP"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "ESP"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "ESP"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "FIN"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "FIN"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "FIN"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "FRA"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "FRA"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "FRA"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "GBR"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "GBR"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "GBR"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "GHA"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "GHA"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "GHA"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "GRC"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "GRC"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "GRC"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "IDN"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "IDN"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "IDN"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "IND"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "IND"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "IND"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "IRL"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "IRL"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "IRL"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "ITA"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "ITA"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "ITA"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "JOR"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "JOR"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "JOR"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "JPN"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "JPN"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "JPN"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "KAZ"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "KAZ"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "KAZ"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "KEN"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "KEN"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "KEN"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "KOR"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "KOR"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "KOR"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "LKA"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "LKA"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "LKA"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "MAR"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "MAR"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "MAR"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "MEX"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "MEX"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "MEX"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "MYS"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "MYS"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "MYS"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "NAM"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "NAM"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "NAM"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "NGA"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "NGA"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "NGA"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "NLD"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "NLD"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "NLD"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "NOR"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "NOR"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "NOR"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "NPL"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "NPL"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "NPL"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "NZL"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "NZL"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "NZL"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "OMN"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "OMN"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "OMN"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "PAK"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "PAK"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "PAK"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "PAN"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "PAN"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "PAN"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "PER"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "PER"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "PER"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "PHL"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "PHL"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "PHL"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "POL"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "POL"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "POL"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "PRT"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "PRT"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "PRT"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "ROU"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "ROU"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "ROU"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "RWA"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "RWA"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "RWA"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "SAU"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "SAU"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "SAU"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "SGP"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "SGP"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "SGP"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "SWE"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "SWE"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "SWE"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "THA"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "THA"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "THA"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "TUR"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "TUR"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "TUR"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "TZA"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "TZA"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "TZA"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "UGA"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "UGA"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "UGA"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "URY"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "URY"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "URY"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "USA"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "USA"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "USA"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "UZB"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "UZB"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "UZB"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "VNM"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "VNM"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "VNM"
+    },
+    {
+      "domain_id": "country_profile",
+      "iso3": "ZAF"
+    },
+    {
+      "domain_id": "macroeconomic",
+      "iso3": "ZAF"
+    },
+    {
+      "domain_id": "energy",
+      "iso3": "ZAF"
+    }
+  ],
+  "rows_sha256": "0ff0d5d78c7f02159aa049686f02767b04dff6268643ee88ffe4ff63c3adecb7",
+  "schema_version": "basic60.country-domain-matrix.v1"
+}

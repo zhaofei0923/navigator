@@ -1,0 +1,56 @@
+{
+  "amendment_id": "PBD-BASIC60-PRIVATE-001-A1",
+  "amends_decision_id": "PBD-BASIC60-PRIVATE-001",
+  "approval": {
+    "authorization_basis": null,
+    "decision": "pending",
+    "evidence": null,
+    "person_name": null,
+    "role": "项目批准人",
+    "signed_at": null
+  },
+  "does_not_complete": [
+    "D2-P",
+    "D4-P",
+    "formal_D1_D4",
+    "P0",
+    "private_trial_ready",
+    "production_release"
+  ],
+  "effective_from": null,
+  "owner_authorization": {
+    "controlled_external_model_processing": "allowed_by_manual_decision",
+    "field_scope": "all_basic60_normalized_data_fields",
+    "internal_ai_processing": "allowed_by_manual_decision",
+    "internal_learning_and_exchange": "allowed_by_manual_decision",
+    "local_model_processing": "allowed_by_manual_decision",
+    "model_training": "prohibited",
+    "ordinary_ui_api_source_labels": "omitted_by_manual_decision",
+    "private_display": "allowed_by_manual_decision",
+    "public_release": "prohibited"
+  },
+  "processing_controls": {
+    "approved_model_configuration_required": true,
+    "private_internal_purpose_only": true,
+    "provider_retention_allowed": false,
+    "provider_training_allowed": false,
+    "raw_terms_or_source_evidence_allowed_in_model_payload": false
+  },
+  "record_type": "basic60_private_usage_amendment",
+  "schema_version": "basic60.usage-amendment.v1",
+  "source_label_policy": {
+    "backend_terms_and_provenance": "retain_for_audit_only",
+    "ordinary_ui_api": "omit_source_labels_and_provenance"
+  },
+  "status": "pending_project_approver",
+  "template_only": true,
+  "v1_runtime_capabilities": {
+    "ai_routes_enabled": false,
+    "embedding_enabled": false,
+    "external_model_calls_enabled": false,
+    "full_text_search_enabled": false,
+    "local_model_service_enabled": false,
+    "reranking_enabled": false,
+    "vector_database_enabled": false
+  }
+}

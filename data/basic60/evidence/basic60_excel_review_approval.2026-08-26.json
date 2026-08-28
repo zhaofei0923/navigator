@@ -1,0 +1,23 @@
+{
+  "schema_version": "basic60.excel-review-approval.v1",
+  "record_type": "basic60_single_excel_review_approval",
+  "evidence_id": "EVD-B60-EXCEL-APPROVAL-20260826-R1",
+  "release_id": "BASIC60-PRIVATE-R1",
+  "profile_id": "basic60_private",
+  "decision": "approved",
+  "person_name": "kevin",
+  "role": "项目批准人",
+  "approved_at": "2026-08-26T10:52:35+08:00",
+  "review_scope": "all_basic60_data_and_sources",
+  "authorized_outcome": "private_trial_ready",
+  "workbook": {
+    "path": "outputs/basic60/BASIC60-PRIVATE-R1_60国基础数据集中审核.xlsx",
+    "sha256": "163a48df8772f5d8a5fc2638240d9f117fec5d0fbb439246319b4fd881e44dd8"
+  },
+  "canonical_payload_sha256": "087f355987d160f828aa70f92eda82b26b2b68bb4f9a673761c18b85ca18b657",
+  "formal_gate_status": "pending",
+  "does_not_complete_formal_d1_d4": true,
+  "does_not_authorize_p0_or_production": true,
+  "authorization_basis": "explicit_user_approval_after_workbook_review",
+  "template_only": false
+}

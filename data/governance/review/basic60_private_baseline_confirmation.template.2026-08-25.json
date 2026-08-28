@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "confirmation_type": "project_baseline_change_review",
+  "decision_id": "PBD-BASIC60-PRIVATE-001",
+  "candidate": {
+    "path": "data/governance/candidates/basic60_private_baseline_change.2026-08-25.json",
+    "sha256": "8f73c0341ec9a3b9cffcd271f10557b2462f2b19f1ff25d3887f80422d3d5f53"
+  },
+  "bound_current_head": "cdc9b2aed6ac8be34840ae4dfe319058adf6dfb0",
+  "expected_reviewer": {
+    "person_name": "kevin",
+    "role": "项目批准人"
+  },
+  "decision": null,
+  "comments": null,
+  "reviewed_at": null,
+  "reviewer_signature": {
+    "person_name": "kevin",
+    "role": "项目批准人",
+    "signed_at": null
+  },
+  "authorized_transcription": false,
+  "authorized_actions": {
+    "write_decision_record": false,
+    "activate_basic60_private_profile": false,
+    "start_real_data_private_trial": false
+  },
+  "decision_output": "data/governance/review/basic60_private_baseline_decision.2026-08-25.json",
+  "evidence_output": "data/governance/evidence/kevin_basic60_private_confirmation_20260825.json",
+  "template_only": true,
+  "warning": "Only the named project approver may approve this exact candidate hash. Approval authorizes only the access-controlled Basic60 private-trial profile and does not complete formal D1-D4, P0, production, public release, policy publication, search, RAG, or AI use."
+}

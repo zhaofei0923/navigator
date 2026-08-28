@@ -61,9 +61,7 @@ def test_every_business_get_requires_demo_key(client: TestClient, path: str) -> 
 
 
 def test_post_endpoints_require_demo_key(client: TestClient) -> None:
-    comparison = client.post("/api/v1/country-comparisons", json={"country_codes": ["IDN", "SAU"]})
     reset = client.post("/api/v1/demo/reset")
-    assert comparison.status_code == 401
     assert reset.status_code == 401
 
 
@@ -126,55 +124,22 @@ def test_unknown_country_uses_consistent_error_envelope(
     assert payload["error"]["code"] == "COUNTRY_NOT_FOUND"
 
 
-def test_comparison_ranks_two_to_four_countries(
-    client: TestClient, auth_headers: dict[str, str]
-) -> None:
-    response = client.post(
-        "/api/v1/country-comparisons",
-        headers=auth_headers,
-        json={"country_codes": ["idn", "SAU", "vnm", "BRA"]},
-    )
-    assert response.status_code == 200
-    payload = response.json()
-    assert_demo_envelope(payload)
-    rows = payload["data"]["countries"]
-    assert [row["rank"] for row in rows] == [1, 2, 3, 4]
-    assert [row["overall_score"] for row in rows] == sorted(
-        [row["overall_score"] for row in rows], reverse=True
-    )
-    assert all(set(row["dimension_deltas"]) == DIMENSIONS for row in rows)
-    assert all(set(row["scores"]) > DIMENSIONS for row in rows)
-    assert payload["data"]["methodology"].startswith("合成五维加权")
-
-
 @pytest.mark.parametrize(
-    "country_codes",
-    [["IDN"], ["IDN", "SAU", "VNM", "BRA", "ZAF"], ["IDN", "idn"]],
+    "path", ("/api/v1/country-comparisons", "/api/v1/demo/country-comparisons")
 )
-def test_comparison_validates_size_and_uniqueness(
-    client: TestClient, auth_headers: dict[str, str], country_codes: list[str]
+@pytest.mark.parametrize("method", ("GET", "POST"))
+def test_removed_comparison_routes_return_404_with_or_without_credentials(
+    client: TestClient, auth_headers: dict[str, str], path: str, method: str
 ) -> None:
-    response = client.post(
-        "/api/v1/country-comparisons",
-        headers=auth_headers,
-        json={"country_codes": country_codes},
-    )
-    assert response.status_code == 422
-    payload = response.json()
-    assert_demo_envelope(payload)
-    assert payload["error"]["code"] == "VALIDATION_ERROR"
-
-
-def test_comparison_reports_unknown_codes(client: TestClient, auth_headers: dict[str, str]) -> None:
-    response = client.post(
-        "/api/v1/country-comparisons",
-        headers=auth_headers,
-        json={"country_codes": ["IDN", "XXX"]},
-    )
-    assert response.status_code == 404
-    payload = response.json()
-    assert_demo_envelope(payload)
-    assert payload["error"]["details"] == [{"missing_country_codes": ["XXX"]}]
+    for headers in ({}, auth_headers):
+        response = client.request(
+            method,
+            path,
+            headers=headers,
+            json={"country_codes": ["IDN", "SAU"]},
+        )
+        assert response.status_code == 404
+        assert response.json() == {"detail": "Not Found"}
 
 
 @pytest.mark.parametrize(
@@ -250,6 +215,7 @@ def test_openapi_preserves_required_contract_identifiers(client: TestClient) -> 
         document["paths"]["/api/v1/countries/{country_code}"]["get"]["operationId"]
         == "API-COUNTRY-002"
     )
-    assert (
-        document["paths"]["/api/v1/country-comparisons"]["post"]["operationId"] == "API-COMPARE-001"
-    )
+    assert "/api/v1/country-comparisons" not in document["paths"]
+    assert "/api/v1/demo/country-comparisons" not in document["paths"]
+    assert not any("comparison" in path.casefold() for path in document["paths"])
+    assert not any("Comparison" in name for name in document["components"]["schemas"])

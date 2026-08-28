@@ -1,0 +1,19 @@
+{
+  "schema_version": "basic60.source-evidence.v5",
+  "source_ref": "B60-SRC-IRENA-PRIMARY",
+  "terms_snapshots": [
+    {
+      "storage_mode": "external_l0",
+      "sha256": "d2bda2b5357516b5faf507ed8f901f78c409099887e16ab556fff663abc51b9a",
+      "byte_size": 61314,
+      "captured_at": "2026-08-26T01:20:58+08:00",
+      "retrieval_uri": "https://www.irena.org/terms-and-conditions",
+      "media_type": "text/html",
+      "canonical_url": "https://www.irena.org/terms-and-conditions",
+      "capture_method": "official_page_rendered_dom_browser_capture",
+      "volume_id": "basic60-private-l0-20260826",
+      "object_key": "sha256/d2bda2b5357516b5faf507ed8f901f78c409099887e16ab556fff663abc51b9a"
+    }
+  ],
+  "captured_at": "2026-08-22T00:00:00+08:00"
+}

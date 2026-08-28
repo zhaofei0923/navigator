@@ -1,0 +1,127 @@
+{
+  "schema_version": 1,
+  "candidate_type": "project_baseline_change_candidate",
+  "decision_id": "PBD-BASIC60-PRIVATE-001",
+  "baseline_version": "V1.0-BASELINE",
+  "status": "pending_named_project_approver_review",
+  "prepared_at": "2026-08-25",
+  "prepared_by": "codex (authorized candidate preparation only)",
+  "bound_current_head": "cdc9b2aed6ac8be34840ae4dfe319058adf6dfb0",
+  "bound_inputs": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "af0adb29e7d7afd5a95f84cd564dd78b8d9e0219642be60e20bf0410ad9660d8"
+    },
+    {
+      "path": "data/contracts/current/manifest.json",
+      "sha256": "9e87720dd84c2fdb21fe052accb2112f59b209ac7d434d7a7d263540d15a6c89"
+    },
+    {
+      "path": "raw material/collection_manifest_60.json",
+      "sha256": "ca0462779f24c8d0f9db087441b90f14c1876f120debfa1e0441d42bd49bf590"
+    },
+    {
+      "path": "raw material/COLLECTION_SCHEMA.md",
+      "sha256": "a8f7fda12fc917d6bc58464b88a39a54324c43f664ab9760b7ba7b2f9ccebbf3"
+    },
+    {
+      "path": "raw material/60国新能源基础信息与政策索引.xlsx",
+      "sha256": "93eae7435221be1ee326062b8fb982e4b993a99d45851a655e645b8da365213e"
+    }
+  ],
+  "requested_decision": "approve_basic60_private_trial",
+  "decision_owner": {
+    "person_name": "kevin",
+    "role": "项目批准人"
+  },
+  "release": {
+    "release_id": "BASIC60-PRIVATE-R1",
+    "release_profile": "basic60_private",
+    "delivery_mode": "access_controlled_private_trial",
+    "formal_gate_status": "pending"
+  },
+  "change_summary": "在不改变正式D1-D4与P0结论的前提下，允许60国真实Basic国家、宏观和能源数据经过精简私有试用链后进入隔离、只读、访问受控的内部环境。",
+  "replacement_rule": "本决定只建立D1-P至D4-P私有试用验证配置；其通过状态为private_trial_ready，不等于正式D4或P0通过。",
+  "allowed_scope": {
+    "countries": "raw material/collection_manifest_60.json中冻结的60国；IDN、VNM、SAU、ZAF和BRA仅保留后续深化标识。",
+    "domains": [
+      "country_profile",
+      "macro_2020_2024",
+      "energy_latest"
+    ],
+    "interfaces": [
+      "GET /api/v1/countries",
+      "GET /api/v1/countries/{code}",
+      "POST /api/v1/country-comparisons"
+    ],
+    "data_use": [
+      "internal_storage",
+      "access_controlled_display",
+      "internal_api_response"
+    ]
+  },
+  "excluded_scope": [
+    "policy_publication",
+    "risk_assessment",
+    "projects",
+    "tenders",
+    "partners",
+    "search",
+    "ai_chat",
+    "rag",
+    "vector_database",
+    "embedding",
+    "reranking",
+    "local_or_cloud_model_calls",
+    "public_release",
+    "production_adoption"
+  ],
+  "streamlined_governance": {
+    "d1_p": "按提供方和数据集一次准入，数据负责人和合规负责人共同签署；系统生成60国乘以三个Basic域的矩阵。",
+    "d2_p": "国家主数据、宏观和能源三个批次；运行、哈希、水位和停止信号机器校验，干净批次由授权数据审核人一次关闭。",
+    "d3_p": "解析、标准化和实体匹配可重放；只对未知枚举、模糊匹配、冲突、高风险翻译和人工合并进行异常审核。",
+    "d4_p": "全部发布值机器校验，60个中文名全量复核，冻结180个有值样本由两名独立审核人复核，所有待补值和异常全量复核，五类角色在一个最终包中集中签署。"
+  },
+  "mandatory_controls": [
+    "所有真实数据服务、数据库、网络、卷、密钥和账号与synthetic_demo隔离",
+    "页面持续显示私有试用、数据截至和非正式结论标识",
+    "原始材料保持不可变并以清单和SHA-256绑定，不提交受限原件或1.21GB raw material到Git",
+    "来源条款、许可、访问和用途未经具名审核不得转active",
+    "缺失值保持pending或unknown，不得以0或低风险替代",
+    "政策、搜索和AI接口不得在真实私有试用路由中注册",
+    "撤权来源必须从活动发布快照和只读API中移除且保留历史",
+    "发现越界数据、权限泄漏、许可变化或误导性展示时立即撤销私有试用发布"
+  ],
+  "machine_acceptance": {
+    "country_count": 60,
+    "macro_annual_record_count": 300,
+    "energy_latest_record_count": 60,
+    "available_metric_observation_count": 2279,
+    "pending_metric_observation_count": 61,
+    "published_field_provenance_pct": 100,
+    "published_field_license_metadata_pct": 100,
+    "p0_data_issue_count": 0,
+    "valid_duplicate_pct_max": 1,
+    "human_sample_accuracy_pct_min": 95
+  },
+  "permitted_before_effective_approval": [
+    "prepare_code",
+    "prepare_templates",
+    "generate_machine_candidates",
+    "run_tests_against_candidate_or_synthetic_inputs"
+  ],
+  "prohibited_before_effective_approval": [
+    "activate_real_sources",
+    "deploy_real_data_private_trial",
+    "mark_private_trial_ready",
+    "write_human_signatures_or_approvals"
+  ],
+  "effective_condition": "项目批准人审核本候选包精确SHA-256并提交具名确认；之后仍须完成D1-P、D2-P和D4-P所需实际角色签署。",
+  "expiry": "项目批准人撤销、正式P0发布或被新的项目基线决定替代时，以最早发生者为准。",
+  "does_not_complete_d1_d4": true,
+  "does_not_complete_formal_d1_d4": true,
+  "does_not_complete_p0": true,
+  "does_not_authorize_production": true,
+  "does_not_authorize_public_release": true,
+  "template_only": true
+}

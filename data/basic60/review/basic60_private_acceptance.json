@@ -1,0 +1,399 @@
+{
+  "acceptance": {
+    "artifacts": {
+      "item_review": null,
+      "machine_evidence": null,
+      "sample_reviews": [
+        null,
+        null
+      ]
+    },
+    "chinese_names_reviewed": 0,
+    "derived_values_reviewed": 0,
+    "duplicate_count": null,
+    "final_approvals": [
+      {
+        "decision": "pending",
+        "evidence": null,
+        "person_name": null,
+        "role": "数据负责人",
+        "signed_at": null,
+        "subject_sha256": null
+      },
+      {
+        "decision": "pending",
+        "evidence": null,
+        "person_name": null,
+        "role": "数据质量负责人",
+        "signed_at": null,
+        "subject_sha256": null
+      },
+      {
+        "decision": "pending",
+        "evidence": null,
+        "person_name": null,
+        "role": "合规负责人",
+        "signed_at": null,
+        "subject_sha256": null
+      },
+      {
+        "decision": "pending",
+        "evidence": null,
+        "person_name": null,
+        "role": "数据工程负责人",
+        "signed_at": null,
+        "subject_sha256": null
+      },
+      {
+        "decision": "pending",
+        "evidence": null,
+        "person_name": null,
+        "role": "项目批准人",
+        "signed_at": null,
+        "subject_sha256": null
+      }
+    ],
+    "machine_counts": {
+      "available_observation_count": 2279,
+      "country_count": 60,
+      "energy_latest_record_count": 60,
+      "macro_annual_record_count": 300,
+      "pending_observation_count": 61
+    },
+    "pending_values_reviewed": 0,
+    "review_templates": {
+      "item_review": {
+        "path": "runtime/basic60/basic60_item_review.template.json",
+        "sha256": "192ef2f10fe1e944695a5c4c7b5374eec8e493b09291341b99c8d786bd7b24d6"
+      },
+      "sample_reviews": [
+        {
+          "path": "runtime/basic60/basic60_sample_review_1.template.json",
+          "sha256": "2ccd1e01acca6328ddaeca2d37cab3a93fda8e060225e9ad77b7fa237203fb35"
+        },
+        {
+          "path": "runtime/basic60/basic60_sample_review_2.template.json",
+          "sha256": "07b4543b3f470e72c004d90cda2de308d57dbf649c0a04ce9cfea11ad094b1cd"
+        }
+      ]
+    },
+    "sample_accurate_count": null,
+    "sample_approvals": [
+      {
+        "decision": "pending",
+        "evidence": null,
+        "person_name": null,
+        "role": "数据质量复核人",
+        "signed_at": null,
+        "subject_sha256": null
+      },
+      {
+        "decision": "pending",
+        "evidence": null,
+        "person_name": null,
+        "role": "数据质量复核人",
+        "signed_at": null,
+        "subject_sha256": null
+      }
+    ],
+    "sample_candidate": {
+      "path": "runtime/basic60/basic60_sample_candidate.json",
+      "sha256": "ba0f80736ac50fb7ec3b30441ebae968ebf11c4ded282eeb0bf7183869b66830"
+    },
+    "sample_size": 180,
+    "unresolved_p0_data_issue_count": null
+  },
+  "baseline_candidate": {
+    "path": "data/governance/candidates/basic60_private_baseline_change.2026-08-25.json",
+    "sha256": "8f73c0341ec9a3b9cffcd271f10557b2462f2b19f1ff25d3887f80422d3d5f53"
+  },
+  "baseline_clarification": {
+    "path": "data/governance/review/basic60_private_internal_review_clarification.2026-08-26.json",
+    "sha256": "d8184d7ae79ee92600462753de6018a48d4190a36cf465660d294a285400505b"
+  },
+  "usage_amendment": {
+    "path": "data/governance/review/basic60_private_usage_amendment.2026-08-26.json",
+    "sha256": "dfa34b4ab13a77aeb37776e6e629f60d491dc40a030adcb238a2a4131b12b49f"
+  },
+  "ai_usage_policy": {
+    "path": "data/basic60/candidates/basic60_ai_usage_policy.json",
+    "sha256": "454adff8ad1fea6ec19160fd07af5a3092ea1ee8cf4b2d2afe410ea2d141e7c4"
+  },
+  "baseline_confirmation": {
+    "path": "data/governance/evidence/kevin_basic60_private_confirmation_20260825.json",
+    "sha256": "595ec2158025ef5c8ae472c6d796aead6048c8a53523c4e3a9b5d64bb876c5d2"
+  },
+  "baseline_confirmation_template": {
+    "path": "data/governance/review/basic60_private_baseline_confirmation.template.2026-08-25.json",
+    "sha256": "020e982e621ed9427b46289da032179fe2d58cde284e9bdd0f637fd5dbb63936"
+  },
+  "baseline_decision": {
+    "path": "data/governance/review/basic60_private_baseline_decision.2026-08-25.json",
+    "sha256": "fdfc437aceb63c51c1e9c982d1f692b75685bc9dfdc97024c5d5d93a6b200def"
+  },
+  "collection": {
+    "approval": {
+      "decision": "pending",
+      "evidence": null,
+      "person_name": null,
+      "role": "授权数据审核人",
+      "signed_at": null,
+      "subject_sha256": null
+    },
+    "batches": [
+      {
+        "access_signal": "none",
+        "batch_id": "BASIC60-BATCH-PROFILE",
+        "dataset_path": "global_sources/60_country_profiles.csv",
+        "dataset_sha256": "d2f574bbb07d7edf4689e9b90b7e4250b534f49d95ebb61d989779ce26236361",
+        "diff_status": "pending",
+        "domain_id": "country_profile",
+        "input_immutable": true,
+        "output_manifest": null,
+        "run_id": "legacy_import_run",
+        "run_status": "pending",
+        "status": "pending"
+      },
+      {
+        "access_signal": "none",
+        "batch_id": "BASIC60-BATCH-MACRO",
+        "dataset_path": "global_sources/60_country_macro_energy.csv",
+        "dataset_sha256": "1cd4c43f5898fdb1b9b096d491f0e01b8bdf2ce015f0d99fdb5dade4969ff1e4",
+        "diff_status": "pending",
+        "domain_id": "macroeconomic",
+        "input_immutable": true,
+        "output_manifest": null,
+        "run_id": "legacy_import_run",
+        "run_status": "pending",
+        "status": "pending"
+      },
+      {
+        "access_signal": "none",
+        "batch_id": "BASIC60-BATCH-ENERGY",
+        "dataset_path": "global_sources/60_country_macro_energy.csv",
+        "dataset_sha256": "1cd4c43f5898fdb1b9b096d491f0e01b8bdf2ce015f0d99fdb5dade4969ff1e4",
+        "diff_status": "pending",
+        "domain_id": "energy",
+        "input_immutable": true,
+        "output_manifest": null,
+        "run_id": "legacy_import_run",
+        "run_status": "pending",
+        "status": "pending"
+      }
+    ],
+    "incidents": [],
+    "input_directory": "raw material",
+    "input_immutable": true
+  },
+  "formal_gate_status": "pending",
+  "processing": {
+    "open_anomaly_count": 0,
+    "open_high_risk_anomaly_count": 0,
+    "original_values_preserved": true,
+    "pipelines": [
+      {
+        "pipeline_id": "D3-PARSE",
+        "replay_manifest": {
+          "path": "data/basic60/candidates/basic60-d3-parse.replay-manifest.json",
+          "sha256": "41943be4aa21e415cf4ea1e00f338434ca2034bbeabd29b40b3175112e7a2dd0"
+        },
+        "status": "succeeded"
+      },
+      {
+        "pipeline_id": "D3-STANDARDIZE",
+        "replay_manifest": {
+          "path": "data/basic60/candidates/basic60-d3-standardize.replay-manifest.json",
+          "sha256": "e51c246c6e2153c1dd9a8e29f15f4a165716f62fb94584a2140563e63ba8cbd1"
+        },
+        "status": "succeeded"
+      },
+      {
+        "pipeline_id": "D3-ENTITY",
+        "replay_manifest": {
+          "path": "data/basic60/candidates/basic60-d3-entity.replay-manifest.json",
+          "sha256": "010f292cdab86f3425590b469166a7c579a21afcd2e2556d137afbc7907a6621"
+        },
+        "status": "succeeded"
+      }
+    ],
+    "source_text_preserved": true
+  },
+  "profile": {
+    "path": "data/basic60/candidates/basic60_private_profile.json",
+    "sha256": "060b1b0bb30a0ead80588a7fa01ac677612f15759d7a8e933587acc0499a2fb5"
+  },
+  "profile_id": "basic60_private",
+  "raw_manifest": {
+    "path": "data/basic60/candidates/basic60_raw_manifest.json",
+    "sha256": "dae161e8e21cc0bb011120f4a3664017534808fc1c8e893ca63c8f888d78854b"
+  },
+  "raw_root_sha256": "b4380273f12b5f04cda57c94a4df972768064714cea43eba5d7a345c3198b688",
+  "release_id": "BASIC60-PRIVATE-R1",
+  "revocation": null,
+  "runtime_seed": {
+    "path": "runtime/basic60/basic60_seed.json",
+    "sha256": "4e40dc48d5c315a83d21df33d7a88b3185d70d64d6e224c115afbbfdfa7a6531"
+  },
+  "schema_version": 1,
+  "source_admission": {
+    "approvals": [
+      {
+        "approval_type": "human_scope_authorization",
+        "decision": "approved",
+        "evidence": {
+          "evidence_id": "EVD-B60-D1-SCOPE-AUTHORIZATION-20260826-R2",
+          "path": "data/basic60/evidence/basic60_d1_scope_authorization.r2.2026-08-26.json",
+          "sha256": "4466f44f7e065619bccbd1fbaa1dd91baa8d85ac3bb3888a7ebfb4c392198215"
+        },
+        "exact_content_hash_signed": false,
+        "person_name": "kevin",
+        "role": "项目批准人",
+        "scope_authorization_id": "B60-D1-SCOPE-AUTH-20260826-R2",
+        "scope_subject_sha256": "3eb75cc675471c7ab1a34a0fc9db19ccff72963a3e0c473ef3e7e28c78af5ad9",
+        "signed_at": "2026-08-26T06:23:16+08:00"
+      }
+    ],
+    "authorized_scope": {
+      "alternative_sources_required": false,
+      "authorization_statement": "Human authorization covers the stable source scope and A1 all-field manual data-usage decision while V1 AI runtime capabilities remain disabled; exact content hashes are machine-bound after capture.",
+      "baseline_clarification": {
+        "path": "data/governance/review/basic60_private_internal_review_clarification.2026-08-26.json",
+        "sha256": "d8184d7ae79ee92600462753de6018a48d4190a36cf465660d294a285400505b"
+      },
+      "machine_baseline_policy": {
+        "authorization_anchor_key": "d1-machine-baselines/authorizations/B60-D1-SCOPE-AUTH-20260826-R2.json",
+        "content_object_mode": "content_addressed_read_only",
+        "mode": "single_use_append_only",
+        "new_authorization_required_for": [
+          "provider_changed",
+          "source_url_changed",
+          "terms_or_license_changed",
+          "dataset_structure_changed",
+          "usage_boundary_changed"
+        ]
+      },
+      "manual_update_policy": {
+        "d1_reapproval_triggers": [
+          "provider_changed",
+          "source_url_changed",
+          "terms_or_license_changed",
+          "dataset_structure_changed",
+          "usage_boundary_changed"
+        ],
+        "mode": "manual_incremental",
+        "routine_value_updates_reuse_d1_admission": true
+      },
+      "primary_source_count": 3,
+      "primary_sources": [
+        {
+          "data_domain": "country_identity",
+          "dataset": "BASIC60 country identity composite",
+          "domain_id": "country_profile",
+          "provider": "World Bank, IANA, ISO and pinned REST Countries repository snapshot",
+          "schema_control": "exact_machine_content_binding",
+          "source_ref": "B60-SRC-COUNTRY-PRIMARY",
+          "source_uri_control": "exact_machine_content_binding",
+          "terms_snapshot_control": "exact_machine_content_binding",
+          "terms_uri": "https://data.worldbank.org/summary-terms-of-use"
+        },
+        {
+          "data_domain": "macro",
+          "dataset": "World Development Indicators 2020-2024 BASIC60 observations",
+          "domain_id": "macroeconomic",
+          "provider": "World Bank",
+          "schema_control": "exact_machine_content_binding",
+          "source_ref": "B60-SRC-WDI-PRIMARY",
+          "source_uri_control": "exact_machine_content_binding",
+          "terms_snapshot_control": "exact_machine_content_binding",
+          "terms_uri": "https://data.worldbank.org/summary-terms-of-use"
+        },
+        {
+          "data_domain": "energy",
+          "dataset": "IRENASTAT Power Capacity and Generation 2026 H1 BASIC60 snapshot",
+          "domain_id": "energy",
+          "provider": "International Renewable Energy Agency (IRENA)",
+          "schema_control": "exact_machine_content_binding",
+          "source_ref": "B60-SRC-IRENA-PRIMARY",
+          "source_uri_control": "exact_machine_content_binding",
+          "terms_snapshot_control": "exact_machine_content_binding",
+          "terms_uri": "https://www.irena.org/terms-and-conditions"
+        }
+      ],
+      "profile_id": "basic60_private",
+      "release_id": "BASIC60-PRIVATE-R1",
+      "review_unit": "provider_dataset",
+      "schema_version": "basic60.d1-authorized-scope.v2",
+      "scope_authorization_id": "B60-D1-SCOPE-AUTH-20260826-R2",
+      "source_declaration": "official_public_data",
+      "usage_amendment": {
+        "path": "data/governance/review/basic60_private_usage_amendment.2026-08-26.json",
+        "sha256": "dfa34b4ab13a77aeb37776e6e629f60d491dc40a030adcb238a2a4131b12b49f"
+      },
+      "usage_boundaries": {
+        "ai_index": "deferred_to_v2",
+        "controlled_external_model_processing": "allowed_by_manual_decision",
+        "internal_ai_processing": "allowed_by_manual_decision",
+        "local_model_processing": "allowed_by_manual_decision",
+        "model_training": "prohibited",
+        "private_display": "allowed_without_source_labels_by_manual_decision",
+        "private_export": "prohibited_except_controlled_model_payload",
+        "store_structured": "allowed",
+        "v1_ai_runtime": "disabled"
+      }
+    },
+    "country_domain_matrix": {
+      "path": "data/basic60/candidates/basic60_country_domain_matrix.json",
+      "sha256": "cad4a96e664fb839300c96c4572bcf0fe802c824768d381758707b4d5249ecf4"
+    },
+    "derived_matrix_sha256": "b55987df2d393ffc84da5dce2224b81090674feadded4f17946e69219ba87280",
+    "domains": [
+      {
+        "alternative_source_id": null,
+        "domain_id": "country_profile",
+        "primary_source_id": "B60-SRC-COUNTRY-PRIMARY",
+        "status": "active"
+      },
+      {
+        "alternative_source_id": null,
+        "domain_id": "macroeconomic",
+        "primary_source_id": "B60-SRC-WDI-PRIMARY",
+        "status": "active"
+      },
+      {
+        "alternative_source_id": null,
+        "domain_id": "energy",
+        "primary_source_id": "B60-SRC-IRENA-PRIMARY",
+        "status": "active"
+      }
+    ],
+    "machine_content_binding": {
+      "byte_size": 863,
+      "object_key": "d1-machine-baselines/authorizations/B60-D1-SCOPE-AUTH-20260826-R2.json",
+      "scope_authorization_id": "B60-D1-SCOPE-AUTH-20260826-R2",
+      "sha256": "e11aa244980e676eae1f948194b124fc922e6b7684f1a9cbb021071706413446",
+      "storage_mode": "external_l0",
+      "volume_id": "basic60-private-l0-20260826"
+    },
+    "scope_authorization_id": "B60-D1-SCOPE-AUTH-20260826-R2",
+    "ai_usage_policy": {
+      "path": "data/basic60/candidates/basic60_ai_usage_policy.json",
+      "sha256": "454adff8ad1fea6ec19160fd07af5a3092ea1ee8cf4b2d2afe410ea2d141e7c4"
+    },
+    "source_registry": {
+      "path": "data/basic60/evidence/basic60_source_registry.r2.2026-08-26.json",
+      "sha256": "2c461c7c718bfc6f1125dada031af4e4bb278ec18085665763dfaa95d053776c"
+    },
+    "usage_boundaries": {
+      "ai_index": "deferred_to_v2",
+      "controlled_external_model_processing": "allowed_by_manual_decision",
+      "internal_ai_processing": "allowed_by_manual_decision",
+      "local_model_processing": "allowed_by_manual_decision",
+      "model_training": "prohibited",
+      "private_display": "allowed_without_source_labels_by_manual_decision",
+      "private_export": "prohibited_except_controlled_model_payload",
+      "store_structured": "allowed",
+      "v1_ai_runtime": "disabled"
+    }
+  },
+  "template_only": false
+}

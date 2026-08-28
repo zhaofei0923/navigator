@@ -14,7 +14,10 @@ COPY pyproject.toml ./
 COPY src ./src
 COPY alembic.ini ./
 COPY alembic ./alembic
+COPY alembic-basic60.ini ./
+COPY alembic_basic60 ./alembic_basic60
 COPY docker-entrypoint.sh /usr/local/bin/navigator-api-entrypoint
+COPY docker-entrypoint-basic60.sh /usr/local/bin/navigator-api-basic60-entrypoint
 
 RUN if [ "$INSTALL_DEPENDENCIES" = "1" ]; then \
       pip install --no-cache-dir .; \
@@ -23,6 +26,7 @@ RUN if [ "$INSTALL_DEPENDENCIES" = "1" ]; then \
     fi \
     && adduser --disabled-password --gecos "" --uid 10001 navigator \
     && chmod 0755 /usr/local/bin/navigator-api-entrypoint \
+    && chmod 0755 /usr/local/bin/navigator-api-basic60-entrypoint \
     && chown -R navigator:navigator /opt/navigator-api
 
 USER navigator

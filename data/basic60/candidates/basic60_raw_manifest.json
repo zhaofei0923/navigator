@@ -1,0 +1,54 @@
+{
+  "algorithm": "sha256(sorted(relative_path\\0byte_size\\0file_sha256\\n))",
+  "excluded_zone_identifier_count": 18,
+  "excluded_zone_identifier_paths": [
+    "countries/ARE/02_policy_documents/files/ARE_policy_006_federal_environment_law_24_1999.pdf:Zone.Identifier",
+    "countries/ARE/02_policy_documents/files/ARE_policy_007_commercial_companies_decree_law_32_2021.pdf:Zone.Identifier",
+    "countries/CAN/02_policy_documents/files/CAN_POL_004_2030_Emissions_Reduction_Plan.pdf:Zone.Identifier",
+    "countries/FRA/02_policy_documents/files/FRA_POL_003_Loi_2019_1147_Energie_Climat.pdf:Zone.Identifier",
+    "countries/FRA/02_policy_documents/files/FRA_POL_004_Loi_2023_175_Acceleration_ENR.pdf:Zone.Identifier",
+    "countries/FRA/02_policy_documents/files/FRA_POL_005_Code_Environnement_EIA_L122_1_L122_16_2026-08-25.pdf:Zone.Identifier",
+    "countries/FRA/02_policy_documents/files/FRA_POL_006_Loi_2015_992_Transition_Energetique.pdf:Zone.Identifier",
+    "countries/FRA/02_policy_documents/files/FRA_POL_007_Code_Energie_Partie_Legislative_2026-08-24.pdf:Zone.Identifier",
+    "countries/GBR/02_policy_documents/files/GBR_policy_010_grid_code_issue_6_revision_45.pdf:Zone.Identifier",
+    "countries/IDN/02_policy_documents/files/IDN_policy_003_Perpres_112_2022.pdf:Zone.Identifier",
+    "countries/IDN/02_policy_documents/files/IDN_policy_007_PP_22_2021.pdf:Zone.Identifier",
+    "countries/IND/02_policy_documents/files/IND_policy_010_CERC_GNA_2022_consolidated.pdf:Zone.Identifier",
+    "countries/PHL/02_policy_documents/files/PHL_POL_01_Philippine_Development_Plan_2023_2028.pdf:Zone.Identifier",
+    "countries/POL/02_policy_documents/files/POL_POL_001_KPEiK_2030_2040_2026.pdf:Zone.Identifier",
+    "countries/POL/02_policy_documents/files/POL_POL_002_PEP2040_2021.pdf:Zone.Identifier",
+    "countries/THA/02_policy_documents/files/THA_POL_02_PDP2018_Rev1.pdf:Zone.Identifier",
+    "countries/ZAF/02_policy_documents/files/ZAF_policy_010_SA_Grid_Code_Network_Code_v10_1.pdf:Zone.Identifier",
+    "countries/ZAF/02_policy_documents/files/ZAF_policy_012_BESF_Grid_Connection_Code_v5_2.pdf:Zone.Identifier"
+  ],
+  "included_byte_count": 1212596919,
+  "included_file_count": 905,
+  "profile_id": "basic60_private",
+  "release_id": "BASIC60-PRIVATE-R1",
+  "root_sha256": "b4380273f12b5f04cda57c94a4df972768064714cea43eba5d7a345c3198b688",
+  "schema_version": 1,
+  "scoped_files": [
+    {
+      "byte_size": 73959,
+      "path": "collection_manifest_60.json",
+      "sha256": "ca0462779f24c8d0f9db087441b90f14c1876f120debfa1e0441d42bd49bf590"
+    },
+    {
+      "byte_size": 143569,
+      "path": "global_sources/60_country_macro_energy.csv",
+      "sha256": "1cd4c43f5898fdb1b9b096d491f0e01b8bdf2ce015f0d99fdb5dade4969ff1e4"
+    },
+    {
+      "byte_size": 22746,
+      "path": "global_sources/60_country_profiles.csv",
+      "sha256": "d2f574bbb07d7edf4689e9b90b7e4250b534f49d95ebb61d989779ce26236361"
+    }
+  ],
+  "seed": {
+    "path": "runtime/basic60/basic60_seed.json",
+    "sha256": "4e40dc48d5c315a83d21df33d7a88b3185d70d64d6e224c115afbbfdfa7a6531"
+  },
+  "source_directory": "raw material",
+  "unsafe_entries": [],
+  "unsafe_entry_count": 0
+}

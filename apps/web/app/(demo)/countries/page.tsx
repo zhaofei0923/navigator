@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Bot, GitCompareArrows, SunMedium } from "lucide-react";
+import { ArrowRight, Bot, SunMedium } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -24,13 +24,11 @@ const COPY = {
     globeHelp: "拖动、缩放或悬停国家；选择高亮市场后可进入完整国家画像。",
     readiness: "进入准备度",
     openCountry: "进入国家详情",
-    compare: "对比两个国家",
     currentMarket: "当前演示市场",
     currentMarketHelp: "以下任务将自动沿用该市场，进入工具后仍可调整。",
     nextActions: "从当前市场继续",
     assistant: "AI 市场判断",
     solarStorage: "光储方案",
-    compareCurrent: "加入双国对比",
   },
   en: {
     title: "Global Markets",
@@ -40,13 +38,11 @@ const COPY = {
     globeHelp: "Drag, zoom or hover over countries, then select a highlighted market to open its profile.",
     readiness: "Readiness",
     openCountry: "Open market profile",
-    compare: "Compare two markets",
     currentMarket: "Current demo market",
     currentMarketHelp: "The next tasks will carry this market forward and can still be changed in each tool.",
     nextActions: "Continue from this market",
     assistant: "AI market assessment",
     solarStorage: "Solar + storage concept",
-    compareCurrent: "Add to comparison",
   },
 } as const;
 
@@ -61,7 +57,6 @@ export default function CountriesPage() {
     () => markersQuery.data?.find((item) => item.code === selectedCode) ?? markersQuery.data?.[0],
     [markersQuery.data, selectedCode],
   );
-  const compareHref = selectedMarker ? `/compare?countries=${selectedMarker.code}` : "/compare";
   return (
     <section className="markets-page">
       <div className="page-heading">
@@ -69,7 +64,6 @@ export default function CountriesPage() {
           <h1>{copy.title}</h1>
           <p>{copy.description}</p>
         </div>
-        <Link className="button button-primary" href={compareHref}>{copy.compare} <ArrowRight size={17} /></Link>
       </div>
       <div className="markets-explorer">
         <div className="markets-explorer-heading">
@@ -114,11 +108,6 @@ export default function CountriesPage() {
               <Link href={`/tools/solar-storage?country=${selectedMarker.code}`}>
                 <SunMedium size={17} aria-hidden="true" />
                 <span>{copy.solarStorage}</span>
-                <ArrowRight size={15} aria-hidden="true" />
-              </Link>
-              <Link href={`/compare?countries=${selectedMarker.code}`}>
-                <GitCompareArrows size={17} aria-hidden="true" />
-                <span>{copy.compareCurrent}</span>
                 <ArrowRight size={15} aria-hidden="true" />
               </Link>
             </nav>

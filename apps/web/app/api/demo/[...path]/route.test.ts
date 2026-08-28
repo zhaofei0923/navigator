@@ -105,4 +105,18 @@ describe("demo API proxy v2 routes", () => {
     });
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it.each([["country-comparisons"], ["demo", "country-comparisons"]])("retires comparison proxy %s without upstream access", async (...segments) => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const path = segments;
+    const response = await POST(
+      new Request(`http://localhost/api/demo/${path.join("/")}`, { method: "POST", body: JSON.stringify({ country_codes: ["IDN", "BRA"] }) }),
+      { params: Promise.resolve({ path }) },
+    );
+
+    expect(response.status).toBe(404);
+    expect((await response.json()).error.code).toBe("DEMO_ENDPOINT_NOT_ALLOWED");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });

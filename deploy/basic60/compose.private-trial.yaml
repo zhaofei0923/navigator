@@ -1,0 +1,165 @@
+name: navigator-basic60-private
+
+services:
+  db:
+    image: ${NAVIGATOR_POSTGRES_IMAGE:-postgres:18-alpine}
+    environment:
+      POSTGRES_DB: navigator_basic60
+      POSTGRES_USER: navigator_basic60
+      POSTGRES_PASSWORD: ${NAVIGATOR_BASIC60_DB_PASSWORD:?NAVIGATOR_BASIC60_DB_PASSWORD must be set}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U navigator_basic60 -d navigator_basic60"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    volumes:
+      - navigator_basic60_pgdata:/var/lib/postgresql
+    networks:
+      - basic60_internal
+    restart: unless-stopped
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      navigator.data-scope: basic60_private
+      navigator.formal-gate-status: pending
+
+  api:
+    build:
+      context: ../../services/api
+      args:
+        PYTHON_BASE_IMAGE: ${NAVIGATOR_PYTHON_BASE_IMAGE:-python:3.13-slim}
+        INSTALL_DEPENDENCIES: ${NAVIGATOR_INSTALL_DEPENDENCIES:-1}
+    entrypoint: ["/usr/local/bin/navigator-api-basic60-entrypoint"]
+    environment:
+      BASIC60_DATABASE_URL: postgresql+psycopg://navigator_basic60:${NAVIGATOR_BASIC60_DB_PASSWORD}@db:5432/navigator_basic60
+      BASIC60_API_KEY: ${NAVIGATOR_BASIC60_API_KEY:?NAVIGATOR_BASIC60_API_KEY must be set}
+      BASIC60_CORS_ORIGINS: ${NAVIGATOR_BASIC60_ORIGIN:-http://localhost:3200}
+      BASIC60_SEED_PATH: /opt/navigator-api/runtime/basic60/basic60_seed.private_trial_ready.json
+      BASIC60_DECISION_PATH: /opt/navigator-api/governance/basic60_decision.json
+      BASIC60_DECISION_SHA256: ${NAVIGATOR_BASIC60_DECISION_SHA256:?NAVIGATOR_BASIC60_DECISION_SHA256 must be set}
+      BASIC60_RELEASE_AUTHORIZATION_PATH: /opt/navigator-api/governance/basic60_release_authorization.json
+      BASIC60_RELEASE_AUTHORIZATION_SHA256: ${NAVIGATOR_BASIC60_RELEASE_AUTHORIZATION_SHA256:?NAVIGATOR_BASIC60_RELEASE_AUTHORIZATION_SHA256 must be set}
+      BASIC60_VALIDATION_REPORT_PATH: /opt/navigator-api/governance/basic60_private_validation.json
+      BASIC60_VALIDATION_REPORT_SHA256: ${NAVIGATOR_BASIC60_VALIDATION_REPORT_SHA256:?NAVIGATOR_BASIC60_VALIDATION_REPORT_SHA256 must be set}
+      BASIC60_RUNTIME_ATTESTATION_PATH: /opt/navigator-api/runtime/basic60/basic60_runtime_attestation.json
+      BASIC60_RUNTIME_ATTESTATION_SHA256: ${NAVIGATOR_BASIC60_RUNTIME_ATTESTATION_SHA256:?NAVIGATOR_BASIC60_RUNTIME_ATTESTATION_SHA256 must be set}
+      BASIC60_RUNTIME_ATTESTATION_KEY: ${NAVIGATOR_BASIC60_RUNTIME_ATTESTATION_KEY:?NAVIGATOR_BASIC60_RUNTIME_ATTESTATION_KEY must be set}
+      BASIC60_CANDIDATE_ONLY: "false"
+      BASIC60_AUTO_CREATE_SCHEMA: "false"
+      BASIC60_AUTO_IMPORT_SEED: "false"
+      BASIC60_ENFORCE_BASELINE_COUNTS: "true"
+      BASIC60_MARKET_CONTENT_ROOT: /opt/navigator-api/market-content
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - type: bind
+        source: ${NAVIGATOR_MARKET_CONTENT_DIR:-../../runtime/market-content}
+        target: /opt/navigator-api/market-content
+        read_only: true
+      - type: bind
+        source: ${NAVIGATOR_BASIC60_RUNTIME_DIR:?NAVIGATOR_BASIC60_RUNTIME_DIR must be set}
+        target: /opt/navigator-api/runtime/basic60
+        read_only: true
+      - type: bind
+        source: ${NAVIGATOR_BASIC60_DECISION_FILE:?NAVIGATOR_BASIC60_DECISION_FILE must be set}
+        target: /opt/navigator-api/governance/basic60_decision.json
+        read_only: true
+      - type: bind
+        source: ${NAVIGATOR_BASIC60_RELEASE_AUTHORIZATION_FILE:?NAVIGATOR_BASIC60_RELEASE_AUTHORIZATION_FILE must be set}
+        target: /opt/navigator-api/governance/basic60_release_authorization.json
+        read_only: true
+      - type: bind
+        source: ${NAVIGATOR_BASIC60_VALIDATION_REPORT_FILE:?NAVIGATOR_BASIC60_VALIDATION_REPORT_FILE must be set}
+        target: /opt/navigator-api/governance/basic60_private_validation.json
+        read_only: true
+    networks:
+      - basic60_internal
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).read()",
+        ]
+      interval: 10s
+      timeout: 5s
+      start_period: 20s
+      retries: 12
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    restart: unless-stopped
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    labels:
+      navigator.data-scope: basic60_private
+      navigator.release-id: BASIC60-PRIVATE-R1
+      navigator.formal-gate-status: pending
+
+  web:
+    build:
+      context: ../../apps/web
+      args:
+        NODE_IMAGE: ${NAVIGATOR_NODE_IMAGE:-node:24-alpine}
+    environment:
+      NAVIGATOR_RUNTIME_PROFILE: basic60_private
+      BASIC60_API_BASE_URL: http://api:8000
+      BASIC60_API_KEY: ${NAVIGATOR_BASIC60_API_KEY:?NAVIGATOR_BASIC60_API_KEY must be set}
+      BASIC60_SHARED_PASSPHRASE: ${NAVIGATOR_BASIC60_SHARED_PASSPHRASE:?NAVIGATOR_BASIC60_SHARED_PASSPHRASE must be set}
+      BASIC60_SESSION_SECRET: ${NAVIGATOR_BASIC60_SESSION_SECRET:?NAVIGATOR_BASIC60_SESSION_SECRET must be set}
+      BASIC60_COOKIE_SECURE: ${NAVIGATOR_BASIC60_COOKIE_SECURE:-false}
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${NAVIGATOR_BASIC60_WEB_PORT:-3200}:3000"
+    networks:
+      - basic60_edge
+      - basic60_internal
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      start_period: 20s
+      retries: 12
+    restart: unless-stopped
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    labels:
+      navigator.data-scope: basic60_private
+      navigator.release-id: BASIC60-PRIVATE-R1
+      navigator.formal-gate-status: pending
+
+networks:
+  basic60_edge:
+    internal: true
+    labels:
+      navigator.data-scope: basic60_private
+  basic60_internal:
+    internal: true
+    labels:
+      navigator.data-scope: basic60_private
+
+volumes:
+  navigator_basic60_pgdata:
+    external: true
+    name: navigator-basic60-private_navigator_basic60_pgdata

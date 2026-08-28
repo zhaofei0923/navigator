@@ -7,10 +7,28 @@ import {
   secureDemoCookieEnabled,
   verifyPassphrase,
 } from "@/lib/demo-session";
+import {
+  APPROVED_BASIC60_DEMO_RUNTIME_PROFILE,
+  currentRuntimeProfile,
+} from "@/lib/runtime-profile";
 
 export const dynamic = "force-dynamic";
 
+function approvedDemoSessionNotFound() {
+  return new NextResponse("Not Found", {
+    status: 404,
+    headers: {
+      "Cache-Control": "no-store, private",
+      "Content-Type": "text/plain; charset=utf-8",
+    },
+  });
+}
+
 export async function POST(request: Request) {
+  if (currentRuntimeProfile() === APPROVED_BASIC60_DEMO_RUNTIME_PROFILE) {
+    return approvedDemoSessionNotFound();
+  }
+
   if (!isConfigured()) {
     return NextResponse.json(
       { error: "演示访问尚未配置，请联系演示负责人。" },
@@ -47,6 +65,10 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE() {
+  if (currentRuntimeProfile() === APPROVED_BASIC60_DEMO_RUNTIME_PROFILE) {
+    return approvedDemoSessionNotFound();
+  }
+
   const response = NextResponse.json({ ok: true });
   response.cookies.set({
     name: DEMO_COOKIE_NAME,

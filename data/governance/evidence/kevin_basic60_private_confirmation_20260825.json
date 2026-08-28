@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "confirmation_type": "project_baseline_change_review",
+  "decision_id": "PBD-BASIC60-PRIVATE-001",
+  "candidate": {
+    "path": "data/governance/candidates/basic60_private_baseline_change.2026-08-25.json",
+    "sha256": "8f73c0341ec9a3b9cffcd271f10557b2462f2b19f1ff25d3887f80422d3d5f53"
+  },
+  "bound_current_head": "cdc9b2aed6ac8be34840ae4dfe319058adf6dfb0",
+  "expected_reviewer": {
+    "person_name": "kevin",
+    "role": "项目批准人"
+  },
+  "decision": "approve_basic60_private_trial",
+  "comments": "批准PBD。内部审核流程按2026-08-26确认进一步简化；外部信息准确性已由项目批准人确认。仍禁止公开发布、政策发布、AI处理和外部模型调用。",
+  "reviewed_at": "2026-08-26T00:15:17+08:00",
+  "reviewer_signature": {
+    "person_name": "kevin",
+    "role": "项目批准人",
+    "signed_at": "2026-08-26T00:15:17+08:00"
+  },
+  "authorized_transcription": true,
+  "authorized_actions": {
+    "write_decision_record": true,
+    "activate_basic60_private_profile": true,
+    "start_real_data_private_trial": true
+  },
+  "decision_output": "data/governance/review/basic60_private_baseline_decision.2026-08-25.json",
+  "evidence_output": "data/governance/evidence/kevin_basic60_private_confirmation_20260825.json",
+  "template_only": false,
+  "warning": "Approval authorizes only the access-controlled Basic60 private-trial profile and does not complete formal D1-D4, P0, production, public release, policy publication, search, RAG, or AI use."
+}

@@ -1,0 +1,80 @@
+{
+  "allowed_outcomes": [
+    "not_ready",
+    "private_trial_ready",
+    "revoked"
+  ],
+  "delivery_mode": "access_controlled_private_trial",
+  "disabled_v1_runtime_capabilities": {
+    "ai_routes_enabled": false,
+    "embedding_enabled": false,
+    "external_model_calls_enabled": false,
+    "full_text_search_enabled": false,
+    "local_model_service_enabled": false,
+    "reranking_enabled": false,
+    "vector_database_enabled": false
+  },
+  "does_not_authorize_p0_or_production": true,
+  "does_not_complete_formal_d1_d4": true,
+  "expected_counts": {
+    "available_observations": 2279,
+    "countries": 60,
+    "energy_latest_records": 60,
+    "macro_annual_records": 300,
+    "pending_observations": 61
+  },
+  "formal_gate_status": "pending",
+  "owner_data_usage_authorization": {
+    "controlled_external_model_processing": "allowed_by_manual_decision",
+    "field_scope": "all_basic60_normalized_data_fields",
+    "internal_ai_processing": "allowed_by_manual_decision",
+    "internal_learning_and_exchange": "allowed_by_manual_decision",
+    "local_model_processing": "allowed_by_manual_decision",
+    "model_training": "prohibited",
+    "ordinary_ui_api_source_labels": "omitted_by_manual_decision",
+    "private_display": "allowed_by_manual_decision",
+    "public_release": "prohibited"
+  },
+  "profile_id": "basic60_private",
+  "release_id": "BASIC60-PRIVATE-R1",
+  "schema_version": 1,
+  "scope": {
+    "countries": 60,
+    "coverage_level": "Basic",
+    "excluded_domains": [
+      "policy",
+      "risk",
+      "project",
+      "tender",
+      "partner",
+      "search",
+      "ai"
+    ],
+    "future_deep_dive_priority_country_codes": [
+      "IDN",
+      "VNM",
+      "SAU",
+      "ZAF",
+      "BRA"
+    ],
+    "included_domains": [
+      "country_profile",
+      "macroeconomic",
+      "energy"
+    ],
+    "read_only_routes": [
+      "GET /api/v1/countries",
+      "GET /api/v1/countries/{code}",
+      "POST /api/v1/country-comparisons"
+    ]
+  },
+  "unimplemented_v1_features": {
+    "ai_processing": true,
+    "cloud_processing": true,
+    "full_text_search": true,
+    "model_training": true,
+    "policy_indexing": true,
+    "policy_publication": true,
+    "vector_database": true
+  }
+}

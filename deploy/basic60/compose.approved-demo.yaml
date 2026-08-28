@@ -1,0 +1,15 @@
+services:
+  web:
+    environment:
+      NAVIGATOR_RUNTIME_PROFILE: approved_basic60_demo
+    ports: !override
+      - "127.0.0.1:${NAVIGATOR_BASIC60_WEB_PORT:-3000}:3000"
+    labels:
+      navigator.entry-surface: approved_existing_demo
+
+networks:
+  basic60_edge:
+    internal: false
+    labels:
+      navigator.data-scope: basic60_private
+      navigator.entry-surface: approved_existing_demo

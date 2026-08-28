@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "record_type": "basic60_d1_scope_authorization",
+  "evidence_id": "EVD-B60-D1-SCOPE-AUTHORIZATION-20260826-R2",
+  "authorization_type": "human_scope_authorization",
+  "decision": "approved",
+  "person_name": "kevin",
+  "role": "项目批准人",
+  "signed_at": "2026-08-26T06:23:16+08:00",
+  "transcribed_at": "2026-08-26T06:23:16+08:00",
+  "authorization_basis": "explicit_user_confirmation_in_project_task",
+  "scope_authorization_id": "B60-D1-SCOPE-AUTH-20260826-R2",
+  "scope_subject_sha256": "3eb75cc675471c7ab1a34a0fc9db19ccff72963a3e0c473ef3e7e28c78af5ad9",
+  "exact_content_hash_signed": false,
+  "template_only": false,
+  "warning": "This records a human authorization of stable scope only. Exact content hashes must be added later by a machine binding and must never be described as signed at the human authorization time."
+}

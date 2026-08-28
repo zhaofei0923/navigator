@@ -69,3 +69,103 @@ Minimum verification:
    Internet.
 9. After a controlled Compose restart, all services become healthy and the
    synthetic seed remains available.
+
+## Approved Basic60 Demo: separate staged deployment
+
+`compose.approved-basic60.yaml` is an independent, image-only profile for the
+already approved real Basic60 data and published country overviews. It does not
+extend or replace `compose.private-preview.yaml`, and it does not change Nginx.
+Keep the synthetic configuration, images, environment and external volume intact.
+The new profile keeps formal D1-D4/P0 status `pending`; staging on Tencent Cloud is
+not itself authorization for anonymous public access or a production release.
+
+This profile explicitly selects `approved_basic60_demo` and the Basic60 API
+entrypoint. Its application has **no shared-passphrase login**: `/login` redirects
+home and `/api/session` is unavailable. The retained private-profile session
+environment fields do not activate authentication. Do not put it behind the old
+unrestricted Nginx location without resolving the intended external access first.
+Any actual external route/access-control change must agree with the current
+explicit user authorization. This file neither adds a new login nor grants that
+authorization. Until then, validate through loopback or an operator SSH tunnel.
+
+### Isolation and runtime contract
+
+- Compose project: `navigator-basic60-private`, with its own `basic60_internal`
+  and `basic60_edge` networks, independent of the synthetic project.
+- Web: `127.0.0.1:3101` by default, leaving the old `3100` service untouched for
+  validation and recovery. API and PostgreSQL have no host ports; only Web joins
+  the non-internal edge network.
+- PostgreSQL: database/user `navigator_basic60`, using the dedicated external
+  volume `navigator-basic60-private_navigator_basic60_pgdata`. Never point this
+  service at the old `navigator-private-preview_navigator_private_preview_pgdata`.
+- Images must already be loaded locally on the CVM. All services have
+  `pull_policy: never`, with no `build` section. Build/test Linux AMD64 images
+  away from the shared server, record their image IDs/archive SHA-256 and source
+  snapshot, and use immutable source-specific image references. Do not build or
+  prune Docker data on the CVM.
+- The resource limits remain 960 MiB and 1.75 CPU total: DB 320 MiB/0.50 CPU,
+  API 256 MiB/0.50 CPU, Web 384 MiB/0.75 CPU. Web retains a 256 MiB Node heap
+  limit. Check available shared-host capacity before running both projects.
+- API and Web have read-only root filesystems, bounded writable `/tmp`, dropped
+  capabilities, no-new-privileges and bounded local logs. DB writes only through
+  its dedicated data volume for persistence; PostgreSQL retains the existing
+  writable-root deployment pattern rather than a new filesystem restriction.
+
+Create a **separate** protected environment from `env.approved-basic60.example`,
+for example `/opt/navigator/basic60/.env.remote` with mode `0600`. Generate
+independent Basic60 database/API/session secrets; do not copy the old synthetic
+environment or reuse its passwords. The machine attestation trust key must verify
+the exact supplied attestation. Rotating it requires a newly generated valid
+attestation and hash, not a change to the human approval. Never log or print keys.
+
+Before startup, transfer and hash-check these approved artifacts outside Git:
+
+1. `basic60_seed.private_trial_ready.json` and `basic60_runtime_attestation.json`
+   in the protected Basic60 runtime directory.
+2. The exact PBD decision, release authorization and final validation report.
+   Preserve their original hashes and approvals; do not regenerate them by hand.
+3. The **complete** published `market-content` store, including `current.json`,
+   manifests, releases, objects, confirmed batches, confirmations, review copies
+   and any revocation tombstones. Copying only country JSON or the active pointer
+   is insufficient. Preserve historical objects and file hashes.
+
+All five API bind mounts are read-only and reject nonexistent host paths. Only
+API mounts the content store; Web has no data/research mount. API UID 10001 needs
+traversal/read permission on the mounted directories/files. Keep the host paths
+protected, with no symlinks or public/static exposure. The original workbooks,
+raw material, unpublished manuscripts and research directories need not be copied
+to this runtime. Full publication-store backups may contain review copies and
+therefore remain private even though the API returns only the approved prose.
+
+### Stage and validate before any edge switch
+
+Inspect the dedicated volume first. If it does not exist, create it once with
+`docker volume create --label navigator.data-scope=basic60_private
+navigator-basic60-private_navigator_basic60_pgdata`. An existing volume must have
+the correct scope; do not relabel/reuse a synthetic volume. After verifying the
+loaded images, protected files, permissions and independent environment:
+
+```bash
+docker compose --env-file /opt/navigator/basic60/.env.remote \
+  -f deploy/tencent/compose.approved-basic60.yaml config --quiet
+docker compose --env-file /opt/navigator/basic60/.env.remote \
+  -f deploy/tencent/compose.approved-basic60.yaml up -d --no-build --pull never
+curl -fsS http://127.0.0.1:3101/api/health
+```
+
+Do not print the expanded Compose configuration: it contains secrets. Startup
+uses the existing Basic60 migrations and idempotent validated seed importer; it
+does not migrate the synthetic database or manufacture a content confirmation.
+Verify healthy containers, `basic60_private` health, 59 outbound countries, both
+languages of all approved overviews, original charts, China/invalid-code rejection,
+retired comparison/report APIs, and absence of host API/DB ports. A green health
+probe alone does not prove the content volume was transferred correctly.
+
+Only after those checks and matching user authorization may the operator back up
+the current site configuration and switch the intended edge route. This staged
+profile does not perform the switch. Validate `nginx -t` before any future reload.
+Retain the previous image/configuration and its volume for service rollback; do
+not run `down -v`, `--volumes` or a Docker prune. Stop only the explicitly selected
+project when necessary. Content rollback uses previously published, non-revoked
+overview versions; the initial 59-country publication has no earlier published
+overview, and old sample manuscripts/retired reports are not rollback targets.

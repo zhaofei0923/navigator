@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Search, TriangleAlert } from "lucide-react";
+import { Search, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -77,7 +77,6 @@ const PAGE_CONFIG: Record<Locale, Record<IntelligenceKind, {
 
 const COPY = {
   "zh-CN": {
-    compare: "进入双国对比",
     search: (title: string) => `搜索${title}`,
     searchPlaceholder: (title: string) => `搜索${title}记录`,
     countryFilter: "筛选国家",
@@ -97,7 +96,6 @@ const COPY = {
     million: "百万",
   },
   en: {
-    compare: "Compare two markets",
     search: (title: string) => `Search ${title}`,
     searchPlaceholder: (title: string) => `Search ${title.toLocaleLowerCase("en")} records`,
     countryFilter: "Filter by market",
@@ -211,7 +209,6 @@ export function IntelligenceListPage({ kind }: { kind: IntelligenceKind }) {
     <section>
       <div className="page-heading">
         <div><h1>{config.title}</h1><p>{config.description}</p></div>
-        <Link className="button button-secondary" href="/compare">{copy.compare} <ArrowRight size={16} /></Link>
       </div>
       {config.tabs ? <SectionTabs active={`/${kind}`} items={config.tabs} /> : null}
       <div className="filter-bar" role="search">

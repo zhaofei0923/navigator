@@ -1,0 +1,40 @@
+{
+  "schema_version": "basic60.source-evidence.v3",
+  "source_ref": "B60-SRC-IRENA-PRIMARY",
+  "terms_snapshots": [
+    {
+      "storage_mode": "external_l0",
+      "sha256": "d2bda2b5357516b5faf507ed8f901f78c409099887e16ab556fff663abc51b9a",
+      "byte_size": 61314,
+      "captured_at": "2026-08-26T01:20:58+08:00",
+      "retrieval_uri": "https://www.irena.org/terms-and-conditions",
+      "media_type": "text/html",
+      "canonical_url": "https://www.irena.org/terms-and-conditions",
+      "capture_method": "official_page_rendered_dom_browser_capture",
+      "volume_id": "basic60-private-l0-20260826",
+      "object_key": "sha256/d2bda2b5357516b5faf507ed8f901f78c409099887e16ab556fff663abc51b9a"
+    }
+  ],
+  "license_conclusion": {
+    "terms_snapshot_sha256s": [
+      "d2bda2b5357516b5faf507ed8f901f78c409099887e16ab556fff663abc51b9a"
+    ],
+    "terms_uris": [
+      "https://www.irena.org/terms-and-conditions"
+    ],
+    "terms_uri": "https://www.irena.org/terms-and-conditions",
+    "license_scope": {
+      "store": true,
+      "display": true,
+      "export": false,
+      "translate": false,
+      "ai_processing": false,
+      "cloud_processing": false
+    },
+    "access_method": "existing frozen snapshot; future refresh by manual operator export only",
+    "rate_limit": "no robot or automated V1 refresh",
+    "ai_processing": "prohibited_for_v1",
+    "cloud_processing": "prohibited_for_v1"
+  },
+  "captured_at": "2026-08-22T00:00:00+08:00"
+}

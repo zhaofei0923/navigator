@@ -1,0 +1,17 @@
+{
+  "authorization_basis": null,
+  "authorization_type": "human_scope_authorization",
+  "decision": "pending",
+  "evidence_id": null,
+  "exact_content_hash_signed": false,
+  "person_name": null,
+  "record_type": "basic60_d1_scope_authorization",
+  "role": "项目批准人",
+  "schema_version": 1,
+  "scope_authorization_id": null,
+  "scope_subject_sha256": null,
+  "signed_at": null,
+  "template_only": true,
+  "transcribed_at": null,
+  "warning": "This records a human authorization of stable scope only. Exact content hashes must be added later by a machine binding and must never be described as signed at the human authorization time."
+}

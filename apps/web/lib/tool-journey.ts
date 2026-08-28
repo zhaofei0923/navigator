@@ -46,10 +46,11 @@ export function resolveToolCountry(
 export function toolHref(path: string, countryCode: string): string {
   const normalized = normalizeCountryParam(countryCode);
   if (!normalized) return path;
-  const [pathname, query = ""] = path.split("?", 2);
+  const [target, fragment] = path.split("#", 2);
+  const [pathname, query = ""] = target.split("?", 2);
   const params = new URLSearchParams(query);
   params.set("country", normalized);
-  return `${pathname}?${params.toString()}`;
+  return `${pathname}?${params.toString()}${fragment === undefined ? "" : `#${fragment}`}`;
 }
 
 export function comparisonHref(countryCode: string): string {

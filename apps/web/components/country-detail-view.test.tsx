@@ -92,7 +92,10 @@ describe("CountryDetailView task journey", () => {
     expect(screen.getByRole("link", { name: /光储方案/ })).toHaveAttribute("href", "/tools/solar-storage?country=ZAF");
     expect(screen.getByRole("link", { name: /可研草案/ })).toHaveAttribute("href", "/tools/feasibility?country=ZAF");
     expect(screen.getByRole("link", { name: /投标准备/ })).toHaveAttribute("href", "/tools/tenders?country=ZAF");
-    expect(screen.getAllByRole("link", { name: /双国对比/ })[0]).toHaveAttribute("href", "/compare?countries=ZAF");
+    expect(screen.getByRole("link", { name: /返回首页地图/ })).toHaveAttribute("href", "/?country=ZAF#markets");
+    expect(screen.getByRole("link", { name: /出海工具/ })).toHaveAttribute("href", "/tools?country=ZAF");
+    expect(screen.getByRole("link", { name: /合作伙伴/ })).toHaveAttribute("href", "/partners?country=ZAF");
+    expect(screen.queryByRole("link", { name: /对比|比较/ })).not.toBeInTheDocument();
     expect(screen.getByText(/不会调用真实数据或外部模型/)).toBeInTheDocument();
   });
 
@@ -108,5 +111,15 @@ describe("CountryDetailView task journey", () => {
     expect(screen.getByRole("link", { name: /Feasibility draft/ })).toHaveAttribute("href", "/tools/feasibility?country=ZAF");
     expect(screen.getByText(/without real data or external model calls/)).toBeInTheDocument();
     expect(screen.queryByText("继续当前市场任务")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Back to homepage map/ })).toHaveAttribute("href", "/?country=ZAF#markets");
+    expect(screen.getByRole("link", { name: /Partners/ })).toHaveAttribute("href", "/partners?country=ZAF");
+    expect(screen.queryByRole("link", { name: /compar/i })).not.toBeInTheDocument();
+  });
+
+  it.each(["Service unavailable", null])("provides a homepage escape for an unavailable country: %s", (error) => {
+    mocks.useDemoQuery.mockReturnValue({ data: null, loading: false, error, reload: mocks.reload });
+    render(<LocaleProvider initialLocale="zh-CN"><CountryDetailView code="ZAF" /></LocaleProvider>);
+    expect(screen.getByRole("link", { name: /返回首页地图/ })).toHaveAttribute("href", "/?country=ZAF#markets");
+    expect(screen.queryByRole("link", { name: /对比|比较/ })).not.toBeInTheDocument();
   });
 });

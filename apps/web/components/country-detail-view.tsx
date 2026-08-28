@@ -9,16 +9,17 @@ import {
   Bot,
   ClipboardCheck,
   FileSearch,
-  GitCompareArrows,
   Globe2,
   Info,
   SunMedium,
+  Users,
 } from "lucide-react";
 import { DecisionPanel } from "@/components/decision-panel";
 import { EmptyState, ErrorState, LoadingState } from "@/components/page-state";
 import { ScoreStrip } from "@/components/score-strip";
 import { SignalTimeline } from "@/components/signal-timeline";
 import { useDemoQuery } from "@/hooks/use-demo-query";
+import { homeMarketHref } from "@/lib/approved-basic60/navigation";
 import { useLocale } from "@/lib/i18n";
 import type { CountryDetail } from "@/lib/types";
 
@@ -32,8 +33,8 @@ const COPY = {
     radarLoading: "正在绘制五维评分…",
     loading: "正在加载国家详情…",
     missing: "未找到此演示国家。",
-    back: "返回全球市场",
-    compare: "加入双国对比",
+    back: "返回首页地图",
+    tools: "出海工具",
     region: "区域",
     currency: "币种",
     data: "数据",
@@ -52,8 +53,8 @@ const COPY = {
     feasibilityHelp: "整理非正式章节草案",
     tenders: "投标准备",
     tendersHelp: "检查演示投标准备度",
-    compareAction: "双国对比",
-    compareHelp: "将当前市场设为市场 A",
+    partners: "合作伙伴",
+    partnersHelp: "查看当前市场的演示伙伴",
     timeline: "机会动态（按时间）",
     viewAll: "查看全部",
   },
@@ -61,8 +62,8 @@ const COPY = {
     radarLoading: "Drawing five-dimension scores…",
     loading: "Loading market profile…",
     missing: "This demo market could not be found.",
-    back: "Back to global markets",
-    compare: "Add to two-market comparison",
+    back: "Back to homepage map",
+    tools: "Expansion tools",
     region: "Region",
     currency: "Currency",
     data: "Data",
@@ -81,8 +82,8 @@ const COPY = {
     feasibilityHelp: "Structure a non-official section draft",
     tenders: "Tender preparation",
     tendersHelp: "Check demo tender readiness",
-    compareAction: "Two-market comparison",
-    compareHelp: "Set this market as Market A",
+    partners: "Partners",
+    partnersHelp: "Explore demo partners in this market",
     timeline: "Opportunity timeline",
     viewAll: "View all",
   },
@@ -99,14 +100,18 @@ export function CountryDetailView({ code }: { code: string }) {
   const query = useDemoQuery<CountryDetail>(`countries/${encodeURIComponent(code)}`);
 
   if (query.loading) return <LoadingState label={copy.loading} />;
-  if (query.error) return <ErrorState message={query.error} retry={query.reload} />;
-  if (!query.data) return <EmptyState message={copy.missing} />;
+  if (query.error || !query.data) return (
+    <section>
+      <Link className="back-link" href={homeMarketHref(code)}><ArrowLeft size={16} />{copy.back}</Link>
+      {query.error ? <ErrorState message={query.error} retry={query.reload} /> : <EmptyState message={copy.missing} />}
+    </section>
+  );
 
   const country = query.data;
   const countryName = locale === "en" ? country.name_en : country.name_zh;
   return (
     <section>
-      <Link className="back-link" href="/countries"><ArrowLeft size={16} />{copy.back}</Link>
+      <Link className="back-link" href={homeMarketHref(country.code)}><ArrowLeft size={16} />{copy.back}</Link>
       <div className="country-detail-heading">
         <div>
           <span className="section-kicker country-context-label">{copy.context}</span>
@@ -114,7 +119,7 @@ export function CountryDetailView({ code }: { code: string }) {
           <h1>{countryName}</h1>
           <p>{country.region}</p>
         </div>
-        <Link className="button button-primary" href={`/compare?countries=${country.code}`}>{copy.compare} <ArrowRight size={17} /></Link>
+        <Link className="button button-primary" href={`/tools?country=${country.code}`}>{copy.tools} <ArrowRight size={17} /></Link>
       </div>
       <div className="country-facts">
         <span><Globe2 size={17} />{copy.region} <strong>{country.region}</strong></span>
@@ -178,10 +183,10 @@ export function CountryDetailView({ code }: { code: string }) {
               description={copy.tendersHelp}
             />
             <RelatedAction
-              href={`/compare?countries=${country.code}`}
-              icon={<GitCompareArrows size={19} />}
-              title={copy.compareAction}
-              description={copy.compareHelp}
+              href={`/partners?country=${country.code}`}
+              icon={<Users size={19} />}
+              title={copy.partners}
+              description={copy.partnersHelp}
             />
           </nav>
         </aside>

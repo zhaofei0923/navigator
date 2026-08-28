@@ -16,9 +16,7 @@ const COLLECTIONS = new Set([
   "partners",
 ]);
 const POST_ENDPOINTS = new Set([
-  "country-comparisons",
   "demo/reset",
-  "demo/country-comparisons",
   "demo/tools/assistant/preview",
   "demo/tools/solar-storage/preview",
   "demo/tools/feasibility-report/preview",

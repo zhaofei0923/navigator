@@ -13,7 +13,6 @@ import { useDemoQuery } from "@/hooks/use-demo-query";
 import { demoApi } from "@/lib/api-client";
 import { useLocale, type SupportedLocale } from "@/lib/i18n";
 import {
-  comparisonHref,
   resolveToolCountry,
   TOOL_PATHS,
   toolHref,
@@ -36,7 +35,6 @@ const COPY = {
     limitations: "演示限制",
     empty: "选择一个受控问题后，结构化演示建议将在这里显示。",
     nextConcept: "继续形成光储方案",
-    compare: "加入双国对比",
     options: {
       market_entry: "市场进入路径",
       policy_risk: "政策与风险检查",
@@ -58,7 +56,6 @@ const COPY = {
     limitations: "Demo limitations",
     empty: "Choose a controlled question and your structured demo guidance will appear here.",
     nextConcept: "Continue to solar & storage",
-    compare: "Add to two-market comparison",
     options: {
       market_entry: "Market-entry path",
       policy_risk: "Policy and risk check",
@@ -174,7 +171,6 @@ export default function AssistantToolPage() {
           label: copy.nextConcept,
           primary: true,
         },
-        { href: comparisonHref(effectiveCountryCode), label: copy.compare },
       ]}
     >
       <div className="tool-workspace">

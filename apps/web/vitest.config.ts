@@ -5,6 +5,9 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./", import.meta.url)),
+      "server-only": fileURLToPath(
+        new URL("./test-support/server-only.ts", import.meta.url),
+      ),
     },
   },
   test: {
@@ -15,7 +18,12 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "json-summary"],
       include: ["components/**/*.tsx", "lib/**/*.ts"],
-      exclude: ["**/*.test.*", "lib/demo-session.ts"],
+      exclude: [
+        "**/*.test.*",
+        "lib/demo-session.ts",
+        "lib/basic60/api.ts",
+        "lib/basic60/session.ts",
+      ],
     },
   },
 });

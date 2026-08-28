@@ -46,6 +46,12 @@ const MARKETS: CountrySummary[] = [
 ];
 
 describe("tool journey country routing", () => {
+  it("keeps country parameters before project-planning fragments", () => {
+    expect(toolHref("/tools#project-planning", "IDN")).toBe("/tools?country=IDN#project-planning");
+    expect(toolHref("/tools?stage=plan#project-planning", "BRA")).toBe("/tools?stage=plan&country=BRA#project-planning");
+    expect(toolHref("/tools#project-planning", "")).toBe("/tools#project-planning");
+  });
+
   it("normalizes a valid ISO3 value and rejects malformed parameters", () => {
     expect(normalizeCountryParam(" idn ")).toBe("IDN");
     expect(normalizeCountryParam("ID")).toBeNull();

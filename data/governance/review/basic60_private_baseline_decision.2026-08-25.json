@@ -1,0 +1,19 @@
+{
+  "decision_id": "PBD-BASIC60-PRIVATE-001",
+  "status": "approved_and_effective",
+  "effective_from": "2026-08-26T00:15:17+08:00",
+  "scope": {
+    "release_profile": "basic60_private",
+    "private_trial_only": true,
+    "real_data_enabled": true,
+    "policies_enabled": false,
+    "ai_enabled": false,
+    "external_model_calls_enabled": false
+  },
+  "approval": {
+    "person_id": "kevin",
+    "role": "project_approver",
+    "signed_at": "2026-08-26T00:15:17+08:00",
+    "signature_sha256": "595ec2158025ef5c8ae472c6d796aead6048c8a53523c4e3a9b5d64bb876c5d2"
+  }
+}

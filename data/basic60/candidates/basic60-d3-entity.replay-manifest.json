@@ -1,0 +1,33 @@
+{
+  "implementation_sha256": "fbe1b1bf448b9f7a68bc66d4bd46cfd8237a98c235e7a15901a6eb90fc3b600d",
+  "independent_replay_sha256": {
+    "first": "a147c2888aa4858956715ea81d153637bd9ed96a5d4b5a6fbc1300fb47039cbc",
+    "second": "a147c2888aa4858956715ea81d153637bd9ed96a5d4b5a6fbc1300fb47039cbc"
+  },
+  "input_payload_sha256": "d5c613739fd0634afb2cf9ae7f5eca2d7d25c2084e282af39c42639ec0d038fe",
+  "open_anomaly_count": 0,
+  "original_values_sha256": "97854774a6247a94e1288611d6077edc817b18808d6eb55f59bafc3ea91e5791",
+  "pipeline_id": "D3-ENTITY",
+  "profile_id": "basic60_private",
+  "quality_observations": {
+    "conflict_record_ids": [],
+    "duplicate_record_ids": [],
+    "fuzzy_match_record_ids": [],
+    "parse_error_record_ids": [],
+    "unknown_enum_record_ids": []
+  },
+  "raw_root_sha256": "b4380273f12b5f04cda57c94a4df972768064714cea43eba5d7a345c3198b688",
+  "record_count": 2340,
+  "release_id": "BASIC60-PRIVATE-R1",
+  "runtime_seed_sha256": "4e40dc48d5c315a83d21df33d7a88b3185d70d64d6e224c115afbbfdfa7a6531",
+  "runtime_stage": {
+    "byte_size": 1909045,
+    "path": "runtime/basic60/d3/basic60-d3-entity.stage.json",
+    "sha256": "29fee245bdc63b635d454a31b61632521307e38f86c5d3ea90e61b68a9ff3e69"
+  },
+  "schema_version": "basic60.replay-manifest.v2",
+  "source_fields_sha256": "73e9fc4dbe450f1580db37db112d5b33049f733b74a69f391c97d5816ed86431",
+  "stage_id": "entity",
+  "stage_payload_sha256": "a147c2888aa4858956715ea81d153637bd9ed96a5d4b5a6fbc1300fb47039cbc",
+  "status": "succeeded"
+}

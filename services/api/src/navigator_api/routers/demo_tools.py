@@ -20,8 +20,6 @@ from navigator_api.localization import disclaimer_for
 from navigator_api.schemas import (
     AssistantPreview,
     AssistantPreviewRequest,
-    ComparisonResult,
-    DemoComparisonRequest,
     DemoMeta,
     DemoResponse,
     FeasibilityReportPreview,
@@ -32,7 +30,6 @@ from navigator_api.schemas import (
     SolarStoragePreviewRequest,
     TenderItem,
 )
-from navigator_api.service import compare_countries
 
 router = APIRouter(prefix="/demo", tags=["demo-expansion-tools"])
 SessionDependency = Annotated[Session, Depends(get_session)]
@@ -59,20 +56,6 @@ def get_globe_markers(
 ) -> DemoResponse[list[GlobeMarker]]:
     data = globe_markers(session, locale)
     return DemoResponse(meta=_meta(locale, len(data)), data=data)
-
-
-@router.post(
-    "/country-comparisons",
-    response_model=DemoResponse[ComparisonResult],
-    operation_id="API-DEMO-COMPARE-001",
-)
-def create_demo_country_comparison(
-    request: DemoComparisonRequest,
-    session: SessionDependency,
-    locale: Locale = "zh-CN",
-) -> DemoResponse[ComparisonResult]:
-    data = compare_countries(session, request.country_codes, locale)
-    return DemoResponse(meta=_meta(locale, len(data.countries)), data=data)
 
 
 @router.post(

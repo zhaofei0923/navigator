@@ -1,0 +1,12 @@
+{
+  "decision": "pending",
+  "evidence_id": null,
+  "person_name": null,
+  "record_type": "basic60_human_approval",
+  "role": null,
+  "schema_version": 1,
+  "signed_at": null,
+  "subject_sha256": null,
+  "template_only": true,
+  "warning": "Only the actual named reviewer may complete this hash-bound evidence copy."
+}

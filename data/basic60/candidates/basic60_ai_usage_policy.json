@@ -1,0 +1,68 @@
+{
+  "field_scope": {
+    "field_count": 34,
+    "fields": [
+      "countries[].admin_structure.count",
+      "countries[].admin_structure.level",
+      "countries[].admin_structure.unit_type",
+      "countries[].capitals[].display_order",
+      "countries[].capitals[].name",
+      "countries[].capitals[].role",
+      "countries[].collected_at",
+      "countries[].coverage_level",
+      "countries[].coverage_status",
+      "countries[].currency.code",
+      "countries[].currency.name",
+      "countries[].id",
+      "countries[].iso2",
+      "countries[].iso3",
+      "countries[].languages[]",
+      "countries[].localized_texts[].field_code",
+      "countries[].localized_texts[].locale",
+      "countries[].localized_texts[].preferred",
+      "countries[].localized_texts[].text",
+      "countries[].localized_texts[].translation_status",
+      "countries[].metrics[].metric_code",
+      "countries[].metrics[].normalized_value",
+      "countries[].metrics[].null_reason",
+      "countries[].metrics[].original_value",
+      "countries[].metrics[].period",
+      "countries[].metrics[].quality_status",
+      "countries[].metrics[].unit",
+      "countries[].metrics[].value_status",
+      "countries[].opportunity_level",
+      "countries[].policy_friendliness_level",
+      "countries[].region_code",
+      "countries[].risk_assessment_status",
+      "countries[].risk_level",
+      "countries[].time_zones[]"
+    ],
+    "fields_sha256": "017809d569e36accd250a58f93472cc18bb08d3ac9c3cb524041686cb446f4a7",
+    "mode": "all_normalized_basic60_fields"
+  },
+  "generator": "navigator-data",
+  "owner_authorization_sha256": "9b72fe3a3808f72357e0f319ace13466d89a489a2016320d1dbc06089a05fd70",
+  "permission_basis": "PBD-BASIC60-PRIVATE-001-A1",
+  "profile_id": "basic60_private",
+  "projection_type": "machine_generated_all_field_scope_projection",
+  "record_type": "basic60_ai_usage_scope_projection",
+  "release_id": "BASIC60-PRIVATE-R1",
+  "schema_version": "basic60.ai-usage-policy.v2",
+  "seed": {
+    "path": "runtime/basic60/basic60_seed.json",
+    "sha256": "4e40dc48d5c315a83d21df33d7a88b3185d70d64d6e224c115afbbfdfa7a6531"
+  },
+  "usage_amendment": {
+    "path": "data/governance/review/basic60_private_usage_amendment.2026-08-26.json",
+    "sha256": "dfa34b4ab13a77aeb37776e6e629f60d491dc40a030adcb238a2a4131b12b49f"
+  },
+  "v1_runtime_capabilities": {
+    "ai_routes_enabled": false,
+    "embedding_enabled": false,
+    "external_model_calls_enabled": false,
+    "full_text_search_enabled": false,
+    "local_model_service_enabled": false,
+    "reranking_enabled": false,
+    "vector_database_enabled": false
+  }
+}

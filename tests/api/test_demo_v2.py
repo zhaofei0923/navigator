@@ -69,35 +69,21 @@ def test_globe_markers_are_bilingual_local_and_complete(
         assert_english(en_item["summary"])
 
 
-def test_demo_comparison_requires_exactly_two_different_countries(
-    client: TestClient, auth_headers: dict[str, str]
+@pytest.mark.parametrize(
+    "country_codes",
+    (["IDN", "SAU"], ["IDN"], ["IDN", "SAU", "VNM"], ["IDN", "idn"]),
+)
+def test_retired_demo_comparison_does_not_accept_or_validate_selections(
+    client: TestClient, auth_headers: dict[str, str], country_codes: list[str]
 ) -> None:
-    accepted = client.post(
+    response = client.post(
         "/api/v1/demo/country-comparisons",
         headers=auth_headers,
         params={"locale": "en"},
-        json={"country_codes": ["idn", "SAU"]},
+        json={"country_codes": country_codes},
     )
-    assert accepted.status_code == 200
-    payload = accepted.json()
-    assert_meta(payload, "en")
-    assert len(payload["data"]["countries"]) == 2
-    assert_english(payload["data"]["recommendation"])
-    assert_english(payload["data"]["methodology"])
-    assert all(row["name_en"] for row in payload["data"]["countries"])
-
-    for country_codes in (
-        ["IDN"],
-        ["IDN", "SAU", "VNM"],
-        ["IDN", "idn"],
-    ):
-        rejected = client.post(
-            "/api/v1/demo/country-comparisons",
-            headers=auth_headers,
-            json={"country_codes": country_codes},
-        )
-        assert rejected.status_code == 422
-        assert rejected.json()["error"]["code"] == "VALIDATION_ERROR"
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Not Found"}
 
 
 @pytest.mark.parametrize("country_code", COUNTRY_CODES)
@@ -303,9 +289,7 @@ def test_existing_country_and_catalog_endpoints_have_complete_english_copy(
 def test_new_operation_ids_are_stable(client: TestClient) -> None:
     paths = client.get("/openapi.json").json()["paths"]
     assert paths["/api/v1/demo/globe-markers"]["get"]["operationId"] == "API-DEMO-GLOBE-001"
-    assert (
-        paths["/api/v1/demo/country-comparisons"]["post"]["operationId"] == "API-DEMO-COMPARE-001"
-    )
+    assert "/api/v1/demo/country-comparisons" not in paths
     assert (
         paths["/api/v1/demo/tools/assistant/preview"]["post"]["operationId"]
         == "API-DEMO-ASSISTANT-PREVIEW-001"

@@ -8,7 +8,6 @@ import { useDemoQuery } from "@/hooks/use-demo-query";
 import { demoApi } from "@/lib/api-client";
 import { useLocale, type SupportedLocale } from "@/lib/i18n";
 import {
-  comparisonHref,
   resolveToolCountry,
   TOOL_PATHS,
   toolHref,
@@ -44,7 +43,6 @@ const COPY = {
     limitations: "草案限制",
     empty: "选择项目类型和章节后，结构化可研草案将在这里显示。",
     nextTender: "继续投标准备",
-    compare: "加入双国对比",
     projectTypes: { solar_storage: "光储项目", microgrid: "微电网", battery_storage: "独立储能" },
     sectionNames: { market_context: "市场背景", technical_concept: "技术概念", delivery_plan: "交付路径", risk_review: "风险复核" },
   },
@@ -61,7 +59,6 @@ const COPY = {
     limitations: "Draft limitations",
     empty: "Choose a project type and sections and the structured feasibility draft will appear here.",
     nextTender: "Continue to tender readiness",
-    compare: "Add to two-market comparison",
     projectTypes: { solar_storage: "Solar & storage", microgrid: "Microgrid", battery_storage: "Standalone battery storage" },
     sectionNames: { market_context: "Market context", technical_concept: "Technical concept", delivery_plan: "Delivery plan", risk_review: "Risk review" },
   },
@@ -171,7 +168,6 @@ export default function FeasibilityToolPage() {
           label: copy.nextTender,
           primary: true,
         },
-        { href: comparisonHref(effectiveCountryCode), label: copy.compare },
       ]}
     >
       <div className="tool-workspace report-workspace">
